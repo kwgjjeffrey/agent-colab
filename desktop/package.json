@@ -1,6 +1,7 @@
 {
   "name": "@colab/desktop-workspace",
   "version": "0.0.0-private",
+  "license": "Apache-2.0",
   "private": true,
   "scripts": {
     "dev": "pnpm --dir ui dev",
