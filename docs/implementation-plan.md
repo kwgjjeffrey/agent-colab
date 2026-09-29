@@ -202,8 +202,8 @@
 
 ## 当前收口顺序
 
-1. Local API discovery file、随机 bearer、Host/Origin 防护；这是本机常驻服务公开 alpha 前的安全前置；
-2. Files 持久化 publish/materialize job、重启恢复与可见状态；这是“持续共享”不丢任务的可靠性前置；
+1. [x] Local API discovery file、随机 bearer、Host/Origin 防护；
+2. [x] Files 持久化 publish/materialize job、重启恢复与可见状态；
 3. [x] Google token 过期刷新、refresh rotation 与 replay 测试；
 4. Session Reader 的产品实现与真实验收已完成；
 5. Shared Skill 纵向闭环已完成；未来 query hook 自动推荐继续延后，不混入当前实现。
