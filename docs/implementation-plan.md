@@ -291,6 +291,14 @@ Windows 首版采用 `%LOCALAPPDATA%\\AgentColab`、目录 junction 和用户级
 - [x] Build and publish Electron `0.1.16-dev` in release `0.1.48-dev`; verify the packaged ASAR contains the corrected source and complete R2 public size/SHA-256 readback for both Windows and macOS artifacts.
 - [ ] Validate corrected startup, Task Scheduler activation, and diagnostic dialog on a real Windows machine.
 
+### T2.7 Windows one-artifact desktop bootstrap (in progress)
+
+- [x] Correct the distribution contract: a first-time Windows user must not run a separate bootstrap before opening the desktop executable.
+- [x] Add a Shell-owned first-run orchestrator that verifies bundled Core/GUI/Skill seeds, installs them under `%LOCALAPPDATA%\\AgentColab`, creates managed junctions, installs the Codex Skill, and registers the existing user-level Core task.
+- [x] Keep the receipt as the final commit point so interrupted setup remains diagnosable and retryable; keep all post-install updates in the existing independent-component setup path.
+- [x] Build Electron `0.1.17-dev`, inspect the packaged Windows ASAR and embedded seed resources, then publish release `0.1.49-dev` to R2 with complete public size/SHA-256 readback. GitHub mirror follows the source commit/tag below.
+- [ ] Validate first-run setup and launch on a clean Windows account.
+
 ## 已删除的工作
 
 - `git2`/libgit2 替换验证：不再为实现纯度替换已验证的 Git CLI；真实跨平台问题出现时另建分发任务；

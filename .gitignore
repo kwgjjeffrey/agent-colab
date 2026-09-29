@@ -4,6 +4,7 @@ dist/
 **/target/
 **/node_modules/
 **/*.tsbuildinfo
+desktop/shell/bootstrap/
 
 # Local runtime state
 **/.data/

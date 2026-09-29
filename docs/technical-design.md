@@ -574,13 +574,13 @@ flowchart LR
 | 层 | 选择 | 理由 |
 | --- | --- | --- |
 | UI | TypeScript + React + Vite | 交互生态成熟，页面逻辑与 Core 隔离 |
-| Optional launcher | Electron | 只提供普通桌面 App 入口、窗口和 deep link；不承担安装、更新或业务能力 |
+| Desktop launcher | Electron | 提供普通桌面 App 入口、窗口和 deep link；Windows 首次启动可引导安装内置种子制品，但不承担业务能力或后续更新决策 |
 | UI state/query | TanStack Query；局部状态用 Zustand | 服务端状态与页面状态分开，避免自造缓存层 |
 | 表单与校验 | React Hook Form + Zod | 设置、邀请和共享流程统一校验 |
 | 组件 | shadcn/ui + Radix primitives | 保持低定制成本，线框到正式 UI 可渐进演进 |
 | 测试 | Vitest + Testing Library；Playwright 做关键 smoke | 单元、组件与端到端职责分开 |
 
-Shell 和 GUI 都不引入数据库、远端 SDK 或同步实现。Electron main process 只负责窗口、受限 IPC 和 deep-link 转发；业务调用全部经过 `local/api`。GUI 是独立签名的静态资源包，由 Skill setup 下载到应用数据目录并原子切换 active pointer。系统浏览器与 Electron 都打开 Local Core 托管的同一 GUI。
+Shell 和 GUI 都不引入数据库、远端 SDK 或同步实现。Electron main process 只负责窗口、受限 IPC、deep-link 转发，以及 Windows 桌面路径的首次安装编排；业务调用全部经过 `local/api`。Windows Shell 内置一套经过哈希校验的兼容 Core/GUI/Skill 种子版本，首次双击时安装到当前用户应用数据目录、注册并启动 Local Core，最后打开由 Core 托管的同一 GUI。安装完成后，GUI、Core 与 Skill 的检查和更新仍交给统一 setup，Electron 不参与后台轮询或业务生命周期。
 
 ### 11.2 Local Core artifact
 
@@ -651,7 +651,7 @@ Server 不手写密码登录、MFA、SAML 或 IdP 管理。Google 和企业登�
 
 ### 11.7 Setup、安装与更新
 
-Colab 本地运行的必需组合是三个相互独立的制品：Desktop GUI 静态资源、Local Core、Colab Skill。Skill 中的 headless setup 是安装/更新真源，负责下载三个制品、激活版本并启动 Local Core。Local Core 通过 loopback HTTP 托管 GUI，setup 可直接用系统浏览器打开它。Electron 只是可选 launcher：它把同一 GUI 放入独立窗口并可提供原生便利能力，不是安装、更新、Files 共享或 Agent 调用的前置。
+Colab 本地运行的必需组合是三个相互独立的制品：Desktop GUI 静态资源、Local Core、Colab Skill。Skill 中的 headless setup 是常规安装/更新真源，负责下载三个制品、激活版本并启动 Local Core。Local Core 通过 loopback HTTP 托管 GUI，setup 可直接用系统浏览器打开它。Electron 仍不是更新、Files 共享或 Agent 调用的前置；但 Windows 桌面制品必须能够从一台未安装 Colab 的机器自举：Shell 携带兼容的种子组合并复用相同目录、receipt、服务名与 active junction 约定完成首次安装。这个例外只消除用户可见的安装顺序，不改变制品边界，后续依然独立比较和升级各制品。
 
 `release-manifest.json` 至少记录：GUI、Local Core、Skill 的独立版本、平台/架构、独立下载地址、size、SHA-256、签名、Local API 兼容范围和 Server API 兼容范围。Electron launcher 使用独立 channel，不阻塞三个必需制品更新。安装过程采用 staging → 验签 → 原子切换制品链接 → 重启 Local Core → health check → 成功提交；失败则恢复上一个制品组合。alpha 阶段不为历史业务数据建设 migration/backup/rollback 体系。
 

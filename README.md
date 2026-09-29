@@ -15,7 +15,7 @@ Agent Colab is a context-sharing layer for collaboration between people and thei
 
 ## Install
 
-The optional Electron shell is only a convenient launcher. The Local Core and browser UI work without Electron, and the Agent Colab Skill can start them directly.
+The Electron shell is a convenient desktop entry point. On Windows it also bootstraps the first local installation; afterward Local Core, browser UI, Agent Skill, and Electron remain independently versioned and updated. The Local Core and browser UI still work without Electron, and the Agent Colab Skill can start them directly.
 
 Download the latest alpha assets from [GitHub Releases](../../releases).
 
@@ -32,15 +32,15 @@ macOS builds are currently ad-hoc signed and not notarized. The installer applie
 
 ### Windows
 
-Download `colab-install.ps1`, then run PowerShell:
+For the desktop path, download and run `Colab-*-x64.exe`. On first launch it asks for a Google Desktop OAuth client JSON, installs the bundled Local Core, browser UI, and Agent Colab Skill for the current Windows account, registers Local Core to start at sign-in, and then opens Colab. The Windows executable is currently unsigned, so Windows may show a SmartScreen warning during this alpha phase.
+
+For a headless or Skill-first installation, download `colab-install.ps1`, then run PowerShell:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\colab-install.ps1 -GoogleCredentials C:\path\to\client_secret.json
 ```
 
-The bootstrap installs Local Core, the browser UI, and Agent Colab Skill. Download the optional `Colab-*-x64.exe` launcher from the same release. The Windows executable is currently unsigned, so Windows may show a SmartScreen warning during this alpha phase.
-
-Run the bootstrap before the optional launcher. If the launcher cannot start Local Core, it displays an installation error and writes diagnostics to `%LOCALAPPDATA%\AgentColab\logs\electron-shell.log`.
+If desktop setup cannot install or start Local Core, it shows a native error and writes diagnostics to `%LOCALAPPDATA%\AgentColab\logs\electron-shell.log`.
 
 After installation, ask a supported coding agent to “open Agent Colab,” or run the installed `colab-open` command from the Agent Colab Skill.
 
