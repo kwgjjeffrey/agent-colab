@@ -471,7 +471,7 @@ sequenceDiagram
 
 Session connector 无损读取来源原始文件或 API 输出。大文件按稳定边界生成不可变 chunks，并生成一个描述重组顺序、来源 adapter 与读取元数据的根文件。新增对话只生成新 chunks 与新 root，不重传历史大 blob。Session Reader 在本地重组或逐 chunk 分页，不把 messages 转成服务端关系表。
 
-已落地实现明确区分三个位置：贡献端 SQLite 的 `last_byte_offset` 是原始来源同步游标；服务端 `current_snapshot_id` 固定一条不可变 segment 链；Reader 的 opaque cursor 绑定该 snapshot，只负责 turns 分页。正常追加只上传来源游标之后、且以换行结束的完整 JSONL 记录；来源被截断时从 0 建立新基线。
+已落地实现明确区分三个位置：贡献端 SQLite 的 `last_byte_offset` 是原始来源同步游标；服务端 `current_snapshot_id` 固定一条不可变 segment 链；Reader 的 opaque cursor 绑定该 snapshot，只负责 turns 分页。正常追加只上传来源游标之后、且以换行结束的完整 JSONL 记录；来源被截断时从 0 建立新基线。每次同步先冻结本轮来源长度，以约 8 MiB 为目标边界聚合完整 JSONL records，每个 Server 已接受的 segment 都立即推进 SQLite source cursor 与 parent snapshot；网络失败从最后一个持久化边界恢复，不重传整份历史。单条 record 不拆分，超过 32 MiB 时明确拒绝并返回来源异常。贡献端 source registration 必须按当前登录 user 查找；另一账号即使共享同一台设备，也只能物化远端 snapshot，不能借用贡献者本地路径上传。
 
 服务端只保存 `channel_shares(kind=session)`、`session_snapshots`、`session_segments` 与 Blob，不加载 provider adapter。消费端依据 manifest 在应用数据目录原子生成 snapshot JSONL，Local Core 的 Codex、MyFlicker、Claude Code adapter 在读取时投影为 `session/snapshot/turns/page/freshness`。Python `colab-session-reader` 只是 Local API 薄客户端，不读取凭证或缓存、不复制 adapter。
 

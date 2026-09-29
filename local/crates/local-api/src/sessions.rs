@@ -7,9 +7,13 @@
 
 use super::*;
 use axum::extract::{Query, State};
+use rusqlite::OptionalExtension;
 use serde_json::{Value, json};
 use std::collections::{HashMap, HashSet};
 use std::io::{BufRead, BufReader, Read, Seek, SeekFrom};
+
+const SESSION_SEGMENT_TARGET_BYTES: usize = 8 * 1024 * 1024;
+const SESSION_RECORD_MAX_BYTES: usize = 32 * 1024 * 1024;
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -88,7 +92,9 @@ pub(super) async fn list_session_sources(
     let pattern = format!("%{}%", search.to_lowercase());
     let limit = query.limit.unwrap_or(200).clamp(1, 500) as i64;
     let store = state.inner.store.lock().await;
-    let mut statement = store.prepare("select catalog_id,thread_id,name,provider,source_adapter,source_path,updated_at from local_session_catalog where ?1='' or lower(name) like ?2 or lower(thread_id) like ?2 order by updated_at desc,thread_id desc limit ?3").map_err(LocalError::internal)?;
+    // The Agent share command accepts the catalog id and exact source path returned by this
+    // endpoint. They must therefore participate in the same lookup as human-facing title/thread.
+    let mut statement = store.prepare("select catalog_id,thread_id,name,provider,source_adapter,source_path,updated_at from local_session_catalog where ?1='' or lower(name) like ?2 or lower(thread_id) like ?2 or lower(catalog_id) like ?2 or lower(source_path) like ?2 order by updated_at desc,thread_id desc limit ?3").map_err(LocalError::internal)?;
     let rows = statement
         .query_map(rusqlite::params![search, pattern, limit], |row| {
             let thread_id: String = row.get(1)?;
@@ -440,9 +446,21 @@ pub(super) async fn sync_session(
 }
 
 async fn sync_source(state: &AppState, share_id: &str) -> Result<(), LocalError> {
-    let (path, offset, parent) = {
+    let user = current_user_id(state).await?;
+    let source = {
         let store = state.inner.store.lock().await;
-        store.query_row("select source_path,last_byte_offset,last_snapshot_id from local_session_sources where share_id=?1",[share_id],|r|Ok((PathBuf::from(r.get::<_,String>(0)?),r.get::<_,i64>(1)?,r.get::<_,Option<String>>(2)?))).map_err(LocalError::internal)?
+        store.query_row(
+            "select source_path,last_byte_offset,last_snapshot_id from local_session_sources where share_id=?1 and user_id=?2",
+            rusqlite::params![share_id, user],
+            |r| Ok((PathBuf::from(r.get::<_, String>(0)?), r.get::<_, i64>(1)?, r.get::<_, Option<String>>(2)?)),
+        )
+        .optional()
+        .map_err(LocalError::internal)?
+    };
+    // A consumer can materialize another member's Session but must never upload from a
+    // contributor source path merely because both accounts have used this device.
+    let Some((path, offset, mut parent)) = source else {
+        return Ok(());
     };
     let length = fs::metadata(&path).map_err(LocalError::internal)?.len() as i64;
     let reset_chain = length < offset;
@@ -453,52 +471,99 @@ async fn sync_source(state: &AppState, share_id: &str) -> Result<(), LocalError>
     let mut file = fs::File::open(&path).map_err(LocalError::internal)?;
     file.seek(SeekFrom::Start(start as u64))
         .map_err(LocalError::internal)?;
-    let mut bytes = Vec::new();
-    file.read_to_end(&mut bytes).map_err(LocalError::internal)?;
-    // Only complete JSONL records are published. A partially flushed tail remains after the
-    // source cursor and is retried on the next scan.
-    let Some(last_newline) = bytes.iter().rposition(|b| *b == b'\n') else {
-        return Ok(());
-    };
-    bytes.truncate(last_newline + 1);
-    let next = start + bytes.len() as i64;
-    let digest = Sha256::digest(&bytes)
-        .iter()
-        .map(|byte| format!("{byte:02x}"))
-        .collect::<String>();
-    let cursor = json!({"byteOffset":next,"sourceSize":length}).to_string();
     let token = access_token(state).await?;
-    let mut request = state
-        .inner
-        .http
-        .post(format!(
-            "{}/v1/sessions/{share_id}/segments",
-            state.inner.server_url
-        ))
-        .bearer_auth(token)
-        .query(&[
-            ("sourceCursor", cursor.as_str()),
-            ("digest", digest.as_str()),
-            ("resetChain", if reset_chain { "true" } else { "false" }),
-        ]);
-    if let Some(ref p) = parent {
-        request = request.query(&[("parentSnapshotId", p)])
+    // Freeze the readable extent for this pass. Concurrent appends are intentionally left for
+    // the next pass, which prevents a busy transcript from making synchronization unbounded.
+    let mut reader = BufReader::new(file.take((length - start) as u64));
+    let mut published = start;
+    let mut first_segment = true;
+    while let Some(bytes) = read_session_segment(&mut reader)? {
+        let next = published + bytes.len() as i64;
+        let digest = Sha256::digest(&bytes)
+            .iter()
+            .map(|byte| format!("{byte:02x}"))
+            .collect::<String>();
+        let cursor = json!({"byteOffset":next,"sourceSize":length}).to_string();
+        let mut request = state
+            .inner
+            .http
+            .post(format!(
+                "{}/v1/sessions/{share_id}/segments",
+                state.inner.server_url
+            ))
+            .bearer_auth(&token)
+            .query(&[
+                ("sourceCursor", cursor.as_str()),
+                ("digest", digest.as_str()),
+                (
+                    "resetChain",
+                    if reset_chain && first_segment {
+                        "true"
+                    } else {
+                        "false"
+                    },
+                ),
+            ]);
+        if let Some(ref snapshot) = parent {
+            request = request.query(&[("parentSnapshotId", snapshot)])
+        }
+        let response = request
+            .body(bytes)
+            .send()
+            .await
+            .map_err(LocalError::internal)?;
+        if !response.status().is_success() {
+            return Err(remote_error(response).await);
+        }
+        let value: Value = response.json().await.map_err(LocalError::internal)?;
+        let snapshot = value["snapshot"]["id"]
+            .as_str()
+            .ok_or_else(|| LocalError::internal("Server omitted Session snapshot id"))?
+            .to_owned();
+        {
+            // Commit progress after every accepted segment. A network failure therefore resumes
+            // from the last durable JSONL boundary instead of replaying a giant initial upload.
+            let store = state.inner.store.lock().await;
+            store.execute(
+                "update local_session_sources set last_byte_offset=?3,last_snapshot_id=?4,updated_at=current_timestamp where share_id=?1 and user_id=?2",
+                rusqlite::params![share_id, user, next, &snapshot],
+            ).map_err(LocalError::internal)?;
+        }
+        published = next;
+        parent = Some(snapshot);
+        first_segment = false;
     }
-    let response = request
-        .body(bytes)
-        .send()
-        .await
-        .map_err(LocalError::internal)?;
-    if !response.status().is_success() {
-        return Err(remote_error(response).await);
-    }
-    let value: Value = response.json().await.map_err(LocalError::internal)?;
-    let snapshot = value["snapshot"]["id"]
-        .as_str()
-        .ok_or_else(|| LocalError::internal("Server omitted Session snapshot id"))?;
-    let store = state.inner.store.lock().await;
-    store.execute("update local_session_sources set last_byte_offset=?2,last_snapshot_id=?3,updated_at=current_timestamp where share_id=?1",rusqlite::params![share_id,next,snapshot]).map_err(LocalError::internal)?;
     Ok(())
+}
+
+/// Build a bounded segment without ever splitting one provider JSONL record.
+fn read_session_segment(reader: &mut impl BufRead) -> Result<Option<Vec<u8>>, LocalError> {
+    let mut segment = Vec::with_capacity(SESSION_SEGMENT_TARGET_BYTES);
+    loop {
+        let mut record = Vec::new();
+        let count = reader
+            .read_until(b'\n', &mut record)
+            .map_err(LocalError::internal)?;
+        if count == 0 {
+            break;
+        }
+        if record.last() != Some(&b'\n') {
+            // Provider is still flushing this record. The cursor is advanced only for complete
+            // records, so this tail is naturally retried on the next synchronization pass.
+            break;
+        }
+        if record.len() > SESSION_RECORD_MAX_BYTES {
+            return Err(LocalError::bad_request(format!(
+                "Session contains a JSONL record larger than {} MiB",
+                SESSION_RECORD_MAX_BYTES / 1024 / 1024
+            )));
+        }
+        segment.extend_from_slice(&record);
+        if segment.len() >= SESSION_SEGMENT_TARGET_BYTES {
+            break;
+        }
+    }
+    Ok((!segment.is_empty()).then_some(segment))
 }
 
 async fn materialize(state: &AppState, share_id: &str) -> Result<String, LocalError> {
@@ -605,7 +670,9 @@ pub(super) async fn read_session(
 ) -> Result<Json<Value>, LocalError> {
     // Contributors publish pending bytes before reading; consumers pull the current immutable
     // snapshot. Both then execute the same adapter projection over a local raw cache.
-    if sync_source(&state, &share_id).await.is_err() { /* A consumer has no local source. */ }
+    // This is a no-op for consumers. For the contributor it must succeed; hiding the upload
+    // error would replace the actionable cause with a misleading "no synchronized snapshot".
+    sync_source(&state, &share_id).await?;
     let path = materialize(&state, &share_id).await?;
     let user = current_user_id(&state).await?;
     let (adapter, name, snapshot) = {
@@ -1128,6 +1195,34 @@ pub(super) async fn withdraw_session(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn session_segments_are_bounded_and_never_split_jsonl_records() {
+        let first = vec![b'a'; SESSION_SEGMENT_TARGET_BYTES - 1];
+        let second = vec![b'b'; 32];
+        let mut input = first.clone();
+        input.push(b'\n');
+        input.extend_from_slice(&second);
+        input.push(b'\n');
+        input.extend_from_slice(b"partial");
+        let mut reader = BufReader::new(std::io::Cursor::new(input));
+
+        let segment = read_session_segment(&mut reader).unwrap().unwrap();
+        assert_eq!(segment.len(), SESSION_SEGMENT_TARGET_BYTES);
+        assert_eq!(segment.last(), Some(&b'\n'));
+        let segment = read_session_segment(&mut reader).unwrap().unwrap();
+        assert_eq!(segment, [second, vec![b'\n']].concat());
+        assert!(read_session_segment(&mut reader).unwrap().is_none());
+    }
+
+    #[test]
+    fn session_segment_rejects_one_unbounded_provider_record() {
+        let mut input = vec![b'x'; SESSION_RECORD_MAX_BYTES + 1];
+        input.push(b'\n');
+        let error =
+            read_session_segment(&mut BufReader::new(std::io::Cursor::new(input))).unwrap_err();
+        assert!(error.message.contains("larger than"));
+    }
 
     #[test]
     fn codex_and_myflicker_are_projected_at_read_time() {

@@ -12,7 +12,7 @@ Skill consumption is an installation lifecycle: load metadata, choose a target A
 
 The Skill is a Python standard-library thin client for Local API. It never reads credentials, requests Server directly, or exposes cache internals. stdout is stable JSON; diagnostics go to stderr; documented exit codes are part of the contract.
 
-Generated “Give to Agent” instructions must use the actual stable installed executable recorded for the selected Agent target and a canonical `colab://` reference. Package tests must run the exact installed command from a temporary installation tree.
+Generated “Give to Agent” instructions must use the actual stable installed executable recorded for the selected Agent target and a canonical `colab://` reference. Package tests must run every executable entry point from a temporary installation tree. In-process imports are insufficient because the installed `bin/` path and source-tree package path differ.
 
 For a known Shared Item, `use --ref` is the single consumption operation: it owns name resolution, access checks, refresh/materialization and local-path delivery. `open` is discovery only. Public refs and normal JSON output use readable names. Resolution is scoped by Local Core's active account and Organization, uses the full descendant path, and exposes UUID refs only inside an explicit ambiguity candidate response.
 
