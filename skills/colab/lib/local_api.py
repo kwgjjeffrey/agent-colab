@@ -1,0 +1,51 @@
+"""Dependency-free transport for the user-local Colab Core.
+
+Local traffic explicitly bypasses proxy environment variables. Authentication will
+move to the Core discovery file; callers never receive remote Colab credentials.
+"""
+from __future__ import annotations
+import json
+import os
+import pathlib
+import urllib.error
+import urllib.request
+from lib.platform_paths import application_root
+
+DEFAULT_CORE = None
+_OPENER = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+
+class LocalApiError(RuntimeError):
+    def __init__(self, message: str, exit_code: int = 4):
+        super().__init__(message)
+        self.exit_code = exit_code
+
+def discovery():
+    path = pathlib.Path(os.environ.get(
+        "COLAB_DISCOVERY_FILE",
+        application_root() / "discovery.json",
+    ))
+    try:
+        if os.name != "nt" and path.stat().st_mode & 0o077:
+            raise LocalApiError(f"Colab discovery file is not private: {path}", 3)
+        value = json.loads(path.read_text())
+        return value["endpoint"], value["bearer"]
+    except (OSError, KeyError, ValueError) as error:
+        raise LocalApiError(f"Cannot read Colab Local Core discovery at {path}: {error}", 3) from error
+
+def request(method: str, path: str, *, core: str = DEFAULT_CORE, body=None, timeout: int = 30):
+    discovered_core, bearer = discovery()
+    core = core or discovered_core
+    payload = None if body is None else json.dumps(body).encode()
+    headers = {"authorization": f"Bearer {bearer}"}
+    if payload is not None:
+        headers["content-type"] = "application/json"
+    request = urllib.request.Request(core.rstrip("/") + path, data=payload, headers=headers, method=method)
+    try:
+        with _OPENER.open(request, timeout=timeout) as response:
+            raw = response.read()
+    except urllib.error.HTTPError as error:
+        detail = error.read().decode("utf-8", errors="replace")
+        raise LocalApiError(f"Local Core returned HTTP {error.code}: {detail}") from error
+    except urllib.error.URLError as error:
+        raise LocalApiError(f"Cannot reach Colab Local Core at {core}: {error.reason}", 3) from error
+    return json.loads(raw) if raw else None

@@ -1,0 +1,94 @@
+#!/usr/bin/env python3
+"""Discover local Skill sources and manage shared Skill installations."""
+from __future__ import annotations
+
+import argparse
+import sys
+from pathlib import Path
+from urllib.parse import quote, unquote, urlparse
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "lib"))
+from local_api import DEFAULT_CORE, LocalApiError, request
+from output import failure, success
+
+
+def parse_ref(value: str):
+    parsed = urlparse(value)
+    parts = ([parsed.netloc] if parsed.netloc else []) + [unquote(p) for p in parsed.path.split("/") if p]
+    if parsed.scheme != "colab" or len(parts) != 3 or parts[0] != "channel":
+        raise ValueError("ref must be colab://channel/{channel-name}/{skill-name}")
+    return parts[1], parts[2]
+
+
+def matches(rows, value):
+    exact = [row for row in rows if row["id"] == value]
+    return exact or [row for row in rows if row["name"].casefold() == value.casefold()]
+
+
+def resolve(core: str, ref: str):
+    channel_name, skill_name = parse_ref(ref)
+    candidates = []
+    for channel in matches(request("GET", "/v1/channels", core=core), channel_name):
+        rows = request("GET", f"/v1/channels/{channel['id']}/skills", core=core)
+        candidates.extend((channel, row) for row in matches(rows, skill_name))
+    if not candidates:
+        raise LocalApiError(f"Shared Skill not found: {skill_name}")
+    if len(candidates) != 1:
+        detail = [{"channel": c["name"], "skill": s["name"], "contributor": s.get("contributorName"),
+                   "updatedAt": s.get("updatedAt"), "preciseRef": f"colab://channel/{c['id']}/{s['id']}"}
+                  for c, s in candidates]
+        raise LocalApiError(f"Skill reference is ambiguous: {detail}", 2)
+    return candidates[0][1]
+
+
+def installations(core: str, ref: str):
+    skill = resolve(core, ref)
+    return skill, request("GET", f"/v1/skills/{skill['id']}/installations", core=core)
+
+
+def main():
+    parser = argparse.ArgumentParser(prog="colab-skill-tool")
+    parser.add_argument("--core", default=DEFAULT_CORE)
+    commands = parser.add_subparsers(dest="operation", required=True)
+    sources = commands.add_parser("sources", help="Search locally discovered Skill sources")
+    sources.add_argument("--query", default="")
+    sources.add_argument("--recent-hours", type=int, default=48)
+    sources.add_argument("--channel")
+    status = commands.add_parser("status", help="Show installation status for a shared Skill")
+    status.add_argument("--ref", required=True); status.add_argument("--target", choices=["codex", "claude", "myflicker"])
+    for name in ("install", "ensure", "check-update", "update", "uninstall"):
+        command = commands.add_parser(name)
+        command.add_argument("--ref", required=True)
+        command.add_argument("--target", required=True, choices=["codex", "claude", "myflicker"])
+    args = parser.parse_args()
+    try:
+        if args.operation == "sources":
+            query = f"query={quote(args.query, safe='')}&recentHours={max(0, args.recent_hours)}"
+            if args.channel:
+                parsed = urlparse(args.channel)
+                parts = ([parsed.netloc] if parsed.netloc else []) + [unquote(p) for p in parsed.path.split("/") if p]
+                if parsed.scheme != "colab" or len(parts) != 2 or parts[0] != "channel":
+                    raise ValueError("channel must be colab://channel/{channel-name}")
+                channels = matches(request("GET", "/v1/channels", core=args.core), parts[1])
+                if len(channels) != 1:
+                    raise LocalApiError("Channel reference is ambiguous", 2)
+                query += f"&channelId={quote(channels[0]['id'], safe='')}"
+            return success(request("GET", f"/v1/skill-sources?{query}", core=args.core))
+        skill, rows = installations(args.core, args.ref)
+        if args.operation in {"status", "check-update"}:
+            if getattr(args, "target", None):
+                rows = [row for row in rows if row["targetAgent"] == args.target]
+            return success({"name": skill["name"], "ref": args.ref, "installations": rows})
+        if args.operation in {"install", "ensure", "update"}:
+            row = request("POST", f"/v1/skills/{skill['id']}/targets/{args.target}/ensure", core=args.core, timeout=900)
+            return success({"name": skill["name"], "ref": args.ref, **row})
+        request("DELETE", f"/v1/skills/{skill['id']}/targets/{args.target}", core=args.core)
+        return success({"name": skill["name"], "ref": args.ref, "targetAgent": args.target, "state": "not_installed"})
+    except ValueError as error:
+        return failure("invalid_argument", str(error), 2)
+    except LocalApiError as error:
+        return failure("local_api_error", str(error), error.exit_code)
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -1,0 +1,275 @@
+<div id="colab-wireframe-v2" aria-label="Colab low fidelity application wireframe">
+  <style>
+    #colab-wireframe-v2 {
+      --c-bg: light-dark(#f5f5f2, #181817);
+      --c-panel: light-dark(#ffffff, #222220);
+      --c-alt: light-dark(#ecece8, #2b2b28);
+      --c-text: light-dark(#20201e, #f0f0ec);
+      --c-muted: light-dark(#6c6c65, #aaa9a1);
+      --c-line: light-dark(#d1d1ca, #45453f);
+      --c-selected: light-dark(#deded7, #3a3a35);
+      min-height: 680px;
+      display: grid;
+      grid-template-columns: 72px minmax(0, 1fr);
+      overflow: hidden;
+      color: var(--c-text);
+      background: var(--c-bg);
+      font-family: ui-sans-serif, system-ui, sans-serif;
+    }
+    #colab-wireframe-v2 * { box-sizing: border-box; }
+    #colab-wireframe-v2 button,
+    #colab-wireframe-v2 input { color: inherit; font: inherit; }
+    #colab-wireframe-v2 button { cursor: pointer; }
+    #colab-wireframe-v2 .rail {
+      padding: 12px 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      background: var(--c-alt);
+      border-right: 1px solid var(--c-line);
+    }
+    #colab-wireframe-v2 .server {
+      width: 46px;
+      height: 46px;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--c-line);
+      border-radius: 14px;
+      background: var(--c-panel);
+      font-weight: 500;
+    }
+    #colab-wireframe-v2 .server[aria-pressed="true"] {
+      border-radius: 10px;
+      color: var(--c-panel);
+      background: var(--c-text);
+    }
+    #colab-wireframe-v2 .server-add { margin-top: auto; }
+    #colab-wireframe-v2 .shell { min-width: 0; display: flex; flex-direction: column; }
+    #colab-wireframe-v2 .channel-header {
+      min-height: 72px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 12px 20px;
+      background: var(--c-panel);
+      border-bottom: 1px solid var(--c-line);
+    }
+    #colab-wireframe-v2 .channel-mark {
+      width: 40px;
+      height: 40px;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--c-line);
+      border-radius: 9px;
+    }
+    #colab-wireframe-v2 .channel-name { font-weight: 500; }
+    #colab-wireframe-v2 .channel-meta { display: block; color: var(--c-muted); margin-top: 3px; }
+    #colab-wireframe-v2 .button {
+      border: 1px solid var(--c-line);
+      border-radius: 6px;
+      padding: 8px 11px;
+      background: var(--c-panel);
+    }
+    #colab-wireframe-v2 .button-primary { color: var(--c-panel); background: var(--c-text); }
+    #colab-wireframe-v2 .work-button { margin-left: auto; }
+    #colab-wireframe-v2 .object-tabs {
+      display: flex;
+      align-items: end;
+      gap: 24px;
+      padding: 0 20px;
+      background: var(--c-panel);
+      border-bottom: 1px solid var(--c-line);
+    }
+    #colab-wireframe-v2 .tab {
+      border: 0;
+      border-bottom: 3px solid transparent;
+      padding: 13px 1px 10px;
+      background: transparent;
+    }
+    #colab-wireframe-v2 .tab[aria-selected="true"] { border-bottom-color: var(--c-text); font-weight: 500; }
+    #colab-wireframe-v2 .workspace { min-width: 0; display: flex; flex: 1; }
+    #colab-wireframe-v2 .content { min-width: 0; flex: 1; }
+    #colab-wireframe-v2 .toolbar {
+      min-height: 62px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 20px;
+      border-bottom: 1px solid var(--c-line);
+    }
+    #colab-wireframe-v2 .toolbar h2 { margin: 0; font-size: inherit; font-weight: 500; }
+    #colab-wireframe-v2 .search {
+      width: min(260px, 38%);
+      margin-left: auto;
+      padding: 8px 10px;
+      border: 1px solid var(--c-line);
+      border-radius: 6px;
+      background: var(--c-panel);
+    }
+    #colab-wireframe-v2 .list { padding: 12px 20px; }
+    #colab-wireframe-v2 .row {
+      display: grid;
+      grid-template-columns: minmax(220px, 1fr) 130px 110px auto;
+      gap: 12px;
+      align-items: center;
+      width: 100%;
+      padding: 14px 8px;
+      border: 0;
+      border-bottom: 1px solid var(--c-line);
+      background: transparent;
+      text-align: left;
+    }
+    #colab-wireframe-v2 .row:hover { background: var(--c-panel); }
+    #colab-wireframe-v2 .title { display: block; font-weight: 500; }
+    #colab-wireframe-v2 .summary,
+    #colab-wireframe-v2 .meta { display: block; color: var(--c-muted); margin-top: 4px; }
+    #colab-wireframe-v2 .actions { display: flex; gap: 6px; justify-content: flex-end; }
+    #colab-wireframe-v2 .action {
+      padding: 6px 9px;
+      border: 1px solid var(--c-line);
+      border-radius: 5px;
+      background: var(--c-panel);
+      white-space: nowrap;
+    }
+    #colab-wireframe-v2 .action-withdraw { color: var(--c-muted); }
+    #colab-wireframe-v2 .files-layout { display: grid; grid-template-columns: minmax(310px, 42%) minmax(320px, 1fr); min-height: 500px; }
+    #colab-wireframe-v2 .tree { padding: 14px 14px 24px 20px; border-right: 1px solid var(--c-line); }
+    #colab-wireframe-v2 .tree-row {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      min-height: 34px;
+      border: 0;
+      background: transparent;
+      text-align: left;
+      padding: 5px 6px;
+    }
+    #colab-wireframe-v2 .tree-row:hover { background: var(--c-panel); }
+    #colab-wireframe-v2 .tree-member { font-weight: 500; }
+    #colab-wireframe-v2 .tree-shared { margin-left: 20px; }
+    #colab-wireframe-v2 .tree-child { margin-left: 42px; }
+    #colab-wireframe-v2 .tree-grandchild { margin-left: 64px; }
+    #colab-wireframe-v2 .tree-actions { margin-left: auto; display: flex; gap: 5px; }
+    #colab-wireframe-v2 .tree-actions .action { padding: 4px 7px; }
+    #colab-wireframe-v2 .preview { padding: 22px; background: var(--c-panel); }
+    #colab-wireframe-v2 .preview h3 { margin: 0 0 6px; font-size: inherit; font-weight: 500; }
+    #colab-wireframe-v2 .preview-path { color: var(--c-muted); }
+    #colab-wireframe-v2 .preview pre {
+      margin-top: 20px;
+      padding: 14px;
+      white-space: pre-wrap;
+      color: var(--c-text);
+      background: var(--c-bg);
+      border: 1px solid var(--c-line);
+    }
+    #colab-wireframe-v2 .settings { max-width: 680px; padding: 22px 20px; }
+    #colab-wireframe-v2 .setting { padding: 0 0 20px; margin-bottom: 20px; border-bottom: 1px solid var(--c-line); }
+    #colab-wireframe-v2 .setting h3 { margin: 0 0 8px; font-size: inherit; font-weight: 500; }
+    #colab-wireframe-v2 .setting p { color: var(--c-muted); }
+    @media (max-width: 760px) {
+      #colab-wireframe-v2 { grid-template-columns: 58px minmax(0, 1fr); }
+      #colab-wireframe-v2 .files-layout { grid-template-columns: 1fr; }
+      #colab-wireframe-v2 .preview { display: none; }
+      #colab-wireframe-v2 .row { grid-template-columns: minmax(180px, 1fr) auto; }
+      #colab-wireframe-v2 .row > span:nth-child(2),
+      #colab-wireframe-v2 .row > span:nth-child(3) { display: none; }
+    }
+    @media (max-width: 500px) {
+      #colab-wireframe-v2 .object-tabs { gap: 13px; overflow-x: auto; }
+      #colab-wireframe-v2 .search { display: none; }
+      #colab-wireframe-v2 .channel-meta { display: none; }
+      #colab-wireframe-v2 .work-button { padding: 8px; }
+    }
+  </style>
+
+  <aside class="rail" aria-label="Channels">
+    <button class="server" type="button" aria-label="Developer Platform" aria-pressed="true">DP</button>
+    <button class="server" type="button" aria-label="Frontend Guild" aria-pressed="false">FG</button>
+    <button class="server" type="button" aria-label="Agent Research" aria-pressed="false">AR</button>
+    <button class="server server-add" type="button" aria-label="Create channel">＋</button>
+  </aside>
+
+  <section class="shell">
+    <header class="channel-header">
+      <div class="channel-mark">DP</div>
+      <div><span class="channel-name">Developer Platform</span><span class="channel-meta">12 members · shared context for the project</span></div>
+      <button class="button button-primary work-button" type="button">Let agent work</button>
+    </header>
+    <nav class="object-tabs" aria-label="Channel objects">
+      <button class="tab" type="button" data-view="sessions" aria-selected="true">Sessions</button>
+      <button class="tab" type="button" data-view="files" aria-selected="false">Files</button>
+      <button class="tab" type="button" data-view="skills" aria-selected="false">Skills</button>
+      <button class="tab" type="button" data-view="settings" aria-selected="false">Settings</button>
+    </nav>
+    <div class="workspace"><main class="content" id="c-content" aria-live="polite"></main></div>
+  </section>
+
+  <script>
+    (() => {
+      const root = document.getElementById('colab-wireframe-v2');
+      const content = root.querySelector('#c-content');
+      const listViews = {
+        sessions: {
+          heading: 'Sessions', share: 'Share my session', placeholder: 'Search sessions',
+          rows: [
+            ['Auth timeout investigation', 'Claude Code · 38 messages', 'Li Si', '12 min ago', false],
+            ['Release workflow design', 'Codex · 61 messages', 'You', 'Yesterday', true],
+            ['SDK compatibility review', 'Claude Code · 22 messages', 'Wang Wu', 'Sep 22', false]
+          ]
+        },
+        skills: {
+          heading: 'Skills', share: 'Share my skill', placeholder: 'Search skills',
+          rows: [
+            ['kdev-toolkit', 'v1.4.0 · Internal development tools', 'You', 'Today', true],
+            ['release-auditor', 'v0.8.2 · Release evidence checks', 'Li Si', 'Yesterday', false],
+            ['api-contract-review', 'v2.1.0 · API schema review', 'Wang Wu', 'Sep 20', false]
+          ]
+        }
+      };
+
+      function actionMarkup(owned) {
+        return `<span class="actions"><button class="action" type="button">Give to agent</button>${owned ? '<button class="action action-withdraw" type="button">Withdraw</button>' : ''}</span>`;
+      }
+
+      function renderList(view) {
+        content.innerHTML = `<div class="toolbar"><h2>${view.heading}</h2><input class="search" type="search" aria-label="Search ${view.heading}" placeholder="${view.placeholder}"><button class="button" type="button">${view.share}</button></div><div class="list">${view.rows.map((row) => `<div class="row"><button type="button" style="display:contents;border:0;background:transparent;text-align:left"><span><span class="title">${row[0]}</span><span class="summary">${row[1]}</span></span><span class="meta">${row[2]}</span><span class="meta">${row[3]}</span></button>${actionMarkup(row[4])}</div>`).join('')}</div>`;
+      }
+
+      function renderFiles() {
+        const files = [
+          ['auth-prototype', 'Directory · 17 files', 'Li Si', '9 min ago', false],
+          ['release-design', 'Directory · 8 files', 'You', 'Yesterday', true],
+          ['rollout-notes.md', 'Markdown · 18 KB', 'You', 'Sep 22', true]
+        ];
+        content.innerHTML = `<div class="toolbar"><h2>Files</h2><input class="search" type="search" aria-label="Search files" placeholder="Search shared files"><button class="button" type="button">Share my files</button></div><div class="list">${files.map((row, index) => `<div class="row"><button class="file-open" data-file-index="${index}" type="button" style="display:contents;border:0;background:transparent;text-align:left"><span><span class="title">${row[0]}</span><span class="summary">${row[1]}</span></span><span class="meta">${row[2]}</span><span class="meta">${row[3]}</span></button>${actionMarkup(row[4])}</div>`).join('')}</div>`;
+        content.querySelectorAll('.file-open').forEach((button) => button.addEventListener('click', () => renderFileDetail(files[Number(button.dataset.fileIndex)])));
+      }
+
+      function renderFileDetail(file) {
+        content.innerHTML = `<div class="toolbar"><button class="button" id="files-back" type="button">← Files</button><h2>${file[0]}</h2><span class="meta">Shared by ${file[2]}</span><span style="margin-left:auto"></span><button class="button" type="button">Give to agent</button>${file[4] ? '<button class="button" type="button">Withdraw</button>' : ''}</div><div class="files-layout"><section class="tree" aria-label="Files inside shared item"><button class="tree-row" type="button">▾ docs</button><button class="tree-row tree-child" type="button" data-preview="design.md">◇ design.md</button><button class="tree-row" type="button">▾ src</button><button class="tree-row tree-child" type="button" data-preview="probe.ts">◇ probe.ts</button><button class="tree-row" type="button" data-preview="README.md">◇ README.md</button></section><section class="preview" aria-label="File preview"><h3 id="preview-title">README.md</h3><span class="preview-path" id="preview-path">${file[0]} / README.md</span><pre id="preview-body"># ${file[0]}\n\nThis file belongs to one shared Files item.\n\nThe preview is read-only.</pre></section></div>`;
+        content.querySelector('#files-back').addEventListener('click', renderFiles);
+        content.querySelectorAll('[data-preview]').forEach((button) => button.addEventListener('click', () => {
+          content.querySelector('#preview-title').textContent = button.dataset.preview;
+          content.querySelector('#preview-path').textContent = `${file[0]} / ${button.dataset.preview}`;
+          content.querySelector('#preview-body').textContent = `Preview of ${button.dataset.preview}\n\nShared files are read-only in Colab.`;
+        }));
+      }
+
+      function renderSettings() {
+        content.innerHTML = `<div class="toolbar"><h2>Settings</h2></div><div class="settings"><section class="setting"><h3>Channel identity</h3><p>Icon: DP · Name: Developer Platform</p><button class="button" type="button">Edit</button></section><section class="setting"><h3>Members</h3><p>12 members · 2 admins</p><button class="button" type="button">Manage members</button></section></div>`;
+      }
+
+      function selectView(name) {
+        root.querySelectorAll('.tab').forEach((tab) => tab.setAttribute('aria-selected', String(tab.dataset.view === name)));
+        if (name === 'files') renderFiles();
+        else if (name === 'settings') renderSettings();
+        else renderList(listViews[name]);
+      }
+
+      root.querySelectorAll('.tab').forEach((tab) => tab.addEventListener('click', () => selectView(tab.dataset.view)));
+      selectView('sessions');
+    })();
+  </script>
+</div>

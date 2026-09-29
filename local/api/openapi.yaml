@@ -1,0 +1,151 @@
+openapi: 3.1.0
+info:
+  title: Colab Local API
+  version: 0.1.0
+paths:
+  /v1/status:
+    get:
+      operationId: getLocalStatus
+      responses:
+        "200":
+          description: Local Core status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LocalStatus"
+  /v1/channels/{channelId}/files:
+    get:
+      operationId: listLocalFileShares
+      parameters:
+        - { name: channelId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: Files shared items enriched with this account's local path }
+  /v1/channels/{channelId}/files/share:
+    post:
+      operationId: shareLocalFiles
+      parameters:
+        - { name: channelId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [localPath]
+              properties:
+                localPath: { type: string }
+                name: { type: string }
+                syncExcludes:
+                  type: array
+                  items: { type: string, enum: [node_modules, target, dist, build, .cache] }
+      responses:
+        "201": { description: Shared item registered and durable first-publication job accepted }
+  /v1/files/inspect-source:
+    post:
+      operationId: inspectLocalFileSource
+      responses:
+        "200": { description: On-demand file counts, byte totals and generated-directory exclusion candidates }
+  /v1/files/{shareId}/sync-scope:
+    get:
+      operationId: getFileSynchronizationScope
+      responses:
+        "200": { description: Scope calculated from the source tree and shadow Git info/exclude }
+    patch:
+      operationId: updateFileSynchronizationScope
+      responses:
+        "200": { description: Shadow Git info/exclude updated and a durable publication job enqueued }
+  /v1/files/{shareId}/publish:
+    post:
+      operationId: publishLocalFileChanges
+      responses:
+        "200": { description: Source rescanned and changed objects published }
+  /v1/files/{shareId}/materialize:
+    post:
+      operationId: materializeFileShare
+      responses:
+        "200": { description: Revision packs downloaded and current root materialized }
+  /v1/files/{shareId}/tree:
+    get:
+      operationId: listMaterializedFileTree
+      responses:
+        "200": { description: Bounded recursive file tree from the local materialization }
+  /v1/files/{shareId}/content:
+    get:
+      operationId: readMaterializedTextFile
+      parameters:
+        - { name: path, in: query, required: true, schema: { type: string } }
+      responses:
+        "200": { description: UTF-8 text preview up to 1 MiB }
+  /v1/session-sources:
+    get:
+      operationId: listLocalSessionSources
+      parameters:
+        - { name: q, in: query, required: false, schema: { type: string }, description: Case-insensitive title or thread/session ID search }
+        - { name: limit, in: query, required: false, schema: { type: integer, minimum: 1, maximum: 500, default: 200 } }
+      responses:
+        "200": { description: Session metadata queried from the background-maintained SQLite catalog; no transcript scan occurs in this request }
+  /v1/channels/{channelId}/sessions:
+    get:
+      operationId: listLocalSessionShares
+      responses:
+        "200": { description: Active shared Sessions enriched with local cache state }
+  /v1/channels/{channelId}/sessions/share:
+    post:
+      operationId: shareLocalSession
+      responses:
+        "201": { description: Session registered; initial raw synchronization continues independently }
+  /v1/sessions/{shareId}/read:
+    post:
+      operationId: readSharedSession
+      responses:
+        "200": { description: Snapshot-pinned normalized turns and opaque next cursor }
+  /v1/skill-sources:
+    get:
+      operationId: listLocalSkillSources
+      responses:
+        "200": { description: Skill catalog filtered by content change time and Channel registration }
+  /v1/channels/{channelId}/skills:
+    get:
+      operationId: listLocalSkillShares
+      responses:
+        "200": { description: Active shared Skills enriched with a local path when available }
+  /v1/channels/{channelId}/skills/share:
+    post:
+      operationId: shareLocalSkill
+      responses:
+        "201": { description: Skill source registered and its first shadow-Git snapshot published }
+  /v1/skills/{shareId}/materialize:
+    post:
+      operationId: materializeSharedSkill
+      responses:
+        "200": { description: Current Skill snapshot materialized into application data }
+  /v1/skills/{shareId}/installations:
+    get:
+      operationId: listSharedSkillInstallations
+      responses:
+        "200": { description: Target receipt states including available updates and local conflicts }
+  /v1/skills/{shareId}/targets/{target}/ensure:
+    post:
+      operationId: ensureSharedSkillInstalled
+      responses:
+        "200": { description: Skill installed or updated atomically }
+        "409": { description: Target is unmanaged or locally modified }
+  /v1/skills/{shareId}/targets/{target}:
+    delete:
+      operationId: uninstallSharedSkill
+      responses:
+        "204": { description: Managed unmodified installation removed }
+        "409": { description: Installed Skill has local changes and was preserved }
+  /v1/skills/{shareId}:
+    delete:
+      operationId: withdrawLocalSkillShare
+      responses:
+        "204": { description: Owned Skill withdrawn; consumer installations remain }
+components:
+  schemas:
+    LocalStatus:
+      type: object
+      required: [service, version]
+      properties:
+        service: { type: string, const: colabd }
+        version: { type: string }

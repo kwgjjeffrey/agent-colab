@@ -1,0 +1,23 @@
+[package]
+name = "colab-server"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+axum.workspace = true
+colab-server-domain = { path = "../domain" }
+colab-server-auth = { path = "../auth" }
+colab-server-persistence = { path = "../persistence" }
+colab-server-email = { path = "../email" }
+dotenvy.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+reqwest.workspace = true
+tokio.workspace = true
+tokio-util.workspace = true
+tower-http.workspace = true
+uuid.workspace = true
+sha2.workspace = true
+hex.workspace = true

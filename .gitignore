@@ -1,0 +1,38 @@
+# Build outputs and downloaded distributions
+dist/
+**/dist/
+**/target/
+**/node_modules/
+**/*.tsbuildinfo
+
+# Local runtime state
+**/.data/
+**/.work/
+**/.wrangler/
+**/*.sqlite
+**/*.sqlite-*
+**/*.db
+**/*.log
+
+# Credentials and machine-specific configuration
+**/.env
+**/.env.*
+!**/.env.example
+!**/.env.local.example
+**/*.secret.json
+**/client_secret*.json
+**/*.pem
+**/*.key
+**/*.p12
+**/*.pfx
+
+# Editor and operating-system metadata
+.DS_Store
+Thumbs.db
+Desktop.ini
+.idea/
+.vscode/
+
+# Repository-local Agent tooling installed for development, not product source
+.agents/
+skills-lock.json

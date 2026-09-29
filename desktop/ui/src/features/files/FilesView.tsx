@@ -1,0 +1,413 @@
+import { useState } from "react";
+import { CheckIcon, PlusIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { trackedFetch } from "@/api/request-activity";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyTitle,
+} from "@/components/ui/empty";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  AgentPromptDialog,
+  agentSkillCommand,
+  type AgentTarget,
+} from "@/features/agent/AgentPromptDialog";
+
+export type FileShare = {
+  id: string;
+  channelId: string;
+  name: string;
+  contributorName: string;
+  contributorAvatarUrl?: string;
+  state: string;
+  currentRootOid?: string;
+  canWithdraw: boolean;
+  updatedAt: string;
+  localPath?: string;
+  syncState?: "preparing" | "syncing" | "failed" | "ready";
+  syncError?: string;
+};
+
+type LocalFileEntry = {
+  path: string;
+  name: string;
+  kind: "directory" | "file";
+  size: number;
+};
+
+type Props = {
+  shares: FileShare[];
+  busy: boolean;
+  onChoose: (directory: boolean) => Promise<string | null>;
+  onShare: (path: string, syncExcludes: string[]) => Promise<void>;
+  onEnsureLocal: (share: FileShare) => Promise<FileShare>;
+  onWithdraw: (share: FileShare) => void;
+  onRetry: (share: FileShare) => void;
+  defaultAgent: AgentTarget;
+  installedAgents: Record<string, { installed: boolean }>;
+};
+
+type SourceInspection = {
+  localPath: string;
+  includedFiles: number;
+  includedBytes: number;
+  excludedFiles: number;
+  excludedBytes: number;
+  projectIgnoreApplied: boolean;
+  exceedsTransportLimit: boolean;
+  candidates: Array<{
+    pattern: string;
+    fileCount: number;
+    byteSize: number;
+    selected: boolean;
+  }>;
+};
+
+/** Files owns only presentation and local browsing; synchronization remains a Local Core use case. */
+export function FilesView({
+  shares,
+  busy,
+  onChoose,
+  onShare,
+  onEnsureLocal,
+  onWithdraw,
+  onRetry,
+  defaultAgent,
+  installedAgents,
+}: Props) {
+  const [openShare, setOpenShare] = useState<string>();
+  const [entries, setEntries] = useState<LocalFileEntry[]>([]);
+  const [preview, setPreview] = useState<{ path: string; content: string }>();
+  const [agentPrompt, setAgentPrompt] = useState<{ ref: string; shareName: string }>();
+  const [browseError, setBrowseError] = useState<string>();
+  const [inspection, setInspection] = useState<SourceInspection>();
+  const [inspecting, setInspecting] = useState(false);
+  const [selectedExcludes, setSelectedExcludes] = useState<string[]>([]);
+  const [scopeShareId, setScopeShareId] = useState<string>();
+
+  async function localShare(share: FileShare) {
+    return share.localPath ? share : await onEnsureLocal(share);
+  }
+
+  async function browse(share: FileShare) {
+    if (openShare === share.id) return setOpenShare(undefined);
+    setBrowseError(undefined);
+    try {
+      const local = await localShare(share);
+      const response = await trackedFetch(
+        `/v1/files/${local.id}/tree`,
+      );
+      if (!response.ok) return setBrowseError(await response.text());
+      setEntries(await response.json());
+      setPreview(undefined);
+      setOpenShare(local.id);
+      // Consumption is cache-first. Refresh runs in the background and never blocks browsing.
+      if (!share.canWithdraw && share.localPath) void onEnsureLocal(share);
+    } catch (reason) {
+      setBrowseError(String(reason));
+    }
+  }
+
+  async function giveToAgent(share: FileShare) {
+    try {
+      const channel = await trackedFetch("/v1/channels")
+        .then((response) => response.json())
+        .then((rows) => rows.find((row: { id: string }) => row.id === share.channelId));
+      if (!channel) throw new Error("Channel is unavailable");
+      const segment = (value: string) => encodeURIComponent(value);
+      const ref = `colab://channel/${segment(channel.name)}/${segment(share.name)}`;
+      setAgentPrompt({ ref, shareName: share.name });
+    } catch (reason) {
+      setBrowseError(String(reason));
+    }
+  }
+
+  function promptFor(agent: AgentTarget) {
+    if (!agentPrompt) return "";
+    return `The user's task may rely on context in the shared Files item “${agentPrompt.shareName}”. Run this command first; it updates the shared content locally and returns its root localPath and file tree:
+
+${agentSkillCommand(agent, "colab-browser")} use --ref '${agentPrompt.ref}'
+
+Treat localPath as read-only context. Use your file tools to read only the files relevant to the task, then complete the user's request.`;
+  }
+
+  async function read(shareId: string, path: string) {
+    setBrowseError(undefined);
+    const response = await trackedFetch(
+      `/v1/files/${shareId}/content?path=${encodeURIComponent(path)}`,
+    );
+    if (!response.ok) return setBrowseError(await response.text());
+    setPreview(await response.json());
+  }
+
+  async function inspect(path: string, excludes: string[], useRecommendations = false) {
+    setInspecting(true);
+    setBrowseError(undefined);
+    try {
+      const response = await trackedFetch("/v1/files/inspect-source", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ localPath: path, syncExcludes: excludes }),
+      });
+      if (!response.ok) throw new Error(await response.text());
+      const value: SourceInspection = await response.json();
+      if (useRecommendations) {
+        const recommended = value.candidates.map((candidate) => candidate.pattern);
+        setSelectedExcludes(recommended);
+        if (recommended.length > 0) return await inspect(path, recommended, false);
+      }
+      setSelectedExcludes(excludes);
+      setInspection(value);
+    } catch (reason) {
+      setBrowseError(String(reason));
+    } finally {
+      setInspecting(false);
+    }
+  }
+
+  async function choose(directory: boolean) {
+    const path = await onChoose(directory);
+    if (path) {
+      setScopeShareId(undefined);
+      await inspect(path, [], true);
+    }
+  }
+
+  async function editScope(share: FileShare) {
+    setInspecting(true);
+    setBrowseError(undefined);
+    try {
+      const response = await trackedFetch(`/v1/files/${share.id}/sync-scope`);
+      if (!response.ok) throw new Error(await response.text());
+      const value: SourceInspection = await response.json();
+      setScopeShareId(share.id);
+      setSelectedExcludes(value.candidates.filter((candidate) => candidate.selected).map((candidate) => candidate.pattern));
+      setInspection(value);
+    } catch (reason) {
+      setBrowseError(String(reason));
+    } finally {
+      setInspecting(false);
+    }
+  }
+
+  async function toggleExclude(pattern: string) {
+    if (!inspection) return;
+    const next = selectedExcludes.includes(pattern)
+      ? selectedExcludes.filter((value) => value !== pattern)
+      : [...selectedExcludes, pattern];
+    await inspect(inspection.localPath, next);
+  }
+
+  async function confirmShare() {
+    if (!inspection) return;
+    if (scopeShareId) {
+      const response = await trackedFetch(`/v1/files/${scopeShareId}/sync-scope`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ syncExcludes: selectedExcludes }),
+      });
+      if (!response.ok) throw new Error(await response.text());
+    } else {
+      await onShare(inspection.localPath, selectedExcludes);
+    }
+    setInspection(undefined);
+    setSelectedExcludes([]);
+    setScopeShareId(undefined);
+  }
+
+  const formatBytes = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 ** 2) return `${(bytes / 1024).toFixed(1)} KiB`;
+    if (bytes < 1024 ** 3) return `${(bytes / 1024 ** 2).toFixed(1)} MiB`;
+    return `${(bytes / 1024 ** 3).toFixed(1)} GiB`;
+  };
+
+  return (
+    <div className="mx-auto flex max-w-4xl flex-col gap-5 py-6">
+      <div className="flex justify-end">
+        <DropdownMenu>
+          <DropdownMenuTrigger render={<Button disabled={busy} />}>
+            <PlusIcon /> Share files
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuGroup>
+              <DropdownMenuItem onClick={() => void choose(false)}>Choose a file</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => void choose(true)}>Choose a folder</DropdownMenuItem>
+            </DropdownMenuGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+      {shares.length === 0 ? (
+        <Empty className="min-h-[60vh]">
+          <EmptyHeader>
+            <EmptyTitle>No shared files yet</EmptyTitle>
+            <EmptyDescription>
+              Share a local file or folder to make its context available to this
+              Channel.
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      ) : (
+        <div className="divide-y rounded-xl border">
+          {shares.map((share) => (
+            <div key={share.id}>
+              <div className="group flex items-center gap-4 p-4">
+                <button
+                  type="button"
+                  className="min-w-0 flex-1 cursor-pointer text-left"
+                  onClick={() => void browse(share)}
+                >
+                  <span className="flex min-w-0 items-center gap-2">
+                    <Avatar size="sm">
+                      <AvatarImage src={share.contributorAvatarUrl} alt="" />
+                      <AvatarFallback>{share.contributorName.slice(0, 1).toUpperCase()}</AvatarFallback>
+                    </Avatar>
+                    <span className="truncate font-medium">{share.name}</span>
+                    <span className="shrink-0 text-sm text-muted-foreground">{share.contributorName}{share.canWithdraw ? " (me)" : ""}</span>
+                  </span>
+                  {share.syncState && share.syncState !== "ready" && (
+                    <p className={share.syncState === "failed" ? "text-sm text-destructive" : "text-sm text-muted-foreground"}>
+                      {share.syncState === "failed" ? share.syncError || "Synchronization failed" : share.syncState === "preparing" ? "Preparing first snapshot…" : "Synchronizing…"}
+                    </p>
+                  )}
+                </button>
+                {share.syncState === "failed" && (
+                  <Button variant="outline" disabled={busy} onClick={() => onRetry(share)}>
+                    Retry
+                  </Button>
+                )}
+                {share.canWithdraw && (
+                  <Button variant="outline" className="opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100" disabled={busy} onClick={() => void editScope(share)}>
+                    Sync scope
+                  </Button>
+                )}
+                <Button
+                  variant="outline"
+                  className="opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+                  disabled={busy || !share.currentRootOid}
+                  onClick={() => void giveToAgent(share)}
+                >
+                  Give to Agent
+                </Button>
+                {share.canWithdraw && (
+                  <Button
+                    variant="destructive"
+                    className="opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+                    disabled={busy}
+                    onClick={() => void onWithdraw(share)}
+                  >
+                    Withdraw
+                  </Button>
+                )}
+              </div>
+              {openShare === share.id && (
+                <div className="grid min-h-64 grid-cols-[minmax(220px,1fr)_2fr] border-t bg-muted/20">
+                  <div className="border-r p-3">
+                    {entries.map((entry) => (
+                      <button
+                        type="button"
+                        key={entry.path}
+                        disabled={entry.kind === "directory"}
+                        onClick={() => void read(share.id, entry.path)}
+                        className="block w-full cursor-pointer truncate rounded px-2 py-1 text-left text-sm hover:bg-muted disabled:cursor-default disabled:font-medium disabled:text-foreground"
+                        style={{
+                          paddingLeft: `${8 + (entry.path.split("/").length - 1) * 16}px`,
+                        }}
+                      >
+                        {entry.kind === "directory" ? "▾ " : ""}
+                        {entry.name}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="min-w-0 p-4">
+                    {preview ? (
+                      <>
+                        <p className="mb-3 text-xs font-medium text-muted-foreground">
+                          {preview.path}
+                        </p>
+                        <pre className="overflow-auto whitespace-pre-wrap text-sm">
+                          {preview.content}
+                        </pre>
+                      </>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        Select a text file to preview it.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+      <AgentPromptDialog
+        open={Boolean(agentPrompt)}
+        title={`Give “${agentPrompt?.shareName ?? ""}” to Agent`}
+        description="Copy this instruction and continue the task in your coding Agent."
+        defaultAgent={defaultAgent}
+        installedAgents={installedAgents}
+        promptFor={promptFor}
+        onClose={() => setAgentPrompt(undefined)}
+        onError={setBrowseError}
+      />
+      <Dialog open={Boolean(inspection) || inspecting} onOpenChange={(open) => !open && !inspecting && setInspection(undefined)}>
+        <DialogContent className="sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle>{scopeShareId ? "Edit synchronization scope" : "Review synchronization scope"}</DialogTitle>
+            <DialogDescription>
+              Colab stores these exclusions outside the source folder and never changes its Git configuration.
+            </DialogDescription>
+          </DialogHeader>
+          {inspecting && !inspection ? (
+            <p className="py-8 text-center text-muted-foreground">Scanning files…</p>
+          ) : inspection ? (
+            <div className="grid gap-4">
+              <p className="truncate rounded-lg bg-muted px-3 py-2 font-mono text-xs">{inspection.localPath}</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-lg border p-3"><strong className="block">Included</strong><span className="text-muted-foreground">{inspection.includedFiles} files · {formatBytes(inspection.includedBytes)}</span></div>
+                <div className="rounded-lg border p-3"><strong className="block">Excluded</strong><span className="text-muted-foreground">{inspection.excludedFiles} files · {formatBytes(inspection.excludedBytes)}</span></div>
+              </div>
+              {inspection.projectIgnoreApplied && <p className="text-xs text-muted-foreground">The project’s existing .gitignore is honored read-only.</p>}
+              {inspection.candidates.length > 0 && (
+                <div className="grid gap-1">
+                  <p className="text-sm font-medium">Generated directories</p>
+                  {inspection.candidates.map((candidate) => (
+                    <Button key={candidate.pattern} type="button" variant="ghost" className="justify-start" disabled={inspecting} onClick={() => void toggleExclude(candidate.pattern)}>
+                      <span className="flex size-5 items-center justify-center rounded border">{selectedExcludes.includes(candidate.pattern) && <CheckIcon className="size-3" />}</span>
+                      <span className="flex-1 text-left">{candidate.pattern}/</span>
+                      <span className="text-muted-foreground">{candidate.fileCount} files · {formatBytes(candidate.byteSize)}</span>
+                    </Button>
+                  ))}
+                </div>
+              )}
+              {inspection.exceedsTransportLimit && <p className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">The selected content exceeds the current 200 MiB transport limit. Exclude generated directories or choose a narrower source.</p>}
+            </div>
+          ) : null}
+          <DialogFooter>
+            <Button variant="outline" disabled={inspecting || busy} onClick={() => setInspection(undefined)}>Cancel</Button>
+            <Button disabled={!inspection || inspecting || busy || inspection.exceedsTransportLimit} onClick={() => void confirmShare()}>{scopeShareId ? "Save scope" : "Share"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {browseError && <p className="text-sm text-destructive">{browseError}</p>}
+    </div>
+  );
+}

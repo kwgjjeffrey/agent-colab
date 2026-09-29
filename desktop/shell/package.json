@@ -1,0 +1,9 @@
+{
+  "name": "@colab/electron-shell",
+  "version": "0.1.15-dev",
+  "private": true,
+  "main": "electron/main.cjs",
+  "scripts": { "dev": "COLAB_UI_DEV_URL=http://127.0.0.1:1420 electron .", "build": "electron-builder --dir", "check": "node --check electron/main.cjs && node --check electron/preload.cjs", "test": "node --test electron/*.test.cjs" },
+  "devDependencies": { "electron": "40.8.2", "electron-builder": "26.0.12" },
+  "build": { "appId": "online.agent-colab.Colab", "productName": "Colab", "asar": true, "files": ["electron/**/*", "package.json"], "mac": {"target": ["zip"], "category": "public.app-category.productivity", "icon": "icons/icon.icns"}, "win": {"target": ["portable"]}, "artifactName": "Colab-${version}-${arch}.${ext}" }
+}

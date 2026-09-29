@@ -1,0 +1,335 @@
+#!/usr/bin/env python3
+"""Install/update the Core, GUI resources, and this Skill from one manifest."""
+from __future__ import annotations
+import argparse, hashlib, json, os, pathlib, plistlib, shutil, subprocess, sys, tarfile, tempfile, time, urllib.parse, urllib.request, zipfile
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
+from lib.platform_paths import application_root, platform_id
+
+DEFAULT_MANIFEST = os.environ.get(
+    "COLAB_RELEASE_MANIFEST",
+    "https://artifacts.agent-colab.zhiyuanwangluo.online/channels/stable.json",
+)
+ROOT = application_root()
+DISCOVERY = ROOT / "discovery.json"
+TARGETS = {"codex": pathlib.Path.home()/".agents/skills/agent-colab", "claude": pathlib.Path.home()/".claude/skills/agent-colab", "myflicker": pathlib.Path.home()/".myflicker/skills/agent-colab"}
+LEGACY_TARGETS = {"codex": pathlib.Path.home()/".agents/skills/colab", "claude": pathlib.Path.home()/".claude/skills/colab", "myflicker": pathlib.Path.home()/".myflicker/skills/colab"}
+DOWNLOAD_HEADERS = {"User-Agent": "agent-colab-setup/1"}
+
+def open_release_url(url: str, timeout: int):
+    """Use an explicit product UA; Cloudflare rejects urllib's default UA."""
+    request = urllib.request.Request(url, headers=DOWNLOAD_HEADERS)
+    return urllib.request.urlopen(request, timeout=timeout)
+
+def download(url: str, sha256: str, size: int, target: pathlib.Path):
+    with open_release_url(url, timeout=180) as response, target.open("wb") as output:
+        shutil.copyfileobj(response, output)
+    raw = target.read_bytes()
+    if len(raw) != size or hashlib.sha256(raw).hexdigest() != sha256:
+        raise RuntimeError(f"artifact verification failed: {url}")
+
+def load_verified_manifest(url: str, temporary: pathlib.Path):
+    manifest=temporary/"release.json"; signature=temporary/"release.json.sig"
+    with open_release_url(url,timeout=30) as response: manifest.write_bytes(response.read())
+    with open_release_url(url+".sig",timeout=30) as response: signature.write_bytes(response.read())
+    allowed=pathlib.Path(__file__).resolve().with_name("release-allowed-signers")
+    result=subprocess.run(["ssh-keygen","-Y","verify","-f",str(allowed),"-I","agent-colab","-n","agent-colab-release","-s",str(signature)],input=manifest.read_bytes(),stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+    if result.returncode: raise RuntimeError("release manifest signature verification failed")
+    return json.loads(manifest.read_text())
+
+def activate_link(target: pathlib.Path, source: pathlib.Path):
+    target.parent.mkdir(parents=True, exist_ok=True)
+    temporary = target.with_name(target.name + f".tmp-{os.getpid()}")
+    remove_link(temporary)
+    if os.name == "nt":
+        # Directory junctions do not require Windows Developer Mode or elevation,
+        # unlike ordinary directory symlinks. They preserve immutable version roots
+        # while allowing the active pointer to move during an update.
+        subprocess.run(["cmd", "/d", "/c", "mklink", "/J", str(temporary), str(source)], check=True, stdout=subprocess.DEVNULL)
+        remove_link(target)
+        temporary.rename(target)
+    else:
+        temporary.symlink_to(source, target_is_directory=True)
+        os.replace(temporary, target)
+
+def remove_link(path: pathlib.Path):
+    if not path.exists() and not path.is_symlink(): return
+    if path.is_symlink(): path.unlink()
+    elif os.name == "nt" and path.is_dir():
+        subprocess.run(["cmd", "/d", "/c", "rmdir", str(path)], check=True, stdout=subprocess.DEVNULL)
+    else: raise RuntimeError(f"refusing to replace unmanaged directory: {path}")
+
+def is_managed_target(path: pathlib.Path) -> bool:
+    try: return path.resolve().is_relative_to((ROOT / "versions/colab-skill").resolve())
+    except (OSError, ValueError): return False
+
+def remove_managed_legacy_link(agent: str):
+    """Remove only the old Colab link created by this installer, never user-owned content."""
+    legacy = LEGACY_TARGETS[agent]
+    managed = (ROOT / "versions/colab-skill").resolve()
+    if (legacy.is_symlink() or (os.name == "nt" and legacy.exists())) and legacy.resolve().is_relative_to(managed):
+        remove_link(legacy)
+
+def safe_extract(archive: pathlib.Path, destination: pathlib.Path):
+    """Extract only regular archive paths contained by the staging directory."""
+    destination = destination.resolve()
+    if archive.suffix == ".zip":
+        with zipfile.ZipFile(archive) as bundle:
+            members = bundle.infolist()
+            names = [member.filename for member in members]
+            if any(member.is_dir() is False and (member.external_attr >> 16) & 0o170000 == 0o120000 for member in members):
+                raise RuntimeError(f"symbolic links are not allowed in {archive.name}")
+            for name in names:
+                if not (destination / name).resolve().is_relative_to(destination):
+                    raise RuntimeError(f"unsafe archive path: {name}")
+            bundle.extractall(destination)
+    else:
+        with tarfile.open(archive, "r:gz") as bundle:
+            members = bundle.getmembers()
+            for member in members:
+                if member.issym() or member.islnk() or not (destination / member.name).resolve().is_relative_to(destination):
+                    raise RuntimeError(f"unsafe archive member: {member.name}")
+            # Python 3.11 on current macOS lacks extractall(filter=...). The
+            # explicit containment/link checks above provide the required guard.
+            bundle.extractall(destination, members=members)
+
+def safe_extract_macos_app(archive: pathlib.Path, destination: pathlib.Path):
+    """Preserve Electron framework links while rejecting path/link escapes from staging."""
+    destination=destination.resolve()
+    with zipfile.ZipFile(archive) as bundle:
+        for member in bundle.infolist():
+            if not (destination/member.filename).resolve().is_relative_to(destination):
+                raise RuntimeError(f"unsafe app archive path: {member.filename}")
+    subprocess.run(["ditto","-x","-k",str(archive),str(destination)],check=True)
+    for root,directories,files in os.walk(destination,followlinks=False):
+        for name in directories+files:
+            candidate=pathlib.Path(root)/name
+            if candidate.is_symlink() and not candidate.resolve().is_relative_to(destination):
+                raise RuntimeError(f"unsafe app archive link: {candidate}")
+
+def install_launchd(server_url: str, credentials: pathlib.Path):
+    if sys.platform != "darwin": return
+    launch_agents=pathlib.Path.home()/"Library/LaunchAgents"; launch_agents.mkdir(parents=True,exist_ok=True)
+    label="online.agent-colab.core"; plist=launch_agents/f"{label}.plist"
+    payload={"Label":label,"ProgramArguments":[str(ROOT/"current/core/colabd")],"RunAtLoad":True,"KeepAlive":True,
+      "EnvironmentVariables":{"COLAB_SERVER_URL":server_url,"COLAB_GUI_ROOT":str(ROOT/"current/ui"),"COLAB_GOOGLE_OAUTH_CREDENTIALS_FILE":str(credentials),"COLAB_DISCOVERY_FILE":str(DISCOVERY),"COLAB_MANAGED_SERVICE":"launchd"},
+      "StandardOutPath":str(ROOT/"colabd.log"),"StandardErrorPath":str(ROOT/"colabd-error.log")}
+    with plist.open("wb") as output: plistlib.dump(payload,output)
+    service=f"gui/{os.getuid()}/{label}"
+    # launchd does not reload ProgramArguments or EnvironmentVariables from an overwritten plist.
+    # Re-register on updates so discovery paths and future runtime settings actually take effect.
+    loaded=subprocess.run(["launchctl","print",service],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL).returncode == 0
+    if loaded:
+        subprocess.run(["launchctl","bootout",service],check=True)
+    # launchd may briefly retain a just-booted-out label and return EIO from bootstrap. The
+    # artifacts are already atomically activated at this point, so retry this bounded local
+    # registration step instead of reporting a broken update that succeeds on manual rerun.
+    last_result=None
+    for delay in (0.1, 0.25, 0.5, 1.0):
+        time.sleep(delay)
+        last_result=subprocess.run(["launchctl","bootstrap",f"gui/{os.getuid()}",str(plist)],stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+        if last_result.returncode == 0:
+            return
+        if subprocess.run(["launchctl","print",service],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL).returncode == 0:
+            return
+    raise subprocess.CalledProcessError(last_result.returncode,last_result.args,output=last_result.stdout,stderr=last_result.stderr)
+
+def install_windows_task(server_url: str, credentials: pathlib.Path):
+    """Register a per-user, login-triggered Core without requiring administrator access."""
+    if os.name != "nt": return
+    runner = ROOT / "run-core.cmd"
+    runner.write_text(
+        "@echo off\n"
+        f'set "COLAB_SERVER_URL={server_url}"\n'
+        f'set "COLAB_GUI_ROOT={ROOT / "current/ui"}"\n'
+        f'set "COLAB_GOOGLE_OAUTH_CREDENTIALS_FILE={credentials}"\n'
+        f'set "COLAB_DISCOVERY_FILE={DISCOVERY}"\n'
+        f'set "COLAB_LOCAL_DATABASE_PATH={ROOT / "data/colab.sqlite3"}"\n'
+        f'set "COLAB_SETUP_PATH={ROOT / "current/skill/setup/colab-setup"}"\n'
+        'set "COLAB_MANAGED_SERVICE=windows-task"\n'
+        f'"{ROOT / "current/core/colabd.exe"}"\n',
+        encoding="utf-8",
+    )
+    subprocess.run(
+        ["schtasks", "/Create", "/TN", "AgentColabCore", "/TR", f'"{runner}"', "/SC", "ONLOGON", "/RL", "LIMITED", "/F"],
+        check=True,
+        stdout=subprocess.DEVNULL,
+    )
+    subprocess.run(["schtasks", "/Run", "/TN", "AgentColabCore"], check=True, stdout=subprocess.DEVNULL)
+
+def select_artifacts(manifest: dict) -> dict:
+    """Select the universal and current-platform variants from a mixed channel."""
+    system, arch = platform_id()
+    selected = {}
+    for item in manifest["artifacts"]:
+        item_platform = item.get("platform")
+        item_arch = item.get("arch")
+        if item_platform and item_platform != system: continue
+        if item_arch and item_arch != arch: continue
+        selected[item["name"]] = item
+    missing = {"local-core", "desktop-ui", "colab-skill"} - selected.keys()
+    if missing: raise RuntimeError(f"release has no {system}-{arch} artifact for: {', '.join(sorted(missing))}")
+    return selected
+
+def main():
+    parser=argparse.ArgumentParser(prog="colab-setup")
+    parser.add_argument("operation", choices=["install","update","update-shell","status","check","install-agent","uninstall-agent","open"])
+    parser.add_argument("--manifest", default=DEFAULT_MANIFEST)
+    parser.add_argument("--agent", action="append", choices=TARGETS, default=[])
+    parser.add_argument("--server-url", default=os.environ.get("COLAB_SERVER_URL","http://108.174.57.132:8787"))
+    parser.add_argument("--google-credentials", type=pathlib.Path)
+    parser.add_argument("--no-restart", action="store_true")
+    args=parser.parse_args()
+    receipt=ROOT/"installation.json"
+    def target_status(path):
+        required=(path/"SKILL.md",path/"agents/openai.yaml",path/"bin/colab-open",path/"bin/colab-browser",path/"bin/colab-session-reader",path/"bin/colab-skill-tool")
+        return {"installed":all(item.exists() for item in required),"path":str(path)}
+    def component_status(current, manifest=None):
+        # Old receipts had one release-wide version. Keep that as a migration fallback only;
+        # new receipts track each independently distributed artifact.
+        installed_versions=current.get("componentVersions",{})
+        legacy=current.get("version")
+        recorded_artifacts=current.get("componentArtifacts",{})
+        result={name:{"installedVersion":installed_versions.get(name,legacy)} for name in ("local-core","desktop-ui","colab-skill")}
+        for name, item in recorded_artifacts.items():
+            if name in result or name == "electron-shell":
+                result.setdefault(name,{})["downloadUrl"] = item.get("url")
+        app=pathlib.Path("/Applications/Colab.app/Contents/Info.plist")
+        shell=None
+        if app.exists():
+            try:
+                with app.open("rb") as source: shell=plistlib.load(source).get("CFBundleShortVersionString")
+            except (OSError,ValueError): pass
+        result.setdefault("electron-shell",{})["installedVersion"]=shell
+        if manifest:
+            for item in select_artifacts(manifest).values():
+                result.setdefault(item["name"],{})["latestVersion"]=item.get("version",manifest["version"])
+                result[item["name"]]["downloadUrl"]=item.get("url")
+            for name,value in result.items():
+                # Electron is optional. Absence is a download opportunity, not a pending update
+                # that would make the shared update button install an unwanted shell.
+                value["updateAvailable"]=bool(value.get("installedVersion")) and value.get("installedVersion")!=value.get("latestVersion")
+        return result
+    if args.operation=="status":
+        current=json.loads(receipt.read_text()) if receipt.exists() else {"installed":False}
+        current["targets"]={name:target_status(path) for name,path in TARGETS.items()}
+        current["components"]=component_status(current)
+        print(json.dumps(current,indent=2)); return
+    if args.operation=="open":
+        if sys.platform=="darwin": subprocess.run(["launchctl","kickstart","-k",f"gui/{os.getuid()}/online.agent-colab.core"],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+        elif os.name=="nt": subprocess.run(["schtasks","/Run","/TN","AgentColabCore"],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+        for _ in range(50):
+            try:
+                discovered=json.loads(DISCOVERY.read_text()); break
+            except (OSError,ValueError): time.sleep(0.1)
+        else: raise RuntimeError(f"Local Core did not publish discovery: {DISCOVERY}")
+        url=discovered["endpoint"].rstrip("/")+"/bootstrap?"+urllib.parse.urlencode({"token":discovered["bearer"]})
+        if os.name=="nt": os.startfile(url)
+        else: subprocess.Popen(["open",url] if sys.platform=="darwin" else ["xdg-open",url])
+        return
+    if args.operation=="check":
+        with tempfile.TemporaryDirectory(prefix="colab-check-") as temporary:
+            manifest=load_verified_manifest(args.manifest,pathlib.Path(temporary))
+        current=json.loads(receipt.read_text()) if receipt.exists() else {"installed":False,"version":None}
+        current.update({"latestVersion":manifest["version"],"updateAvailable":current.get("version")!=manifest["version"]})
+        current["targets"]={name:target_status(path) for name,path in TARGETS.items()}
+        current["components"]=component_status(current,manifest)
+        print(json.dumps(current,indent=2)); return
+    if args.operation in ("install-agent","uninstall-agent"):
+        if len(args.agent)!=1: raise RuntimeError(f"{args.operation} requires exactly one --agent")
+        agent=args.agent[0]; target=TARGETS[agent]
+        current=json.loads(receipt.read_text()) if receipt.exists() else {}
+        agents=set(current.get("agents",[]))
+        if args.operation=="install-agent":
+            version=current.get("componentVersions",{}).get("colab-skill",current.get("version"))
+            skill_root=ROOT/"versions/colab-skill"/str(version)/str(version)
+            if not skill_root.exists(): raise RuntimeError("Install or update Colab before adding an Agent target")
+            activate_link(target,skill_root); remove_managed_legacy_link(agent); agents.add(agent)
+        else:
+            if (target.is_symlink() or (os.name=="nt" and target.exists())) and is_managed_target(target): remove_link(target)
+            elif target.exists(): raise RuntimeError(f"refusing to remove unmanaged Skill directory: {target}")
+            agents.discard(agent)
+        current["agents"]=sorted(agents); receipt.write_text(json.dumps(current,indent=2)+"\n")
+        print(json.dumps({"agent":agent,"installed":args.operation=="install-agent","path":str(target)})); return
+    if args.operation=="update-shell":
+        if sys.platform!="darwin": raise RuntimeError("Electron Shell update is currently available only on macOS")
+        with tempfile.TemporaryDirectory(prefix="colab-shell-") as temporary:
+            temporary=pathlib.Path(temporary); manifest=load_verified_manifest(args.manifest,temporary)
+            # Mixed-platform channels contain more than one Electron artifact;
+            # use the same platform selector as the main installer.
+            item=select_artifacts(manifest)["electron-shell"]
+            archive=temporary/"shell.zip"; extracted=temporary/"extracted"
+            download(item["url"],item["sha256"],item["size"],archive); extracted.mkdir(); safe_extract_macos_app(archive,extracted)
+            source=next(extracted.rglob("Colab.app")); target=pathlib.Path("/Applications/Colab.app")
+            backups=ROOT/"backups"; backups.mkdir(parents=True,exist_ok=True)
+            if target.exists():
+                backup=backups/f"Colab-{int(time.time())}.app"; shutil.move(target,backup)
+            shutil.move(source,target)
+        print(json.dumps({"component":"electron-shell","version":item.get("version",manifest["version"]),"installed":True})); return
+    if not args.manifest: raise SystemExit("--manifest or COLAB_RELEASE_MANIFEST is required")
+    if os.name == "nt":
+        missing = [command for command in ("git", "ssh-keygen") if not shutil.which(command)]
+        if missing: raise RuntimeError(f"Windows installation requires: {', '.join(missing)}")
+    with tempfile.TemporaryDirectory(prefix="colab-setup-") as temporary:
+        temporary=pathlib.Path(temporary)
+        manifest=load_verified_manifest(args.manifest,temporary); release_version=manifest["version"]
+        items=select_artifacts(manifest)
+        existing=json.loads(receipt.read_text()) if receipt.exists() else {}
+        installed_versions=existing.get("componentVersions",{})
+        legacy_version=existing.get("version")
+        staged={}
+        for name in ("local-core","desktop-ui","colab-skill"):
+            item=items[name]; archive=temporary/pathlib.Path(item["url"]).name
+            version=item.get("version",release_version)
+            if installed_versions.get(name,legacy_version)==version and (ROOT/"versions"/name/version).exists():
+                continue
+            download(item["url"],item["sha256"],item["size"],archive)
+            final=ROOT/"versions"/name/version
+            stage=ROOT/"versions"/name/f".{version}.staging-{os.getpid()}"
+            shutil.rmtree(stage,ignore_errors=True); stage.mkdir(parents=True)
+            safe_extract(archive,stage)
+            staged[name]=(stage,final)
+        for stage,final in staged.values():
+            if final.exists(): shutil.rmtree(final)
+            os.replace(stage,final)
+        component_versions={name:item.get("version",release_version) for name,item in items.items()}
+        skill_version=component_versions["colab-skill"]
+        skill_root=ROOT/"versions/colab-skill"/skill_version/skill_version
+        # Python's zipfile does not restore executable mode bits. The archive has already passed
+        # signature, size, hash and safe-path checks, so restore every regular bin entry instead
+        # of hard-coding today's commands and breaking the first upgrade that adds another one.
+        executables=[item for item in (skill_root/"bin").iterdir() if item.is_file()]
+        executables.append(skill_root/"setup/colab-setup")
+        for executable in executables:
+            executable.chmod(0o755)
+        agents=args.agent or existing.get("agents") or ["codex"]
+        ROOT.mkdir(parents=True,exist_ok=True)
+        credentials=ROOT/"config/google-oauth.json"
+        if args.google_credentials:
+            credentials.parent.mkdir(parents=True,exist_ok=True)
+            if args.google_credentials.resolve() != credentials.resolve():
+                shutil.copy2(args.google_credentials,credentials)
+            credentials.chmod(0o600)
+        if not credentials.exists(): raise RuntimeError("--google-credentials is required for the first installation")
+        for agent in agents:
+            activate_link(TARGETS[agent],skill_root)
+            remove_managed_legacy_link(agent)
+        activate_link(ROOT/"current/skill",skill_root)
+        activate_link(ROOT/"current/core",ROOT/"versions/local-core"/component_versions["local-core"])
+        activate_link(ROOT/"current/ui",ROOT/"versions/desktop-ui"/component_versions["desktop-ui"])
+        # Alpha setup triggers the service restart but does not block the user
+        # on watcher shutdown or attempt business-data rollback.
+        if not args.no_restart:
+            install_launchd(args.server_url,credentials)
+            install_windows_task(args.server_url,credentials)
+        component_artifacts={name:{key:item.get(key) for key in ("version","url","platform","arch") if item.get(key) is not None} for name,item in items.items()}
+        receipt.write_text(json.dumps({"installed":True,"version":release_version,"componentVersions":component_versions,"componentArtifacts":component_artifacts,"manifest":args.manifest,"serverUrl":args.server_url,"agents":agents,"installedAt":time.time()},indent=2)+"\n")
+        # `update` is the single user-facing operation. The Shell stays pinned when its artifact
+        # version is unchanged, and is replaced only when the channel explicitly advances it.
+        shell_installed=component_status(existing)["electron-shell"].get("installedVersion")
+        shell_latest=component_versions.get("electron-shell")
+        if sys.platform=="darwin" and shell_installed and shell_latest and shell_installed!=shell_latest:
+            result=subprocess.run([sys.executable,str(pathlib.Path(__file__).resolve()),"update-shell","--manifest",args.manifest],stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+            if result.returncode: raise RuntimeError(f"Electron Shell update failed: {result.stderr.decode(errors='replace')}")
+    print(receipt.read_text(),end="")
+if __name__=="__main__": main()
