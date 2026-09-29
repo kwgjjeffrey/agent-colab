@@ -17,7 +17,7 @@ Agent Colab is a context-sharing layer for collaboration between people and thei
 
 The optional Electron shell is only a convenient launcher. The Local Core and browser UI work without Electron, and the Agent Colab Skill can start them directly.
 
-Download the latest alpha assets from [GitHub Releases](../../releases/latest).
+Download the latest alpha assets from [GitHub Releases](../../releases).
 
 ### macOS
 

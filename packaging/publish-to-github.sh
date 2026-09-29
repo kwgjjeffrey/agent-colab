@@ -12,7 +12,7 @@ tag="v$release_version"
 command -v gh >/dev/null || { echo "GitHub CLI (gh) is required" >&2; exit 2; }
 gh auth status >/dev/null
 
-assets=(
+sources=(
   "$repo_root/packaging/colab-install"
   "$repo_root/packaging/colab-install.ps1"
   "$repo_root/dist/release-$release_version.json"
@@ -25,12 +25,25 @@ assets=(
   "$repo_root/dist/electron-shell/$shell_version/Colab-$shell_version-x64.exe"
 )
 
-for asset in "${assets[@]}"; do
+for asset in "${sources[@]}"; do
   [[ -f "$asset" ]] || { echo "Missing release asset: $asset" >&2; exit 2; }
 done
 
 notes="$(mktemp -t agent-colab-release-notes)"
-trap 'rm -f "$notes"' EXIT
+stage="$(mktemp -d -t agent-colab-github-release)"
+trap 'rm -f "$notes"; rm -rf "$stage"' EXIT
+# Descriptive names keep independent artifacts unambiguous in GitHub's flat asset list.
+cp "$repo_root/packaging/colab-install" "$stage/colab-install"
+cp "$repo_root/packaging/colab-install.ps1" "$stage/colab-install.ps1"
+cp "$repo_root/dist/release-$release_version.json" "$stage/release-$release_version.json"
+cp "$repo_root/dist/release-$release_version.json.sig" "$stage/release-$release_version.json.sig"
+cp "$repo_root/dist/local-core/$core_version/darwin-arm64.tar.gz" "$stage/agent-colab-local-core-$core_version-darwin-arm64.tar.gz"
+cp "$repo_root/dist/local-core/$core_version/windows-x86_64.zip" "$stage/agent-colab-local-core-$core_version-windows-x86_64.zip"
+cp "$repo_root/dist/desktop-ui/$ui_version.zip" "$stage/agent-colab-desktop-ui-$ui_version.zip"
+cp "$repo_root/dist/colab-skill/$skill_version.zip" "$stage/agent-colab-skill-$skill_version.zip"
+cp "$repo_root/dist/electron-shell/$shell_version/Colab-$shell_version-arm64.zip" "$stage/Colab-$shell_version-arm64.zip"
+cp "$repo_root/dist/electron-shell/$shell_version/Colab-$shell_version-x64.exe" "$stage/Colab-$shell_version-x64.exe"
+assets=("$stage"/*)
 printf '%s\n' \
   'Public alpha release for evaluation.' \
   '' \
