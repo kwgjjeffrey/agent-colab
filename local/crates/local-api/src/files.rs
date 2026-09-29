@@ -4,8 +4,10 @@
 //! infrastructure, which keeps Files changes from coupling authentication and Channel handlers.
 
 use super::*;
+use axum::body::Body;
 use notify::{RecommendedWatcher, RecursiveMode, Watcher};
 use std::collections::HashSet;
+use tokio_util::io::ReaderStream;
 use wait_timeout::ChildExt;
 
 const JOB_PUBLISH: &str = "publish_files";
@@ -1012,17 +1014,7 @@ pub(super) async fn read_local_file_content(
     let relative = query
         .get("path")
         .ok_or_else(|| LocalError::bad_request("Missing file path"))?;
-    let candidate = if root.is_file() {
-        if root.file_name().and_then(|value| value.to_str()) != Some(relative) {
-            return Err(LocalError::bad_request("Invalid file path"));
-        }
-        root.clone()
-    } else {
-        fs::canonicalize(root.join(relative)).map_err(LocalError::internal)?
-    };
-    if (!root.is_file() && !candidate.starts_with(&root)) || !candidate.is_file() {
-        return Err(LocalError::bad_request("Invalid file path"));
-    }
+    let candidate = resolve_local_file(&root, relative)?;
     let metadata = fs::metadata(&candidate).map_err(LocalError::internal)?;
     if metadata.len() > 1024 * 1024 {
         return Err(LocalError::bad_request("File is too large to preview"));
@@ -1033,6 +1025,52 @@ pub(super) async fn read_local_file_content(
         path: relative.clone(),
         content,
     }))
+}
+
+/// Stream a local materialization to the authenticated loopback client. Browser-native previews
+/// (PDF/images) can consume this without buffering the file in Local Core; format-specific Office
+/// renderers still impose their own client-side size limit before parsing an ArrayBuffer.
+pub(super) async fn stream_local_file_content(
+    State(state): State<AppState>,
+    AxumPath(share_id): AxumPath<String>,
+    Query(query): Query<HashMap<String, String>>,
+) -> Result<Response, LocalError> {
+    let root = local_file_root(&state, &share_id).await?;
+    let relative = query
+        .get("path")
+        .ok_or_else(|| LocalError::bad_request("Missing file path"))?;
+    let candidate = resolve_local_file(&root, relative)?;
+    let file = tokio::fs::File::open(&candidate)
+        .await
+        .map_err(LocalError::internal)?;
+    let content_type = mime_guess::from_path(&candidate)
+        .first_or_octet_stream()
+        .to_string();
+    Ok((
+        [
+            (header::CONTENT_TYPE, content_type),
+            (header::X_CONTENT_TYPE_OPTIONS, "nosniff".to_owned()),
+        ],
+        Body::from_stream(ReaderStream::new(file)),
+    )
+        .into_response())
+}
+
+/// Resolve a requested relative path without allowing a materialized-tree escape. Single-file
+/// shares deliberately accept only their displayed file name.
+fn resolve_local_file(root: &Path, relative: &str) -> Result<PathBuf, LocalError> {
+    let candidate = if root.is_file() {
+        if root.file_name().and_then(|value| value.to_str()) != Some(relative) {
+            return Err(LocalError::bad_request("Invalid file path"));
+        }
+        root.to_owned()
+    } else {
+        fs::canonicalize(root.join(relative)).map_err(LocalError::internal)?
+    };
+    if (!root.is_file() && !candidate.starts_with(root)) || !candidate.is_file() {
+        return Err(LocalError::bad_request("Invalid file path"));
+    }
+    Ok(candidate)
 }
 async fn local_file_root(state: &AppState, share_id: &str) -> Result<PathBuf, LocalError> {
     let user_id = current_user_id(state).await?;

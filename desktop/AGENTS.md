@@ -16,6 +16,8 @@ Feature UI belongs under `ui/src/features/<feature>/`; `main.tsx` may compose fe
 
 Session UI lives in `ui/src/features/sessions`. It lists local Agent sources through Local Core, never scans provider directories in React. The GUI does not preview Session contents or call the Reader when an item is clicked; it shows metadata and the latest committed synchronization time, then hands explicit consumption to `colab-session-reader read` through Give-to-Agent. Unlike Files, no cache path is exposed because provider adapters normalize raw records behind the Reader contract.
 
+Files drill-down UI lives in `ui/src/features/files/FileExplorer.tsx`; format rendering belongs in `FilePreview.tsx`, not the collection list. Keep the IDE-style tree/content workspace independent of synchronization. Browser-native image/PDF previews use the authenticated Local Core raw stream; DOCX/XLSX renderers load only after selection and must retain the client-side size guard. Unsupported, corrupt, or oversized formats report inside the preview pane and must not become a page-level synchronization error.
+
 The Share Session dialog opens before data loading and searches the Local Core metadata catalog after a short input debounce. Results show the coding Agent and session/thread ID so similarly named sessions remain distinguishable.
 
 Files rows optimize for human attribution, not Git internals: show contributor avatar/name and `(me)` for the current contributor, never expose root OIDs as versions, keep secondary actions hidden until hover/focus, and render Withdraw as destructive. File and folder registration share one visible entry point even if the platform picker needs a second choice internally.

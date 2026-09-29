@@ -78,6 +78,12 @@ Channel 由参与者按需自行创建，不与 Git 仓库等技术对象一一�
 
 Channel 不是一次性的交接包，而是一个持续存在的协作关系。上下文默认持续更新，没有预设时间限制；贡献者可以撤回自己登记的上下文。
 
+### 5.1 Quick Share：不建立协作关系的一次性交付
+
+Channel 适合持续协作，但调研访谈、故障求助和定向代码交接往往只发生一次。此时要求贡献者先注册、加入 Organization、再加入 Channel，会让建立协作关系的成本高于交付上下文本身。Colab 因而提供独立的 **Quick Share / Share my context**：贡献者直接选择 Files、Session 或 Skill 来源，设置过期时间（默认 24 小时），上传一个固定快照并取得可转发的 Agent 提示词。
+
+Quick Share 不是临时 Channel，也不会自动把任一方加入 Organization。持有链接的人只能在过期前读取这次 Transfer 中明确选中的快照；不能列举其他资源、持续跟随来源变化或获得成员权限。贡献者可以提前撤销。接收方的 Agent 通过 Agent Colab Skill 使用该 capability；如果尚未安装，提示词先引导 Agent 执行官方安装入口，再由 setup 安装 Skill、Local Core 和可选 GUI/桌面壳。
+
 ## 6. 登记上下文
 
 “登记”是当前比“订阅”更准确的核心动作。
