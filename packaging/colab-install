@@ -7,7 +7,7 @@ with_app=false
 agents=(codex)
 
 usage() {
-  echo "Usage: colab-install --google-credentials FILE [--with-app] [--agent codex|claude|myflicker]"
+  echo "Usage: colab-install [--google-credentials FILE] [--with-app] [--agent codex|claude|myflicker]"
 }
 
 while [[ $# -gt 0 ]]; do
@@ -21,10 +21,10 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-[[ -f "$google_credentials" ]] || {
-  echo "--google-credentials must point to the Google Desktop OAuth JSON file" >&2
+if [[ -n "$google_credentials" && ! -f "$google_credentials" ]]; then
+  echo "--google-credentials does not exist: $google_credentials" >&2
   exit 2
-}
+fi
 
 for command in curl ssh-keygen python3 unzip shasum; do
   command -v "$command" >/dev/null || { echo "Missing required command: $command" >&2; exit 2; }
@@ -71,7 +71,8 @@ setup="$(find "$temporary/skill" -type f -path '*/setup/colab-setup' -print -qui
 [[ -n "$setup" ]] || { echo "Skill setup entry is missing" >&2; exit 4; }
 chmod 0755 "$setup"
 
-setup_args=(install --manifest "$manifest_url" --google-credentials "$google_credentials")
+setup_args=(install --manifest "$manifest_url")
+[[ -z "$google_credentials" ]] || setup_args+=(--google-credentials "$google_credentials")
 for agent in "${agents[@]}"; do setup_args+=(--agent "$agent"); done
 "$setup" "${setup_args[@]}"
 

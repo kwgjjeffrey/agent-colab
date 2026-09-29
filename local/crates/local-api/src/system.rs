@@ -102,7 +102,8 @@ pub(super) async fn update_installation() -> Result<Json<serde_json::Value>, Loc
             let _ = Command::new("powershell.exe")
                 .args([
                     "-NoProfile",
-                    "-WindowStyle", "Hidden",
+                    "-WindowStyle",
+                    "Hidden",
                     "-Command",
                     "Start-Sleep -Seconds 2; Start-ScheduledTask -TaskName 'AgentColabCore'",
                 ])

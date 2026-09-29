@@ -4,6 +4,11 @@ use sha2::{Digest, Sha256};
 use sqlx::{PgPool, postgres::PgPoolOptions};
 use uuid::Uuid;
 
+mod transfers;
+pub use transfers::{
+    AddTransferItemError, CreateTransferError, ExpiredTransfer, TransferItem, TransferManifest,
+};
+
 /// Returns true when PostgreSQL rejected a write because a unique index was violated.
 ///
 /// Persistence owns this provider-specific inspection so the HTTP API can expose a stable
@@ -591,59 +596,129 @@ impl Database {
 
     /// Lists active Skill Shared Items. Skill package bytes remain opaque to the Server and use
     /// the same revision table as Files; `kind` is the authorization boundary between them.
-    pub async fn list_skill_shares(&self, user_id: Uuid, channel_id: Uuid) -> anyhow::Result<Option<Vec<SkillShare>>> {
+    pub async fn list_skill_shares(
+        &self,
+        user_id: Uuid,
+        channel_id: Uuid,
+    ) -> anyhow::Result<Option<Vec<SkillShare>>> {
         let actor:Option<Uuid>=sqlx::query_scalar("select cm.organization_member_id from channel_members cm join organization_members om on om.id=cm.organization_member_id where cm.channel_id=$1 and om.user_id=$2").bind(channel_id).bind(user_id).fetch_optional(&self.pool).await?;
         let Some(actor) = actor else { return Ok(None) };
         Ok(Some(sqlx::query_as("select s.id,s.channel_id,s.name,s.description,coalesce(u.display_name,u.email) contributor_name,u.avatar_url contributor_avatar_url,s.state,s.current_root_oid,(s.contributor_member_id=$2) can_withdraw,s.updated_at::text updated_at from channel_shares s join organization_members om on om.id=s.contributor_member_id join users u on u.id=om.user_id where s.channel_id=$1 and s.kind='skill' and s.state='active' order by s.updated_at desc").bind(channel_id).bind(actor).fetch_all(&self.pool).await?))
     }
 
-    pub async fn create_skill_share(&self, user_id: Uuid, channel_id: Uuid, name: &str, description: Option<&str>) -> anyhow::Result<Option<SkillShare>> {
+    pub async fn create_skill_share(
+        &self,
+        user_id: Uuid,
+        channel_id: Uuid,
+        name: &str,
+        description: Option<&str>,
+    ) -> anyhow::Result<Option<SkillShare>> {
         let member:Option<Uuid>=sqlx::query_scalar("select cm.organization_member_id from channel_members cm join organization_members om on om.id=cm.organization_member_id where cm.channel_id=$1 and om.user_id=$2").bind(channel_id).bind(user_id).fetch_optional(&self.pool).await?;
-        let Some(member) = member else { return Ok(None) };
-        let id=Uuid::new_v4();
+        let Some(member) = member else {
+            return Ok(None);
+        };
+        let id = Uuid::new_v4();
         Ok(Some(sqlx::query_as("insert into channel_shares(id,channel_id,contributor_member_id,name,description,kind,source_adapter) values($1,$2,$3,$4,$5,'skill','shadow-git-v1') returning id,channel_id,name,description,(select coalesce(u.display_name,u.email) from organization_members om join users u on u.id=om.user_id where om.id=$3) contributor_name,(select u.avatar_url from organization_members om join users u on u.id=om.user_id where om.id=$3) contributor_avatar_url,state,current_root_oid,true can_withdraw,updated_at::text updated_at").bind(id).bind(channel_id).bind(member).bind(name).bind(description).fetch_one(&self.pool).await?))
     }
 
-    pub async fn create_skill_revision(&self, user_id: Uuid, share_id: Uuid, root_oid: &str, parent_root_oid: Option<&str>, blob_key: &str, byte_size: i64) -> anyhow::Result<Option<FileRevision>> {
-        self.create_git_revision(user_id, share_id, "skill", root_oid, parent_root_oid, blob_key, byte_size).await
+    pub async fn create_skill_revision(
+        &self,
+        user_id: Uuid,
+        share_id: Uuid,
+        root_oid: &str,
+        parent_root_oid: Option<&str>,
+        blob_key: &str,
+        byte_size: i64,
+    ) -> anyhow::Result<Option<FileRevision>> {
+        self.create_git_revision(
+            user_id,
+            share_id,
+            "skill",
+            root_oid,
+            parent_root_oid,
+            blob_key,
+            byte_size,
+        )
+        .await
     }
 
-    pub async fn list_skill_revisions(&self, user_id: Uuid, share_id: Uuid) -> anyhow::Result<Option<Vec<FileRevision>>> {
+    pub async fn list_skill_revisions(
+        &self,
+        user_id: Uuid,
+        share_id: Uuid,
+    ) -> anyhow::Result<Option<Vec<FileRevision>>> {
         self.list_git_revisions(user_id, share_id, "skill").await
     }
 
-    pub async fn skill_revision_blob_key(&self, user_id: Uuid, revision_id: Uuid) -> anyhow::Result<Option<String>> {
-        self.git_revision_blob_key(user_id, revision_id, "skill").await
+    pub async fn skill_revision_blob_key(
+        &self,
+        user_id: Uuid,
+        revision_id: Uuid,
+    ) -> anyhow::Result<Option<String>> {
+        self.git_revision_blob_key(user_id, revision_id, "skill")
+            .await
     }
 
-    pub async fn withdraw_skill_share(&self, user_id: Uuid, share_id: Uuid) -> anyhow::Result<bool> {
+    pub async fn withdraw_skill_share(
+        &self,
+        user_id: Uuid,
+        share_id: Uuid,
+    ) -> anyhow::Result<bool> {
         self.withdraw_git_share(user_id, share_id, "skill").await
     }
 
-    async fn create_git_revision(&self, user_id: Uuid, share_id: Uuid, kind: &str, root_oid: &str, parent_root_oid: Option<&str>, blob_key: &str, byte_size: i64) -> anyhow::Result<Option<FileRevision>> {
-        let mut tx=self.pool.begin().await?;
+    async fn create_git_revision(
+        &self,
+        user_id: Uuid,
+        share_id: Uuid,
+        kind: &str,
+        root_oid: &str,
+        parent_root_oid: Option<&str>,
+        blob_key: &str,
+        byte_size: i64,
+    ) -> anyhow::Result<Option<FileRevision>> {
+        let mut tx = self.pool.begin().await?;
         let allowed:bool=sqlx::query_scalar("select exists(select 1 from channel_shares s join organization_members om on om.id=s.contributor_member_id where s.id=$1 and s.kind=$2 and om.user_id=$3 and s.state='active' and s.current_root_oid is not distinct from $4)").bind(share_id).bind(kind).bind(user_id).bind(parent_root_oid).fetch_one(&mut *tx).await?;
-        if !allowed { return Ok(None) }
-        let id=Uuid::new_v4();
+        if !allowed {
+            return Ok(None);
+        }
+        let id = Uuid::new_v4();
         let revision=sqlx::query_as::<_,FileRevision>("insert into file_revisions(id,share_id,root_oid,parent_root_oid,blob_key,byte_size) values($1,$2,$3,$4,$5,$6) returning id,share_id,root_oid,parent_root_oid,byte_size,created_at::text created_at").bind(id).bind(share_id).bind(root_oid).bind(parent_root_oid).bind(blob_key).bind(byte_size).fetch_one(&mut *tx).await?;
         sqlx::query("update channel_shares set current_root_oid=$2,updated_at=now() where id=$1 and kind=$3").bind(share_id).bind(root_oid).bind(kind).execute(&mut *tx).await?;
         tx.commit().await?;
         Ok(Some(revision))
     }
 
-    async fn list_git_revisions(&self, user_id: Uuid, share_id: Uuid, kind: &str) -> anyhow::Result<Option<Vec<FileRevision>>> {
+    async fn list_git_revisions(
+        &self,
+        user_id: Uuid,
+        share_id: Uuid,
+        kind: &str,
+    ) -> anyhow::Result<Option<Vec<FileRevision>>> {
         let allowed:bool=sqlx::query_scalar("select exists(select 1 from channel_shares s join channel_members cm on cm.channel_id=s.channel_id join organization_members om on om.id=cm.organization_member_id where s.id=$1 and s.kind=$2 and om.user_id=$3 and s.state='active')").bind(share_id).bind(kind).bind(user_id).fetch_one(&self.pool).await?;
-        if !allowed { return Ok(None) }
+        if !allowed {
+            return Ok(None);
+        }
         Ok(Some(sqlx::query_as("select id,share_id,root_oid,parent_root_oid,byte_size,created_at::text created_at from file_revisions where share_id=$1 order by created_at").bind(share_id).fetch_all(&self.pool).await?))
     }
 
-    async fn git_revision_blob_key(&self, user_id: Uuid, revision_id: Uuid, kind: &str) -> anyhow::Result<Option<String>> {
+    async fn git_revision_blob_key(
+        &self,
+        user_id: Uuid,
+        revision_id: Uuid,
+        kind: &str,
+    ) -> anyhow::Result<Option<String>> {
         sqlx::query_scalar("select r.blob_key from file_revisions r join channel_shares s on s.id=r.share_id join channel_members cm on cm.channel_id=s.channel_id join organization_members om on om.id=cm.organization_member_id where r.id=$1 and s.kind=$2 and om.user_id=$3 and s.state='active'").bind(revision_id).bind(kind).bind(user_id).fetch_optional(&self.pool).await.map_err(Into::into)
     }
 
-    async fn withdraw_git_share(&self, user_id: Uuid, share_id: Uuid, kind: &str) -> anyhow::Result<bool> {
+    async fn withdraw_git_share(
+        &self,
+        user_id: Uuid,
+        share_id: Uuid,
+        kind: &str,
+    ) -> anyhow::Result<bool> {
         let result=sqlx::query("update channel_shares s set state='withdrawn',updated_at=now() from organization_members om where s.id=$1 and s.kind=$2 and om.id=s.contributor_member_id and om.user_id=$3 and s.state='active'").bind(share_id).bind(kind).bind(user_id).execute(&self.pool).await?;
-        Ok(result.rows_affected()==1)
+        Ok(result.rows_affected() == 1)
     }
 
     pub async fn list_session_shares(

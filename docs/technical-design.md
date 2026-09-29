@@ -483,7 +483,9 @@ Session connector 无损读取来源原始文件或 API 输出。大文件按稳
 
 Quick Share 是独立的 `transfer` aggregate，不复用 Organization、Member、Channel 或 `channel_shares` 伪装临时成员关系。服务端只保存固定快照、对象类型、创建时间、到期时间、撤销状态、配额计数和 capability token 的 hash；原始 token 只在创建时返回一次。读取 API 先校验 token hash、到期、撤销和限流，再返回本 Transfer 明确列出的对象，绝不允许由 token 枚举账号、Organization 或 Channel。
 
-贡献端 Local Core 复用 Files shadow Git、Session segment 和 Skill shadow Git 的既有生产 adapter，但 Quick Share 创建完成后不注册 watcher，也不持续追踪来源。默认 TTL 为 24 小时，服务端设部署级最大 TTL、单 Transfer 大小和下载次数限制；提前撤销立即拒绝新读取，后台 GC 在到期宽限后删除 blob。接收端 Local Core 以 capability token 物化到独立 `transfers/` 缓存，不能把 token 写入日志、命令历史、可读文件名或普通资源 URI。
+Standalone Server 的实际落地使用 `quick_transfers` 与 `quick_transfer_items`。创建时分别生成 upload/read/revoke 三个 256-bit capability，避免可转发的读取凭证获得追加或撤销权；数据库按来源 IP 执行跨进程滚动创建限额。每个 item 以流式 I/O 写入临时 Blob，同时计算 SHA-256，经过单 item 256 MiB、单 Transfer 512 MiB 和 20 item 限额后原子改名并提交元数据。`finalize` 只在所有 item 已持久化后将状态从 `uploading` 推进到 `ready`，之后不再允许修改，因此消费端看到的是固定清单。到期或撤销会立刻使查询失效；周期 GC 先删除 Blob、再删除 PostgreSQL 元数据，删除失败则保留记录供下一轮重试。
+
+贡献端 Local Core 复用 Files/Skill shadow Git，并在 Session 上传前复制已冻结的原始 provider 文件；Quick Share 创建完成后不注册 watcher，也不持续追踪来源。默认 TTL 为 24 小时，服务端设部署级最大 TTL、单 Transfer 大小和下载次数限制；提前撤销立即拒绝新读取，后台 GC 在到期宽限后删除 blob。同一 Transfer 的人类可读名称按大小写不敏感规则判重，避免接收端在大小写不敏感文件系统发生目录覆盖。接收端 Local Core 以 capability token 物化到独立 `transfers/` 缓存，流式下载时计算 SHA-256 并在校验成功后原子落位；不能把 token 写入日志、可读文件名或普通资源 URI。创建端 Local API 只返回可转发的 read capability，revoke token 仅保存在私有 SQLite receipt。
 
 未安装场景使用稳定的公开 bootstrap 命令下载并校验签名后的 Agent Colab Skill/setup；setup 只安装本机制品，真正读取仍由提示词中的一次性 capability 完成。Electron 是可选入口，不能成为消费 Quick Share 的前置。
 

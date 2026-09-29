@@ -1,6 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
+# Official builds inject the installed-app OAuth client as release configuration. It is not a
+# user secret, but the source path remains ignored so forks can publish their own client identity.
+config_file="${COLAB_R2_CONFIG:-$repo_root/packaging/.env.local}"
+if [[ -f "$config_file" ]]; then
+  set -a
+  # shellcheck disable=SC1090
+  source "$config_file"
+  set +a
+fi
 core_version=$(tr -d '[:space:]' < "$repo_root/local/VERSION")
 ui_version=$(tr -d '[:space:]' < "$repo_root/desktop/ui/VERSION")
 skill_version=$(tr -d '[:space:]' < "$repo_root/skills/colab/VERSION")
@@ -45,7 +54,14 @@ if $build_core; then
   cargo build --locked --release --manifest-path "$repo_root/local/Cargo.toml" -p colabd
   mkdir -p "$dist/local-core/$core_version/$platform-$arch"
   cp "$repo_root/local/target/release/colabd" "$dist/local-core/$core_version/$platform-$arch/colabd"
-  tar -C "$dist/local-core/$core_version/$platform-$arch" -czf "$dist/local-core/$core_version/$platform-$arch.tar.gz" colabd
+  if [[ -n "${COLAB_DESKTOP_GOOGLE_OAUTH_CREDENTIALS_FILE:-}" ]]; then
+    [[ -f "$COLAB_DESKTOP_GOOGLE_OAUTH_CREDENTIALS_FILE" ]] || {
+      echo "COLAB_DESKTOP_GOOGLE_OAUTH_CREDENTIALS_FILE does not exist" >&2
+      exit 2
+    }
+    cp "$COLAB_DESKTOP_GOOGLE_OAUTH_CREDENTIALS_FILE" "$dist/local-core/$core_version/$platform-$arch/google-oauth.json"
+  fi
+  tar -C "$dist/local-core/$core_version/$platform-$arch" -czf "$dist/local-core/$core_version/$platform-$arch.tar.gz" .
 fi
 
 if $build_ui; then
@@ -84,8 +100,14 @@ if $build_shell; then
   cp "$repo_root/desktop/shell/dist/Colab-$shell_version-arm64.dmg" "$dist/electron-shell/$shell_version/"
 fi
 
-artifacts=("$dist/local-core/$core_version/$platform-$arch.tar.gz" "$dist/desktop-ui/$ui_version.zip" "$dist/colab-skill/$skill_version.zip" "$dist/electron-shell/$shell_version/Colab-$shell_version-arm64.zip")
-$build_shell && artifacts+=("$dist/electron-shell/$shell_version/Colab-$shell_version-arm64.dmg")
+artifacts=()
+$build_core && artifacts+=("$dist/local-core/$core_version/$platform-$arch.tar.gz")
+$build_ui && artifacts+=("$dist/desktop-ui/$ui_version.zip")
+$build_skill && artifacts+=("$dist/colab-skill/$skill_version.zip")
+if $build_shell; then
+  artifacts+=("$dist/electron-shell/$shell_version/Colab-$shell_version-arm64.zip")
+  artifacts+=("$dist/electron-shell/$shell_version/Colab-$shell_version-arm64.dmg")
+fi
 for artifact in "${artifacts[@]}"; do
   shasum -a 256 "$artifact"
 done

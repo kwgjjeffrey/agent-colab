@@ -11,7 +11,13 @@ cargo build --locked --release --manifest-path (Join-Path $RepoRoot "local/Cargo
 $CoreDir = Join-Path $Dist "local-core/$CoreVersion/windows-x86_64"
 New-Item -ItemType Directory -Force $CoreDir | Out-Null
 Copy-Item (Join-Path $RepoRoot "local/target/release/colabd.exe") $CoreDir
-Compress-Archive -Path (Join-Path $CoreDir "colabd.exe") -DestinationPath (Join-Path $Dist "local-core/$CoreVersion/windows-x86_64.zip") -Force
+if ($env:COLAB_DESKTOP_GOOGLE_OAUTH_CREDENTIALS_FILE) {
+  if (-not (Test-Path -LiteralPath $env:COLAB_DESKTOP_GOOGLE_OAUTH_CREDENTIALS_FILE -PathType Leaf)) {
+    throw "COLAB_DESKTOP_GOOGLE_OAUTH_CREDENTIALS_FILE does not exist"
+  }
+  Copy-Item $env:COLAB_DESKTOP_GOOGLE_OAUTH_CREDENTIALS_FILE (Join-Path $CoreDir "google-oauth.json")
+}
+Compress-Archive -Path (Join-Path $CoreDir "*") -DestinationPath (Join-Path $Dist "local-core/$CoreVersion/windows-x86_64.zip") -Force
 
 node (Join-Path $RepoRoot "desktop/shell/scripts/prepare-windows-bootstrap.cjs")
 npx --yes pnpm@10.18.3 --dir (Join-Path $RepoRoot "desktop/shell") exec electron-builder --win portable --x64

@@ -1,0 +1,76 @@
+#!/usr/bin/env python3
+"""Create, receive, or revoke an expiring Agent Colab Quick Share."""
+from __future__ import annotations
+
+import argparse
+import pathlib
+import sys
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "lib"))
+from local_api import DEFAULT_CORE, LocalApiError, request
+from output import failure, success
+
+
+def parse_item(value: str) -> dict:
+    """Parse KIND=PATH[::ADAPTER] without making shell callers construct JSON."""
+    try:
+        kind, source = value.split("=", 1)
+    except ValueError as error:
+        raise ValueError("item must be KIND=PATH, with ::ADAPTER appended for Sessions") from error
+    kind = kind.casefold()
+    adapter = None
+    if kind == "session":
+        try:
+            source, adapter = source.rsplit("::", 1)
+        except ValueError as error:
+            raise ValueError("Session item must be session=PATH::SOURCE_ADAPTER") from error
+    if kind not in {"files", "session", "skill"} or not source:
+        raise ValueError("item kind must be files, session, or skill and PATH must not be empty")
+    item = {"kind": kind, "sourcePath": str(pathlib.Path(source).expanduser())}
+    if adapter:
+        item["sourceAdapter"] = adapter
+    return item
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(prog="colab-transfer")
+    parser.add_argument("--core", default=DEFAULT_CORE)
+    commands = parser.add_subparsers(dest="operation", required=True)
+
+    create = commands.add_parser("create", help="Create a fixed, expiring context snapshot")
+    create.add_argument("--item", action="append", required=True, help="files=PATH, skill=PATH, or session=PATH::ADAPTER")
+    create.add_argument("--expires-in", type=int, default=24 * 60 * 60, metavar="SECONDS")
+
+    receive = commands.add_parser("receive", help="Download and materialize an authorized transfer")
+    receive.add_argument("--capability", required=True)
+
+    revoke = commands.add_parser("revoke", help="Revoke a transfer created on this device")
+    revoke.add_argument("--transfer-id", required=True)
+    revoke.add_argument("--revoke-token", help="Only needed if the local creator receipt is unavailable")
+
+    args = parser.parse_args()
+    try:
+        if args.operation == "create":
+            value = request("POST", "/v1/transfers", core=args.core, timeout=1800, body={
+                "expiresInSeconds": args.expires_in,
+                "items": [parse_item(item) for item in args.item],
+            })
+        elif args.operation == "receive":
+            # Receive can include large immutable snapshots. Local Core streams them and returns
+            # only after atomic materialization, so the CLI wait must exceed ordinary CRUD calls.
+            value = request("POST", "/v1/transfers/receive", core=args.core, timeout=1800, body={"capability": args.capability})
+        else:
+            request("POST", "/v1/transfers/revoke", core=args.core, body={
+                "transferId": args.transfer_id,
+                "revokeToken": args.revoke_token,
+            })
+            value = {"transferId": args.transfer_id, "revoked": True}
+        return success(value)
+    except ValueError as error:
+        return failure("invalid_argument", str(error), 2)
+    except LocalApiError as error:
+        return failure("local_api_error", str(error), error.exit_code)
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

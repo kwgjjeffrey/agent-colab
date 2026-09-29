@@ -1,7 +1,7 @@
 # Colab 实现计划
 
 状态：执行中  
-当前里程碑：M1–M4 主链已完成；正在收口 Files 预览，下一项为 M5 Quick Share，身份加固与 Windows 实机验收并行待办
+当前里程碑：M1–M4 主链与 Files 预览已完成；当前主线为 M5 Quick Share，随后依次收口身份生命周期、存储治理和邀请可靠性。Windows 实机验收等待测试设备，微信登录等待开放平台材料，二者不阻塞当前主线。
 
 ## 执行纪律
 
@@ -177,15 +177,23 @@
 5. [~] headless setup 安装与更新：主链与多 Agent target 通过，正式签名、公证与自动回滚仍延后；
 6. [x] Codex、Claude Code、MyFlicker 的实际安装位置、安装/更新/卸载与用户修改保护已验收；用户要求打开产品页面时由 `colab-open` 直接启动 Core 并打开认证后的 GUI，不经过 setup 或资源查询命令。
 
-## M5：Quick Share 一次性上下文传输（已设计，待实现）
+## M5：Quick Share 一次性上下文传输（纵向实现中）
 
 1. [x] 产品边界：Quick Share 是固定快照的临时 Transfer，不是临时 Channel，不创建 Organization Member，也不要求贡献者或接收者先加入协作关系；
 2. [x] 安全边界：默认 24 小时、可提前撤销、服务端仅存 capability token hash；token 只能读取明确列出的对象，不能枚举其他资源；
-3. [ ] Server：transfer schema、匿名创建限额/滥用防护、capability consume/revoke、到期 GC 与 Blob 引用回收；
-4. [ ] Local Core：复用三类生产 adapter 建立一次静态快照，不注册 watcher；接收端隔离物化、token 脱敏和 Files/Session/Skill 分流；
-5. [ ] Python Skill：新增 `colab-transfer`，并提供无需预装时可校验版本、摘要和签名的稳定 bootstrap 命令；
-6. [ ] Desktop：独立 “Share my context” 入口、对象多选、TTL、上传进度、提示词、复制和提前撤销；
-7. [ ] 黑盒验收：干净设备、未登录账号、未安装 Agent Colab 三种起点均能取得明确授权的上下文；过期、撤销、超额、篡改 token 均被拒绝。
+3. [x] **T5.1 Server**：transfer schema、匿名创建限额/滥用防护、capability consume/revoke、到期 GC 与 Blob 引用回收；
+4. [x] **T5.2 Local Core**：复用 Files/Skill shadow Git 与 Session 固定字节边界建立一次静态快照，不注册 watcher；接收端以流式 SHA-256 校验完成隔离物化、token 脱敏和 Files/Session/Skill 分流；
+5. [x] **T5.3 Python Skill**：新增并验证 `colab-transfer create|receive|revoke`；官方 Core 制品携带发布者 OAuth client 配置，公开签名安装器不再要求终端用户选择 JSON；
+6. [x] **T5.4 Desktop**：实现全局 “Share my context” 入口、Files/Session/Skill 多选、TTL、真实上传状态、接收提示词、复制和提前撤销；
+7. [~] **T5.5 黑盒验收（当前）**：release `0.1.56-dev` 已独立发布 Core `0.1.40-dev`、GUI `0.1.34-dev`、Skill `0.1.35-dev`，Electron 保持 `0.1.18-dev`；R2 公网完整回读、实际安装升级、混合对象传输、错误/撤销 token、同层重名冲突已通过。仍需在干净未安装起点验证 bootstrap，并完成自然到期、超额与 GC 黑盒验证。
+
+### M5 之后的固定收口顺序
+
+1. [ ] Google session 生命周期：refresh rotation、过期恢复、replay 拒绝黑盒测试；
+2. [ ] Files 存储治理：服务端孤儿 blob GC、配额与大对象边界；
+3. [ ] 邀请可靠性：transactional outbox、退避重试与任意收件人 provider 验收；
+4. [ ] Windows 干净账户实机：首次启动、登录、更新和三类共享；**等待测试设备，不阻塞 1–3**；
+5. [ ] 微信登录：provider identity、显式账号关联和真实登录；**等待微信开放平台材料，不阻塞 1–4**。
 
 ## 身份能力待办
 

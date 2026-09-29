@@ -32,6 +32,8 @@ An update check must visibly progress to updates available, up to date, or failu
 
 All context types use `features/agent/AgentPromptDialog` for Give to Agent. A feature owns only its prompt body; dialog sizing, overflow handling, target availability, default-Agent primary action, clipboard and Agent launch behavior must not be duplicated.
 
+Quick Share lives under `ui/src/features/transfers` and is a global entry independent from authentication and the selected Channel. React gathers local Files, Session-catalog and Skill-catalog sources, but Local Core owns snapshot creation, streaming upload, capability receipts and revoke. The result surface copies one self-contained receiver prompt; when the selected Agent target is not installed, that prompt uses the signed public installer before calling `colab-transfer receive`. Never expose upload/revoke capabilities in the prompt or imply that the fixed transfer tracks later source changes.
+
 Show the Agent Colab Skill as one independently versioned artifact. Codex, Claude Code, and MyFlicker rows are installation targets for that same artifact, not separately versioned copies. Settings offers one check/update action; per-artifact rows explain what will change instead of exposing redundant update buttons.
 
 The implemented Settings popover calls Local Core's allow-listed system API. Local Core delegates every check/install/update/uninstall mutation to the packaged Python setup; React must not write Skill directories or activate artifacts itself. Agent targets are independent (`codex`, `claude`, `myflicker`) and their state comes from managed links on disk.

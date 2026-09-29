@@ -399,12 +399,12 @@ Quick Share 不属于 `colab://channel/...` 资源树。创建方通过 Browser 
 
 提示词分两种：检测到 Agent Colab 已安装时直接调用 `colab-transfer receive`；未安装时先运行官方、带版本和摘要校验的 bootstrap 命令，然后调用同一入口。提示词可以携带 secret capability，因此 GUI 必须明确其默认有效期和转发风险；CLI 输出、错误与日志默认遮蔽 token，仅显示短 fingerprint。
 
-计划接口：
+已实现接口：
 
 ```text
-colab-browser create-transfer --source SOURCE... --expires-in 24h
-colab-browser revoke-transfer --transfer TRANSFER_ID
+colab-transfer create --item files=/path --item session=/path/thread.jsonl::codex-jsonl-v1 --item skill=/path/skill --expires-in 86400
 colab-transfer receive --capability CAPABILITY
+colab-transfer revoke --transfer-id TRANSFER_ID
 ```
 
 Files 返回只读本地路径和树；Session 返回可继续分页的 Reader handle；Skill 返回可检查并安装到目标 Agent 的临时来源。Transfer 到期后已物化的本地副本仍属于接收者设备，服务端不能远程擦除；产品只承诺阻止新的获取和刷新。

@@ -1229,6 +1229,77 @@ fn write_shadow_excludes(repo: &Path, patterns: &[String]) -> Result<(), LocalEr
     fs::write(info.join("exclude"), body).map_err(LocalError::internal)
 }
 
+/// Creates one self-contained Git pack for a fixed Files or Skill snapshot.
+///
+/// Quick Share uses a full pack because it has no prior revision chain. Keeping the pack producer
+/// beside the normal shadow-Git implementation preserves the same exclude, single-file and size
+/// invariants instead of inventing a second archive format for temporary transfers.
+pub(super) fn create_full_snapshot_pack(
+    source: &Path,
+    shadow: &Path,
+    pack_path: &Path,
+    excludes: &[String],
+    commit_message: &str,
+) -> Result<String, LocalError> {
+    let work_tree = source_work_tree(source);
+    init_shadow(shadow, work_tree)?;
+    write_shadow_excludes(shadow, excludes)?;
+    git(shadow, work_tree, &["read-tree", "--empty"])?;
+    if source.is_dir() {
+        git(shadow, work_tree, &["add", "-A", "--", "."])?;
+    } else {
+        let pathspec = source
+            .file_name()
+            .and_then(|value| value.to_str())
+            .ok_or_else(|| LocalError::bad_request("Shared file name is not valid UTF-8"))?;
+        git(shadow, work_tree, &["add", "-A", "--", pathspec])?;
+    }
+    validate_indexed_payload(shadow, work_tree)?;
+    let tree = git_text(shadow, work_tree, &["write-tree"])?;
+    let mut commit = git_command(shadow, work_tree);
+    commit
+        .args(["commit-tree", tree.as_str()])
+        .env("GIT_AUTHOR_NAME", "Colab")
+        .env("GIT_AUTHOR_EMAIL", "local@agent-colab")
+        .env("GIT_COMMITTER_NAME", "Colab")
+        .env("GIT_COMMITTER_EMAIL", "local@agent-colab")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped());
+    let mut child = commit.spawn().map_err(LocalError::internal)?;
+    child
+        .stdin
+        .as_mut()
+        .expect("piped commit input")
+        .write_all(commit_message.as_bytes())
+        .map_err(LocalError::internal)?;
+    let output = wait_with_output_timeout(child, std::time::Duration::from_secs(120))?;
+    if !output.status.success() {
+        return Err(LocalError::internal(String::from_utf8_lossy(
+            &output.stderr,
+        )));
+    }
+    let root = String::from_utf8_lossy(&output.stdout).trim().to_owned();
+    if let Some(parent) = pack_path.parent() {
+        fs::create_dir_all(parent).map_err(LocalError::internal)?;
+    }
+    let pack_file = fs::File::create(pack_path).map_err(LocalError::internal)?;
+    let mut pack = git_command(shadow, work_tree);
+    pack.args(["pack-objects", "--stdout", "--revs"])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::from(pack_file))
+        .stderr(Stdio::piped());
+    let mut child = pack.spawn().map_err(LocalError::internal)?;
+    writeln!(child.stdin.as_mut().expect("piped pack input"), "{root}")
+        .map_err(LocalError::internal)?;
+    let output = wait_with_output_timeout(child, std::time::Duration::from_secs(120))?;
+    if !output.status.success() {
+        return Err(LocalError::internal(String::from_utf8_lossy(
+            &output.stderr,
+        )));
+    }
+    Ok(root)
+}
+
 /// Read Colab's synchronization scope from Git's repository-local exclude file. This file is the
 /// sole source of truth for excludes; SQLite only locates the shadow repository. Unknown entries
 /// are ignored by the current GUI but remain Git-effective until the user explicitly saves scope.

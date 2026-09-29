@@ -182,7 +182,7 @@ def main():
     args=parser.parse_args()
     receipt=ROOT/"installation.json"
     def target_status(path):
-        required=(path/"SKILL.md",path/"agents/openai.yaml",path/"bin/colab-open",path/"bin/colab-browser",path/"bin/colab-session-reader",path/"bin/colab-skill-tool")
+        required=(path/"SKILL.md",path/"agents/openai.yaml",path/"bin/colab-open",path/"bin/colab-browser",path/"bin/colab-session-reader",path/"bin/colab-skill-tool",path/"bin/colab-transfer")
         return {"installed":all(item.exists() for item in required),"path":str(path)}
     def component_status(current, manifest=None):
         # Old receipts had one release-wide version. Keep that as a migration fallback only;
@@ -310,7 +310,17 @@ def main():
             if args.google_credentials.resolve() != credentials.resolve():
                 shutil.copy2(args.google_credentials,credentials)
             credentials.chmod(0o600)
-        if not credentials.exists(): raise RuntimeError("--google-credentials is required for the first installation")
+        if not credentials.exists():
+            # Official Core artifacts carry the installed-app client configuration. OAuth client
+            # secrets in native apps are public distribution identity, not an end-user credential;
+            # forks inject their own ignored file when building the Core artifact.
+            bundled=ROOT/"versions/local-core"/component_versions["local-core"]/"google-oauth.json"
+            if bundled.exists():
+                credentials.parent.mkdir(parents=True,exist_ok=True)
+                shutil.copy2(bundled,credentials)
+                credentials.chmod(0o600)
+        if not credentials.exists():
+            raise RuntimeError("this release does not include the publisher's Google OAuth client configuration")
         for agent in agents:
             activate_link(TARGETS[agent],skill_root)
             remove_managed_legacy_link(agent)

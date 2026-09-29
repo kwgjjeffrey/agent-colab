@@ -37,7 +37,7 @@ Download and open the DMG for the ordinary App launcher. The launcher expects Lo
 
 ```bash
 chmod +x ./colab-install
-./colab-install --google-credentials /path/to/client_secret.json --with-app
+./colab-install --with-app
 ```
 
 macOS builds are currently ad-hoc signed and not notarized. The installer applies the required local Gatekeeper exception only to the downloaded Colab application.
@@ -49,7 +49,7 @@ For the desktop path, download and run `Colab-*-x64.exe`. On first launch it ins
 For a headless or Skill-first installation, download `colab-install.ps1`, then run PowerShell:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\colab-install.ps1 -GoogleCredentials C:\path\to\client_secret.json
+powershell -ExecutionPolicy Bypass -File .\colab-install.ps1
 ```
 
 If desktop setup cannot install or start Local Core, it shows a native error and writes diagnostics to `%LOCALAPPDATA%\AgentColab\logs\electron-shell.log`.
