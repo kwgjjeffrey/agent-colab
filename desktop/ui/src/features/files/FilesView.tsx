@@ -29,6 +29,7 @@ import {
   agentSkillCommand,
   type AgentTarget,
 } from "@/features/agent/AgentPromptDialog";
+import { FileExplorer, type LocalFileEntry } from "@/features/files/FileExplorer";
 
 export type FileShare = {
   id: string;
@@ -43,13 +44,6 @@ export type FileShare = {
   localPath?: string;
   syncState?: "preparing" | "syncing" | "failed" | "ready";
   syncError?: string;
-};
-
-type LocalFileEntry = {
-  path: string;
-  name: string;
-  kind: "directory" | "file";
-  size: number;
 };
 
 type Props = {
@@ -94,7 +88,6 @@ export function FilesView({
 }: Props) {
   const [openShare, setOpenShare] = useState<string>();
   const [entries, setEntries] = useState<LocalFileEntry[]>([]);
-  const [preview, setPreview] = useState<{ path: string; content: string }>();
   const [agentPrompt, setAgentPrompt] = useState<{ ref: string; shareName: string }>();
   const [browseError, setBrowseError] = useState<string>();
   const [inspection, setInspection] = useState<SourceInspection>();
@@ -116,7 +109,6 @@ export function FilesView({
       );
       if (!response.ok) return setBrowseError(await response.text());
       setEntries(await response.json());
-      setPreview(undefined);
       setOpenShare(local.id);
       // Consumption is cache-first. Refresh runs in the background and never blocks browsing.
       if (!share.canWithdraw && share.localPath) void onEnsureLocal(share);
@@ -146,15 +138,6 @@ export function FilesView({
 ${agentSkillCommand(agent, "colab-browser")} use --ref '${agentPrompt.ref}'
 
 Treat localPath as read-only context. Use your file tools to read only the files relevant to the task, then complete the user's request.`;
-  }
-
-  async function read(shareId: string, path: string) {
-    setBrowseError(undefined);
-    const response = await trackedFetch(
-      `/v1/files/${shareId}/content?path=${encodeURIComponent(path)}`,
-    );
-    if (!response.ok) return setBrowseError(await response.text());
-    setPreview(await response.json());
   }
 
   async function inspect(path: string, excludes: string[], useRecommendations = false) {
@@ -239,6 +222,11 @@ Treat localPath as read-only context. Use your file tools to read only the files
     return `${(bytes / 1024 ** 3).toFixed(1)} GiB`;
   };
 
+  const browsedShare = shares.find((share) => share.id === openShare);
+  if (browsedShare) {
+    return <FileExplorer shareId={browsedShare.id} shareName={browsedShare.name} entries={entries} onClose={() => setOpenShare(undefined)} />;
+  }
+
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-5 py-6">
       <div className="flex justify-end">
@@ -267,8 +255,7 @@ Treat localPath as read-only context. Use your file tools to read only the files
       ) : (
         <div className="divide-y rounded-xl border">
           {shares.map((share) => (
-            <div key={share.id}>
-              <div className="group flex items-center gap-4 p-4">
+            <div key={share.id} className="group flex items-center gap-4 p-4">
                 <button
                   type="button"
                   className="min-w-0 flex-1 cursor-pointer text-left"
@@ -316,44 +303,6 @@ Treat localPath as read-only context. Use your file tools to read only the files
                     Withdraw
                   </Button>
                 )}
-              </div>
-              {openShare === share.id && (
-                <div className="grid min-h-64 grid-cols-[minmax(220px,1fr)_2fr] border-t bg-muted/20">
-                  <div className="border-r p-3">
-                    {entries.map((entry) => (
-                      <button
-                        type="button"
-                        key={entry.path}
-                        disabled={entry.kind === "directory"}
-                        onClick={() => void read(share.id, entry.path)}
-                        className="block w-full cursor-pointer truncate rounded px-2 py-1 text-left text-sm hover:bg-muted disabled:cursor-default disabled:font-medium disabled:text-foreground"
-                        style={{
-                          paddingLeft: `${8 + (entry.path.split("/").length - 1) * 16}px`,
-                        }}
-                      >
-                        {entry.kind === "directory" ? "▾ " : ""}
-                        {entry.name}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="min-w-0 p-4">
-                    {preview ? (
-                      <>
-                        <p className="mb-3 text-xs font-medium text-muted-foreground">
-                          {preview.path}
-                        </p>
-                        <pre className="overflow-auto whitespace-pre-wrap text-sm">
-                          {preview.content}
-                        </pre>
-                      </>
-                    ) : (
-                      <p className="text-sm text-muted-foreground">
-                        Select a text file to preview it.
-                      </p>
-                    )}
-                  </div>
-                </div>
-              )}
             </div>
           ))}
         </div>

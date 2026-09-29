@@ -76,6 +76,17 @@ paths:
         - { name: path, in: query, required: true, schema: { type: string } }
       responses:
         "200": { description: UTF-8 text preview up to 1 MiB }
+  /v1/files/{shareId}/raw:
+    get:
+      operationId: streamMaterializedFile
+      parameters:
+        - { name: path, in: query, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: Authenticated loopback byte stream for browser-native or local format preview
+          content:
+            application/octet-stream:
+              schema: { type: string, format: binary }
   /v1/session-sources:
     get:
       operationId: listLocalSessionSources

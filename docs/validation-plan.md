@@ -44,12 +44,16 @@
 | V-FILES-03 | **通过** | 超大或误包含构建物的共享源是否会拖死同步 | `agent-colab` 曾因构建物进入 shadow index 产生超过 2 GiB 对象，而 Server body limit 为 256 MiB。release `0.1.36-dev` 已安装复验：按 shadow `info/exclude` 排除 102,559 文件/20,071,279,289 bytes，纳入 393 文件/47,483,603 bytes，预览约 4.2 秒；真实临时 Shared Item 首次发布约 4 秒完成并得到 root `9972e3fe…`，随后已撤回。范围 PATCH → durable job completed → GET 读回均通过，SQLite schema 不含 exclude 配置，来源 `.gitignore` hash 保持 `8a8346e3…`。现有单文件 100 MiB/总量 200 MiB 预检阻止不可能进入单请求的工作；更大对象的分块传输仍属后续 transport 能力。 |
 | V-CONTRACT-01 | **Supabase 恢复时验收** | Supabase 与独立 Rust+PostgreSQL 后端是否具有相同产品语义 | 当前只验收 standalone；恢复 Supabase 后再让同一套黑盒测试运行两次 |
 | V-PUBLIC-01 | **通过** | 首次加载、前台请求状态与公开 GitHub 分发是否形成可理解、可复验的 alpha 体验 | GUI `0.1.30-dev` 构建与 request-activity 并发测试通过；首次无数据时显示 workspace loading，已有数据时 foreground request 显示顶部 loading，后台 reconciliation 静默。release `0.1.47-dev` 六个制品已通过 R2 公共 size/SHA-256 回读；public repository `kwgjjeffrey/agent-colab` 与含描述性资产名的 GitHub prerelease 已创建，匿名 manifest 下载 hash 与 Windows executable HTTP Range 下载通过。macOS DMG 从 release `0.1.52-dev` 已发布 ZIP 中的同一 App 生成；挂载后通过深层签名、bundle version 和 ASAR 摘要一致性验证，GitHub 完整回读为 110,809,491 bytes、SHA-256 `71733a62…4392`。README 中四张架构图已从 GitHub 运行时 Mermaid 改为仓库内静态 SVG，并保留可编辑 `.mmd` 源；公开页面不再出现 Mermaid `Loading`/rich-display failure，四个 SVG 均通过 XML 校验并由 GitHub 以 `image/svg+xml` 提供。 |
+| V-FILES-PREVIEW-01 | **实现完成，待安装后真人验收** | Files 是否能以 IDE 式信息架构预览常见格式，同时避免 Local Core 缓冲大文件 | GUI 已拆为全窗 File Explorer（目录树 + 内容区）；文本、图片、PDF、`.docx`、`.xlsx` 分别使用原生或按需 renderer。Local Core raw endpoint 使用 `ReaderStream`，未知/损坏/超限文件只在预览区降级；Office 前端解析上限为 25 MiB。待发布后用真实共享文件完成视觉与内存验收。 |
+| V-TRANSFER-01 | **待验证** | 未注册、未加入 Organization/Channel 的贡献者能否安全完成一次性上下文交付 | 验证默认 24 小时 capability、Files/Session/Skill 混合快照、未安装 Skill bootstrap、接收端消费、提前撤销/到期/篡改拒绝、匿名限额及 GC；不得把 Transfer 权限扩散为租户或 Channel 权限。 |
+| V-AUTH-WECHAT-01 | **待调研/验证** | 微信开放平台 OAuth 能否与现有 Google identity 安全共存 | 先确认目标客户端类型、所需开放平台资质、回调域名和 unionid 可用范围，再验证 provider identity 映射、显式账号关联与真实登录；不按昵称或未验证邮箱自动合并。 |
 
 ## 3. 接下来的执行顺序
 
-1. **Files 收口**：完成持久化同步 job/outbox、Local API discovery/bearer/Origin 防护和断网重启恢复。
-2. **发布与身份加固**：在公开 alpha 前补 refresh rotation、兼容范围拒绝、健康检查与故障注入；签名公证和其他桌面平台按发布范围安排。
-3. **Shared Skill 已完成**：来源发现、共享、跨账号消费、目标 Agent 安装/更新/卸载和 Give-to-Agent 已闭环；下一阶段只在明确需求出现后推进 query submit hook 自动推荐。
+1. **Files 预览收口**：发布并真人验收全窗树/内容预览，以及文本、图片、PDF、DOCX、XLSX 与不支持格式降级。
+2. **Quick Share**：先做 capability/匿名滥用/GC 纵切，再接三类来源、bootstrap 和 GUI；不能复用 Channel membership 走捷径。
+3. **发布与身份加固**：补 Google refresh rotation、兼容范围拒绝、健康检查与故障注入；并行调研微信开放平台身份类型和账号关联规则。
+4. **Windows 实机**：完成干净账户首次启动、Google 登录、自启、更新和三类共享闭环。
 
 ## 4. 当前确定原则
 

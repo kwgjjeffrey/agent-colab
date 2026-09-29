@@ -107,6 +107,16 @@ Session、Files 中由成员分享的根对象、Skill，都是 Shared Item 的�
 
 顶部提供“共享我的 Session”。清单显示标题、贡献者、来源 agent 和最近同步时间；首次快照尚未提交时明确显示同步中。每个 item 直接提供“给 Agent”；如果当前用户是所有者，还提供“撤回”。Session item 不以点击打开正文预览：对话渲染不是首版产品重点，也不应让一次 GUI 浏览隐式触发大型 Session 的全量物化和 adapter 投影。正文消费统一交给 Session Reader。
 
+### Files drill-down preview
+
+点击 Files item 后离开集合列表并进入占满内容窗口的 File Explorer。顶部提供返回和当前位置面包屑；左侧是目录树，右侧是选中文件的预览区，信息架构与 IDE 一致。文本、图片和 PDF 使用本机浏览器能力；`.xlsx` 与 `.docx` 使用按需加载的本地解析器，内容不会送到第三方预览服务。未知格式、损坏文件和大小超限只在右侧预览区显示明确提示，不能把 Local API JSON 错误追加到页面底部。
+
+### Quick Share
+
+未加入 Channel 的贡献者从独立入口选择“Share my context”，再选择一个或多个本机 Files、Session、Skill 来源及过期时间，默认 24 小时。界面必须逐项展示将要上传的来源、静态快照语义、到期时间和提前撤销入口；完成后展示一段可复制提示词。该流程不要求贡献者先创建账号、Organization 或 Channel。
+
+提示词对接收者只描述完成任务需要做的动作：已安装 Agent Colab 时直接使用 Quick Share 脚手架；未安装时先运行官方安装命令，再调用同一个脚手架。提示词不泄露服务端内部 ID、Blob key 或鉴权实现。
+
 ### 4.4 Files
 
 顶部提供“共享我的 Files”。Files 与 Sessions 使用相同的信息架构：第一层是共享文件对象列表，显示名称、贡献者、更新时间和简要信息。每个 Shared Item 直接提供“给 Agent”；只有所有者能看到“撤回”。

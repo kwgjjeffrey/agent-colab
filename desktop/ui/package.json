@@ -1,10 +1,33 @@
 {
   "name": "@colab/desktop-ui",
-  "version": "0.1.31-dev",
+  "version": "0.1.32-dev",
   "license": "Apache-2.0",
   "private": true,
   "type": "module",
-  "scripts": { "dev": "vite", "build": "tsc -b && vite build", "check": "tsc -b --pretty false && vite build", "test": "vitest run" },
-  "dependencies": { "@base-ui/react": "1.8.0", "cn": "^0.4.0", "react": "19.3.0", "react-dom": "19.3.0", "lucide-react": "1.48.0", "class-variance-authority": "^0.7.1" },
-  "devDependencies": { "@tailwindcss/vite": "^4.3.3", "@types/react": "^19.2.0", "@types/react-dom": "^19.2.0", "@vitejs/plugin-react": "6.1.1", "tailwindcss": "^4.3.3", "typescript": "7.0.2", "vite": "8.3.1", "vitest": "^4.0.0" }
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "check": "tsc -b --pretty false && vite build",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@base-ui/react": "1.8.0",
+    "class-variance-authority": "^0.7.1",
+    "cn": "^0.4.0",
+    "docx-preview": "0.4.1",
+    "exceljs": "4.4.0",
+    "lucide-react": "1.48.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@vitejs/plugin-react": "6.1.1",
+    "tailwindcss": "^4.3.3",
+    "typescript": "7.0.2",
+    "vite": "8.3.1",
+    "vitest": "^4.0.0"
+  }
 }

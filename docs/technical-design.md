@@ -479,6 +479,14 @@ Session connector 无损读取来源原始文件或 API 输出。大文件按稳
 
 消费端在应用数据目录保存按账号隔离的 manifest/segment 缓存与 adapter 索引。Reader 读取时把原始结构投影为 Codex-shaped turns；该投影是消费协议，不是持久化格式。opaque cursor 同时绑定 Share、root/revision、adapter 与分页位置，拒绝跨 snapshot 混用。工具输出裁剪发生在最终响应阶段，因此同一原始 snapshot 可以按不同 `includeOutputs`/长度参数读取，无需重新同步。
 
+### 7.4 Quick Share capability
+
+Quick Share 是独立的 `transfer` aggregate，不复用 Organization、Member、Channel 或 `channel_shares` 伪装临时成员关系。服务端只保存固定快照、对象类型、创建时间、到期时间、撤销状态、配额计数和 capability token 的 hash；原始 token 只在创建时返回一次。读取 API 先校验 token hash、到期、撤销和限流，再返回本 Transfer 明确列出的对象，绝不允许由 token 枚举账号、Organization 或 Channel。
+
+贡献端 Local Core 复用 Files shadow Git、Session segment 和 Skill shadow Git 的既有生产 adapter，但 Quick Share 创建完成后不注册 watcher，也不持续追踪来源。默认 TTL 为 24 小时，服务端设部署级最大 TTL、单 Transfer 大小和下载次数限制；提前撤销立即拒绝新读取，后台 GC 在到期宽限后删除 blob。接收端 Local Core 以 capability token 物化到独立 `transfers/` 缓存，不能把 token 写入日志、命令历史、可读文件名或普通资源 URI。
+
+未安装场景使用稳定的公开 bootstrap 命令下载并校验签名后的 Agent Colab Skill/setup；setup 只安装本机制品，真正读取仍由提示词中的一次性 capability 完成。Electron 是可选入口，不能成为消费 Quick Share 的前置。
+
 ## 8. 元数据一致性与 Realtime
 
 每次 Channel、成员、Share 或 current root 变化，都在业务事务中写 `metadata_events`。客户端正确性依赖 cursor pull：
@@ -599,6 +607,8 @@ Shell 和 GUI 都不引入数据库、远端 SDK 或同步实现。Electron main
 | Git object/tree | `git2`/libgit2 候选 | 不要求终端预装 Git；须先通过 shadow Git 兼容验证 |
 
 Local API 首版统一使用 `127.0.0.1` loopback HTTP，而不是同时维护 Unix socket、named pipe 和 HTTP 三套 transport。`colabd` 首次启动选择随机端口并生成高熵 bearer，写入仅当前用户可读的 discovery 文件；后续重启复用端口与 bearer、更新 PID。服务端校验 `Host`、拒绝浏览器跨域请求、限制 body 和并发。这样 Desktop 与 Skill 可以复用普通 OpenAPI client，普通浏览器也能跨 Core 重启恢复，Windows 不需要特殊 transport。
+
+Files GUI 的原始内容接口只在已鉴权 loopback API 上提供，并以 Tokio `File` + `ReaderStream` 流式返回，Local Core 不把 PDF、图片或 Office 文件整体读入内存。浏览器原生流式展示图片/PDF；`.docx` 和 `.xlsx` 因格式解析需要在前端形成 `ArrayBuffer`，故设置 25 MiB 预览上限并按需加载 `docx-preview`/`exceljs`。预览失败只属于展示状态，不改变已经物化的共享内容，也不影响 Agent 使用文件原生工具。
 
 本地长期任务必须写入 SQLite outbox 后再执行；内存 channel 只作唤醒，不作事实来源。重启后按 lease/next_attempt_at 恢复，避免引入另一套本地队列服务。
 

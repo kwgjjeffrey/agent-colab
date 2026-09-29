@@ -1,7 +1,7 @@
 # Colab 实现计划
 
 状态：执行中  
-当前里程碑：M3 Session 共享与阅读闭环已完成；Shared Skill 设计已确认，进入纵向实现
+当前里程碑：M1–M4 主链已完成；正在收口 Files 预览，下一项为 M5 Quick Share，身份加固与 Windows 实机验收并行待办
 
 ## 执行纪律
 
@@ -19,6 +19,7 @@
 2. **M2：Files 共享与同步闭环**
 3. **M3：Session 与 Skill Shared Item**
 4. **M4：Python Agent Skill**
+5. **M5：Quick Share 一次性上下文传输**
 
 ## M1：Desktop + 成员管理闭环
 
@@ -143,7 +144,7 @@
 - [x] 首次完整 pack、后续 thin incremental pack、root commit 与 CAS；
 - [x] 可替换 Blob Store 的首个本地文件系统 adapter；
 - [x] 其他成员下载 revision chain、校验 Git pack、物化当前 root；
-- [x] Desktop Files 列表、单文件/目录选择、自动发布、树浏览和文本预览；不再显示“Open/Share changes”假操作；
+- [x] Desktop Files 列表、单文件/目录选择、自动发布，以及 IDE 式全窗下钻预览；文本、图片、PDF、`.docx`、`.xlsx` 有明确 renderer，未知/损坏/超限格式在预览区降级；不再显示“Open/Share changes”假操作；
 - [x] 贡献者撤回与非贡献者权限拒绝；
 - [x] 真实双账号完成两次 revision、消费物化、目录树和文件内容验证；
 - [x] 原生文件监听、2 秒静默窗口合并、首次立即发布与进程内失败重试；
@@ -175,6 +176,21 @@
 4. [x] Session Reader：已实现 snapshot-pinned cursor、来源 adapter 与工具输出裁剪；
 5. [~] headless setup 安装与更新：主链与多 Agent target 通过，正式签名、公证与自动回滚仍延后；
 6. [x] Codex、Claude Code、MyFlicker 的实际安装位置、安装/更新/卸载与用户修改保护已验收；用户要求打开产品页面时由 `colab-open` 直接启动 Core 并打开认证后的 GUI，不经过 setup 或资源查询命令。
+
+## M5：Quick Share 一次性上下文传输（已设计，待实现）
+
+1. [x] 产品边界：Quick Share 是固定快照的临时 Transfer，不是临时 Channel，不创建 Organization Member，也不要求贡献者或接收者先加入协作关系；
+2. [x] 安全边界：默认 24 小时、可提前撤销、服务端仅存 capability token hash；token 只能读取明确列出的对象，不能枚举其他资源；
+3. [ ] Server：transfer schema、匿名创建限额/滥用防护、capability consume/revoke、到期 GC 与 Blob 引用回收；
+4. [ ] Local Core：复用三类生产 adapter 建立一次静态快照，不注册 watcher；接收端隔离物化、token 脱敏和 Files/Session/Skill 分流；
+5. [ ] Python Skill：新增 `colab-transfer`，并提供无需预装时可校验版本、摘要和签名的稳定 bootstrap 命令；
+6. [ ] Desktop：独立 “Share my context” 入口、对象多选、TTL、上传进度、提示词、复制和提前撤销；
+7. [ ] 黑盒验收：干净设备、未登录账号、未安装 Agent Colab 三种起点均能取得明确授权的上下文；过期、撤销、超额、篡改 token 均被拒绝。
+
+## 身份能力待办
+
+- [ ] Google session 生命周期加固：refresh rotation、过期恢复和 replay 黑盒测试；
+- [ ] 微信登录集成：确认开放平台网站应用/移动应用身份类型、unionid/openid 账号合并规则、OAuth 回调和中国区隐私合规，再实现 Server provider adapter、GUI 登录入口及真实账号验收；不得把微信账号与 Google 账号仅按昵称或未验证邮箱自动合并。
 
 ## 当前收口顺序
 

@@ -550,6 +550,10 @@ pub fn router(state: AppState, security: LocalSecurity) -> Router {
             "/v1/files/{share_id}/content",
             get(files::read_local_file_content),
         )
+        .route(
+            "/v1/files/{share_id}/raw",
+            get(files::stream_local_file_content),
+        )
         .route("/v1/files/{share_id}", delete(files::withdraw_file_share))
         .route("/v1/session-sources", get(sessions::list_session_sources))
         .route(
