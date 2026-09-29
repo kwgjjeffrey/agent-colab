@@ -40,6 +40,8 @@ powershell -ExecutionPolicy Bypass -File .\colab-install.ps1 -GoogleCredentials 
 
 The bootstrap installs Local Core, the browser UI, and Agent Colab Skill. Download the optional `Colab-*-x64.exe` launcher from the same release. The Windows executable is currently unsigned, so Windows may show a SmartScreen warning during this alpha phase.
 
+Run the bootstrap before the optional launcher. If the launcher cannot start Local Core, it displays an installation error and writes diagnostics to `%LOCALAPPDATA%\AgentColab\logs\electron-shell.log`.
+
 After installation, ask a supported coding agent to “open Agent Colab,” or run the installed `colab-open` command from the Agent Colab Skill.
 
 ## Architecture

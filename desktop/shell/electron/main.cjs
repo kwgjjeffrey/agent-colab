@@ -2,6 +2,7 @@
 const path = require('node:path')
 const fs = require('node:fs/promises')
 const os = require('node:os')
+const { spawn } = require('node:child_process')
 const { app, BrowserWindow, dialog, ipcMain, shell } = require('electron')
 
 let window
@@ -10,6 +11,34 @@ const applicationRoot = process.platform === 'win32'
   ? path.join(process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local'), 'AgentColab')
   : path.join(os.homedir(), '.local', 'share', 'agent-colab')
 const discoveryPath = process.env.COLAB_DISCOVERY_FILE || path.join(applicationRoot, 'discovery.json')
+const logPath = path.join(applicationRoot, 'logs', 'electron-shell.log')
+const installationGuide = 'https://github.com/kwgjjeffrey/agent-colab#install'
+
+async function logFailure(error) {
+  try {
+    await fs.mkdir(path.dirname(logPath), { recursive: true })
+    const message = error instanceof Error ? (error.stack || error.message) : String(error)
+    await fs.appendFile(logPath, `[${new Date().toISOString()}] ${message}\n`, 'utf8')
+  } catch {
+    // Diagnostics must never replace the original startup error.
+  }
+}
+
+function requestCoreStart() {
+  if (process.platform !== 'win32') return
+  // Setup owns service registration. The shell only asks Windows to start that registered task;
+  // it does not duplicate Core configuration or become responsible for its lifecycle.
+  try {
+    const child = spawn('schtasks.exe', ['/Run', '/TN', 'AgentColabCore'], {
+      detached: true,
+      stdio: 'ignore',
+      windowsHide: true,
+    })
+    child.unref()
+  } catch {
+    // Missing task is reported through the bounded discovery failure below.
+  }
+}
 
 async function localGuiUrl() {
   if (process.env.COLAB_LOCAL_GUI_URL) return process.env.COLAB_LOCAL_GUI_URL
@@ -30,6 +59,7 @@ async function localGuiUrl() {
 }
 
 async function createWindow() {
+  requestCoreStart()
   window = new BrowserWindow({ width: 1280, height: 820, minWidth: 900, minHeight: 600, show: false,
     webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true } })
   // Electron is only a native bookmark for the independently installed Local
@@ -47,7 +77,26 @@ app.on('open-url', (event, url) => {
   if (!url.startsWith('colab://')) return
   if (window) window.webContents.send('host:deep-link', [url]); else pendingDeepLinks.push(url)
 })
-app.whenReady().then(async () => { app.setAsDefaultProtocolClient('colab'); await createWindow() })
+async function reportStartupFailure(error) {
+  await logFailure(error)
+  const detail = `${error instanceof Error ? error.message : String(error)}\n\nDiagnostic log: ${logPath}`
+  const result = await dialog.showMessageBox({
+    type: 'error',
+    title: 'Agent Colab could not start',
+    message: 'Install or start Agent Colab Local Core before opening the desktop launcher.',
+    detail,
+    buttons: ['Open installation guide', 'Close'],
+    defaultId: 0,
+    cancelId: 1,
+    noLink: true,
+  })
+  if (result.response === 0) await shell.openExternal(installationGuide)
+  app.quit()
+}
+
+app.whenReady()
+  .then(async () => { app.setAsDefaultProtocolClient('colab'); await createWindow() })
+  .catch(reportStartupFailure)
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit() })
 app.on('activate', () => { if (!window) createWindow() })
 
