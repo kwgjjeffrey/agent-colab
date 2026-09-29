@@ -1,0 +1,23 @@
+erDiagram
+    USER ||--o{ AUTH_IDENTITY : signs_in_with
+    USER ||--o{ LOGIN_SESSION : authenticates
+    USER ||--o{ ORGANIZATION_MEMBER : becomes
+    ORGANIZATION ||--o{ ORGANIZATION_MEMBER : contains
+    ORGANIZATION ||--o{ ORGANIZATION_IDP : configures
+    ORGANIZATION ||--o{ ORGANIZATION_INVITATION : issues
+    ORGANIZATION ||--o{ CHANNEL : owns
+    ORGANIZATION_MEMBER ||--o{ CHANNEL_MEMBER : joins_as
+    CHANNEL ||--o{ CHANNEL_MEMBER : contains
+    CHANNEL ||--o{ CHANNEL_SHARE : publishes
+    ORGANIZATION_MEMBER ||--o{ CHANNEL_SHARE : contributes
+    CHANNEL_SHARE ||--o{ GIT_REVISION : files_or_skill
+    GIT_REVISION }o--|| BLOB_OBJECT : references
+    CHANNEL_SHARE ||--o{ SESSION_SNAPSHOT : session
+    SESSION_SNAPSHOT ||--o{ SESSION_SEGMENT : orders
+    SESSION_SEGMENT }o--|| BLOB_OBJECT : references
+    LOCAL_ACCOUNT ||--o{ LOCAL_JOB : schedules
+    LOCAL_ACCOUNT ||--o{ LOCAL_CATALOG_ENTRY : discovers
+    CHANNEL_SHARE ||--o| LOCAL_SOURCE : produced_from
+    CHANNEL_SHARE ||--o| LOCAL_MATERIALIZATION : consumed_as
+    LOCAL_SOURCE ||--|| SHADOW_GIT : tracks
+    LOCAL_MATERIALIZATION ||--|| LOCAL_PATH : exposes

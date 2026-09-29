@@ -1,0 +1,34 @@
+flowchart LR
+    subgraph Device[User device]
+        ES[Optional Electron Shell<br/>launcher only]
+        GUI[Desktop GUI resources<br/>React static assets]
+        SKILL[Agent Colab Skill<br/>Python commands]
+        CORE[Rust Local Core<br/>localhost API + background workers]
+        SQLITE[(SQLite<br/>accounts, indexes, cursors, jobs)]
+        SHADOW[(Shadow Git + object cache<br/>change detection and transfer objects)]
+        MAT[(Materialized working copies<br/>Files, Sessions, Skills)]
+        ES -->|opens| GUI
+        GUI -->|authenticated loopback HTTP| CORE
+        SKILL -->|authenticated loopback HTTP| CORE
+        CORE --> SQLITE
+        CORE --> SHADOW
+        CORE --> MAT
+    end
+    subgraph Hosted[Deployed separately]
+        SERVER[Rust Colab Server<br/>identity, authorization, coordination]
+        PG[(PostgreSQL<br/>relational metadata)]
+        BLOBS[(Blob store<br/>Git packs and Session segments)]
+        GOOGLE[Google OAuth / enterprise IdP]
+        SERVER --> PG
+        SERVER --> BLOBS
+        SERVER <--> GOOGLE
+    end
+    CORE -->|Colab HTTP API| SERVER
+    subgraph Distribution[Client artifact distribution]
+        CHANNEL[Signed release-channel manifest]
+        R2[Cloudflare R2<br/>update origin]
+        GH[GitHub Releases<br/>public evaluation mirror]
+    end
+    CORE -. checks and installs changed artifacts .-> CHANNEL
+    CHANNEL --> R2
+    R2 -. mirrored builds .-> GH
