@@ -72,7 +72,6 @@ flowchart LR
         SQLITE[(SQLite<br/>accounts, indexes, cursors, jobs)]
         SHADOW[(Shadow Git + object cache<br/>change detection and transfer objects)]
         MAT[(Materialized working copies<br/>Files, Sessions, Skills)]
-
         ES -->|opens| GUI
         GUI -->|authenticated loopback HTTP| CORE
         SKILL -->|authenticated loopback HTTP| CORE
@@ -86,20 +85,17 @@ flowchart LR
         PG[(PostgreSQL<br/>relational metadata)]
         BLOBS[(Blob store<br/>Git packs and Session segments)]
         GOOGLE[Google OAuth / enterprise IdP]
-
         SERVER --> PG
         SERVER --> BLOBS
         SERVER <--> GOOGLE
     end
 
     CORE -->|Colab HTTP API| SERVER
-
     subgraph Distribution[Client artifact distribution]
         CHANNEL[Signed release-channel manifest]
         R2[Cloudflare R2<br/>update origin]
         GH[GitHub Releases<br/>public evaluation mirror]
     end
-
     CORE -. checks and installs changed artifacts .-> CHANNEL
     CHANNEL --> R2
     R2 -. mirrored builds .-> GH
@@ -124,13 +120,11 @@ erDiagram
     CHANNEL ||--o{ CHANNEL_MEMBER : contains
     CHANNEL ||--o{ CHANNEL_SHARE : publishes
     ORGANIZATION_MEMBER ||--o{ CHANNEL_SHARE : contributes
-
     CHANNEL_SHARE ||--o{ GIT_REVISION : files_or_skill
     GIT_REVISION }o--|| BLOB_OBJECT : references
     CHANNEL_SHARE ||--o{ SESSION_SNAPSHOT : session
     SESSION_SNAPSHOT ||--o{ SESSION_SEGMENT : orders
     SESSION_SEGMENT }o--|| BLOB_OBJECT : references
-
     LOCAL_ACCOUNT ||--o{ LOCAL_JOB : schedules
     LOCAL_ACCOUNT ||--o{ LOCAL_CATALOG_ENTRY : discovers
     CHANNEL_SHARE ||--o| LOCAL_SOURCE : produced_from
@@ -147,7 +141,6 @@ Git is used locally as a content-addressed change detector and pack generator. I
 
 ```mermaid
 sequenceDiagram
-    autonumber
     participant FS as Source file/folder/Skill
     participant LC as Local Core
     participant SG as Isolated shadow Git
@@ -156,7 +149,6 @@ sequenceDiagram
     participant DB as PostgreSQL
     participant C as Consumer Local Core
     participant A as GUI / Agent Skill
-
     FS->>LC: filesystem change
     LC->>LC: debounce and enqueue durable sync job
     LC->>SG: index included paths and compute root OID
@@ -165,7 +157,6 @@ sequenceDiagram
     LC->>BS: upload only missing pack objects
     LC->>SV: commit revision with expected parent root
     SV->>DB: append revision and advance current root atomically
-
     A->>C: use shared item
     C-->>A: return cached local path immediately when available
     C->>SV: compare cached root with current root
@@ -182,20 +173,17 @@ Sessions keep their provider's original records. A source adapter finds complete
 
 ```mermaid
 sequenceDiagram
-    autonumber
     participant P as Codex / Claude Code / MyFlicker
     participant LC as Producer Local Core
     participant SV as Colab Server
     participant BS as Blob store
     participant C as Consumer Local Core
     participant R as colab-session-reader
-
     P->>LC: append source-native Session records
     LC->>LC: read complete records after source cursor
     LC->>SV: create snapshot from previous snapshot
     LC->>BS: upload bounded immutable segments
     LC->>SV: commit segment order and new source cursor
-
     R->>C: read shared Session with page cursor
     C->>SV: resolve current snapshot
     C->>BS: download only uncached segments
