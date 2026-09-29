@@ -329,6 +329,16 @@ Windows 首版采用 `%LOCALAPPDATA%\\AgentColab`、目录 junction 和用户级
 - [x] Standardize repository metadata and the root license on Apache-2.0 so the public project has permissive commercial reuse plus an explicit contributor patent grant.
 - [x] Add a human-facing Apple-silicon DMG without replacing the ZIP used by machine-driven update flows, and mirror the DMG in the public GitHub prerelease.
 
+### T2.9 IDE-style Files preview (implementation and release completed; visual acceptance pending)
+
+- [x] Replace the inline list-row preview with a full-window File Explorer containing a left tree, right preview pane, back action, and breadcrumb;
+- [x] Keep UTF-8 text bounded, stream image/PDF/raw bytes from authenticated Local Core, and lazy-load DOCX/XLSX renderers with a 25 MiB client parsing guard;
+- [x] Display unsupported, corrupt, oversized, and renderer failures inside the preview pane rather than as bottom-of-page JSON errors;
+- [x] Split collection, explorer, and format rendering into separate modules; update Local API contract, module `AGENTS.md`, interaction and technical design;
+- [x] Pass Rust tests and Desktop/Electron checks; release `0.1.54-dev` with Core `0.1.38-dev` and GUI `0.1.32-dev`, while Skill remains `0.1.34-dev` and Electron remains `0.1.18-dev`;
+- [x] Install from stable R2 and verify the authenticated DOCX byte stream returns the correct MIME type, `nosniff`, exact size and SHA-256;
+- [ ] Human visual acceptance for directory navigation, DOCX, XLSX, PDF, image and unsupported-file states.
+
 ## 已删除的工作
 
 - `git2`/libgit2 替换验证：不再为实现纯度替换已验证的 Git CLI；真实跨平台问题出现时另建分发任务；
