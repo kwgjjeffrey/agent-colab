@@ -1,0 +1,17 @@
+sequenceDiagram
+    participant P as Codex / Claude Code / MyFlicker
+    participant LC as Producer Local Core
+    participant SV as Colab Server
+    participant BS as Blob store
+    participant C as Consumer Local Core
+    participant R as colab-session-reader
+    P->>LC: append source-native Session records
+    LC->>LC: read complete records after source cursor
+    LC->>SV: create snapshot from previous snapshot
+    LC->>BS: upload bounded immutable segments
+    LC->>SV: commit segment order and new source cursor
+    R->>C: read shared Session with page cursor
+    C->>SV: resolve current snapshot
+    C->>BS: download only uncached segments
+    C->>C: reconstruct raw records and run provider reader adapter
+    C-->>R: normalized turns, tool I/O, and next cursor

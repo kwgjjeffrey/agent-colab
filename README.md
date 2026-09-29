@@ -62,44 +62,7 @@ After installation, ask a supported coding agent to “open Agent Colab,” or r
 
 The browser UI and the Python Skill are two clients of the same Local Core. Electron is an optional launcher, not an application server and not a prerequisite for either path. Business logic does not move between these independently released units for packaging convenience.
 
-```mermaid
-flowchart LR
-    subgraph Device[User device]
-        ES[Optional Electron Shell<br/>launcher only]
-        GUI[Desktop GUI resources<br/>React static assets]
-        SKILL[Agent Colab Skill<br/>Python commands]
-        CORE[Rust Local Core<br/>localhost API + background workers]
-        SQLITE[(SQLite<br/>accounts, indexes, cursors, jobs)]
-        SHADOW[(Shadow Git + object cache<br/>change detection and transfer objects)]
-        MAT[(Materialized working copies<br/>Files, Sessions, Skills)]
-        ES -->|opens| GUI
-        GUI -->|authenticated loopback HTTP| CORE
-        SKILL -->|authenticated loopback HTTP| CORE
-        CORE --> SQLITE
-        CORE --> SHADOW
-        CORE --> MAT
-    end
-
-    subgraph Hosted[Deployed separately]
-        SERVER[Rust Colab Server<br/>identity, authorization, coordination]
-        PG[(PostgreSQL<br/>relational metadata)]
-        BLOBS[(Blob store<br/>Git packs and Session segments)]
-        GOOGLE[Google OAuth / enterprise IdP]
-        SERVER --> PG
-        SERVER --> BLOBS
-        SERVER <--> GOOGLE
-    end
-
-    CORE -->|Colab HTTP API| SERVER
-    subgraph Distribution[Client artifact distribution]
-        CHANNEL[Signed release-channel manifest]
-        R2[Cloudflare R2<br/>update origin]
-        GH[GitHub Releases<br/>public evaluation mirror]
-    end
-    CORE -. checks and installs changed artifacts .-> CHANNEL
-    CHANNEL --> R2
-    R2 -. mirrored builds .-> GH
-```
+[![Runtime and deployment boundaries](docs/architecture/runtime-boundaries.svg)](docs/architecture/runtime-boundaries.mmd)
 
 The call direction is an invariant: **GUI and Skill call Local Core; Local Core calls Server**. Server is never bundled with the desktop application. Local Core owns device paths, provider adapters, background synchronization, and local credentials; Server owns shared identity, authorization, metadata, and remote blobs.
 
@@ -107,31 +70,7 @@ The call direction is an invariant: **GUI and Skill call Local Core; Local Core 
 
 The server stores relationships and publication metadata in PostgreSQL. Shared contents remain opaque blobs: Files and Skills use immutable Git pack revisions, while Sessions preserve source records in immutable segments. The local database is a cache and work queue, not a second remote source of truth.
 
-```mermaid
-erDiagram
-    USER ||--o{ AUTH_IDENTITY : signs_in_with
-    USER ||--o{ LOGIN_SESSION : authenticates
-    USER ||--o{ ORGANIZATION_MEMBER : becomes
-    ORGANIZATION ||--o{ ORGANIZATION_MEMBER : contains
-    ORGANIZATION ||--o{ ORGANIZATION_IDP : configures
-    ORGANIZATION ||--o{ ORGANIZATION_INVITATION : issues
-    ORGANIZATION ||--o{ CHANNEL : owns
-    ORGANIZATION_MEMBER ||--o{ CHANNEL_MEMBER : joins_as
-    CHANNEL ||--o{ CHANNEL_MEMBER : contains
-    CHANNEL ||--o{ CHANNEL_SHARE : publishes
-    ORGANIZATION_MEMBER ||--o{ CHANNEL_SHARE : contributes
-    CHANNEL_SHARE ||--o{ GIT_REVISION : files_or_skill
-    GIT_REVISION }o--|| BLOB_OBJECT : references
-    CHANNEL_SHARE ||--o{ SESSION_SNAPSHOT : session
-    SESSION_SNAPSHOT ||--o{ SESSION_SEGMENT : orders
-    SESSION_SEGMENT }o--|| BLOB_OBJECT : references
-    LOCAL_ACCOUNT ||--o{ LOCAL_JOB : schedules
-    LOCAL_ACCOUNT ||--o{ LOCAL_CATALOG_ENTRY : discovers
-    CHANNEL_SHARE ||--o| LOCAL_SOURCE : produced_from
-    CHANNEL_SHARE ||--o| LOCAL_MATERIALIZATION : consumed_as
-    LOCAL_SOURCE ||--|| SHADOW_GIT : tracks
-    LOCAL_MATERIALIZATION ||--|| LOCAL_PATH : exposes
-```
+[![Persistent data model](docs/architecture/persistent-data-model.svg)](docs/architecture/persistent-data-model.mmd)
 
 `CHANNEL_SHARE` is the common metadata envelope (`files`, `session`, or `skill`), not a common content schema. Provider-specific Session records are deliberately not rewritten on upload; reader adapters normalize them only when an agent reads a Session.
 
@@ -139,31 +78,7 @@ erDiagram
 
 Git is used locally as a content-addressed change detector and pack generator. It is **not** pushed to a remote Git repository and does not touch the source repository's `.git` directory. The server receives immutable packs through its blob plane and advances the shared item's current root only after the corresponding metadata operation succeeds.
 
-```mermaid
-sequenceDiagram
-    participant FS as Source file/folder/Skill
-    participant LC as Local Core
-    participant SG as Isolated shadow Git
-    participant SV as Colab Server
-    participant BS as Blob store
-    participant DB as PostgreSQL
-    participant C as Consumer Local Core
-    participant A as GUI / Agent Skill
-    FS->>LC: filesystem change
-    LC->>LC: debounce and enqueue durable sync job
-    LC->>SG: index included paths and compute root OID
-    SG-->>LC: missing immutable Git objects
-    LC->>SV: request publication / transfer
-    LC->>BS: upload only missing pack objects
-    LC->>SV: commit revision with expected parent root
-    SV->>DB: append revision and advance current root atomically
-    A->>C: use shared item
-    C-->>A: return cached local path immediately when available
-    C->>SV: compare cached root with current root
-    C->>BS: fetch missing packs only
-    C->>C: verify, import, and atomically rematerialize
-    C-->>A: local path and directory tree
-```
+[![Files and Skills synchronization](docs/architecture/files-skills-sync.svg)](docs/architecture/files-skills-sync.mmd)
 
 Files are consumed through native filesystem tools after materialization. Skills add an explicit install/update step that copies the verified materialization into the selected coding agent's Skill location.
 
@@ -171,25 +86,7 @@ Files are consumed through native filesystem tools after materialization. Skills
 
 Sessions keep their provider's original records. A source adapter finds complete new records after the last source cursor; uploads are bounded immutable segments, so long conversations do not require a full re-upload. On read, the consumer caches missing segments locally and the appropriate provider adapter returns a normalized, paginated view.
 
-```mermaid
-sequenceDiagram
-    participant P as Codex / Claude Code / MyFlicker
-    participant LC as Producer Local Core
-    participant SV as Colab Server
-    participant BS as Blob store
-    participant C as Consumer Local Core
-    participant R as colab-session-reader
-    P->>LC: append source-native Session records
-    LC->>LC: read complete records after source cursor
-    LC->>SV: create snapshot from previous snapshot
-    LC->>BS: upload bounded immutable segments
-    LC->>SV: commit segment order and new source cursor
-    R->>C: read shared Session with page cursor
-    C->>SV: resolve current snapshot
-    C->>BS: download only uncached segments
-    C->>C: reconstruct raw records and run provider reader adapter
-    C-->>R: normalized turns, tool I/O, and next cursor
-```
+[![Session synchronization and reading](docs/architecture/session-sync.svg)](docs/architecture/session-sync.mmd)
 
 ### Repository and release units
 

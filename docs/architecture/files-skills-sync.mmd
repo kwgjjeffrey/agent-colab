@@ -1,0 +1,23 @@
+sequenceDiagram
+    participant FS as Source file/folder/Skill
+    participant LC as Local Core
+    participant SG as Isolated shadow Git
+    participant SV as Colab Server
+    participant BS as Blob store
+    participant DB as PostgreSQL
+    participant C as Consumer Local Core
+    participant A as GUI / Agent Skill
+    FS->>LC: filesystem change
+    LC->>LC: debounce and enqueue durable sync job
+    LC->>SG: index included paths and compute root OID
+    SG-->>LC: missing immutable Git objects
+    LC->>SV: request publication / transfer
+    LC->>BS: upload only missing pack objects
+    LC->>SV: commit revision with expected parent root
+    SV->>DB: append revision and advance current root atomically
+    A->>C: use shared item
+    C-->>A: return cached local path immediately when available
+    C->>SV: compare cached root with current root
+    C->>BS: fetch missing packs only
+    C->>C: verify, import, and atomically rematerialize
+    C-->>A: local path and directory tree
