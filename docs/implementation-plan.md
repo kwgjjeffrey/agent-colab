@@ -281,7 +281,7 @@ Windows 首版采用 `%LOCALAPPDATA%\\AgentColab`、目录 junction 和用户级
 - [x] Translate public README, visible UI additions, and Agent handoff prompts into English.
 - [x] Expand ignore rules for credentials, local databases, runtime state, build output, and provider tooling.
 - [x] Publish GUI `0.1.30-dev` in release channel `0.1.47-dev`; all six platform artifacts passed public R2 size and SHA-256 readback verification.
-- [ ] Create the public GitHub repository and mirror the verified alpha artifacts in a GitHub Release.
+- [x] Create public repository `kwgjjeffrey/agent-colab`; mirror ten descriptively named installers/artifacts in GitHub prerelease `v0.1.47-dev` and verify anonymous manifest hash plus Windows executable range download.
 
 ## 已删除的工作
 
