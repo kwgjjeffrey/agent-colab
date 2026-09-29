@@ -212,6 +212,10 @@ Windows 首版采用 `%LOCALAPPDATA%\\AgentColab`、目录 junction 和用户级
 - [x] Session 来源清单改为 SQLite 元数据索引；MyFlicker 补齐新版 CLI、旧版 CLI 与 Desktop 三类存储，排除 `requests/` 请求碎片，并以独立 Desktop adapter 处理覆盖、rollback 与工具调用；
 - [x] Agent Colab Skill 显式暴露 GUI 对应的 Files/Session 完整故事线：来源发现、共享、消费、阅读和撤回；脚手架 `--help` 同步提供可发现的命令说明；
 - [x] 更新 API 契约、技术设计、各模块 `AGENTS.md`；当前复验发布为 release `0.1.34-dev`、Core `0.1.27-dev`、Skill `0.1.25-dev`。
+- [x] 修复已安装 Skill 的 sibling-module 导入契约，并从临时安装树直接执行全部五个入口；不再由源码 `PYTHONPATH` 掩盖打包错误；
+- [x] 修复大型 Session 首次同步：冻结本轮长度、按完整 JSONL record 聚合约 8 MiB segment、逐段提交 cursor/snapshot 并支持失败续传；读取不再吞掉贡献端同步错误；
+- [x] contributor source 按当前 user 隔离；`session-sources` 的 catalog id/source path 可被后续 `share --source` 精确查回；
+- [x] 发布 release `0.1.52-dev`（Core `0.1.36-dev`、Skill `0.1.34-dev`，GUI/Electron 不变），并用 `yuzhyuan@gmail.com` → `jeffreyyuzhyuan@gmail.com` 完成 Files/Session/Skill 分享、列表、消费、安装/卸载和撤回的安装后黑盒验收。
 
 ### T0 计划与设计校准
 

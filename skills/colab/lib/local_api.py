@@ -9,7 +9,9 @@ import os
 import pathlib
 import urllib.error
 import urllib.request
-from lib.platform_paths import application_root
+# The executable entrypoints add this directory itself to sys.path. Import the
+# sibling module directly so the packaged Skill works outside the source tree.
+from platform_paths import application_root
 
 DEFAULT_CORE = None
 _OPENER = urllib.request.build_opener(urllib.request.ProxyHandler({}))

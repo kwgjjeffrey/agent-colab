@@ -324,6 +324,8 @@ colab-session-reader read \
 
 Session Reader 在本机解释来源原始快照。一次 `read` 内部完成权限解析、检查更新、拉取缺失 segment 和读取，不要求 Agent 预先调用 Browser。与 Files 一样，已有缓存可先读；刷新超时或离线时返回固定缓存并在 `freshness` 中明确说明，而不是把可用历史变成错误。
 
+分发验收必须从临时安装树直接执行 `colab-open`、`colab-browser`、`colab-session-reader`、`colab-skill-tool` 和 `colab-setup`，不能用源码目录导入成功替代。真实跨账号 E2E 还要由账号 A 经 Browser 分别共享 Files、Session、Skill，账号 B 经三个专用入口完成可见、物化、读取、安装/卸载，最后由 A 撤回；这同时验证脚手架参数、Local API 权限和远端持久化契约。
+
 首版不提供远端 session 正文搜索；需要搜索时先同步，再由来源 adapter 的本地索引/扫描能力完成。等真实使用证明需要语义分段时，再扩展 Reader，而不是现在预设 outline 或 section。
 
 ## 7. `colab-skill-tool`
