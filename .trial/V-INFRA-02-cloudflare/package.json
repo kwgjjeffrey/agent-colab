@@ -1,0 +1,16 @@
+{
+  "name": "colab-cloudflare-validation",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --local",
+    "db:migrate": "wrangler d1 migrations apply colab-validation --local",
+    "types": "wrangler types",
+    "check": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.2",
+    "ws": "^8.18.3",
+    "wrangler": "4.141.0"
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "name": "colab-application-core-validation",
+  "private": true,
+  "type": "module",
+  "scripts": { "validate": "node src/validate.mjs" },
+  "dependencies": { "undici": "8.11.2" }
+}

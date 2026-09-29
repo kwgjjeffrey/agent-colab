@@ -1,0 +1,14 @@
+[package]
+name = "colab-server-email"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+async-trait.workspace = true
+lettre.workspace = true
+minijinja.workspace = true
+reqwest.workspace = true
+serde_json.workspace = true
+serde.workspace = true

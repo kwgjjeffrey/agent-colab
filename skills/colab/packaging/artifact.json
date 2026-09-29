@@ -1,0 +1,6 @@
+{
+  "name": "colab-skill",
+  "version": "0.1.33-dev",
+  "localApi": ">=0.1.0 <0.2.0",
+  "entrypoints": ["bin/colab-open", "bin/colab-browser", "bin/colab-session-reader", "bin/colab-skill-tool", "setup/colab-setup"]
+}

@@ -1,0 +1,4 @@
+.env.local
+.wrangler/
+node_modules/
+

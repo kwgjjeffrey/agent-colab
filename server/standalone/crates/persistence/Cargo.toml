@@ -1,0 +1,13 @@
+[package]
+name = "colab-server-persistence"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+sqlx.workspace = true
+serde.workspace = true
+sha2.workspace = true
+hex.workspace = true
+uuid.workspace = true

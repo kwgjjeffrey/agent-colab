@@ -1,0 +1,16 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "colab-cloudflare-validation",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-09-26",
+  "observability": { "enabled": true, "logs": { "enabled": true }, "traces": { "enabled": true } },
+  "d1_databases": [{ "binding": "DB", "database_name": "colab-validation", "database_id": "00000000-0000-0000-0000-000000000000", "migrations_dir": "migrations" }],
+  "r2_buckets": [{ "binding": "OBJECTS", "bucket_name": "colab-validation-objects" }],
+  "queues": {
+    "producers": [{ "binding": "INDEX_QUEUE", "queue": "colab-validation-index" }],
+    "consumers": [{ "queue": "colab-validation-index", "max_batch_size": 10, "max_batch_timeout": 1 }]
+  },
+  "triggers": { "crons": ["*/1 * * * *"] },
+  "durable_objects": { "bindings": [{ "name": "CHANNEL_HUB", "class_name": "ChannelHub" }] },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["ChannelHub"] }]
+}

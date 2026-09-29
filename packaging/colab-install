@@ -1,0 +1,92 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+manifest_url="${COLAB_RELEASE_MANIFEST:-https://artifacts.agent-colab.zhiyuanwangluo.online/channels/stable.json}"
+google_credentials=""
+with_app=false
+agents=(codex)
+
+usage() {
+  echo "Usage: colab-install --google-credentials FILE [--with-app] [--agent codex|claude|myflicker]"
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --google-credentials) google_credentials="$2"; shift 2 ;;
+    --with-app) with_app=true; shift ;;
+    --agent) agents+=("$2"); shift 2 ;;
+    --manifest) manifest_url="$2"; shift 2 ;;
+    -h|--help) usage; exit 0 ;;
+    *) echo "Unknown argument: $1" >&2; usage >&2; exit 2 ;;
+  esac
+done
+
+[[ -f "$google_credentials" ]] || {
+  echo "--google-credentials must point to the Google Desktop OAuth JSON file" >&2
+  exit 2
+}
+
+for command in curl ssh-keygen python3 unzip shasum; do
+  command -v "$command" >/dev/null || { echo "Missing required command: $command" >&2; exit 2; }
+done
+
+temporary="$(mktemp -d -t agent-colab-install)"
+trap 'rm -rf "$temporary"' EXIT
+manifest="$temporary/stable.json"
+signature="$temporary/stable.json.sig"
+allowed="$temporary/release-allowed-signers"
+user_agent="agent-colab-bootstrap/1"
+
+curl -fL --retry 3 -A "$user_agent" "$manifest_url" -o "$manifest"
+curl -fL --retry 3 -A "$user_agent" "$manifest_url.sig" -o "$signature"
+printf '%s\n' 'agent-colab ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDCxpnhppbE+x96B8Y0Y/kqaIOXm5hweIrP4zpOAQeHz' > "$allowed"
+ssh-keygen -Y verify -f "$allowed" -I agent-colab -n agent-colab-release -s "$signature" < "$manifest" >/dev/null
+
+artifact_fields() {
+  python3 - "$manifest" "$1" <<'PY'
+import json,sys
+payload=json.load(open(sys.argv[1]))
+item=next(value for value in payload["artifacts"] if value["name"] == sys.argv[2] and value.get("platform") in (None,"darwin") and value.get("arch") in (None,"arm64"))
+print(item["url"], item["sha256"], item["size"], sep="\t")
+PY
+}
+
+verify_file() {
+  local file="$1" expected_hash="$2" expected_size="$3"
+  local actual_hash actual_size
+  actual_hash="$(shasum -a 256 "$file" | awk '{print $1}')"
+  actual_size="$(stat -f '%z' "$file")"
+  [[ "$actual_hash" == "$expected_hash" && "$actual_size" == "$expected_size" ]] || {
+    echo "Artifact verification failed: $file" >&2
+    exit 4
+  }
+}
+
+IFS=$'\t' read -r skill_url skill_hash skill_size <<< "$(artifact_fields colab-skill)"
+skill_archive="$temporary/colab-skill.zip"
+curl -fL --retry 3 -A "$user_agent" "$skill_url" -o "$skill_archive"
+verify_file "$skill_archive" "$skill_hash" "$skill_size"
+unzip -q "$skill_archive" -d "$temporary/skill"
+setup="$(find "$temporary/skill" -type f -path '*/setup/colab-setup' -print -quit)"
+[[ -n "$setup" ]] || { echo "Skill setup entry is missing" >&2; exit 4; }
+chmod 0755 "$setup"
+
+setup_args=(install --manifest "$manifest_url" --google-credentials "$google_credentials")
+for agent in "${agents[@]}"; do setup_args+=(--agent "$agent"); done
+"$setup" "${setup_args[@]}"
+
+if [[ "$with_app" == true ]]; then
+  IFS=$'\t' read -r app_url app_hash app_size <<< "$(artifact_fields electron-shell)"
+  app_archive="$temporary/Colab.zip"
+  curl -fL --retry 3 -A "$user_agent" "$app_url" -o "$app_archive"
+  verify_file "$app_archive" "$app_hash" "$app_size"
+  [[ ! -e /Applications/Colab.app ]] || {
+    echo "/Applications/Colab.app already exists; update it from Colab Settings or remove it explicitly" >&2
+    exit 4
+  }
+  ditto -x -k "$app_archive" /Applications
+  xattr -dr com.apple.quarantine /Applications/Colab.app
+  codesign --verify --deep --strict /Applications/Colab.app
+fi
+
+echo "Agent Colab installation complete. Run ~/.agents/skills/agent-colab/setup/colab-setup open or open /Applications/Colab.app."

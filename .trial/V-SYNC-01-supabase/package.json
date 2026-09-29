@@ -1,0 +1,14 @@
+{
+  "name": "colab-supabase-sync-validation",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "validate": "node src/validate.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "2.117.2",
+    "https-proxy-agent": "9.1.0",
+    "undici": "8.11.2",
+    "ws": "8.21.3"
+  }
+}

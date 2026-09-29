@@ -1,0 +1,16 @@
+{
+  "name": "@colab/desktop-workspace",
+  "version": "0.0.0-private",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --dir ui dev",
+    "build": "pnpm --dir ui build && pnpm --dir shell build",
+    "build:ui": "pnpm --dir ui build",
+    "build:shell": "pnpm --dir shell build",
+    "check": "pnpm --dir ui check && pnpm --dir shell check",
+    "format": "prettier --write .",
+    "test": "pnpm --dir ui test && pnpm --dir shell test"
+  },
+  "devDependencies": { "prettier": "^3.6.0" },
+  "packageManager": "pnpm@10.18.3"
+}

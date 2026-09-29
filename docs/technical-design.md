@@ -1,0 +1,694 @@
+# Colab 技术设计
+
+状态：第一轮验证收敛版  
+当前实现主线：独立 Rust + PostgreSQL；Supabase 原型保留但暂停继续开发  
+范围：Organization、Channel、Session、Files、Skills、Settings
+
+## 1. 当前架构结论
+
+- 独立 Rust Local Core 是本机业务能力和后台同步的唯一进程；Desktop UI 与 Skill scripts 都是它的客户端，GUI 不运行时 Core 仍可工作；
+- Files、Skill 使用独立 shadow Git tree 表达快照；不接触来源目录的 `.git`；
+- Session 保留来源原始结构，大型追加文件按稳定边界拆成不可变 segment/chunk；
+- 服务端只登记 Shared Item 当前 root，不提供 commit history、branch、merge 或版本恢复；
+- Git objects 存 S3-compatible Blob Storage，PostgreSQL 只存传输目录和当前指针；
+- 对象目录以 `(share_id, oid)` 为身份，只做 Share 内去重；
+- Files 消费前同步到本机并交给文件工具；Skill 先同步制品，再安装/更新到指定 Agent 目标并交给其原生 Skill loader；Session 由专用 Reader 按来源结构分页读取；
+- 实时通道只发送失效通知，数据库 current root 才是事实来源；
+- 搜索是从 Blob 真源异步产生、可以删除重建的投影；
+- 当前服务端主线采用独立 Rust API、Google OIDC、PostgreSQL、S3-compatible Blob、SSE 和 PostgreSQL FTS；
+- 客户端只依赖 Colab Server 领域协议，不直接依赖 PostgREST、Supabase RPC 或 Storage SDK；
+- 独立版使用 Rust + PostgreSQL，并替换身份、Blob、Realtime 和任务实现；两版接受同一套 Server Contract Tests。
+
+## 2. 总体架构
+
+```mermaid
+flowchart LR
+    GUI[Optional Desktop UI] -->|local IPC| CORE[Rust Local Core]
+    AG[Agent Runtime] -->|Skill scripts / local IPC| CORE
+
+    CORE --> LDB[(Client SQLite)]
+    CORE --> SG[(Shadow Git / Object Cache)]
+    CORE --> MAT[(Read-only Materializations)]
+    CORE --> TOK[Local credential store adapter]
+
+    CORE -->|Colab HTTP API| API[Colab Server API]
+    CORE -->|authorized transfer descriptor| ST[Blob Data Plane]
+    CORE <-->|invalidate only| RT[Changes Stream]
+
+    API --> PG[(PostgreSQL)]
+    PG --> OUT[(Reliable Jobs)]
+    OUT --> IX[Index Worker]
+    IX --> ST
+    IX --> FTS[(PostgreSQL FTS Projection)]
+```
+
+边界原则：
+
+- UI 是可选客户端，只负责展示和收集意图，不写 SQLite、不调用远端服务；
+- Agent 不持有 Colab Server refresh token，只调用本机 Local API；
+- Rust Local Core 独立于 GUI 生命周期，是本地业务能力的唯一入口和 SQLite 唯一写入者；
+- Colab Server API 负责身份验证、Channel 权限、原子写入和短时 Blob 授权；
+- Storage 只存字节，不承担 Shared Item、文件树或产品版本语义；
+- Index Worker 可以理解来源内容，但其失败不能阻塞共享或下载。
+
+## 3. 领域对象
+
+```mermaid
+erDiagram
+    USERS ||--o{ AUTH_IDENTITIES : authenticates_with
+    USERS ||--o{ DEVICES : owns
+    USERS ||--o{ CHANNEL_MEMBERS : joins
+    USERS ||--o{ ORGANIZATION_MEMBERS : joins
+    ORGANIZATIONS ||--o{ ORGANIZATION_MEMBERS : contains
+    ORGANIZATIONS ||--o{ CHANNELS : owns
+    ORGANIZATIONS ||--o{ ORGANIZATION_INVITATIONS : invites
+    CHANNELS ||--o{ CHANNEL_MEMBERS : contains
+    CHANNELS ||--o{ CHANNEL_SHARES : contains
+    USERS ||--o{ CHANNEL_SHARES : contributes
+    DEVICES ||--o{ CHANNEL_SHARES : publishes
+    CHANNEL_SHARES ||--o{ SYNC_ATTEMPTS : transfers
+    SYNC_ATTEMPTS ||--o{ SYNC_ATTEMPT_OBJECTS : expects
+    CHANNEL_SHARES ||--o{ GIT_OBJECTS : owns
+    CHANNEL_SHARES ||--o| SEARCH_PROJECTIONS : projects
+    CHANNEL_SHARES ||--o{ SEARCH_DOCUMENTS : indexes
+    CHANNELS ||--o{ METADATA_EVENTS : emits
+    CHANNELS ||--o{ AUDIT_EVENTS : audits
+```
+
+Shared Item 是 `channel_shares` 的产品名称。`session | files | skill` 只有内容读取方式不同，共享、撤回、权限、同步和“给 Agent”语义完全相同。
+
+## 4. 服务端数据结构
+
+领域 schema 由 PostgreSQL migrations 管理。两种实现共享对象语义和约束，不要求逐表物理结构完全相同；涉及 `auth.users`、Storage policy、pgmq 等 Supabase 平台对象的 migration 分开放置。下列字段是领域设计约束，不要求现在一次性全部实现。
+
+### 4.1 身份和设备
+
+#### `users`
+
+| 字段 | 说明 |
+| --- | --- |
+| `id uuid PK` | Colab 领域用户 ID |
+| `display_name text` | 展示名 |
+| `avatar_url text nullable` | 头像 |
+| `created_at timestamptz` | 创建时间 |
+
+#### `auth_identities`
+
+| 字段 | 说明 |
+| --- | --- |
+| `issuer text` | 身份发行方；如 Google 或企业 IdP |
+| `subject text` | 该发行方内稳定的 subject |
+| `user_id uuid FK` | 映射到 Colab 用户 |
+| `provider text` | provider 类型 |
+| `email text nullable` | 展示与邀请匹配用，不作为身份主键 |
+
+联合唯一键为 `(issuer, subject)`。Google、企业 OIDC 与其他 provider 最终都映射为一个 Colab `user_id`。
+
+Supabase 实现以 `auth.users.id` 直接作为 `users.id`，身份凭据和 provider linking 由 Supabase Auth 管理；领域表只保留 profile。独立版自己维护 `users`、`auth_identities` 与 session。授权决策不读取 Supabase 中用户可修改的 `user_metadata`。
+
+#### `devices`
+
+| 字段 | 说明 |
+| --- | --- |
+| `id uuid PK` | 设备 ID |
+| `user_id uuid FK` | 所有者 |
+| `name text` | 用户可识别的设备名 |
+| `platform text` | macOS/Windows/Linux |
+| `public_key text nullable` | 后续设备签名能力预留 |
+| `last_seen_at timestamptz` | 最近在线时间 |
+| `revoked_at timestamptz nullable` | 设备撤销 |
+
+Desktop 首版由 Local Core 把 Colab session 存在应用私有目录、权限为 `0600` 的 SQLite；不依赖 macOS Keychain。Web 使用服务端 HttpOnly/Secure cookie。凭证存储是平台 adapter，企业发行版仍可选择系统凭证库。
+
+### 4.2 Organization、Channel 与成员
+
+#### `organizations` / `organization_members`
+
+Organization 是租户和人员目录边界；Channel 是 Organization 内实际发生协作的单元。`organizations` 保存 `id/name/slug/created_by/created_at`。`organization_members` 拥有独立的 `id`，并以 `(organization_id,user_id)` 保证一个账号在同一组织内只有一个 Member；角色为 `owner|admin|member`。用户在组织内的 Channel membership、创建和邀请行为都引用 Member，而不直接引用全局 User。用户首次注册时会拥有一个个人 Organization；企业 OIDC/SSO 可把账号自动映射到已配置的 Organization。
+
+当前 Organization 是客户端针对当前登录账号保存的低频工作上下文：Desktop 在账号设置中展示、切换和创建 Organization；Local Core 按账号保存选择；Server API 仍显式携带 `organization_id`，不依赖隐式服务端全局状态。切换 Organization 后，Channel 列表整体切换。
+
+#### `organization_identity_providers`
+
+保存 Organization 与 OIDC/SAML issuer、可选邮箱域名的映射。认证成功后只根据受信任 issuer + subject 建立身份；邮箱域名不能单独充当身份凭证。
+
+#### `channels`
+
+`id`、`organization_id`、`name`、`description`、`icon_path`、`created_by_member_id`、`created_at`、`updated_at`。名称不承担全局唯一身份。Local Core 已根据当前账号与当前 Organization 取得授权资源集合后，Browser 使用完整子孙路径逐层收窄；若仍有多个候选，返回带元数据和精确 UUID ref 的歧义结果。UUID 继续用于内部关系、协议调用和歧义后的明确选择。
+
+#### `channel_members`
+
+联合主键 `(channel_id, organization_member_id)`；其他字段为 `role(owner|admin|member)`、`joined_at`。数据库外键保证 Channel 中出现的主体必定是 Organization Member。
+
+首版权限规则：
+
+- member：浏览 Channel，读取 Shared Item，共享自己的对象；
+- admin：另可邀请、移除 member，修改 Channel；
+- owner：另可管理 admin，且不能被普通删除流程移除。
+
+权限在 Colab Server API 的 use case 中显式检查。Supabase 实现的 public schema 仍启用 RLS，防止 Data API 被绕过 API 入口直接访问；产品权限语义不依赖 RLS，独立版在 Rust use case 中执行同一规则。
+
+#### `organization_invitations`
+
+`id`、`organization_id`、可选 `channel_id`、`email`、`organization_role`、`channel_role`、`token_hash`、`invited_by_member_id`、`expires_at`、`accepted_at`、`revoked_at`。
+
+组织内成员通过人员目录搜索后可直接加入 Channel。组织外用户无论是否已有 Colab 账号，都必须通过邮件明确接受；接受动作在一个事务中加入 Organization 和目标 Channel。只保存邀请 token hash；原 token 只出现在邀请链接中。
+
+#### 邮件发送边界
+
+成员 use case 只产生 Organization Invitation，不直接拼 SMTP。`EmailSender` 端口由部署适配器实现：独立 Rust 服务端使用 `lettre` 的通用 SMTP/TLS transport，模板使用 `minijinja`。开发环境接 Mailpit；正式环境可以接自建 Postfix/Postal，或任何标准 SMTP 服务。Cloudflare 只托管 DNS，不进入邮件发送依赖。正式上线前增加 transactional outbox、幂等发送键和退避重试，使数据库事务不依赖邮件服务器瞬时可用性。
+
+### 4.3 Shared Item
+
+#### `channel_shares`
+
+| 字段 | 说明 |
+| --- | --- |
+| `id uuid PK` | Shared Item ID |
+| `channel_id uuid FK` | 所属 Channel |
+| `contributor_id uuid FK` | 所有者 |
+| `source_device_id uuid FK` | 当前发布来源设备 |
+| `kind text` | `session/files/skill` |
+| `name text` | 展示名称 |
+| `summary text nullable` | 人或 Agent 提供的简介，不是真源 |
+| `source_adapter text` | 如 `codex-session-v1`、`filesystem-v1` |
+| `current_root_oid text nullable` | 当前可读快照 |
+| `state text` | `active/withdrawn` |
+| `created_at/updated_at` | 时间戳 |
+
+Shared Item 名称同样是可读选择器，不强制承担唯一身份。对人和 Agent 默认暴露 Channel 名称与 Shared Item 名称；完整路径仍歧义时才返回候选元数据和精确 UUID ref。数据库主键、Blob key 和并发控制始终使用 UUID/OID，二者不混为一层。
+
+Files 首版已实现 `shadow-git-v1`：Local Core 在应用私有目录创建外置 shadow Git，不向来源目录写入 `.git`；首次 revision 上传完整 Git pack，后续 revision 以当前已发布 root 为 parent 生成 thin incremental pack。Server 对 parent 使用 CAS，成功后才推进 `current_root_oid`。消费方按 revision 顺序把 pack 导入本地 object database，再将当前 root 原子物化到应用数据目录。Server 的 Blob Store 首个 adapter 是本地文件系统，业务接口不依赖其路径布局，部署阶段可替换为 S3-compatible adapter。
+
+每个 Files 来源的 Colab 专属排除规则只存于该 shadow Git 的 `$GIT_DIR/info/exclude`，这是唯一真源，也是 `git add` 实际消费的标准位置。GUI 查看或编辑同步范围时，Local Core 直接读取或重写该文件；SQLite 只记录 `share_id`、来源路径与 shadow Git 路径，不复制排除规则。来源项目自身的 `.gitignore` 仍由 Git 正常读取，Colab 只读、不修改。同步范围是低频管理操作，不为它额外建立数据库索引或重建协议。
+
+当前 Local Core 使用操作系统文件 watcher 监听已登记来源；事件只负责更新 SQLite `local_jobs` 的 publish job，并把 due time 推迟到 2 秒静默窗口之后。独立 worker 原子 claim 后调用统一的 `publish_source`，后者仍执行完整 shadow Git 扫描。generation 在 job 执行期间继续递增，旧 generation 完成时若发现新事件便把 job 留在 pending，避免上传期间的修改丢失。首次登记走同一持久化任务，durable job 接受后立即返回 `preparing`；失败记录错误并按 2、4、8 秒指数退避（上限 5 分钟），手动重试可立即推进。Core 启动把遗留 running lease 恢复为 pending。同步不绑定 Desktop GUI 生命周期。
+| `withdrawn_at timestamptz nullable` | 撤回时间 |
+
+没有 `object_version`、`file_entries`、`session_messages`、`skill_versions` 等服务端表。内部内容由 root tree 指向的原始快照表达。
+
+### 4.4 同步传输
+
+#### `sync_attempts`
+
+短期存在的传输事务，不是产品版本。
+
+`id`、`share_id`、`device_id`、`base_root_oid`、`target_root_oid`、`state(preparing|uploading|committed|failed|expired)`、`expected_count`、`expires_at`、`created_at`、`committed_at`。
+
+#### `sync_attempt_objects`
+
+联合主键 `(attempt_id, oid)`；字段 `size`、`state(missing|uploaded|verified)`。用于分批登记一个 attempt 期望的 OID，并保证 commit 前没有漏传。attempt 过期后整批删除，它不是长期 manifest。
+
+#### `git_objects`
+
+联合主键 `(share_id, oid)`；字段 `storage_path`、`size`、`created_at`、`last_referenced_at`。
+
+Storage key 固定为：
+
+```text
+git-objects/{channel_id}/{share_id}/{oid}
+```
+
+数据库不保存文件相对路径。文件路径只存在 Git tree 字节中；`storage_path` 是对象存储地址，不是文件目录元数据。
+
+#### `sync_jobs`
+
+可靠异步 outbox：`id`、`share_id`、`root_oid`、`kind(index|gc)`、`state`、`attempts`、`next_attempt_at`、`last_error`、`created_at`、`completed_at`。`unique(share_id, root_oid, kind)` 保证幂等。
+
+root CAS 与 index job 必须在同一个 PostgreSQL 事务提交。pgmq/worker 负责消费；Cron 扫描卡住的 pending/failed job。
+
+### 4.5 搜索
+
+#### `search_projections`
+
+主键 `share_id`；字段 `root_oid`、`state(pending|indexing|ready|failed)`、`indexed_at`、`error_code`、`error_detail`。
+
+#### `search_documents`
+
+`id`、`channel_id`、`share_id`、`root_oid`、`locator jsonb`、`title`、`plain_text`、`fts tsvector`。
+
+`locator` 只描述如何回到原文：Files/Skill 是相对路径与行号；Session 是来源 reader 的 turn/message locator。查询必须同时满足：Channel 成员权限、Share active、document root 等于 Share current root。
+
+索引是派生数据，可以整表删除重建。首版使用 PostgreSQL FTS；pgvector 不进入首版。
+
+### 4.6 事件与审计
+
+#### `metadata_events`
+
+单调 `id bigint` 作为 cursor；字段 `channel_id`、`entity_type`、`entity_id`、`operation`、`occurred_at`。客户端断线后按 cursor 拉取变化。Realtime 只通知“有新 cursor”，不承担可靠事件日志。
+
+#### `audit_events`
+
+记录管理和安全动作：`id`、`actor_id`、`channel_id`、`action`、`object_ref`、`metadata jsonb`、`created_at`。不把普通文件读取全部写成高成本审计，具体审计范围在企业需求出现后扩展。
+
+## 5. 客户端数据与磁盘结构
+
+客户端 SQLite 是缓存与本机任务事实来源，不复制服务端所有表。
+
+### 5.1 SQLite tables
+
+| 表 | 关键字段 | 角色 |
+| --- | --- | --- |
+| `accounts` | `user_id, email, display_name, avatar_url, session_json, last_used_at` | 已登录账号和 Colab session；仅由 Local Core 读写 |
+| `local_settings` | `key, value` | 当前账号等本机设置 |
+| `channel_cache` | `channel_id, name, icon_ref, role, updated_at` | Channel 缓存 |
+| `member_cache` | `channel_id, user_id, role, display_name, updated_at` | 成员缓存 |
+| `share_cache` | `share_id, channel_id, kind, contributor_id, current_root_oid, state, updated_at` | Shared Item 元数据缓存 |
+| `local_sources` | `share_id, adapter, source_locator, shadow_git_dir, watch_state, last_published_root, last_scan_at` | 本机贡献来源 |
+| `object_stores` | `share_id, git_dir, last_gc_at` | 本地 Git object database 位置 |
+| `materializations` | `share_id, root_oid, local_path, state, lease_count, last_accessed_at` | 消费侧只读物化 |
+| `local_jobs` | `id, dedupe_key, kind, share_id, user_id, state, generation, attempts, next_attempt_at, last_error` | publish/materialize 持久化 outbox；generation 防止运行中事件丢失 |
+| `sync_cursors` | `channel_id, metadata_cursor, last_success_at` | 元数据补偿游标 |
+| `local_session_catalog` | `catalog_id, provider, thread_id, name, source_path, source_adapter, size_bytes, mtime_ns, updated_at` | 三类 Agent 本机会话清单索引；`catalog_id` 区分跨项目重名 thread，只存元数据，不存对话正文 |
+
+不建立本地 `file_entries` 表。shadow Git index 已经表达文件扫描状态；filesystem watcher 提供候选变更，watch overflow 或不可信时做完整 rescan。避免数据库再维护一份容易漂移的目录镜像。
+
+同理，不在 SQLite 保存 Files exclude。`local_sources.shadow_git_dir` 足以定位 `$GIT_DIR/info/exclude`；该文件与 shadow index 同属 Git 执行状态，GUI 按需读取即可。
+
+Session 来源发现与内容同步分离：Local Core 启动后立即、此后每 60 秒扫描 Codex、MyFlicker 和 Claude Code 的会话目录。MyFlicker 必须同时覆盖新版 CLI `~/.myflicker/projects/*/*.jsonl`、旧版 CLI `~/.codeflicker/projects/*/*.jsonl` 和 Desktop `~/.myflicker/sessions/*/message/cache.jsonl`；两类 CLI 共用 reader，Desktop 的覆盖记录、rollback 和 tool-call 结构由独立 adapter 投影，所有 `requests/` 请求碎片均排除。扫描先比较文件大小和纳秒级 mtime，只有变化的 JSONL 才有界读取前 80 行以更新标题；原始文件仍是真源。GUI 和 Skill 的清单/搜索请求只查询 `local_session_catalog`，支持名称及 thread/session ID 模糊搜索，不在交互请求中遍历或读取会话文件。跨项目重复 thread ID 由本机稳定的 `catalog_id` 消歧；它不是远端资源 ID，也不会进入共享路径。
+
+### 5.2 App Data 目录
+
+App Data 必须由操作系统目录 API 决定，不能相对当前工作目录。macOS 当前落在 `~/Library/Application Support/online.agent-colab.Colab/`；Windows/Linux 使用各自标准应用数据目录。展示给人和 Agent 的物化目录采用 `贡献者/共享名称`，内部 UUID 只用于数据库、对象库与协议寻址。
+
+```text
+<app-data>/
+├── colab.sqlite
+├── shadows/
+│   └── {share_id}/
+│       ├── git/                 # 来源侧独立 Git dir/index
+│       └── session-segments/    # 仅 Session adapter 使用
+├── objects/
+│   └── {share_id}/git/          # 消费侧 Git object database
+├── materialized/
+│   └── {share_id}/{root_oid}/   # 原子生成的只读快照
+├── staging/
+│   └── {job_id}/                # 下载和 checkout 临时目录
+└── logs/
+```
+
+来源绝对路径、session key 与 agent 产品本地位置只存在来源设备的 `source_locator`。服务端永远看不到用户的绝对路径。
+
+## 6. 服务与模块划分
+
+### 6.1 Rust Local Core 与可选 Desktop UI
+
+GUI 存在时，本机是两个独立进程；GUI 不存在时只有 Core。`colabd` 是可以脱离 Desktop 安装和运行的 Rust 后台进程；Desktop UI 是可选客户端，不拥有业务状态：
+
+```mermaid
+flowchart TB
+    UI[Desktop UI process] -->|loopback HTTP + discovery bearer| LAPI[Local API]
+    CLI[Skill scripts] -->|loopback HTTP + discovery bearer| LAPI
+    LAPI --> UC[colabd Rust Use Cases]
+    UC --> REPO[Local Repositories]
+    UC --> SYNC[Sync Engine]
+    UC --> AUTH[Auth Manager]
+    UC --> READ[Session Readers]
+    UC --> SKILL_INSTALL[Skill Installer Adapters]
+    SYNC --> SHADOW[Shadow Git]
+    SYNC --> REMOTE[Colab Server Client]
+    REPO --> SQLITE[(SQLite)]
+    AUTH --> CREDENTIALS[Credential Store Adapter]
+```
+
+- **`colabd`**：无头运行的 Rust Local Core；拥有业务状态、后台任务和本地资源；
+- **Desktop UI**：Tauri 或 Electron 均可，只负责 Channel rail、Sessions/Files/Skills/Settings、选择器、进度与错误展示；
+- **Rust Use Cases**：创建 Channel、成员管理、共享、撤回、同步、物化、搜索；
+- **Auth Manager**：PKCE、loopback/deep-link callback、session refresh、账号切换与凭证存储；
+- **Sync Engine**：shadow tree、批量求缺、TUS 上传、CAS commit、下载与物化；
+- **Source Adapters**：filesystem、Codex session、未来其他 agent session；
+- **Skill Installer Adapters**：把已验证的 Skill artifact 安装或更新到 Codex、Claude Code、MyFlicker 等目标目录，保存安装 receipt，并把后续使用交还目标 Agent 的原生 loader；
+- **Local Repositories**：SQLite 唯一写入与事务；
+- **Local API Adapter**：由 `colabd` 暴露；统一使用带随机 bearer 的 loopback HTTP 和仅当前用户可读的 discovery file，不再并行维护 Unix socket/named pipe；GUI 和 Skill scripts 通过同一 API 调用同一 use case；
+- **Platform Adapters**：watcher、可选系统凭证库、系统浏览器、托盘、开机启动。
+
+同一个 `dedupe_key` 的本地任务只执行一次。退出 GUI 不影响 `colabd`；Core 由 launchd/systemd/Windows Service、显式执行 `colabd start`，或首次 Skill 调用按平台策略启动。用户可单独停止 Core，停止前应完成 SQLite checkpoint 并安全挂起本地任务。
+
+不运行 Node.js 或 Python 本地业务服务。即使 Desktop UI 最终采用 Electron，其 Node main process 也只是 GUI 宿主和 Local API client，不接管 Core。Node.js 继续用于前端构建和验证脚本；Python 不进入桌面运行时。
+
+### 6.2 Colab Server 领域 API
+
+客户端只认识以下能力组：
+
+| 能力 | 稳定语义 | 不暴露的实现细节 |
+| --- | --- | --- |
+| `auth` | discovery、开始登录、交换 code、refresh、logout | Supabase Auth / 独立 OIDC broker |
+| `channels` | Channel CRUD、成员、邀请 | PostgREST、SQL function、Rust handler |
+| `shares` | Shared Item CRUD、撤回、current root | 数据表名称与 RLS |
+| `sync` | begin、分批登记 OID、取得传输 descriptor、commit、current | Storage SDK、bucket policy、S3 credentials |
+| `changes` | cursor pull；可选实时失效通知 | Supabase Realtime / WebSocket / SSE |
+| `search` | 查询当前 root 的派生索引 | PostgreSQL FTS SQL |
+
+`GET /v1/capabilities` 返回后端版本、支持的登录方式、上传协议、单批上限和 realtime transport。它用于协商已定义的可选能力，不是任意插件系统。
+
+大对象传输通过 descriptor 表达，例如 `{method, url, headers, protocol, expires_at}`。Supabase 可以返回 TUS/direct Storage URL，独立版可以返回 S3 multipart URL；Local Core 只实现明确支持的 `tus | s3-multipart | single-put` transport。
+
+### 6.3 Supabase 实现（冻结）
+
+- **Auth**：Google/OIDC 登录、user/session/refresh；
+- **PostgreSQL/RPC**：Channel、成员、Share、同步 attempt、root CAS、对象目录、事件 cursor；
+- **Edge Functions**：邀请、复杂权限、批量签名 URL、外部回调、Indexer 入口；
+- **Storage**：private Git objects，TUS 断点续传；
+- **Realtime**：Channel 元数据失效通知；
+- **pgmq + Cron**：索引、GC、邮件和失败补偿；
+- **FTS**：当前 root 的关键词索引。
+
+Supabase Edge Functions 是 Colab Server API 的入口，客户端不直接调用 Supabase RPC/PostgREST。简单原子逻辑可由 Function 调用 PostgreSQL function；需要 secrets、外部网络或签发 Storage descriptor 的逻辑留在 Function。重 CPU 工作不能放 Edge Function：托管平台当前每请求 CPU 时间有限，应进入后台任务。[Supabase Edge Function limits](https://supabase.com/docs/guides/functions/limits)
+
+Supabase Auth 的 OAuth 页面仍可直接由系统浏览器访问，但 authorize URL 由 Colab Server auth discovery/SDK adapter 生成，业务模块不读取 Supabase 专属 session 结构。
+
+该实现保留已有 migration、验证原型和能力结论，但当前实现阶段不新增功能、不追求与 standalone 同步。等独立 Rust 主线完成 Channel/成员、Files 同步和 Shared Item 闭环后，再决定是否恢复。
+
+### 6.4 独立 Rust 实现
+
+建议组件：
+
+- HTTP API：Rust `axum`/`tower`；
+- 数据库：PostgreSQL + `sqlx` migrations；
+- 身份：OIDC authorization-code + PKCE；Google 和企业 IdP 作为 provider，服务端发行 Colab session；
+- Blob：S3-compatible API，默认支持 MinIO/云对象存储；单机演示可用受控文件目录；
+- Realtime：WebSocket 或 SSE 只发送 cursor invalidation；
+- Jobs：PostgreSQL outbox + `FOR UPDATE SKIP LOCKED` worker；
+- Search：PostgreSQL FTS；
+- 部署：API 与 worker 可同一二进制用不同 subcommand，也可拆进程扩容。
+
+独立版不模拟 Supabase 的 RLS、PostgREST、Realtime protocol 或 Storage schema；它只实现 Colab Server API 的业务语义。Supabase 与 Rust 版分别拥有 adapter/integration code，通过同一套黑盒 Contract Tests 保证行为一致。
+
+### 6.5 协议所有权，而不是 `shared/`
+
+不设置含义宽泛的顶层 `shared` 模块。跨制品关系按“服务提供方拥有协议、消费方生成或实现 client”处理：
+
+| 协议 | 所有者 | 消费者 |
+| --- | --- | --- |
+| Local API OpenAPI/JSON Schema | `local/api/` | Desktop、Skill scripts |
+| Colab Server API OpenAPI/JSON Schema | `server/api/` | Local Core、第三方服务端实现者 |
+| `colab://` canonical ref schema | `server/api/schemas/` | Local Core、Desktop、Skill |
+| Server Contract Tests | `server/tests/contract/` | 当前验收 standalone；Supabase 恢复后复用 |
+
+Desktop 与 Rust client 的 DTO、错误码、cursor 和状态机由协议 schema 生成到各自构建目录；Python Skill 保持标准库薄 client，用相同 schema 产生的 fixture 做一致性测试。不把这些生成物做成第三个共享源码包。Git OID 校验等少量纯逻辑，只有在出现三个以上真实消费者后才提取独立 crate；首版分别放在 `local` 与 `server` 的所属模块中。
+
+Supabase Function、Rust handler、Auth、Storage authorization、job worker 都属于各自服务端实现，不共享基础设施代码。这样既防止客户端被 Supabase SDK 锁死，也避免为代码复用制造脱离制品边界的目录。
+
+### 6.6 Agent Scaffold
+
+`skills/colab` 是独立发布制品，包含薄脚本和使用说明：
+
+- `colab-browser`：Channel/Shared Item 浏览、管理、共享、撤回、Files 消费和搜索；
+- `colab-session-reader`：已实现来源 Session 的增量同步、snapshot-pinned 游标阅读、`includeOutputs` 与单项输出裁剪；
+- `colab-skill-tool`：发现本机 Skill 来源，并对共享 Skill 执行指定目标 Agent 的 status/install/ensure/check-update/update/uninstall；Local Core 持有安装 receipt、冲突检测与用户修改保护；
+- `colab-open`：面向“打开/调起 Agent Colab 页面”的独立入口；启动或唤醒 Local Core，再打开带本机 bootstrap token 的 GUI。它不复用 `colab-browser open`，后者只负责资源发现；
+- 脚本自己实现 Local API client，不依赖额外的 `colab` CLI 制品，也不直接请求远端服务；
+- Files 的 `use` 返回本地路径后直接使用文件工具；Skill Tool 负责把共享 Skill 变成目标 Agent 真正可发现的已安装能力，不能只返回一个临时目录；Session Reader 自行取得和解释 Session 快照。
+
+#### Shared Skill 来源、版本与安装
+
+Skill 与 Files 共用 shadow-Git 快照和 Git pack 传输协议，但消费语义不同。Skill 的共享单位是一个包含合法 `SKILL.md` 的具体根目录；自动发现的 Agent Skill 和用户明确选择的开发目录在持久化层都是同一种 `source_path`，只保留发现目标作为辅助元数据。
+
+Local Core 通过目标 adapter 扫描并监听 Codex、Claude Code、MyFlicker 的 Skill 根目录。`local_skill_catalog` 保存可重建元数据：`source_id, source_path, name, description, discovered_targets, last_changed_at`。同一 canonical path 只登记一次。48 小时推荐只依据目录创建或内容变化时间，并排除当前 Channel 已共享的来源；不推断“使用证据”，不自动共享。
+
+一旦共享，watcher 与 Files 相同：两秒静默窗口后由持久化 job 完整重扫，shadow Git 生成新快照；`root_oid` 就是 Colab 的 Skill 内容版本，不增加 `skill_versions` 或依赖作者维护语义版本。服务端使用 `channel_shares(kind='skill')`、`file_revisions` 与 Blob Store 保存当前指针及不可变 pack。
+
+消费侧先把共享快照物化到应用数据目录，再由 `SkillInstaller` adapter 安装到目标 Agent。`skill_installations` receipt 至少记录 `share_id, target_agent, installed_path, installed_root_oid, content_hash, managed_by_colab, installed_at`。检查更新比较 `installed_root_oid` 与共享 `current_root_oid`。安装、更新与卸载只操作 receipt 明确归 Colab 管理的目标；同名非托管目录或检测到用户修改时返回冲突，绝不静默覆盖。目标 adapter 同时返回立即生效、需要新会话或需要重启等 activation 状态。
+
+撤回只终止 Channel 中的发现和后续更新，不远程删除其他成员设备上已经安装的副本。本地 receipt 将其视为来源不可用，用户仍可主动卸载。
+
+#### Git pack 传输护栏
+
+当前 standalone alpha 将一次 shadow-Git 变更编码为一个 opaque Git pack，再通过单次 HTTP 请求写入 Blob。它复用 Git 的对象与增量语义，但不是执行远端 `git push`，也还不具备 Git smart protocol 的流式协商。Local Core 必须在 `pack-objects` 前检查 index：单文件超过 100 MiB、总内容超过 200 MiB时直接返回可操作错误，不能继续高 CPU 打包或等待一个必然超过 Server 256 MiB body limit 的请求。
+
+创建共享对象只负责登记 durable publish job，并立即以 `preparing` 返回；GUI 从任务真源展示 `syncing / failed / ready`，不能用固定 HTTP 等待期限把仍在后台运行的任务误报成失败。未来支持更大共享对象时，应把 transport 升级为可恢复的分块 Blob upload；该变化只属于传输层，不改变 watcher、shadow Git 和 `root_oid` 的语义。
+
+### 6.7 本机制品更新与进程切换
+
+Setup 先下载、验签、校验 hash，在版本目录中完成 staging，再原子切换 `current/core`、`current/ui` 与 `current/skill`。运行中的 Core 不覆盖自身，也不在 HTTP 响应尚未返回时重启。由 LaunchAgent 管理时，Core 在更新响应返回后延迟退出，launchd 从新的 `current/core` 拉起；非托管启动只报告需要重启。
+
+发布清单允许同一组件出现多个 `platform + arch` 变体；GUI 与 Python Skill 是通用制品，Local Core 和 Electron 按当前平台选择。macOS setup 使用 launchd 与目录 symlink；Windows setup 把状态放在 `%LOCALAPPDATA%\AgentColab`，使用无需 Developer Mode 的 directory junction 激活不可变版本，并以用户级 Task Scheduler 任务托管 Core。Windows 更新在响应返回后退出旧 Core，再由脱离旧进程生命周期的延迟任务启动新版本。
+
+Local Core 首次安装时选择 OS 随机 loopback 端口并生成高熵 bearer，随后把二者作为安装级 rendezvous identity 保存在 mode-0600 discovery 中；进程重启只更新 PID，不改变浏览器 origin 和 HttpOnly cookie。更新由 Local Core 调用 setup 激活制品并在响应送达后退出，launchd 在同一端口拉起新进程。GUI 仅在这次显式更新操作中，以有限时长探测同源 `/v1/status`，确认 PID 已变化后 reload。该流程在普通系统浏览器和 Electron 中完全一致；Electron 只在初次打开窗口时读取 discovery，不运行常驻检查。
+
+## 7. 同步协议
+
+### 7.1 发布
+
+```mermaid
+sequenceDiagram
+    participant C as Rust Local Core
+    participant G as Shadow Git
+    participant S as Colab Sync API
+    participant B as Storage
+    participant D as PostgreSQL
+
+    C->>G: scan changed source and write tree
+    G-->>C: target root + reachable OIDs
+    C->>S: begin_sync(share, base root, target root, OID batches)
+    S->>D: create expiring attempt and expected objects
+    S-->>C: missing OIDs + provider-neutral transfer descriptors
+    C->>B: upload missing objects (TUS for large object)
+    C->>S: register uploaded OID batches
+    S->>D: verify Storage rows and mark verified
+    C->>S: commit_sync(attempt)
+    S->>D: verify all expected objects
+    S->>D: CAS current root + enqueue index job + metadata event
+    S-->>C: committed root + event cursor
+```
+
+只有 `commit_sync` 成功才对其他成员可见。上传一半的 objects 是不可见的临时数据，attempt 过期后由 GC 删除。
+
+同一 Share 在客户端只允许一个 commit in-flight；watcher 产生的新变化合并进下一次 tree。CAS 冲突不做 merge：来源设备读取服务端 current root，重新发布自己最新的完整快照。
+
+### 7.2 消费
+
+1. 读取 `share_cache.current_root_oid`，必要时向服务端刷新；
+2. root 与本地 materialization 相同则直接复用；
+3. 下载 root tree object，逐层解析 tree 并求出本机缺失 OID；
+4. 批量取得短时下载授权，并发下载；
+5. 每个 object 用 Git OID 校验，任何不一致都丢弃重试；
+6. 在 staging 中 `read-tree/checkout-index`；
+7. 完成后原子 rename 到 `{share_id}/{root_oid}`；
+8. SQLite 事务切换 materialization；旧目录在 lease 为零后回收。
+
+### 7.3 Session
+
+Session connector 无损读取来源原始文件或 API 输出。大文件按稳定边界生成不可变 chunks，并生成一个描述重组顺序、来源 adapter 与读取元数据的根文件。新增对话只生成新 chunks 与新 root，不重传历史大 blob。Session Reader 在本地重组或逐 chunk 分页，不把 messages 转成服务端关系表。
+
+已落地实现明确区分三个位置：贡献端 SQLite 的 `last_byte_offset` 是原始来源同步游标；服务端 `current_snapshot_id` 固定一条不可变 segment 链；Reader 的 opaque cursor 绑定该 snapshot，只负责 turns 分页。正常追加只上传来源游标之后、且以换行结束的完整 JSONL 记录；来源被截断时从 0 建立新基线。
+
+服务端只保存 `channel_shares(kind=session)`、`session_snapshots`、`session_segments` 与 Blob，不加载 provider adapter。消费端依据 manifest 在应用数据目录原子生成 snapshot JSONL，Local Core 的 Codex、MyFlicker、Claude Code adapter 在读取时投影为 `session/snapshot/turns/page/freshness`。Python `colab-session-reader` 只是 Local API 薄客户端，不读取凭证或缓存、不复制 adapter。
+
+稳定边界优先使用来源自身的 turn/record 边界；Codex JSONL 首版按完整 turn 关联的连续原始 records 分 segment，不能拆断单条 JSON record。每个 root manifest 只记录来源 adapter/schema、ordered segment digests、可安全共享的 session 元数据和读取边界。Server 只保存 Share 当前 root、不可变 manifest/segment blob 和同步所需的 snapshot 记录；它不解释 message/tool schema。来源只追加时上传新 segment 和新 manifest；来源发生尾部修订时只重建受影响尾段，无法确认稳定边界时安全退化为新完整 snapshot。
+
+消费端在应用数据目录保存按账号隔离的 manifest/segment 缓存与 adapter 索引。Reader 读取时把原始结构投影为 Codex-shaped turns；该投影是消费协议，不是持久化格式。opaque cursor 同时绑定 Share、root/revision、adapter 与分页位置，拒绝跨 snapshot 混用。工具输出裁剪发生在最终响应阶段，因此同一原始 snapshot 可以按不同 `includeOutputs`/长度参数读取，无需重新同步。
+
+## 8. 元数据一致性与 Realtime
+
+每次 Channel、成员、Share 或 current root 变化，都在业务事务中写 `metadata_events`。客户端正确性依赖 cursor pull：
+
+```text
+Realtime 通知 / App 唤醒 / Agent 请求
+  → pull_changes(channel, after_cursor)
+  → SQLite 单事务应用 channel/member/share delta
+  → 最后推进 sync_cursors.metadata_cursor
+```
+
+没有 WebSocket 时，变化会在下次 App 激活、打开 Channel、Agent 调用或低频后台刷新时补齐；有 WebSocket 时只是更快触发同一个 pull。这样断线、重复通知和乱序都不影响正确性。
+
+## 9. 身份流程
+
+Desktop 使用 Google 原生应用的 OAuth authorization code + PKCE；Supabase 路径暂停：
+
+1. Auth Manager 生成 verifier/challenge/state；
+2. Local Core 从真实 Google Desktop credential 生成 authorize URL，由系统浏览器打开；
+3. Google 回调 Local Core 的随机 loopback 端口；
+4. Local Core 校验 state，将一次性 code、PKCE verifier、nonce 和 redirect URI交给 Rust Server；
+5. Rust Server 向 Google token endpoint 交换 token，并以 Google discovery/JWKS 校验 ID token；
+6. Server 用 Google `(issuer, subject)` 建立用户并签发可撤销的 Colab opaque session；
+7. Colab session 写 Local Core 独占的 SQLite；Local API 不返回 token，Agent runtime 不可读取凭据。
+
+开发阶段优先 loopback `http://127.0.0.1:{ephemeral-port}/auth/callback`，避免自定义 scheme 被其他应用抢注；发行阶段再评估 universal/app link。首版只接 Google Auth，不建设邀请邮件、密码登录或其他 provider。
+
+## 10. 工程目录结构
+
+源码目录按发布或部署单元组织。`desktop`、`local`、`server`、`skills` 彼此平行，不再用泛化的 `app/` 和 `shared/` 把不同制品混在一起：
+
+```text
+agent-colab/
+├── .trial/                         # 可丢弃验证原型与报告
+├── desktop/
+│   ├── shell/                       # 可选 Electron launcher artifact
+│   ├── ui/                          # Desktop GUI artifact：React/Vite 可独立更新资源
+│   └── tests/
+├── local/                           # Local Core artifact 源码
+│   ├── api/                         # Local API OpenAPI/schema；由本目录拥有
+│   ├── crates/
+│   │   ├── daemon/                  # colabd 生命周期与启动
+│   │   ├── core/                    # Rust use cases
+│   │   ├── local-api/               # socket/pipe/loopback adapter
+│   │   ├── sources/                 # filesystem/session adapters
+│   │   ├── sync/                    # shadow Git 与远端同步
+│   │   ├── persistence/             # SQLite
+│   │   └── platform/                # keychain/watcher/service manager
+│   ├── packaging/                   # 独立 colabd 安装包/service definitions
+│   └── tests/
+├── server/                          # Server deployable 源码
+│   ├── api/                         # Server API OpenAPI/schema；由本目录拥有
+│   ├── supabase/                    # Supabase 部署实现
+│   │   ├── migrations/
+│   │   ├── functions/
+│   │   └── tests/
+│   ├── standalone/                  # Rust + PostgreSQL 部署实现
+│   │   ├── crates/
+│   │   ├── migrations/
+│   │   └── tests/
+│   ├── tests/contract/              # 两种实现共用黑盒测试
+│   └── deploy/                      # container/helm/compose 等部署材料
+├── docs/                            # 产品、交互与技术设计
+├── skills/
+│   └── colab/
+│       ├── SKILL.md
+│       ├── bin/
+│       │   ├── colab-browser
+│       │   └── colab-session-reader
+│       ├── lib/                     # scripts 内部复用的 Local API client
+│       ├── packaging/               # Skill artifact manifest/build
+│       └── references/
+└── dist/                             # 发布阶段才创建
+```
+
+制品和部署单元关系是：
+
+```mermaid
+flowchart LR
+    E[optional Electron launcher] -->|opens same loopback URL| D[Desktop GUI artifact]
+    B[system browser] -->|opens same loopback URL| D
+    D -->|Local API| L[Local Core artifact]
+    K[Skill artifact] -->|Local API| L
+    L -->|Server API| S[Server deployment]
+```
+
+首次 Desktop 安装包可以捆绑 GUI、`colabd` 和 Skill，但 Shell、GUI、Local Core、Skill 始终分别版本化和独立产出；无 GUI 环境只安装 Local Core 与 Skill。发布频道的 promotion/release id 只表示一份已签名的制品组合，不充当各制品版本。各源码单元拥有自己的 `VERSION`，安装 receipt 用 `componentVersions` 记录实际版本；统一“检查/更新”逐项比较，仅下载和激活版本发生变化的制品。Electron 没有代码变化时保持原版本，也不重新构建。协议依赖固定为：`desktop/skill → local/api → local core → server/api → server implementation`。GUI 不被 Core 反向依赖。
+
+## 11. 技术栈定案
+
+### 11.1 Electron Shell 与 Desktop GUI artifacts
+
+| 层 | 选择 | 理由 |
+| --- | --- | --- |
+| UI | TypeScript + React + Vite | 交互生态成熟，页面逻辑与 Core 隔离 |
+| Optional launcher | Electron | 只提供普通桌面 App 入口、窗口和 deep link；不承担安装、更新或业务能力 |
+| UI state/query | TanStack Query；局部状态用 Zustand | 服务端状态与页面状态分开，避免自造缓存层 |
+| 表单与校验 | React Hook Form + Zod | 设置、邀请和共享流程统一校验 |
+| 组件 | shadcn/ui + Radix primitives | 保持低定制成本，线框到正式 UI 可渐进演进 |
+| 测试 | Vitest + Testing Library；Playwright 做关键 smoke | 单元、组件与端到端职责分开 |
+
+Shell 和 GUI 都不引入数据库、远端 SDK 或同步实现。Electron main process 只负责窗口、受限 IPC 和 deep-link 转发；业务调用全部经过 `local/api`。GUI 是独立签名的静态资源包，由 Skill setup 下载到应用数据目录并原子切换 active pointer。系统浏览器与 Electron 都打开 Local Core 托管的同一 GUI。
+
+### 11.2 Local Core artifact
+
+| 能力 | Rust 选择 | 不手搓的部分 |
+| --- | --- | --- |
+| async runtime | Tokio | task、timer、signal、I/O runtime |
+| Local HTTP | Axum + Tower + tower-http | routing、middleware、timeout、trace |
+| Server client | reqwest + rustls | HTTP、TLS、streaming body |
+| SQLite | SQLx + bundled SQLite | migration、transaction、compile-time query checking |
+| serialization | Serde | JSON/DTO |
+| 文件监听 | notify | macOS/Windows/Linux watcher；overflow 后仍由完整扫描兜底 |
+| Credential storage | rusqlite；可选 keyring adapter | Desktop 应用私有 SQLite / Web HttpOnly cookie；企业版可接 Keychain/Credential Manager/Secret Service |
+| 路径 | directories | 各平台标准 data/config/cache 目录 |
+| 日志 | `log` facade + 简单滚动文件 | 首版只保证可诊断；tracing/OpenTelemetry 后续加入 |
+| 服务管理 | service-manager 加平台安装脚本 | launchd/systemd/Windows Service 的安装与控制 |
+| Git object/tree | `git2`/libgit2 候选 | 不要求终端预装 Git；须先通过 shadow Git 兼容验证 |
+
+Local API 首版统一使用 `127.0.0.1` loopback HTTP，而不是同时维护 Unix socket、named pipe 和 HTTP 三套 transport。`colabd` 首次启动选择随机端口并生成高熵 bearer，写入仅当前用户可读的 discovery 文件；后续重启复用端口与 bearer、更新 PID。服务端校验 `Host`、拒绝浏览器跨域请求、限制 body 和并发。这样 Desktop 与 Skill 可以复用普通 OpenAPI client，普通浏览器也能跨 Core 重启恢复，Windows 不需要特殊 transport。
+
+本地长期任务必须写入 SQLite outbox 后再执行；内存 channel 只作唤醒，不作事实来源。重启后按 lease/next_attempt_at 恢复，避免引入另一套本地队列服务。
+
+### 11.3 Skill artifact
+
+| 层 | 选择 |
+| --- | --- |
+| 脚本运行时 | Python 3，首版只使用标准库 |
+| Local API client | Skill 内一个轻量 Python client；请求/响应 fixture 对照 `local/api` 做契约测试 |
+| 参数/输出 | JSON 为稳定机器接口；人类文本只是可选 formatter |
+| 打包 | 纯 `.py` 与 Skill 文档，无 pip 安装；manifest 固定所需 Local API version |
+
+不依赖 `curl`、`jq`、Node/npm 或额外 CLI。Python client 不引入 requests/pydantic 等第三方依赖，避免污染用户环境；协议面保持很薄，通过 fixture 和 Local API contract tests 防止手写 client 漂移。Desktop setup 安装 Skill 时一并检查 `python3`，并给出明确诊断。
+
+### 11.4 Standalone Server deployment
+
+| 能力 | 选择 | 说明 |
+| --- | --- | --- |
+| HTTP | Axum + Tower + tower-http | 与 Local Core 共享工具链，不共享业务源码 |
+| async/TLS/client | Tokio + rustls + reqwest | 不依赖系统 OpenSSL |
+| PostgreSQL | SQLx | migration、事务、query checking |
+| OIDC client | `openidconnect` + `oauth2` crates | discovery、authorization code、PKCE、JWKS 校验不手写 |
+| Colab session | opaque access/refresh token，数据库只存 hash | 不自己充当通用 IdP；只将外部 OIDC identity 换成 Colab session |
+| Blob | `object_store` 作为内部 port；S3 production adapter | MinIO、R2、S3 和企业兼容存储；授权 URL 由服务端签发 |
+| Jobs | PostgreSQL transactional outbox + worker | 与 root CAS 同事务；`SKIP LOCKED` claim、lease、retry、dead-letter |
+| Search | PostgreSQL FTS | 首版不引入 Elasticsearch/向量库 |
+| Realtime | Axum SSE | 只推送 cursor invalidation；正确性仍依赖 cursor pull |
+| Rate limit | tower-governor | API、登录和签名 URL 限流 |
+| 日志 | `log` facade + JSON/文本日志 | 首版满足问题定位；tracing/OpenTelemetry 后续加入 |
+| 集成验收 | 临时 PostgreSQL、临时 S3-compatible Storage、假的 Google OIDC 端点 | 验证真实跨模块闭环；具体测试工具在进入 Server 阶段再选 |
+| 分发 | OCI image + Docker Compose；后续 Helm | 最小依赖为 PostgreSQL、S3-compatible Blob、OIDC |
+
+Server 不手写密码登录、MFA、SAML 或 IdP 管理。Google 和企业登录都通过外部 OIDC；需要完整企业身份产品的部署方接 Keycloak、Authentik、Zitadel、Okta 或 Entra ID。Colab 只维护 provider identity 到领域 user 的映射，以及自己的可撤销 session。
+
+后台任务暂不绑定某个仍在快速演进的 Rust job framework。首版 outbox 语义很窄，直接以 PostgreSQL 事务、lease 和状态机实现，并通过故障注入测试验证；如果任务类型和调度需求显著增长，再评估 `sqlxmq`/`graphile_worker`，不提前引入队列 DSL。
+
+### 11.5 Supabase Server deployment（暂停）
+
+保留已有 PostgreSQL、Auth、Storage、Edge Functions、Realtime、pgmq/Cron 和 FTS 验证资产。近期不继续实现，也不作为当前功能的验收对象。若未来恢复，它仍需实现同一 `server/api`，且 Supabase 专属依赖只能存在于 `server/supabase/`。
+
+### 11.6 API、版本与发布工具
+
+- `local/api/openapi.yaml` 和 `server/api/openapi.yaml` 是协议真源；使用 Spectral lint，并在 CI 中检查生成物无漂移；
+- Desktop TypeScript client 使用 `openapi-typescript/openapi-fetch`；Skill 使用标准库 Python 薄 client；Rust Server client 优先使用 `progenitor` 生成，再包一层手写 domain adapter；
+- 所有网络 API 使用结构化错误 `{code, message, details, retryable, request_id}`，不让调用方解析字符串；
+- Desktop GUI、Local Core、Skill 分别使用 SemVer，可选 Electron launcher 有自己的低频版本。GUI manifest 明确兼容的 Local API range；Skill manifest 明确兼容的 Local API range；Local Core discovery 返回自身版本与 API version；
+- Server API 以 `/v1` 做破坏性版本边界，非破坏性字段只能追加；Local Core 通过 `/v1/capabilities` 协商可选能力；
+- Rust 使用 Cargo workspace、rustfmt、Clippy、cargo-deny、cargo-audit、cargo-nextest；TypeScript 使用 pnpm、ESLint、Prettier、Vitest；Python 使用 Ruff；依赖与 lockfile 必须提交；
+- 制品签名、SBOM、安装、更新和发布渠道由 Colab Skill 内的 headless setup 作为唯一安装引擎；GUI 设置页和可选 Electron launcher 只调用该能力，不各自实现 updater。
+
+### 11.7 Setup、安装与更新
+
+Colab 本地运行的必需组合是三个相互独立的制品：Desktop GUI 静态资源、Local Core、Colab Skill。Skill 中的 headless setup 是安装/更新真源，负责下载三个制品、激活版本并启动 Local Core。Local Core 通过 loopback HTTP 托管 GUI，setup 可直接用系统浏览器打开它。Electron 只是可选 launcher：它把同一 GUI 放入独立窗口并可提供原生便利能力，不是安装、更新、Files 共享或 Agent 调用的前置。
+
+`release-manifest.json` 至少记录：GUI、Local Core、Skill 的独立版本、平台/架构、独立下载地址、size、SHA-256、签名、Local API 兼容范围和 Server API 兼容范围。Electron launcher 使用独立 channel，不阻塞三个必需制品更新。安装过程采用 staging → 验签 → 原子切换制品链接 → 重启 Local Core → health check → 成功提交；失败则恢复上一个制品组合。alpha 阶段不为历史业务数据建设 migration/backup/rollback 体系。
+
+Setup 还负责：
+
+- 注册/卸载 launchd、systemd user service 或 Windows Service；
+- 安装 `colabd` 和 discovery/config 目录权限；
+- 将 Skill 安装到已发现且用户选择的 Agent 环境，并保存安装 receipt；
+- 更新时只修改由本 setup 拥有的文件，不覆盖用户编辑的 Skill；检测到修改时先提示或旁路安装；
+- GUI 设置页检查组合版本，但下载和替换调用 Skill setup；setup 更新 GUI 时原子切换静态资源指针，更新 Local Core 时通过 launchd/systemd/Windows Service 安全重启，避免任一前端宿主自覆盖；
+- headless 安装与 Desktop 安装写入同一种 ownership receipt，防止两个 updater 争抢同一个 `colabd`。
+
+## 12. 尚未明确、需要在开工前或纵切中确认
+
+1. **Supabase 恢复时点**：当前冻结；只有独立 Rust 主线形成稳定 Server API 后，才决定是否恢复为第二实现。
+2. **Local Git 实现**：alpha 继续使用已经通过兼容与性能验证的系统 Git CLI；不再为“实现纯度”单独验证 `git2`/libgit2。只有 Windows/Linux 分发或目标环境缺少兼容 Git 时，才把“捆绑固定 Git executable”作为发布兼容任务；不手写 Git object 实现。
+3. **Python 最低版本**：检查首批 Agent 环境的 `python3` 版本，尽量保持标准库代码兼容；若某个平台没有 Python，由 Desktop/headless setup 提供受控 Python runtime，而不是要求用户手动配环境。
+4. **无 GUI 首次登录**：本机有浏览器时使用 system browser + loopback callback；真正 SSH/headless 环境需要 OIDC Device Authorization Grant 或一次性 pairing flow，取决于目标 IdP 支持情况。
+5. **Skill 安装目标**：Codex、Claude Code 等产品的 Skill 目录、覆盖规则和用户修改保护需要逐个确认，并由 setup adapter 处理。
+6. **Blob 最低兼容集**：明确只保证 AWS S3 API 的哪些操作、multipart 限制和 presign 行为，并用 MinIO、R2、AWS S3 跑同一套 contract tests。
+7. **开源许可与商标**：代码 license、官方 hosted service 的品牌和企业二开边界尚未确定，会影响依赖审计与发布材料。
+
+## 13. 实现顺序
+
+1. **Files 收口**：已完成真实共享、自动发布、同步、预览、撤回和 Agent 消费主链；进入下一阶段前只补名称寻址、持久化同步任务和 Local API 安全边界。双物理设备、极端大目录和发布故障注入是 alpha 加固项，不阻塞功能演进。
+2. **Session Shared Item**：保留来源原始结构，补来源 adapter、增量 segment 和专用 Session Reader；不把消息强转成统一服务端表。
+3. **Skill Shared Item**：底层可以复用 Files 的目录快照与传输，但产品消费语义是安装/检查更新/更新到指定 Agent 目标，再由目标 Agent 原生加载。`colab-skill-tool` 的接口、receipt、多目标安装状态与用户修改保护先评审，确认后才实现。
+4. **Agent 管理操作**：按真实 Agent 故事线逐步开放 Channel、成员、share/withdraw 等 Browser operation，不预先铺空 CRUD。
+
+每一阶段必须形成可以实际使用的纵向闭环并通过验收，再进入下一阶段；不提前铺下一阶段的空接口。
+
+## 14. 当前不进入实现
+
+- 群聊与群聊中的 agent runtime；
+- Agent blueprint 管理；
+- 结构化任务模块；
+- 多人协同编辑同一来源文件；
+- 跨 Share 全局 object 去重；
+- 第三种 BaaS 或任意云平台兼容层；
+- pgvector 语义搜索。

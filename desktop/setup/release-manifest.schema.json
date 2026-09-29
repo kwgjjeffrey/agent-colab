@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-colab.dev/schemas/release-manifest.schema.json",
+  "title": "Colab release manifest",
+  "type": "object",
+  "required": ["release", "artifacts"],
+  "properties": {
+    "release": { "type": "string" },
+    "artifacts": {
+      "type": "array",
+      "minItems": 3,
+      "items": {
+        "type": "object",
+        "required": ["name", "version", "platform", "arch", "sha256", "url"],
+        "properties": {
+          "name": { "enum": ["desktop", "local", "skill"] },
+          "version": { "type": "string" },
+          "platform": { "type": "string" },
+          "arch": { "type": "string" },
+          "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+          "url": { "type": "string", "format": "uri" },
+          "localApi": { "type": "string" },
+          "serverApi": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

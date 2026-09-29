@@ -1,0 +1,243 @@
+#!/usr/bin/env python3
+"""Browse canonical Colab resources through Local Core."""
+from __future__ import annotations
+import argparse
+import sys
+from pathlib import Path
+from typing import Optional
+from urllib.parse import quote, unquote, urlparse
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "lib"))
+from local_api import DEFAULT_CORE, LocalApiError, request
+from output import failure, success
+
+class AmbiguousReference(ValueError):
+    def __init__(self, message: str, candidates):
+        super().__init__(message)
+        self.candidates = candidates
+
+def parse_ref(value: str):
+    parsed = urlparse(value)
+    if parsed.scheme != "colab":
+        raise ValueError("reference must use colab://")
+    parts = ([parsed.netloc] if parsed.netloc else []) + [unquote(part) for part in parsed.path.split("/") if part]
+    if not parts:
+        return (None, None)
+    if parts[0] != "channel" or len(parts) not in (2, 3):
+        raise ValueError("reference must be colab://channel/{channel-name}[/{item-name}]")
+    return parts[1], parts[2] if len(parts) == 3 else None
+
+def named_ref(channel_name: str, item_name: Optional[str] = None):
+    ref = f"colab://channel/{quote(channel_name, safe='')}"
+    return ref if item_name is None else f"{ref}/{quote(item_name, safe='')}"
+
+def matching(rows, value: str, resource: str):
+    exact_id = [row for row in rows if row["id"] == value]
+    if exact_id:
+        return exact_id
+    matches = [row for row in rows if row["name"].casefold() == value.casefold()]
+    if not matches:
+        raise LocalApiError(f"{resource} not found: {value}")
+    return matches
+
+def channels(core: str):
+    return request("GET", "/v1/channels", core=core)
+
+def files(core: str, channel_id: str):
+    return request("GET", f"/v1/channels/{channel_id}/files", core=core)
+
+def sessions(core: str, channel_id: str):
+    return request("GET", f"/v1/channels/{channel_id}/sessions", core=core)
+
+def skills(core: str, channel_id: str):
+    return request("GET", f"/v1/channels/{channel_id}/skills", core=core)
+
+def resolve_channel(core: str, value: str):
+    """Resolve only inside the active account and Organization; never guess duplicates."""
+    matches = matching(channels(core), value, "Channel")
+    if len(matches) != 1:
+        raise AmbiguousReference("Channel name is ambiguous in the active Organization", [
+            {"name": row["name"], "createdAt": row.get("createdAt"), "role": row.get("role"), "preciseRef": named_ref(row["id"])}
+            for row in matches
+        ])
+    return matches[0]
+
+def resolve_channel_ref(core: str, ref: str):
+    channel_name, item_name = parse_ref(ref)
+    if not channel_name or item_name:
+        raise ValueError("channel must be colab://channel/{channel-name}")
+    return resolve_channel(core, channel_name)
+
+def public_result(value):
+    """Keep database UUIDs inside the client; public refs are name-addressed."""
+    if isinstance(value, list):
+        return [public_result(item) for item in value]
+    if isinstance(value, dict):
+        return {key: public_result(item) for key, item in value.items() if key not in {"id", "channelId", "currentRootOid"}}
+    return value
+
+def open_ref(core: str, ref: str):
+    channel_name, item_name = parse_ref(ref)
+    available_channels = channels(core)
+    if channel_name is None:
+        return [{"ref": named_ref(row["name"]), "kind": "channel", **row} for row in available_channels]
+    channel_matches = matching(available_channels, channel_name, "Channel")
+    if item_name is None:
+        if len(channel_matches) > 1:
+            raise AmbiguousReference("Channel name is ambiguous in the active Organization", [
+                {"name": row["name"], "createdAt": row.get("createdAt"), "role": row.get("role"), "preciseRef": named_ref(row["id"])}
+                for row in channel_matches
+            ])
+        channel = channel_matches[0]
+        return ([{"ref": named_ref(channel["name"], row["name"]), "kind": "item", "item_type": "files", **row} for row in files(core, channel["id"])] +
+                [{"ref": named_ref(channel["name"], row["name"]), "kind": "item", "item_type": "session", **row} for row in sessions(core, channel["id"])] +
+                [{"ref": named_ref(channel["name"], row["name"]), "kind": "item", "item_type": "skill", **row} for row in skills(core, channel["id"])])
+
+    # A full descendant path can disambiguate same-named Channels. Resolution happens only over
+    # Channels visible through Local Core's active account and active Organization.
+    item_matches = []
+    for channel in channel_matches:
+        for item_type, rows in (("files", files(core, channel["id"])), ("session", sessions(core, channel["id"])), ("skill", skills(core, channel["id"]))):
+            for row in matching_or_empty(rows, item_name):
+                item_matches.append((channel, item_type, row))
+    if not item_matches:
+        raise LocalApiError(f"Shared Item not found: {item_name}")
+    if len(item_matches) > 1:
+        raise AmbiguousReference("The complete readable path is ambiguous", [
+            {
+                "channel": channel["name"],
+                "channelCreatedAt": channel.get("createdAt"),
+                "item": row["name"],
+                "contributor": row.get("contributorName"),
+                "updatedAt": row.get("updatedAt"),
+                "preciseRef": named_ref(channel["id"], row["id"]),
+            }
+            for channel, _, row in item_matches
+        ])
+    channel, item_type, row = item_matches[0]
+    consume = {"files": "use", "session": "read", "skill": "install"}[item_type]
+    return {"ref": named_ref(channel["name"], row["name"]), "kind": "item", "item_type": item_type, "capabilities": ["open", consume] + (["withdraw"] if row.get("canWithdraw") else []), **row}
+
+def matching_or_empty(rows, value: str):
+    exact_id = [row for row in rows if row["id"] == value]
+    if exact_id:
+        return exact_id
+    return [row for row in rows if row["name"].casefold() == value.casefold()]
+
+def use_ref(core: str, ref: str):
+    opened = open_ref(core, ref)
+    if not isinstance(opened, dict) or opened.get("kind") != "item":
+        raise ValueError("use requires a Shared Item reference")
+    if opened.get("item_type") != "files":
+        raise ValueError("use consumes Files only; use colab-session-reader for Sessions")
+    # A contributor's source is already the authoritative local working copy;
+    # materializing it again would duplicate data and can be expensive.
+    if opened.get("canWithdraw") and opened.get("localPath"):
+        result = opened
+    else:
+        # Agent consumption asks for a current snapshot, unlike GUI browsing's
+        # stale-while-revalidate path. The Local Core waits for its durable job.
+        result = request("POST", f"/v1/files/{opened['id']}/materialize?wait=true", core=core)
+    result = dict(result)
+    result["tree"] = request("GET", f"/v1/files/{opened['id']}/tree", core=core)
+    return result
+
+def share_item(core: str, channel_ref: str, item_type: str, source: str, name: Optional[str]):
+    channel = resolve_channel_ref(core, channel_ref)
+    if item_type == "files":
+        row = request("POST", f"/v1/channels/{channel['id']}/files/share", core=core,
+                      body={"localPath": source, "name": name}, timeout=900)
+        return {"ref": named_ref(channel["name"], row["name"]), "itemType": "files", **row}
+    if item_type == "session":
+        # Session source discovery is backed by the Local Core SQLite catalog. An exact id/path
+        # is required so an Agent cannot accidentally share a similarly named conversation.
+        candidates = request("GET", f"/v1/session-sources?q={quote(source, safe='')}&limit=500", core=core)
+        matches = [row for row in candidates if source in (row.get("id"), row.get("threadId"), row.get("sourcePath"))]
+        if len(matches) != 1:
+            raise LocalApiError(f"Session source must resolve uniquely by id or source path: {source}")
+        row = matches[0]
+        shared = request("POST", f"/v1/channels/{channel['id']}/sessions/share", core=core,
+                         body={"sourcePath": row["sourcePath"], "sourceAdapter": row["sourceAdapter"], "name": name or row["name"]})
+        return {"ref": named_ref(channel["name"], shared["name"]), "itemType": "session", **shared}
+    if item_type == "skill":
+        body = {"name": name}
+        if source.startswith("src_"):
+            body["sourceId"] = source
+        else:
+            body["sourcePath"] = source
+        shared = request("POST", f"/v1/channels/{channel['id']}/skills/share", core=core,
+                         body=body)
+        return {"ref": named_ref(channel["name"], shared["name"]), "itemType": "skill", **shared}
+    raise ValueError("item-type must be files, session, or skill")
+
+def withdraw_item(core: str, ref: str):
+    opened = open_ref(core, ref)
+    if not isinstance(opened, dict) or opened.get("kind") != "item":
+        raise ValueError("withdraw requires a Shared Item reference")
+    if not opened.get("canWithdraw"):
+        raise LocalApiError("Current member cannot withdraw this Shared Item")
+    collection = {"files": "files", "session": "sessions", "skill": "skills"}[opened["item_type"]]
+    request("DELETE", f"/v1/{collection}/{opened['id']}", core=core)
+    return {"ref": ref, "state": "withdrawn"}
+
+def main() -> int:
+    parser = argparse.ArgumentParser(prog="colab-browser")
+    parser.add_argument("--core", default=DEFAULT_CORE)
+    operations = parser.add_subparsers(dest="operation", required=True)
+    opening = operations.add_parser("open", help="List Channels or a Channel's Files, Sessions, and Skills"); opening.add_argument("--ref", required=True)
+    using = operations.add_parser("use", help="Refresh and materialize a shared Files item"); using.add_argument("--ref", required=True)
+    syncing = operations.add_parser("sync", help="Compatibility alias for Files use"); syncing.add_argument("--item", required=True)
+    create = operations.add_parser("create-channel", help="Create a Channel"); create.add_argument("--name", required=True); create.add_argument("--icon")
+    update = operations.add_parser("update-channel", help="Update Channel identity"); update.add_argument("--channel", required=True); update.add_argument("--name"); update.add_argument("--icon")
+    member_list = operations.add_parser("members", help="List Channel members"); member_list.add_argument("--channel", required=True)
+    add = operations.add_parser("add-member", help="Add or invite a Channel member"); add.add_argument("--channel", required=True); add.add_argument("--user", required=True); add.add_argument("--role", default="member", choices=["member", "admin"])
+    change = operations.add_parser("update-member", help="Change a Channel member role"); change.add_argument("--channel", required=True); change.add_argument("--user", required=True); change.add_argument("--role", required=True, choices=["member", "admin"])
+    remove = operations.add_parser("remove-member", help="Remove a Channel member"); remove.add_argument("--channel", required=True); remove.add_argument("--user", required=True)
+    share = operations.add_parser("share", help="Share local Files, an indexed Session, or a Skill source"); share.add_argument("--channel", required=True); share.add_argument("--item-type", required=True, choices=["files", "session", "skill"]); share.add_argument("--source", required=True); share.add_argument("--name")
+    withdraw = operations.add_parser("withdraw", help="Withdraw an owned Files, Session, or Skill item"); withdraw.add_argument("--item", required=True)
+    source_list = operations.add_parser("session-sources", help="Search the local indexed Session catalog"); source_list.add_argument("--query", default=""); source_list.add_argument("--limit", type=int, default=200)
+    args = parser.parse_args()
+    try:
+        if args.operation == "open":
+            return success(public_result(open_ref(args.core, args.ref)))
+        if args.operation == "use":
+            return success(public_result(use_ref(args.core, args.ref)))
+        if args.operation == "create-channel":
+            row = request("POST", "/v1/channels", core=args.core, body={"name": args.name, "icon": args.icon})
+            return success(public_result({"ref": named_ref(row["name"]), **row}))
+        if args.operation == "update-channel":
+            channel = resolve_channel_ref(args.core, args.channel)
+            row = request("PATCH", f"/v1/channels/{channel['id']}", core=args.core,
+                          body={"name": args.name or channel["name"], "icon": args.icon if args.icon is not None else channel.get("icon")})
+            return success(public_result({"ref": named_ref(row["name"]), **row}))
+        if args.operation in {"members", "add-member", "update-member", "remove-member"}:
+            channel = resolve_channel_ref(args.core, args.channel)
+            path = f"/v1/channels/{channel['id']}/members"
+            if args.operation == "members": return success(public_result(request("GET", path, core=args.core)))
+            if args.operation == "add-member": return success(public_result(request("POST", path, core=args.core, body={"email": args.user, "role": args.role})))
+            if args.operation == "update-member": return success(public_result(request("PATCH", f"{path}/{quote(args.user, safe='')}", core=args.core, body={"email": None, "role": args.role})))
+            request("DELETE", f"{path}/{quote(args.user, safe='')}", core=args.core)
+            return success({"user": args.user, "state": "removed"})
+        if args.operation == "share":
+            return success(public_result(share_item(args.core, args.channel, args.item_type, args.source, args.name)))
+        if args.operation == "withdraw":
+            return success(public_result(withdraw_item(args.core, args.item)))
+        if args.operation == "session-sources":
+            path = f"/v1/session-sources?q={quote(args.query, safe='')}&limit={max(1, min(args.limit, 500))}"
+            # Keep the catalog id in this discovery-only response. A thread id can occur in
+            # more than one MyFlicker project; Agents need the catalog id as the deterministic
+            # fallback accepted by `share --source` when a human-readable id is ambiguous.
+            return success(request("GET", path, core=args.core))
+        channel_id, item_id = parse_ref(args.item)
+        if not channel_id or not item_id:
+            raise ValueError("sync requires a Shared Item reference")
+        return success(public_result(use_ref(args.core, args.item)))
+    except AmbiguousReference as error:
+        return failure("ambiguous_reference", str(error), 2, {"candidates": error.candidates})
+    except ValueError as error:
+        return failure("invalid_argument", str(error), 2)
+    except LocalApiError as error:
+        return failure("local_api_error", str(error), error.exit_code)
+
+if __name__ == "__main__":
+    raise SystemExit(main())

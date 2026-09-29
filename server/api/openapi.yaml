@@ -1,0 +1,230 @@
+openapi: 3.1.0
+info:
+  title: Colab Server API
+  version: 0.1.0
+paths:
+  /health/live:
+    get:
+      operationId: getLiveness
+      responses:
+        "200": { description: Process is alive }
+  /health/ready:
+    get:
+      operationId: getReadiness
+      responses:
+        "200": { description: Process and PostgreSQL are ready }
+        "503":
+          description: A required dependency is unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /v1/status:
+    get:
+      operationId: getServerStatus
+      responses:
+        "200":
+          description: Server status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServiceStatus"
+  /v1/organizations:
+    get:
+      operationId: listOrganizations
+      responses:
+        "200":
+          description: Organizations represented by the authenticated user's memberships
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Organization" }
+    post:
+      operationId: createOrganization
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string, minLength: 1, maxLength: 80 }
+      responses:
+        "201":
+          description: Organization and owner membership created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Organization" }
+  /v1/organizations/{organizationId}/channels:
+    parameters:
+      - name: organizationId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      operationId: listOrganizationChannels
+      responses:
+        "200":
+          description: Channels visible through the authenticated user's Organization Member
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Channel" }
+  /v1/channels/{channelId}/files:
+    parameters:
+      - name: channelId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      operationId: listFileShares
+      responses:
+        "200":
+          description: Active Files shared items in the Channel
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/FileShare" } }
+    post:
+      operationId: createFileShare
+      responses:
+        "201":
+          description: Files shared item registered
+  /v1/files/{shareId}/revisions:
+    parameters:
+      - name: shareId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      operationId: listFileRevisions
+      responses:
+        "200": { description: Ordered Git revision chain }
+    post:
+      operationId: uploadFileRevision
+      parameters:
+        - { name: rootOid, in: query, required: true, schema: { type: string } }
+        - { name: parentRootOid, in: query, required: false, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/x-git-packed-objects:
+            schema: { type: string, format: binary }
+      responses:
+        "201": { description: Revision accepted and current root advanced }
+        "409": { description: Parent root does not match current root }
+  /v1/file-revisions/{revisionId}/content:
+    get:
+      operationId: downloadFileRevisionPack
+      parameters:
+        - name: revisionId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Git pack for this revision
+          content:
+            application/x-git-packed-objects:
+              schema: { type: string, format: binary }
+  /v1/channels/{channelId}/sessions:
+    get:
+      operationId: listSessionShares
+      responses:
+        "200": { description: Active Session shared items in the Channel }
+    post:
+      operationId: createSessionShare
+      responses:
+        "201": { description: Session shared item registered }
+  /v1/sessions/{shareId}/segments:
+    get:
+      operationId: getSessionSnapshotManifest
+      responses:
+        "200": { description: Current immutable snapshot and its ordered raw segment chain }
+    post:
+      operationId: appendSessionSegment
+      responses:
+        "201": { description: Raw provider segment accepted and snapshot CAS advanced }
+        "409": { description: Parent snapshot does not match current snapshot }
+  /v1/session-segments/{segmentId}/content:
+    get:
+      operationId: downloadSessionSegment
+      responses:
+        "200":
+          description: Opaque provider JSONL segment streamed from Blob storage
+  /v1/channels/{channelId}/skills:
+    get:
+      operationId: listSkillShares
+      responses:
+        "200": { description: Active Skill shared items in the Channel }
+    post:
+      operationId: createSkillShare
+      responses:
+        "201": { description: Skill shared item registered }
+  /v1/skills/{shareId}/revisions:
+    get:
+      operationId: listSkillRevisions
+      responses:
+        "200": { description: Ordered opaque shadow-Git revision chain }
+    post:
+      operationId: uploadSkillRevision
+      responses:
+        "201": { description: Skill revision accepted and current root advanced }
+        "409": { description: Parent root does not match current root }
+  /v1/skill-revisions/{revisionId}/content:
+    get:
+      operationId: downloadSkillRevisionPack
+      responses:
+        "200": { description: Opaque Git pack for this Skill revision }
+  /v1/skills/{shareId}:
+    delete:
+      operationId: withdrawSkillShare
+      responses:
+        "204": { description: Owned Skill shared item withdrawn }
+components:
+  schemas:
+    Organization:
+      type: object
+      required: [id, memberId, name, role, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        memberId: { type: string, format: uuid }
+        name: { type: string }
+        role: { type: string, enum: [owner, admin, member] }
+        createdAt: { type: string }
+    Channel:
+      type: object
+      required: [id, name, role, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        icon: { type: [string, "null"] }
+        role: { type: string, enum: [owner, admin, member] }
+        createdAt: { type: string }
+    FileShare:
+      type: object
+      required: [id, channelId, name, contributorName, state, canWithdraw, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        channelId: { type: string, format: uuid }
+        name: { type: string }
+        contributorName: { type: string }
+        state: { type: string, enum: [active, withdrawn] }
+        currentRootOid: { type: [string, "null"] }
+        canWithdraw: { type: boolean }
+        updatedAt: { type: string }
+    ServiceStatus:
+      type: object
+      required: [service, version]
+      properties:
+        service: { type: string, const: colab-server }
+        version: { type: string }
+    Error:
+      type: object
+      required: [code, message, retryable]
+      properties:
+        code: { type: string }
+        message: { type: string }
+        retryable: { type: boolean }

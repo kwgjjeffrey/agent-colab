@@ -1,0 +1,16 @@
+[package]
+name = "colabd"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+axum.workspace = true
+colab-local-api = { path = "../local-api" }
+tokio.workspace = true
+directories.workspace = true
+dotenvy.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+uuid.workspace = true

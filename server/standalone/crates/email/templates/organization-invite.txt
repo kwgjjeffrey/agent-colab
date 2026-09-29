@@ -1,0 +1,6 @@
+Join {{ organization }} on Colab
+
+{{ inviter }} invited you to collaborate.
+Review the invitation: {{ accept_url }}
+
+This invitation expires automatically.
