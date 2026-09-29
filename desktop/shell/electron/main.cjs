@@ -4,6 +4,7 @@ const fs = require('node:fs/promises')
 const os = require('node:os')
 const { spawn } = require('node:child_process')
 const { app, BrowserWindow, dialog, ipcMain, shell } = require('electron')
+const { ensureWindowsInstallation } = require('./windows-bootstrap.cjs')
 
 let window
 let pendingDeepLinks = []
@@ -83,9 +84,9 @@ async function reportStartupFailure(error) {
   const result = await dialog.showMessageBox({
     type: 'error',
     title: 'Agent Colab could not start',
-    message: 'Install or start Agent Colab Local Core before opening the desktop launcher.',
+    message: 'Agent Colab could not finish local setup or start Local Core.',
     detail,
-    buttons: ['Open installation guide', 'Close'],
+    buttons: ['Open troubleshooting guide', 'Close'],
     defaultId: 0,
     cancelId: 1,
     noLink: true,
@@ -95,7 +96,11 @@ async function reportStartupFailure(error) {
 }
 
 app.whenReady()
-  .then(async () => { app.setAsDefaultProtocolClient('colab'); await createWindow() })
+  .then(async () => {
+    app.setAsDefaultProtocolClient('colab')
+    await ensureWindowsInstallation({ dialog, applicationRoot, resourcesPath: process.resourcesPath })
+    await createWindow()
+  })
   .catch(reportStartupFailure)
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit() })
 app.on('activate', () => { if (!window) createWindow() })

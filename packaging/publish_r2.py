@@ -55,8 +55,10 @@ def _curl_download(url: str, output: Path, byte_range: str | None = None) -> Non
     # reading otherwise healthy R2 responses. curl is already a bootstrap
     # dependency, and --noproxy makes this release-integrity check deterministic.
     command = [
-            "curl", "--fail", "--location", "--silent", "--show-error",
+            "curl", "--http1.1", "--fail", "--location", "--silent", "--show-error",
             "--noproxy", "*", "--retry", "3", "--retry-all-errors",
+            # Force HTTP/1.1: this R2 custom domain has returned a complete HTTP/2
+            # range body without closing the stream on the development network.
             # Electron archives are currently ~110 MiB and the custom-domain
             # egress can be slow from the development network. Integrity still
             # requires a complete public readback; size the timeout for that
@@ -89,7 +91,9 @@ def public_download(url: str, output: Path, expected_size: int | None = None) ->
     # multi-MiB range streams early; one-MiB chunks retry cheaply and avoid
     # restarting an otherwise complete 80+ MiB artifact verification.
     chunk_size = 1024 * 1024
-    workers = min(32, (expected_size + chunk_size - 1) // chunk_size)
+    # A small pool is faster and more reliable than opening dozens of TLS handshakes
+    # through the same consumer uplink; excessive concurrency caused connection timeouts.
+    workers = min(8, (expected_size + chunk_size - 1) // chunk_size)
     parts = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as executor:
         futures = []

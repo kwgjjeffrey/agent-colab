@@ -13,6 +13,7 @@ New-Item -ItemType Directory -Force $CoreDir | Out-Null
 Copy-Item (Join-Path $RepoRoot "local/target/release/colabd.exe") $CoreDir
 Compress-Archive -Path (Join-Path $CoreDir "colabd.exe") -DestinationPath (Join-Path $Dist "local-core/$CoreVersion/windows-x86_64.zip") -Force
 
+node (Join-Path $RepoRoot "desktop/shell/scripts/prepare-windows-bootstrap.cjs")
 npx --yes pnpm@10.18.3 --dir (Join-Path $RepoRoot "desktop/shell") exec electron-builder --win portable --x64
 $ShellDir = Join-Path $Dist "electron-shell/$ShellVersion"
 New-Item -ItemType Directory -Force $ShellDir | Out-Null
