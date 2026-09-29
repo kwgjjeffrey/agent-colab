@@ -53,7 +53,7 @@ printf '%s\n' \
   "- Agent Colab Skill: $skill_version" \
   "- Electron Shell: $shell_version" \
   '' \
-  'Use `colab-install` on macOS or `colab-install.ps1` on Windows. The desktop builds are not yet notarized or code-signed for public distribution.' \
+  'On Windows, `Colab-*-x64.exe` bootstraps the bundled Core, GUI, and Agent Skill on first launch; `colab-install.ps1` remains available for headless or Skill-first setup. Use `colab-install` on macOS. The desktop builds are not yet notarized or code-signed for public distribution.' \
   > "$notes"
 
 # GitHub Releases are a public mirror. R2 remains the signed update origin used by installed clients.
