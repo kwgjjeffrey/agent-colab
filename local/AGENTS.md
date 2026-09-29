@@ -16,6 +16,12 @@ For managed updates, activate immutable artifacts first, return the HTTP result,
 
 Device preferences such as the default coding Agent live in `local_settings`. Platform application launching is also allow-listed by Agent id in `system.rs`; GUI must never pass an arbitrary executable name.
 
+Colab access tokens are resolved through the shared `access_token` boundary. It proactively
+rotates an expired or near-expiry pair through Server, serializes rotation with
+`auth_refresh_lock`, persists the new pair before exposing it in memory, and never returns either
+credential through Local API. Feature modules must not refresh independently: concurrent use of
+one rotating refresh token is replay and causes Server to revoke that session family.
+
 The implemented Local API chooses an OS-assigned loopback port on first installation and atomically publishes a mode-0600 discovery file containing the endpoint, process metadata, API version and a high-entropy bearer. Endpoint and bearer are reused across process restarts so ordinary browser tabs retain the same origin and HttpOnly cookie; PID is rewritten on every start. Desktop, Electron and the Python Skill resolve the Core through that file. API requests enforce bearer/cookie authentication plus Host and Origin checks. Preserve this single transport instead of adding fixed ports, Unix sockets or a second GUI-owned backend.
 
 On Windows, setup pins mutable installation state under `%LOCALAPPDATA%\AgentColab`, uses directory junctions for active immutable versions so ordinary users do not need symlink privilege, and invokes the extensionless Python setup through `python`. Keep Windows path/service decisions inside platform adapters; do not leak them into synchronization use cases.

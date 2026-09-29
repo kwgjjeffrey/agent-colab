@@ -4,6 +4,22 @@ use sha2::{Digest, Sha256};
 use sqlx::{PgPool, postgres::PgPoolOptions};
 use uuid::Uuid;
 
+fn new_token(prefix: &str) -> String {
+    format!(
+        "{prefix}{}{}",
+        Uuid::new_v4().simple(),
+        Uuid::new_v4().simple()
+    )
+}
+
+fn unix_time_after(seconds: i64) -> i64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .expect("system clock predates Unix epoch")
+        .as_secs() as i64
+        + seconds
+}
+
 mod transfers;
 pub use transfers::{
     AddTransferItemError, CreateTransferError, ExpiredTransfer, TransferItem, TransferManifest,
@@ -38,7 +54,18 @@ pub struct CreatedSession {
     pub access_token: String,
     pub refresh_token: String,
     pub expires_in: i64,
+    pub expires_at: i64,
     pub user: AuthenticatedUser,
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum RefreshSessionError {
+    #[error("refresh token is invalid")]
+    Invalid,
+    #[error("refresh token replayed; session revoked")]
+    Replay,
+    #[error(transparent)]
+    Internal(#[from] anyhow::Error),
 }
 
 #[derive(Debug, Serialize, sqlx::FromRow)]
@@ -79,6 +106,16 @@ pub struct OrganizationPerson {
     pub email: String,
     pub display_name: Option<String>,
     pub avatar_url: Option<String>,
+}
+
+#[derive(Debug, sqlx::FromRow)]
+pub struct EmailOutboxJob {
+    pub id: Uuid,
+    pub to: String,
+    pub organization_name: String,
+    pub inviter_name: String,
+    pub token: String,
+    pub attempts: i32,
 }
 
 #[derive(Debug, Serialize, sqlx::FromRow)]
@@ -251,28 +288,108 @@ impl Database {
         sqlx::query("insert into organization_members(id,organization_id,user_id,role) values($1,$2,$2,'owner') on conflict(organization_id,user_id) do nothing")
             .bind(Uuid::new_v4()).bind(user.id).execute(&mut *tx).await.context("ensure organization owner")?;
 
-        let access_token = format!(
-            "colab_at_{}{}",
-            Uuid::new_v4().simple(),
-            Uuid::new_v4().simple()
-        );
-        let refresh_token = format!(
-            "colab_rt_{}{}",
-            Uuid::new_v4().simple(),
-            Uuid::new_v4().simple()
-        );
+        let access_token = new_token("colab_at_");
+        let refresh_token = new_token("colab_rt_");
         let access_hash = token_hash(&access_token);
         let refresh_hash = token_hash(&refresh_token);
         let session_id = Uuid::new_v4();
         sqlx::query("insert into sessions (id, user_id, access_token_hash, refresh_token_hash, expires_at) values ($1, $2, $3, $4, now() + interval '30 days')")
-            .bind(session_id).bind(user.id).bind(access_hash).bind(refresh_hash)
+            .bind(session_id).bind(user.id).bind(access_hash).bind(&refresh_hash)
             .execute(&mut *tx).await.context("create session")?;
+        sqlx::query(
+            "insert into session_refresh_tokens(token_hash,session_id,generation) values($1,$2,0)",
+        )
+        .bind(refresh_hash)
+        .bind(session_id)
+        .execute(&mut *tx)
+        .await
+        .context("record initial refresh token")?;
         tx.commit().await.context("commit auth transaction")?;
         Ok(CreatedSession {
             access_token,
             refresh_token,
             expires_in: 2_592_000,
+            expires_at: unix_time_after(2_592_000),
             user,
+        })
+    }
+
+    /// Rotates both opaque credentials atomically. A consumed token is positive replay evidence,
+    /// so the transaction revokes the complete session before returning an error.
+    pub async fn refresh_session(
+        &self,
+        refresh_token: &str,
+    ) -> Result<CreatedSession, RefreshSessionError> {
+        let mut tx = self
+            .pool
+            .begin()
+            .await
+            .context("begin refresh transaction")?;
+        let refresh_hash = token_hash(refresh_token);
+        let row = sqlx::query_as::<_, (Uuid, i64, Option<String>, Option<String>, String, Option<String>, Option<String>)>(
+            "select s.id,rt.generation,rt.consumed_at::text,s.revoked_at::text,u.email,u.display_name,u.avatar_url from session_refresh_tokens rt join sessions s on s.id=rt.session_id join users u on u.id=s.user_id where rt.token_hash=$1 for update of rt,s"
+        ).bind(&refresh_hash).fetch_optional(&mut *tx).await.context("find refresh token")?;
+        let Some((
+            session_id,
+            generation,
+            consumed_at,
+            revoked_at,
+            email,
+            display_name,
+            avatar_url,
+        )) = row
+        else {
+            return Err(RefreshSessionError::Invalid);
+        };
+        if revoked_at.is_some() {
+            return Err(RefreshSessionError::Invalid);
+        }
+        if consumed_at.is_some() {
+            sqlx::query("update sessions set revoked_at=coalesce(revoked_at,now()) where id=$1")
+                .bind(session_id)
+                .execute(&mut *tx)
+                .await
+                .context("revoke replayed session")?;
+            tx.commit().await.context("commit replay revocation")?;
+            return Err(RefreshSessionError::Replay);
+        }
+        let user_id: Uuid = sqlx::query_scalar("select user_id from sessions where id=$1")
+            .bind(session_id)
+            .fetch_one(&mut *tx)
+            .await
+            .context("load session user")?;
+        let access_token = new_token("colab_at_");
+        let next_refresh_token = new_token("colab_rt_");
+        let access_hash = token_hash(&access_token);
+        let next_refresh_hash = token_hash(&next_refresh_token);
+        sqlx::query("update session_refresh_tokens set consumed_at=now() where token_hash=$1")
+            .bind(refresh_hash)
+            .execute(&mut *tx)
+            .await
+            .context("consume refresh token")?;
+        sqlx::query(
+            "insert into session_refresh_tokens(token_hash,session_id,generation) values($1,$2,$3)",
+        )
+        .bind(&next_refresh_hash)
+        .bind(session_id)
+        .bind(generation + 1)
+        .execute(&mut *tx)
+        .await
+        .context("record rotated refresh token")?;
+        sqlx::query("update sessions set access_token_hash=$2,refresh_token_hash=$3,expires_at=now()+interval '30 days' where id=$1")
+            .bind(session_id).bind(access_hash).bind(next_refresh_hash).execute(&mut *tx).await.context("rotate session")?;
+        tx.commit().await.context("commit refresh rotation")?;
+        Ok(CreatedSession {
+            access_token,
+            refresh_token: next_refresh_token,
+            expires_in: 2_592_000,
+            expires_at: unix_time_after(2_592_000),
+            user: AuthenticatedUser {
+                id: user_id,
+                email,
+                display_name,
+                avatar_url,
+            },
         })
     }
 
@@ -436,6 +553,10 @@ impl Database {
         let invitation_id = Uuid::new_v4();
         let token = format!("{}{}", Uuid::new_v4().simple(), Uuid::new_v4().simple());
         sqlx::query("insert into organization_invitations(id,organization_id,channel_id,email,organization_role,channel_role,token_hash,invited_by_member_id,expires_at) values($1,$2,$3,lower($4),'member',$5,$6,$7,now()+interval '7 days')").bind(invitation_id).bind(organization_id).bind(channel_id).bind(email).bind(role).bind(token_hash(&token)).bind(actor_member_id).execute(&mut *tx).await?;
+        // The invitation and notification intent commit together. Delivery is performed later by
+        // a leased worker, so a provider outage never turns a successful invite into an HTTP 503.
+        sqlx::query("insert into email_outbox(id,invitation_id,kind,payload) values($1,$2,'organization_invite',$3)")
+            .bind(Uuid::new_v4()).bind(invitation_id).bind(serde_json::json!({"to":email.to_lowercase(),"organizationName":organization_name,"inviterName":inviter_name,"token":token})).execute(&mut *tx).await?;
         tx.commit().await?;
         Ok(AddChannelMember::Invitation {
             invitation_id,
@@ -444,6 +565,29 @@ impl Database {
             organization_name,
             inviter_name,
         })
+    }
+
+    pub async fn claim_email(&self) -> anyhow::Result<Option<EmailOutboxJob>> {
+        sqlx::query_as(
+            "with due as (select id from email_outbox where next_attempt_at<=now() and (state='pending' or lease_until<now()) order by next_attempt_at,created_at for update skip locked limit 1) update email_outbox o set state='sending',attempts=attempts+1,lease_until=now()+interval '2 minutes' from due where o.id=due.id returning o.id,o.payload->>'to' as to,o.payload->>'organizationName' as organization_name,o.payload->>'inviterName' as inviter_name,o.payload->>'token' as token,o.attempts"
+        ).fetch_optional(&self.pool).await.map_err(Into::into)
+    }
+
+    pub async fn complete_email(&self, id: Uuid) -> anyhow::Result<()> {
+        // Successful rows are deleted so the plaintext short-lived invitation token is retained
+        // no longer than delivery requires.
+        sqlx::query("delete from email_outbox where id=$1")
+            .bind(id)
+            .execute(&self.pool)
+            .await?;
+        Ok(())
+    }
+
+    pub async fn retry_email(&self, id: Uuid, error: &str) -> anyhow::Result<()> {
+        let error = error.chars().take(2000).collect::<String>();
+        sqlx::query("update email_outbox set state='pending',lease_until=null,last_error=$2,next_attempt_at=now()+make_interval(secs=>least(3600,5*(1<<least(attempts,10)))) where id=$1")
+            .bind(id).bind(error).execute(&self.pool).await?;
+        Ok(())
     }
 
     pub async fn update_member_role(
@@ -549,24 +693,16 @@ impl Database {
         blob_key: &str,
         byte_size: i64,
     ) -> anyhow::Result<Option<FileRevision>> {
-        // Serialize the metadata transition with a compare-and-swap on current_root_oid. Only the
-        // contributing Organization Member may append, and the caller's parent must still be the
-        // active root. Returning None means authorization or CAS failed; callers must not advance
-        // their local publication cursor in that case.
-        let mut tx = self.pool.begin().await?;
-        let allowed:bool=sqlx::query_scalar("select exists(select 1 from channel_shares fs join organization_members om on om.id=fs.contributor_member_id where fs.id=$1 and fs.kind='files' and om.user_id=$2 and fs.state='active' and fs.current_root_oid is not distinct from $3)").bind(share_id).bind(user_id).bind(parent_root_oid).fetch_one(&mut *tx).await?;
-        if !allowed {
-            return Ok(None);
-        };
-        let id = Uuid::new_v4();
-        let revision=sqlx::query_as::<_,FileRevision>("insert into file_revisions(id,share_id,root_oid,parent_root_oid,blob_key,byte_size) values($1,$2,$3,$4,$5,$6) returning id,share_id,root_oid,parent_root_oid,byte_size,created_at::text created_at").bind(id).bind(share_id).bind(root_oid).bind(parent_root_oid).bind(blob_key).bind(byte_size).fetch_one(&mut *tx).await?;
-        sqlx::query("update channel_shares set current_root_oid=$2,updated_at=now() where id=$1 and kind='files'")
-            .bind(share_id)
-            .bind(root_oid)
-            .execute(&mut *tx)
-            .await?;
-        tx.commit().await?;
-        Ok(Some(revision))
+        self.create_git_revision(
+            user_id,
+            share_id,
+            "files",
+            root_oid,
+            parent_root_oid,
+            blob_key,
+            byte_size,
+        )
+        .await
     }
 
     pub async fn list_file_revisions(
@@ -678,15 +814,35 @@ impl Database {
         byte_size: i64,
     ) -> anyhow::Result<Option<FileRevision>> {
         let mut tx = self.pool.begin().await?;
+        // Serialize quota accounting per user. Without the advisory lock, concurrent uploads can
+        // both observe spare capacity and exceed the limit after committing.
+        sqlx::query("select pg_advisory_xact_lock(hashtext($1::text))")
+            .bind(user_id)
+            .execute(&mut *tx)
+            .await?;
         let allowed:bool=sqlx::query_scalar("select exists(select 1 from channel_shares s join organization_members om on om.id=s.contributor_member_id where s.id=$1 and s.kind=$2 and om.user_id=$3 and s.state='active' and s.current_root_oid is not distinct from $4)").bind(share_id).bind(kind).bind(user_id).bind(parent_root_oid).fetch_one(&mut *tx).await?;
         if !allowed {
             return Ok(None);
+        }
+        const USER_GIT_QUOTA_BYTES: i64 = 2 * 1024 * 1024 * 1024;
+        let used: i64 = sqlx::query_scalar("select coalesce(sum(r.byte_size),0)::bigint from file_revisions r join channel_shares s on s.id=r.share_id join organization_members om on om.id=s.contributor_member_id where om.user_id=$1 and s.state='active' and s.kind in ('files','skill')")
+            .bind(user_id).fetch_one(&mut *tx).await?;
+        if byte_size < 0 || used.saturating_add(byte_size) > USER_GIT_QUOTA_BYTES {
+            anyhow::bail!("storage quota exceeded");
         }
         let id = Uuid::new_v4();
         let revision=sqlx::query_as::<_,FileRevision>("insert into file_revisions(id,share_id,root_oid,parent_root_oid,blob_key,byte_size) values($1,$2,$3,$4,$5,$6) returning id,share_id,root_oid,parent_root_oid,byte_size,created_at::text created_at").bind(id).bind(share_id).bind(root_oid).bind(parent_root_oid).bind(blob_key).bind(byte_size).fetch_one(&mut *tx).await?;
         sqlx::query("update channel_shares set current_root_oid=$2,updated_at=now() where id=$1 and kind=$3").bind(share_id).bind(root_oid).bind(kind).execute(&mut *tx).await?;
         tx.commit().await?;
         Ok(Some(revision))
+    }
+
+    /// Returns the complete Blob reachability set used by filesystem GC. Withdrawn Channel
+    /// shares and expired/revoked Quick Shares are intentionally absent and become collectible.
+    pub async fn referenced_blob_keys(&self) -> anyhow::Result<Vec<String>> {
+        sqlx::query_scalar(
+            "select r.blob_key from file_revisions r join channel_shares s on s.id=r.share_id where s.state='active' and s.kind in ('files','skill') union select sg.blob_key from session_segments sg join session_snapshots ss on ss.id=sg.snapshot_id join channel_shares s on s.id=ss.share_id where s.state='active' and s.kind='session' union select qi.blob_key from quick_transfer_items qi join quick_transfers qt on qt.id=qi.transfer_id where qi.blob_key is not null and qt.state in ('uploading','ready') and qt.expires_at>now()"
+        ).fetch_all(&self.pool).await.map_err(Into::into)
     }
 
     async fn list_git_revisions(

@@ -112,14 +112,19 @@ async fn fail(state: &AppState, message: String) -> Result<Html<&'static str>, L
         message,
     })
 }
-pub(super) async fn auth_status(State(state): State<AppState>) -> Json<AuthStatus> {
+pub(super) async fn auth_status(
+    State(state): State<AppState>,
+) -> Result<Json<AuthStatus>, LocalError> {
+    if state.inner.session.lock().await.is_some() {
+        access_token(&state).await?;
+    }
     let session = state.inner.session.lock().await.clone();
     let error = state.inner.last_error.lock().await.clone();
-    Json(AuthStatus {
+    Ok(Json(AuthStatus {
         authenticated: session.is_some(),
         user: session.map(|value| value.user),
         error,
-    })
+    }))
 }
 pub(super) async fn list_accounts(
     State(state): State<AppState>,
@@ -173,11 +178,19 @@ pub(super) async fn switch_account(
             })?;
         serde_json::from_str(&value).map_err(LocalError::internal)?
     };
+    *state.inner.session.lock().await = Some(session);
+    let token = match access_token(&state).await {
+        Ok(token) => token,
+        Err(error) => {
+            *state.inner.session.lock().await = None;
+            return Err(error);
+        }
+    };
     let validation = state
         .inner
         .http
         .get(format!("{}/v1/organizations", state.inner.server_url))
-        .bearer_auth(&session.access_token)
+        .bearer_auth(token)
         .send()
         .await
         .map_err(LocalError::internal)?;
@@ -199,7 +212,6 @@ pub(super) async fn switch_account(
             )
             .map_err(LocalError::internal)?;
     }
-    *state.inner.session.lock().await = Some(session);
     Ok(StatusCode::NO_CONTENT)
 }
 pub(super) async fn logout(State(state): State<AppState>) -> Result<StatusCode, LocalError> {
@@ -226,7 +238,10 @@ pub(super) async fn logout(State(state): State<AppState>) -> Result<StatusCode, 
         .map_err(LocalError::internal)?;
     Ok(StatusCode::NO_CONTENT)
 }
-async fn save_account(state: &AppState, session: &ColabSession) -> Result<(), LocalError> {
+pub(super) async fn save_account(
+    state: &AppState,
+    session: &ColabSession,
+) -> Result<(), LocalError> {
     let encoded = serde_json::to_string(session).map_err(LocalError::internal)?;
     let store = state.inner.store.lock().await;
     store.execute("insert into accounts(user_id,email,display_name,avatar_url,session_json,last_used_at) values($1,$2,$3,$4,$5,current_timestamp) on conflict(user_id) do update set email=excluded.email,display_name=excluded.display_name,avatar_url=excluded.avatar_url,session_json=excluded.session_json,last_used_at=current_timestamp",rusqlite::params![session.user.id,session.user.email,session.user.display_name,session.user.avatar_url,encoded]).map_err(LocalError::internal)?;

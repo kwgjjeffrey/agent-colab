@@ -10,6 +10,10 @@ The Local Core loopback origin and browser credential are installation-scoped an
 
 Neither artifact owns accounts, Channels, file synchronization, SQLite, or remote service calls. Those go through the Local API. Local Core hosts the active GUI resources on loopback HTTP, so the system browser and Electron display exactly the same application.
 
+Member invitation success means the durable invitation and email outbox intent were committed, not
+that an external provider completed delivery during the click. The UI reports “queued for
+delivery”; it must not claim “sent” or turn a provider retry into a failed invitation.
+
 Feature UI belongs under `ui/src/features/<feature>/`; `main.tsx` may compose features but must not absorb their browsing, preview, synchronization-trigger or prompt-building logic.
 
 “Give to Agent” for a known Shared Item emits one directly executable `colab-browser use --ref ...` instruction. It must not expose preliminary `open` checks, cache paths, database UUIDs, or multi-step synchronization plumbing. References use the readable Channel and Shared Item path defined by `docs/agent-interface.md`; Browser handles rare ambiguity explicitly.

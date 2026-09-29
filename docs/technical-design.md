@@ -414,7 +414,7 @@ Local Core 通过目标 adapter 扫描并监听 Codex、Claude Code、MyFlicker 
 
 #### Git pack 传输护栏
 
-当前 standalone alpha 将一次 shadow-Git 变更编码为一个 opaque Git pack，再通过单次 HTTP 请求写入 Blob。它复用 Git 的对象与增量语义，但不是执行远端 `git push`，也还不具备 Git smart protocol 的流式协商。Local Core 必须在 `pack-objects` 前检查 index：单文件超过 100 MiB、总内容超过 200 MiB时直接返回可操作错误，不能继续高 CPU 打包或等待一个必然超过 Server 256 MiB body limit 的请求。
+当前 standalone alpha 将一次 shadow-Git 变更编码为一个 opaque Git pack，再通过单次 HTTP 请求写入 Blob。它复用 Git 的对象与增量语义，但不是执行远端 `git push`，也还不具备 Git smart protocol 的协商。Local Core 必须在 `pack-objects` 前检查 index：单文件超过 100 MiB、总内容超过 200 MiB时直接返回可操作错误。Server 不把请求整体加载进内存，而是流式写临时文件，在 256 MiB 硬边界内完成 `fsync` 和原子改名；下载同样从 Blob 流式输出。Files/Skill 的 active revision history 共享每贡献者 2 GiB 配额，配额判断通过 PostgreSQL advisory transaction lock 串行化；每小时 GC 根据数据库可达性回收失败上传、已撤回 Channel Share 和已过期 Transfer 的 Blob，并为在途写入保留一小时 grace period。分块/断点续传仍是后续 transport 改进，不改变版本模型。
 
 创建共享对象只负责登记 durable publish job，并立即以 `preparing` 返回；GUI 从任务真源展示 `syncing / failed / ready`，不能用固定 HTTP 等待期限把仍在后台运行的任务误报成失败。未来支持更大共享对象时，应把 transport 升级为可恢复的分块 Blob upload；该变化只属于传输层，不改变 watcher、shadow Git 和 `root_oid` 的语义。
 
@@ -513,6 +513,17 @@ Desktop 使用 Google 原生应用的 OAuth authorization code + PKCE；Supabase
 5. Rust Server 向 Google token endpoint 交换 token，并以 Google discovery/JWKS 校验 ID token；
 6. Server 用 Google `(issuer, subject)` 建立用户并签发可撤销的 Colab opaque session；
 7. Colab session 写 Local Core 独占的 SQLite；Local API 不返回 token，Agent runtime 不可读取凭据。
+
+Colab session 使用短路由内统一解析的 opaque access token 和一次性 refresh token。Server
+为每个 session family 保存 refresh token 的哈希代际；成功刷新会在单个 PostgreSQL 事务内
+消费旧 token、签发并记录新 token、替换 access token。已消费 token 再次出现属于 replay，
+Server 立即撤销整个 family。Local Core 用单飞锁串行刷新，在 access token 到期前 60 秒恢复，
+并先把新 token pair 原子写入私有 SQLite，再向其他本地调用者公开；GUI 和 Skill 永远拿不到凭据。
+
+组织邀请事务同时写 `organization_invitations` 与 `email_outbox`，API 只返回 `queued`，不把
+邮件 provider 延迟或短暂故障扩散成业务失败。Worker 通过 `FOR UPDATE SKIP LOCKED` 获取两分钟
+lease，失败按指数退避（上限一小时），进程重启后可重新领取过期 lease；成功发送即删除 outbox
+行，避免继续保存明文短期邀请 token。SMTP/Cloudflare 只作为 email port adapter，不进入邀请领域逻辑。
 
 开发阶段优先 loopback `http://127.0.0.1:{ephemeral-port}/auth/callback`，避免自定义 scheme 被其他应用抢注；发行阶段再评估 universal/app link。首版只接 Google Auth，不建设邀请邮件、密码登录或其他 provider。
 

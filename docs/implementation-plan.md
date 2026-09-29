@@ -58,7 +58,7 @@
 - [x] 配置真实 redirect URI；
 - [x] Local Core 实现 authorization code + PKCE、state/nonce 校验，Rust Server 向 Google 验证 ID token；
 - [x] 建立 `users`、`auth_identities`、`sessions`；
-- [ ] opaque access/refresh token rotation；
+- [x] opaque access/refresh token rotation；
 - [x] logout/revoke 与 Desktop 系统浏览器真实 Google 登录；
 - [x] 多账号 session 写入 Local Core 独占、权限为 `0600` 的 SQLite；Web 使用 HttpOnly/Secure cookie。
 
@@ -189,22 +189,22 @@
 
 ### M5 之后的固定收口顺序
 
-1. [ ] Google session 生命周期：refresh rotation、过期恢复、replay 拒绝黑盒测试；
-2. [ ] Files 存储治理：服务端孤儿 blob GC、配额与大对象边界；
-3. [ ] 邀请可靠性：transactional outbox、退避重试与任意收件人 provider 验收；
+1. [x] Google session 生命周期：Server 一次性 refresh rotation 与代际记录、Local Core 到期前单飞恢复和原子持久化、replay 撤销 session family；隔离测试 session 黑盒已验证；
+2. [x] Files 存储治理：Files/Skill pack 上传和下载改为磁盘流式 I/O，Server 256 MiB 硬边界、每贡献者 2 GiB active revision 配额、失败写入即时清理及基于可达性的小时 GC；
+3. [~] 邀请可靠性：transactional outbox、lease 恢复、指数退避和 GUI queued 语义已完成并通过真实 provider 失败重试黑盒；任意收件人送达仍等待 VPS 25 端口/rDNS 条件，不把外部准备伪装成已完成；
 4. [ ] Windows 干净账户实机：首次启动、登录、更新和三类共享；**等待测试设备，不阻塞 1–3**；
 5. [ ] 微信登录：provider identity、显式账号关联和真实登录；**等待微信开放平台材料，不阻塞 1–4**。
 
 ## 身份能力待办
 
-- [ ] Google session 生命周期加固：refresh rotation、过期恢复和 replay 黑盒测试；
+- [x] Google session 生命周期加固：refresh rotation、过期恢复和 replay 黑盒测试；
 - [ ] 微信登录集成：确认开放平台网站应用/移动应用身份类型、unionid/openid 账号合并规则、OAuth 回调和中国区隐私合规，再实现 Server provider adapter、GUI 登录入口及真实账号验收；不得把微信账号与 Google 账号仅按昵称或未验证邮箱自动合并。
 
 ## 当前收口顺序
 
 1. Local API discovery file、随机 bearer、Host/Origin 防护；这是本机常驻服务公开 alpha 前的安全前置；
 2. Files 持久化 publish/materialize job、重启恢复与可见状态；这是“持续共享”不丢任务的可靠性前置；
-3. Google token 过期刷新、refresh rotation 与 replay 测试；在更广泛发放前完成；
+3. [x] Google token 过期刷新、refresh rotation 与 replay 测试；
 4. Session Reader 的产品实现与真实验收已完成；
 5. Shared Skill 纵向闭环已完成；未来 query hook 自动推荐继续延后，不混入当前实现。
 

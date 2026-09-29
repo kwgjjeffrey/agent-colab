@@ -29,6 +29,24 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ServiceStatus"
+  /v1/auth/session/refresh:
+    post:
+      operationId: refreshSession
+      description: Atomically rotate an opaque access/refresh token pair. Refresh tokens are one-time capabilities; replay revokes the session family.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken: { type: string }
+      responses:
+        "200":
+          description: Rotated session credentials
+        "401":
+          description: Unknown, revoked, or replayed refresh token
   /v1/organizations:
     get:
       operationId: listOrganizations
