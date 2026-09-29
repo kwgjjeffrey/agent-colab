@@ -13,7 +13,10 @@ pub enum AddTransferItemError {
 use super::Database;
 
 const MAX_ACTIVE_TRANSFERS_PER_IP: i64 = 5;
-const MAX_ITEMS_PER_TRANSFER: i64 = 20;
+// A Quick Share capability intentionally addresses exactly one context object. Keeping the
+// invariant on the server prevents older or modified clients from recreating the discarded
+// batch-sharing model.
+const MAX_ITEMS_PER_TRANSFER: i64 = 1;
 const MAX_TRANSFER_BYTES: i64 = 512 * 1024 * 1024;
 
 #[derive(Debug)]
@@ -41,6 +44,27 @@ pub struct TransferManifest {
     pub id: Uuid,
     pub expires_at: String,
     pub items: Vec<TransferItem>,
+}
+
+#[derive(Debug, Serialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct TransferAccess {
+    pub display_name: Option<String>,
+    pub avatar_url: Option<String>,
+    pub first_accessed_at: String,
+    pub last_accessed_at: String,
+    pub access_count: i64,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ManagedTransfer {
+    pub id: Uuid,
+    pub state: String,
+    pub expires_at: String,
+    pub created_at: String,
+    pub item: TransferItem,
+    pub accesses: Vec<TransferAccess>,
 }
 
 #[derive(Debug)]
@@ -213,6 +237,64 @@ impl Database {
             expires_at,
             items,
         }))
+    }
+
+    pub async fn record_transfer_access(
+        &self,
+        transfer_id: Uuid,
+        read_token: &str,
+        reader_key: &str,
+        user_id: Option<Uuid>,
+    ) -> anyhow::Result<()> {
+        // The read capability remains the authority. Optional account attribution is only accepted
+        // after the API has authenticated that account; an anonymous installation still gets a
+        // stable, privacy-preserving row instead of exposing its network address.
+        sqlx::query("insert into quick_transfer_accesses(transfer_id,reader_key_hash,user_id) select id,$3,$4 from quick_transfers where id=$1 and read_token_hash=$2 and state='ready' and expires_at>now() on conflict(transfer_id,reader_key_hash) do update set user_id=coalesce(excluded.user_id,quick_transfer_accesses.user_id),last_accessed_at=now(),access_count=quick_transfer_accesses.access_count+1")
+            .bind(transfer_id)
+            .bind(hash_token(read_token))
+            .bind(hash_token(reader_key))
+            .bind(user_id)
+            .execute(&self.pool)
+            .await?;
+        Ok(())
+    }
+
+    pub async fn managed_transfer(
+        &self,
+        transfer_id: Uuid,
+        revoke_token: &str,
+    ) -> anyhow::Result<Option<ManagedTransfer>> {
+        let header: Option<(String, String, String)> = sqlx::query_as("select state,expires_at::text,created_at::text from quick_transfers where id=$1 and revoke_token_hash=$2")
+            .bind(transfer_id).bind(hash_token(revoke_token)).fetch_optional(&self.pool).await?;
+        let Some((state, expires_at, created_at)) = header else {
+            return Ok(None);
+        };
+        let item = sqlx::query_as::<_,TransferItem>("select id,position,kind,name,source_adapter,metadata,digest,byte_size from quick_transfer_items where transfer_id=$1 order by position limit 1")
+            .bind(transfer_id).fetch_optional(&self.pool).await?;
+        let Some(item) = item else {
+            return Ok(None);
+        };
+        let accesses=sqlx::query_as::<_,TransferAccess>("select coalesce(u.display_name,u.email) display_name,u.avatar_url,a.first_accessed_at::text,a.last_accessed_at::text,a.access_count from quick_transfer_accesses a left join users u on u.id=a.user_id where a.transfer_id=$1 order by a.last_accessed_at desc")
+            .bind(transfer_id).fetch_all(&self.pool).await?;
+        Ok(Some(ManagedTransfer {
+            id: transfer_id,
+            state,
+            expires_at,
+            created_at,
+            item,
+            accesses,
+        }))
+    }
+
+    pub async fn update_transfer_expiry(
+        &self,
+        transfer_id: Uuid,
+        revoke_token: &str,
+        expires_in_seconds: i64,
+    ) -> anyhow::Result<Option<String>> {
+        sqlx::query_scalar("update quick_transfers set expires_at=now()+make_interval(secs=>$3::double precision) where id=$1 and revoke_token_hash=$2 and state='ready' and expires_at>now() returning expires_at::text")
+            .bind(transfer_id).bind(hash_token(revoke_token)).bind(expires_in_seconds as f64)
+            .fetch_optional(&self.pool).await.map_err(Into::into)
     }
 
     pub async fn transfer_item_blob_key(

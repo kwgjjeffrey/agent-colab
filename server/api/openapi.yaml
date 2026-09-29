@@ -240,6 +240,17 @@ paths:
       operationId: revokeQuickTransfer
       responses:
         "204": { description: Transfer revoked; Blob GC follows asynchronously }
+  /v1/transfers/{transferId}/manage:
+    get:
+      operationId: manageQuickTransfer
+      summary: Read creator-only metadata and aggregated usage with the revoke capability
+      responses:
+        "200": { description: Fixed item, current expiry, state, and hashed-reader access summaries }
+    patch:
+      operationId: updateQuickTransferExpiry
+      summary: Replace the remaining lifetime of an active transfer with the revoke capability
+      responses:
+        "200": { description: Updated expiry }
 components:
   schemas:
     Organization:

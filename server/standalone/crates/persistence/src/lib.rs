@@ -22,7 +22,8 @@ fn unix_time_after(seconds: i64) -> i64 {
 
 mod transfers;
 pub use transfers::{
-    AddTransferItemError, CreateTransferError, ExpiredTransfer, TransferItem, TransferManifest,
+    AddTransferItemError, CreateTransferError, ExpiredTransfer, ManagedTransfer, TransferAccess,
+    TransferItem, TransferManifest,
 };
 
 /// Returns true when PostgreSQL rejected a write because a unique index was violated.

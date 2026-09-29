@@ -36,7 +36,7 @@ An update check must visibly progress to updates available, up to date, or failu
 
 All context types use `features/agent/AgentPromptDialog` for Give to Agent. A feature owns only its prompt body; dialog sizing, overflow handling, target availability, default-Agent primary action, clipboard and Agent launch behavior must not be duplicated.
 
-Quick Share lives under `ui/src/features/transfers` and is a global entry independent from authentication and the selected Channel. React gathers local Files, Session-catalog and Skill-catalog sources, but Local Core owns snapshot creation, streaming upload, capability receipts and revoke. The result surface copies one self-contained receiver prompt; when the selected Agent target is not installed, that prompt uses the signed public installer before calling `colab-transfer receive`. Never expose upload/revoke capabilities in the prompt or imply that the fixed transfer tracks later source changes.
+Quick Share lives under `ui/src/features/transfers` and is a global entry independent from authentication and the selected Channel. Its entry is a type dropdown plus `Manage shared items`; one selection creates exactly one fixed-snapshot Transfer immediately. React gathers local Files, Session-catalog and Skill-catalog sources, but Local Core owns snapshot creation, streaming upload, capability receipts, expiry changes and revoke. Closing the result Dialog does not cancel the share. Keep every source row and prompt bounded inside the Dialog. The result surface copies one self-contained receiver prompt; when the selected Agent target is not installed, that prompt uses the signed public installer before calling `colab-transfer receive`. Never expose upload/revoke capabilities in the prompt or imply that the fixed transfer tracks later source changes.
 
 Show the Agent Colab Skill as one independently versioned artifact. Codex, Claude Code, and MyFlicker rows are installation targets for that same artifact, not separately versioned copies. Settings offers one check/update action; per-artifact rows explain what will change instead of exposing redundant update buttons.
 
@@ -47,3 +47,9 @@ Settings persists one device-local default Agent in Local Core SQLite. Only an i
 The launcher is separately downloadable per platform: macOS publishes a human-facing DMG plus a ZIP/App machine-consumed artifact, and Windows uses a self-bootstrapping x64 executable during alpha. The Windows executable carries verified seed copies of Core, GUI, and Skill so a first-time user can double-click one artifact; those components remain independently versioned and use the normal setup/update path afterward. Alpha packages may be unsigned only when labeled as development acceptance builds; do not call them production installers or imply notarization/code signing.
 
 Keep components and use-case clients out of a monolithic entry file. Shared UI primitives live under `ui/src/components`; feature code lives under `ui/src/features/<feature>`; Local API access lives under `ui/src/api`.
+
+Conversation/DM is designed but not implemented. Its future UI is an application-level surface,
+not a Sessions/Files/Skills tab and not a fake Channel alias. An `@agent` action renders an explicit
+Agent Request state card with approval/offline/queued/running/result states; it must not turn a
+normal message bubble into an implicit remote command. Conversation membership and Channel access
+remain visibly separate. See `docs/interaction.md` section 6 before adding UI.

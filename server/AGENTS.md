@@ -23,7 +23,7 @@ with capped exponential backoff. Successful rows are deleted so their plaintext,
 token is not retained after delivery. Provider adapters remain in the email crate; invitation
 business logic must not call SMTP or Cloudflare directly.
 
-Quick Share is implemented by `quick_transfers` / `quick_transfer_items` and the isolated API/persistence modules named `transfers.rs`. It is not a temporary Channel and never creates Organization membership. Upload, read, and revoke capabilities are distinct; PostgreSQL stores only SHA-256 hashes. Item bodies stream directly to immutable Blob files with bounded item/transfer sizes. Finalize freezes the manifest, while expiry/revocation makes it unreadable immediately and the background GC removes Blob files before metadata.
+Quick Share is implemented by `quick_transfers` / `quick_transfer_items` / `quick_transfer_accesses` and the isolated API/persistence modules named `transfers.rs`. It is not a temporary Channel and never creates Organization membership. One Transfer contains exactly one item. Upload, read, and revoke capabilities are distinct; PostgreSQL stores only SHA-256 hashes. Item bodies stream directly to immutable Blob files with bounded item/transfer sizes. Finalize freezes the manifest, while expiry/revocation makes it unreadable immediately and the background GC removes Blob files before metadata. Management requires the revoke capability. Manifest reads hash and aggregate a stable receiver key; associate an account only after independently validating an optional Colab session, and never expose raw receiver identifiers.
 
 Readable Channel and Shared Item names are selectors, not unique database identities. Do not reject valid product names merely to simplify Agent routing. Local Core scopes resources by active account, active Organization and authorization; Browser narrows candidates using the complete descendant path and returns metadata plus precise UUID refs only when ambiguity remains.
 
@@ -36,3 +36,10 @@ Deployment must be reproducible from checked-in scripts: bootstrap prerequisites
 PostgreSQL rows and Blob Store objects form one logical dataset. During alpha, test data may be discarded and deployment does not promise historical-data migration. When compatibility becomes a product requirement, backup, migration, and disaster recovery must move and verify both; readiness alone will not prove that existing Shared Item revisions remain consumable.
 
 Do not report deployment success until the public or explicitly configured readiness endpoint passes and the activated version is recorded.
+
+Conversation/DM is designed but not implemented. When it is started, PostgreSQL and the Rust
+Server remain authoritative for messages, membership, Agent Request approval, offline queue and
+leases. A realtime gateway may publish cursor invalidations and provide short reconnect recovery,
+but must not become a second message store or decide authorization. Conversation membership never
+silently grants Channel or Shared Item access. See `docs/technical-design.md` section 11.8 before
+adding routes or migrations.

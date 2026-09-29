@@ -46,9 +46,10 @@
 | V-CONTRACT-01 | **Supabase 恢复时验收** | Supabase 与独立 Rust+PostgreSQL 后端是否具有相同产品语义 | 当前只验收 standalone；恢复 Supabase 后再让同一套黑盒测试运行两次 |
 | V-PUBLIC-01 | **通过** | 首次加载、前台请求状态与公开 GitHub 分发是否形成可理解、可复验的 alpha 体验 | GUI `0.1.30-dev` 构建与 request-activity 并发测试通过；首次无数据时显示 workspace loading，已有数据时 foreground request 显示顶部 loading，后台 reconciliation 静默。release `0.1.47-dev` 六个制品已通过 R2 公共 size/SHA-256 回读；public repository `kwgjjeffrey/agent-colab` 与含描述性资产名的 GitHub prerelease 已创建，匿名 manifest 下载 hash 与 Windows executable HTTP Range 下载通过。macOS DMG 从 release `0.1.52-dev` 已发布 ZIP 中的同一 App 生成；挂载后通过深层签名、bundle version 和 ASAR 摘要一致性验证，GitHub 完整回读为 110,809,491 bytes、SHA-256 `71733a62…4392`。README 中四张架构图已从 GitHub 运行时 Mermaid 改为仓库内静态 SVG，并保留可编辑 `.mmd` 源；公开页面不再出现 Mermaid `Loading`/rich-display failure，四个 SVG 均通过 XML 校验并由 GitHub 以 `image/svg+xml` 提供。 |
 | V-FILES-PREVIEW-01 | **流式链路通过，待真人视觉验收** | Files 是否能以 IDE 式信息架构预览常见格式，同时避免 Local Core 缓冲大文件 | GUI 已拆为全窗 File Explorer（目录树 + 内容区）；文本、图片、PDF、`.docx`、`.xlsx` 分别使用原生或按需 renderer。release `0.1.54-dev`（Core `0.1.38-dev`、GUI `0.1.32-dev`）通过 Rust/GUI 构建、R2 完整回读和实际安装；已安装 Core 对真实 `Doc1.docx` 以 `ReaderStream` 返回 371,251 bytes，MIME、`nosniff` 与源 SHA-256 完全一致。未知/损坏/超限文件只在预览区降级，Office 前端解析上限为 25 MiB；待真人完成树导航及各格式视觉验收。 |
-| V-TRANSFER-01 | **主体通过；到期/GC 与干净 bootstrap 待验** | 未注册、未加入 Organization/Channel 的贡献者能否安全完成一次性上下文交付 | 真实 VPS 已验证独立 upload/read/revoke capability、错误 token 403、流式 Blob 往返 SHA-256 一致、finalize 固定清单、撤销后立即 403，以及大小写不敏感的同层重名 409。本机真实混合 Files/Session/Skill 创建、流式接收物化、目录树、创建端不返回 revoke secret 和三条 Python CLI 均通过；GUI 全局入口构建通过。release `0.1.56-dev` 已完成 R2 全量回读及本机实际升级。仍需干净未安装起点、自然到期/超额/GC 黑盒验证。 |
+| V-TRANSFER-01 | **主体通过；跨账号与到期/GC 待验** | 未注册、未加入 Organization/Channel 的贡献者能否安全完成一次性上下文交付 | release `0.1.59-dev` 已部署 migration/API 并经 R2 完整回读、本机真实升级。真实 Files 快照得到 create 201、receive 1 item、登录账号 `Zhiyuan Yu` 使用记录、有效期更新和 revoke 204，管理清单保留 revoked 状态；GUI 目视确认类型下拉、视口内结果页、访问者与重新管理入口。整仓 `make check` 通过。仍需第二账号/匿名领取、干净 bootstrap、自然到期/超额/GC 黑盒。 |
 | V-AUTH-WECHAT-01 | **待调研/验证** | 微信开放平台 OAuth 能否与现有 Google identity 安全共存 | 先确认目标客户端类型、所需开放平台资质、回调域名和 unionid 可用范围，再验证 provider identity 映射、显式账号关联与真实登录；不按昵称或未验证邮箱自动合并。 |
 | V-INVITE-OUTBOX-01 | **可靠性通过；任意收件人送达待外部条件** | 邀请是否会因邮件 provider 延迟/失败丢失或让业务请求假失败 | 邀请与 `email_outbox` 在同一 PostgreSQL 事务提交，API 真实返回 202/`queued`；部署环境用不可送达测试地址验证 worker 已领取一次、记录失败并退回 pending，后续按 capped exponential backoff 重试。成功后删除含短期明文 token 的 outbox 行。任意公网收件人送达仍等待 VPS 出站 25 与 rDNS 工单，不标记通过。 |
+| V-CHAT-01 | **待进入实现前验证** | 一个真实 provider session 能否由指定 Local Core runtime 按 Conversation binding 恢复，并在断线重连后恰好领取一次已授权请求 | 产品与架构决策不依赖此项；实现前用一个真实 Agent、一个 Conversation 和一次 runtime 断线验证 session 连续性、owner approval、lease 过期重领、幂等上报及 cursor 补洞。不要用 mock 对话冒充通过。 |
 
 ## 3. 接下来的执行顺序
 
@@ -56,6 +57,7 @@
 2. **Quick Share 剩余黑盒**：干净未安装起点 bootstrap、自然到期/超额/GC；主体能力与发布已通过。
 3. **外部条件项**：邮件任意公网收件人送达等待 VPS 出站 25/rDNS；Windows 干净账户实机等待设备；微信登录等待开放平台材料。
 4. **后续加固**：健康检查与故障注入；Supabase 仅在路线恢复时运行同一契约套件，不进入当前 standalone 主线。
+5. **Conversation 实现门槛**：只有该 feature 获得立项后才执行 V-CHAT-01；当前不为尚未实现的聊天搭建空服务或假 UI。
 
 ## 4. 当前确定原则
 

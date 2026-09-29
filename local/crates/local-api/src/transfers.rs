@@ -4,7 +4,11 @@ use std::{
     process::{Command, Stdio},
 };
 
-use axum::{Json, extract::State, http::StatusCode};
+use axum::{
+    Json,
+    extract::{Path as AxumPath, State},
+    http::StatusCode,
+};
 use futures_util::TryStreamExt;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
@@ -60,8 +64,10 @@ pub(super) async fn create_transfer(
     State(state): State<AppState>,
     Json(request): Json<CreateTransferRequest>,
 ) -> Result<(StatusCode, Json<CreatedTransfer>), LocalError> {
-    if request.items.is_empty() || request.items.len() > 20 {
-        return Err(LocalError::bad_request("Choose between 1 and 20 items"));
+    if request.items.len() != 1 {
+        return Err(LocalError::bad_request(
+            "Quick Share accepts exactly one item",
+        ));
     }
     let response = state
         .inner
@@ -129,7 +135,14 @@ pub(super) async fn create_transfer(
         // Creator capabilities are intentionally kept only in the user-private Local Core SQLite
         // store. They never enter a resource name, URL path, log line, or server-side plaintext.
         let store = state.inner.store.lock().await;
-        store.execute("insert into local_quick_transfers(transfer_id,read_token,revoke_token,expires_at) values(?1,?2,?3,?4)",[&created.id,&created.read_token,&created.revoke_token,&created.expires_at]).map_err(LocalError::internal)?;
+        let source = &request.items[0];
+        let name = source.name.as_deref().unwrap_or_else(|| {
+            Path::new(&source.source_path)
+                .file_name()
+                .and_then(|value| value.to_str())
+                .unwrap_or("Shared context")
+        });
+        store.execute("insert into local_quick_transfers(transfer_id,read_token,revoke_token,expires_at,item_kind,item_name) values(?1,?2,?3,?4,?5,?6)",rusqlite::params![created.id,created.read_token,created.revoke_token,created.expires_at,source.kind,name]).map_err(LocalError::internal)?;
     }
     let _ = fs::remove_dir_all(&staging);
     Ok((
@@ -143,6 +156,199 @@ pub(super) async fn create_transfer(
             expires_at: created.expires_at,
         }),
     ))
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(super) struct TransferAccess {
+    display_name: Option<String>,
+    avatar_url: Option<String>,
+    first_accessed_at: String,
+    last_accessed_at: String,
+    access_count: i64,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ManagedServerItem {
+    kind: String,
+    name: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ManagedServerTransfer {
+    id: String,
+    state: String,
+    expires_at: String,
+    created_at: String,
+    item: ManagedServerItem,
+    accesses: Vec<TransferAccess>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(super) struct ManagedTransfer {
+    transfer_id: String,
+    capability: String,
+    state: String,
+    expires_at: String,
+    created_at: String,
+    item_kind: String,
+    item_name: String,
+    accesses: Vec<TransferAccess>,
+}
+
+async fn fetch_managed(
+    state: &AppState,
+    transfer_id: &str,
+    read_token: &str,
+    revoke_token: &str,
+) -> Result<ManagedTransfer, LocalError> {
+    let response = state
+        .inner
+        .http
+        .get(format!(
+            "{}/v1/transfers/{transfer_id}/manage",
+            state.inner.server_url
+        ))
+        .bearer_auth(revoke_token)
+        .send()
+        .await
+        .map_err(LocalError::internal)?;
+    if !response.status().is_success() {
+        return Err(remote_error(response).await);
+    }
+    let remote: ManagedServerTransfer = response.json().await.map_err(LocalError::internal)?;
+    Ok(ManagedTransfer {
+        transfer_id: remote.id,
+        capability: format!("agent-colab-transfer://{transfer_id}/{read_token}"),
+        state: remote.state,
+        expires_at: remote.expires_at,
+        created_at: remote.created_at,
+        item_kind: remote.item.kind,
+        item_name: remote.item.name,
+        accesses: remote.accesses,
+    })
+}
+
+pub(super) async fn list_transfers(
+    State(state): State<AppState>,
+) -> Result<Json<Vec<ManagedTransfer>>, LocalError> {
+    let rows = {
+        let store = state.inner.store.lock().await;
+        let mut statement=store.prepare("select transfer_id,read_token,revoke_token,expires_at,item_kind,item_name,case when revoked_at is not null then 'revoked' when datetime(expires_at)<=datetime('now') then 'expired' else 'ready' end local_state,created_at from local_quick_transfers order by created_at desc").map_err(LocalError::internal)?;
+        statement
+            .query_map([], |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, String>(1)?,
+                    row.get::<_, String>(2)?,
+                    row.get::<_, String>(3)?,
+                    row.get::<_, String>(4)?,
+                    row.get::<_, String>(5)?,
+                    row.get::<_, String>(6)?,
+                    row.get::<_, String>(7)?,
+                ))
+            })
+            .map_err(LocalError::internal)?
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(LocalError::internal)?
+    };
+    let mut result = Vec::with_capacity(rows.len());
+    for (id, read, revoke, expires, kind, name, local_state, created) in rows {
+        if local_state != "ready" {
+            result.push(ManagedTransfer {
+                transfer_id: id.clone(),
+                capability: format!("agent-colab-transfer://{id}/{read}"),
+                state: local_state,
+                expires_at: expires,
+                created_at: created,
+                item_kind: kind,
+                item_name: name,
+                accesses: Vec::new(),
+            });
+        } else if let Ok(remote) = fetch_managed(&state, &id, &read, &revoke).await {
+            result.push(remote);
+        }
+    }
+    Ok(Json(result))
+}
+
+pub(super) async fn get_transfer(
+    State(state): State<AppState>,
+    AxumPath(transfer_id): AxumPath<String>,
+) -> Result<Json<ManagedTransfer>, LocalError> {
+    let (read, revoke) = {
+        let store = state.inner.store.lock().await;
+        store
+            .query_row(
+                "select read_token,revoke_token from local_quick_transfers where transfer_id=?1",
+                [&transfer_id],
+                |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?)),
+            )
+            .map_err(|_| LocalError::bad_request("Quick Share receipt was not found"))?
+    };
+    fetch_managed(&state, &transfer_id, &read, &revoke)
+        .await
+        .map(Json)
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(super) struct UpdateTransferRequest {
+    expires_in_seconds: i64,
+}
+
+pub(super) async fn update_transfer(
+    State(state): State<AppState>,
+    AxumPath(transfer_id): AxumPath<String>,
+    Json(request): Json<UpdateTransferRequest>,
+) -> Result<Json<ManagedTransfer>, LocalError> {
+    if !(5 * 60..=7 * 24 * 60 * 60).contains(&request.expires_in_seconds) {
+        return Err(LocalError::bad_request(
+            "Expiry must be between 5 minutes and 7 days",
+        ));
+    }
+    let (read, revoke) = {
+        let store = state.inner.store.lock().await;
+        store.query_row("select read_token,revoke_token from local_quick_transfers where transfer_id=?1 and revoked_at is null",[&transfer_id],|row|Ok((row.get::<_,String>(0)?,row.get::<_,String>(1)?))).map_err(|_|LocalError::bad_request("Active Quick Share receipt was not found"))?
+    };
+    let response = state
+        .inner
+        .http
+        .patch(format!(
+            "{}/v1/transfers/{transfer_id}/manage",
+            state.inner.server_url
+        ))
+        .bearer_auth(&revoke)
+        .json(&json!({"expiresInSeconds":request.expires_in_seconds}))
+        .send()
+        .await
+        .map_err(LocalError::internal)?;
+    if !response.status().is_success() {
+        return Err(remote_error(response).await);
+    }
+    let expires_at = response
+        .json::<Value>()
+        .await
+        .map_err(LocalError::internal)?
+        .get("expiresAt")
+        .and_then(Value::as_str)
+        .ok_or_else(|| LocalError::internal("Server omitted expiry"))?
+        .to_owned();
+    {
+        let store = state.inner.store.lock().await;
+        store
+            .execute(
+                "update local_quick_transfers set expires_at=?2 where transfer_id=?1",
+                [&transfer_id, &expires_at],
+            )
+            .map_err(LocalError::internal)?;
+    }
+    fetch_managed(&state, &transfer_id, &read, &revoke)
+        .await
+        .map(Json)
 }
 
 struct PreparedSource {
@@ -291,7 +497,26 @@ pub(super) async fn receive_transfer(
     Json(request): Json<ReceiveTransferRequest>,
 ) -> Result<Json<ReceivedTransfer>, LocalError> {
     let (transfer_id, token) = parse_capability(&request.capability)?;
-    let response = state
+    let reader_id = {
+        let store = state.inner.store.lock().await;
+        if let Ok(value) = store.query_row(
+            "select value from local_settings where key='quick_share_reader_id'",
+            [],
+            |row| row.get::<_, String>(0),
+        ) {
+            value
+        } else {
+            let value = Uuid::new_v4().to_string();
+            store
+                .execute(
+                    "insert into local_settings(key,value) values('quick_share_reader_id',?1)",
+                    [&value],
+                )
+                .map_err(LocalError::internal)?;
+            value
+        }
+    };
+    let mut request_builder = state
         .inner
         .http
         .get(format!(
@@ -299,9 +524,15 @@ pub(super) async fn receive_transfer(
             state.inner.server_url
         ))
         .bearer_auth(&token)
-        .send()
-        .await
-        .map_err(LocalError::internal)?;
+        .header("x-colab-reader-id", reader_id);
+    // A signed-in recipient can be shown by name to the creator. Anonymous Quick Share remains
+    // valid: absence of this independently authenticated session only produces an anonymous use.
+    if state.inner.session.lock().await.is_some()
+        && let Ok(session_token) = crate::access_token(&state).await
+    {
+        request_builder = request_builder.header("x-colab-session", session_token);
+    }
+    let response = request_builder.send().await.map_err(LocalError::internal)?;
     if !response.status().is_success() {
         return Err(remote_error(response).await);
     }
@@ -520,7 +751,7 @@ pub(super) async fn revoke_transfer(
     let store = state.inner.store.lock().await;
     store
         .execute(
-            "delete from local_quick_transfers where transfer_id=?1",
+            "update local_quick_transfers set revoked_at=current_timestamp where transfer_id=?1",
             [request.transfer_id],
         )
         .map_err(LocalError::internal)?;
