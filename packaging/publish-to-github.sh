@@ -21,6 +21,7 @@ sources=(
   "$repo_root/dist/local-core/$core_version/windows-x86_64.zip"
   "$repo_root/dist/desktop-ui/$ui_version.zip"
   "$repo_root/dist/colab-skill/$skill_version.zip"
+  "$repo_root/dist/electron-shell/$shell_version/Colab-$shell_version-arm64.dmg"
   "$repo_root/dist/electron-shell/$shell_version/Colab-$shell_version-arm64.zip"
   "$repo_root/dist/electron-shell/$shell_version/Colab-$shell_version-x64.exe"
 )
@@ -41,6 +42,7 @@ cp "$repo_root/dist/local-core/$core_version/darwin-arm64.tar.gz" "$stage/agent-
 cp "$repo_root/dist/local-core/$core_version/windows-x86_64.zip" "$stage/agent-colab-local-core-$core_version-windows-x86_64.zip"
 cp "$repo_root/dist/desktop-ui/$ui_version.zip" "$stage/agent-colab-desktop-ui-$ui_version.zip"
 cp "$repo_root/dist/colab-skill/$skill_version.zip" "$stage/agent-colab-skill-$skill_version.zip"
+cp "$repo_root/dist/electron-shell/$shell_version/Colab-$shell_version-arm64.dmg" "$stage/Colab-$shell_version-arm64.dmg"
 cp "$repo_root/dist/electron-shell/$shell_version/Colab-$shell_version-arm64.zip" "$stage/Colab-$shell_version-arm64.zip"
 cp "$repo_root/dist/electron-shell/$shell_version/Colab-$shell_version-x64.exe" "$stage/Colab-$shell_version-x64.exe"
 assets=("$stage"/*)
@@ -53,7 +55,7 @@ printf '%s\n' \
   "- Agent Colab Skill: $skill_version" \
   "- Electron Shell: $shell_version" \
   '' \
-  'On Windows, `Colab-*-x64.exe` bootstraps the bundled Core, GUI, and Agent Skill on first launch; `colab-install.ps1` remains available for headless or Skill-first setup. Use `colab-install` on macOS. The desktop builds are not yet notarized or code-signed for public distribution.' \
+  'On Windows, `Colab-*-x64.exe` bootstraps the bundled Core, GUI, and Agent Skill on first launch; `colab-install.ps1` remains available for headless or Skill-first setup. On macOS, use the DMG for the launcher and `colab-install` for Core, GUI, and Skill setup. The desktop builds are not yet notarized or publicly signed.' \
   > "$notes"
 
 # GitHub Releases are a public mirror. R2 remains the signed update origin used by installed clients.

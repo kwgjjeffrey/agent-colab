@@ -24,6 +24,7 @@ Download the public alpha artifacts here:
 | Path | Download |
 | --- | --- |
 | Windows desktop (one-file first-run bootstrap) | [`Colab-0.1.18-dev-x64.exe`](https://github.com/kwgjjeffrey/agent-colab/releases/download/v0.1.52-dev/Colab-0.1.18-dev-x64.exe) |
+| macOS desktop launcher (Apple silicon DMG) | [`Colab-0.1.18-dev-arm64.dmg`](https://github.com/kwgjjeffrey/agent-colab/releases/download/v0.1.52-dev/Colab-0.1.18-dev-arm64.dmg) |
 | macOS installer | [`colab-install`](https://github.com/kwgjjeffrey/agent-colab/releases/download/v0.1.52-dev/colab-install) |
 | Windows headless / Skill-first installer | [`colab-install.ps1`](https://github.com/kwgjjeffrey/agent-colab/releases/download/v0.1.52-dev/colab-install.ps1) |
 | All platform and component artifacts | [GitHub Releases](https://github.com/kwgjjeffrey/agent-colab/releases) |
@@ -32,7 +33,7 @@ The versioned links above identify the currently documented alpha. Use the Relea
 
 ### macOS
 
-Download `colab-install`, then run:
+Download and open the DMG for the ordinary App launcher. The launcher expects Local Core, GUI resources, and the Agent Colab Skill to be installed; install those once with `colab-install`:
 
 ```bash
 chmod +x ./colab-install

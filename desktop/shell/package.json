@@ -7,5 +7,5 @@
   "scripts": { "dev": "COLAB_UI_DEV_URL=http://127.0.0.1:1420 electron .", "build": "electron-builder --dir", "check": "node --check electron/main.cjs && node --check electron/preload.cjs && node --check electron/windows-bootstrap.cjs && node --check scripts/prepare-windows-bootstrap.cjs", "test": "node --test electron/*.test.cjs" },
   "dependencies": { "extract-zip": "2.0.1" },
   "devDependencies": { "electron": "40.8.2", "electron-builder": "26.0.12" },
-  "build": { "appId": "online.agent-colab.Colab", "productName": "Colab", "asar": true, "files": ["electron/**/*", "package.json"], "mac": {"target": ["zip"], "category": "public.app-category.productivity", "icon": "icons/icon.icns"}, "win": {"target": ["portable"], "extraResources": [{"from": "bootstrap/windows", "to": "bootstrap-windows", "filter": ["**/*"]}]}, "artifactName": "Colab-${version}-${arch}.${ext}" }
+  "build": { "appId": "online.agent-colab.Colab", "productName": "Colab", "asar": true, "files": ["electron/**/*", "package.json"], "mac": {"target": ["zip", "dmg"], "category": "public.app-category.productivity", "icon": "icons/icon.icns"}, "win": {"target": ["portable"], "extraResources": [{"from": "bootstrap/windows", "to": "bootstrap-windows", "filter": ["**/*"]}]}, "artifactName": "Colab-${version}-${arch}.${ext}" }
 }

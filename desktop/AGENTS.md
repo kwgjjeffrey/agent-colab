@@ -36,6 +36,6 @@ The implemented Settings popover calls Local Core's allow-listed system API. Loc
 
 Settings persists one device-local default Agent in Local Core SQLite. Only an installed Agent can be selected from the GUI.
 
-The launcher is separately downloadable per platform: macOS uses a ZIP/App artifact and Windows uses a self-bootstrapping x64 executable during alpha. The Windows executable carries verified seed copies of Core, GUI, and Skill so a first-time user can double-click one artifact; those components remain independently versioned and use the normal setup/update path afterward. Alpha packages may be unsigned only when labeled as development acceptance builds; do not call them production installers or imply notarization/code signing.
+The launcher is separately downloadable per platform: macOS publishes a human-facing DMG plus a ZIP/App machine-consumed artifact, and Windows uses a self-bootstrapping x64 executable during alpha. The Windows executable carries verified seed copies of Core, GUI, and Skill so a first-time user can double-click one artifact; those components remain independently versioned and use the normal setup/update path afterward. Alpha packages may be unsigned only when labeled as development acceptance builds; do not call them production installers or imply notarization/code signing.
 
 Keep components and use-case clients out of a monolithic entry file. Shared UI primitives live under `ui/src/components`; feature code lives under `ui/src/features/<feature>`; Local API access lives under `ui/src/api`.
