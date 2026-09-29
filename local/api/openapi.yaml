@@ -152,6 +152,35 @@ paths:
       operationId: withdrawLocalSkillShare
       responses:
         "204": { description: Owned Skill withdrawn; consumer installations remain }
+  /v1/transfers:
+    get:
+      operationId: listManagedQuickTransfers
+      responses:
+        "200": { description: Quick Shares created on this device, including active usage summaries }
+    post:
+      operationId: createLocalQuickTransfer
+      summary: Freeze and upload exactly one local Files, Session, or Skill source
+      responses:
+        "201": { description: Read capability returned; management capability retained privately }
+  /v1/transfers/{transferId}:
+    get:
+      operationId: getManagedQuickTransfer
+      responses:
+        "200": { description: Creator management view mediated by Local Core }
+    patch:
+      operationId: updateLocalQuickTransferExpiry
+      responses:
+        "200": { description: Expiry updated through the private revoke capability }
+  /v1/transfers/revoke:
+    post:
+      operationId: revokeLocalQuickTransfer
+      responses:
+        "204": { description: Share revoked and local receipt retained for management history }
+  /v1/transfers/receive:
+    post:
+      operationId: receiveQuickTransfer
+      responses:
+        "200": { description: Item streamed, verified, and atomically materialized in application data }
 components:
   schemas:
     LocalStatus:

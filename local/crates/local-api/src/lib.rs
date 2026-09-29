@@ -302,7 +302,30 @@ impl AppState {
         store.execute_batch("create table if not exists accounts(user_id text primary key,email text not null,display_name text,avatar_url text,session_json text,last_used_at text not null default current_timestamp);create table if not exists local_settings(key text primary key,value text);create table if not exists local_file_sources(share_id text primary key,channel_id text not null,source_path text not null,shadow_git_path text not null,last_root_oid text,updated_at text not null default current_timestamp);create table if not exists file_materializations(share_id text primary key,local_path text not null,last_root_oid text,updated_at text not null default current_timestamp);create table if not exists file_share_cache(share_id text primary key,name text not null,contributor_name text not null,contributor_avatar_url text,remote_updated_at text not null default '',updated_at text not null default current_timestamp);create table if not exists local_jobs(id text primary key,dedupe_key text not null unique,kind text not null,share_id text not null,user_id text not null,state text not null check(state in ('pending','running','failed','completed')),generation integer not null default 1,attempts integer not null default 0,next_attempt_at integer not null,last_error text,created_at text not null default current_timestamp,updated_at text not null default current_timestamp,completed_at text);create index if not exists local_jobs_due on local_jobs(state,next_attempt_at);").context("migrate local SQLite")?;
         store.execute_batch("create table if not exists local_session_sources(share_id text primary key,channel_id text not null,user_id text not null,source_path text not null,source_adapter text not null,source_thread_id text,last_byte_offset integer not null default 0,last_snapshot_id text,updated_at text not null default current_timestamp);create table if not exists session_materializations(share_id text not null,user_id text not null,snapshot_id text not null,raw_path text not null,updated_at text not null default current_timestamp,primary key(share_id,user_id));create table if not exists session_share_cache(share_id text primary key,name text not null,source_adapter text not null,contributor_name text not null,contributor_avatar_url text,remote_updated_at text not null default '',updated_at text not null default current_timestamp);create table if not exists local_session_catalog(catalog_id text primary key,provider text not null,thread_id text not null,name text not null,source_path text not null unique,source_adapter text not null,size_bytes integer not null,mtime_ns integer not null,updated_at integer not null);create index if not exists local_session_catalog_recent on local_session_catalog(updated_at desc);create index if not exists local_session_catalog_identity on local_session_catalog(provider,thread_id);").context("migrate Session cache")?;
         store.execute_batch("create table if not exists local_skill_catalog(source_id text primary key,source_path text not null unique,name text not null,description text,discovered_targets text not null,last_changed_at integer not null,content_fingerprint text not null,updated_at text not null default current_timestamp);create index if not exists local_skill_catalog_recent on local_skill_catalog(last_changed_at desc);create table if not exists local_skill_sources(share_id text primary key,channel_id text not null,user_id text not null,source_id text not null,source_path text not null,shadow_git_path text not null,last_root_oid text,updated_at text not null default current_timestamp);create table if not exists skill_share_cache(share_id text primary key,name text not null,description text,contributor_name text not null,contributor_avatar_url text,remote_updated_at text not null default '',updated_at text not null default current_timestamp);create table if not exists skill_materializations(share_id text not null,user_id text not null,local_path text not null,last_root_oid text not null,updated_at text not null default current_timestamp,primary key(share_id,user_id));create table if not exists skill_installations(share_id text not null,user_id text not null,target_agent text not null,installed_path text not null,installed_root_oid text not null,content_hash text not null,installed_at text not null default current_timestamp,primary key(share_id,user_id,target_agent));").context("migrate Skill cache")?;
-        store.execute_batch("create table if not exists local_quick_transfers(transfer_id text primary key,read_token text not null,revoke_token text not null,expires_at text not null,created_at text not null default current_timestamp);create table if not exists received_transfer_items(transfer_id text not null,item_id text not null,kind text not null,name text not null,source_adapter text not null,local_path text not null,digest text not null,expires_at text not null,received_at text not null default current_timestamp,primary key(transfer_id,item_id));").context("migrate Quick Share receipts")?;
+        store.execute_batch("create table if not exists local_quick_transfers(transfer_id text primary key,read_token text not null,revoke_token text not null,expires_at text not null,item_kind text not null default '',item_name text not null default '',revoked_at text,created_at text not null default current_timestamp);create table if not exists received_transfer_items(transfer_id text not null,item_id text not null,kind text not null,name text not null,source_adapter text not null,local_path text not null,digest text not null,expires_at text not null,received_at text not null default current_timestamp,primary key(transfer_id,item_id));").context("migrate Quick Share receipts")?;
+        for (column, definition) in [
+            (
+                "item_kind",
+                "alter table local_quick_transfers add column item_kind text not null default ''",
+            ),
+            (
+                "item_name",
+                "alter table local_quick_transfers add column item_name text not null default ''",
+            ),
+            (
+                "revoked_at",
+                "alter table local_quick_transfers add column revoked_at text",
+            ),
+        ] {
+            let exists = store
+                .prepare("pragma table_info(local_quick_transfers)")?
+                .query_map([], |row| row.get::<_, String>(1))?
+                .filter_map(Result::ok)
+                .any(|name| name == column);
+            if !exists {
+                store.execute(definition, [])?;
+            }
+        }
         // `local_session_catalog` is a disposable projection. Alpha builds may replace its
         // schema instead of migrating cache rows; the background index reconstructs it from the
         // provider-owned transcripts immediately after startup.
@@ -612,7 +635,11 @@ pub fn router(state: AppState, security: LocalSecurity) -> Router {
         .route("/v1/skills/{share_id}", delete(skills::withdraw_skill))
         .route(
             "/v1/transfers",
-            axum::routing::post(transfers::create_transfer),
+            get(transfers::list_transfers).post(transfers::create_transfer),
+        )
+        .route(
+            "/v1/transfers/{transfer_id}",
+            get(transfers::get_transfer).patch(transfers::update_transfer),
         )
         .route(
             "/v1/transfers/receive",

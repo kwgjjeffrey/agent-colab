@@ -34,6 +34,10 @@ pub(super) fn router() -> Router<AppState> {
             "/v1/transfers/{transfer_id}",
             get(get_manifest).delete(revoke),
         )
+        .route(
+            "/v1/transfers/{transfer_id}/manage",
+            get(manage).patch(update_expiry),
+        )
 }
 
 #[derive(Deserialize)]
@@ -246,13 +250,77 @@ async fn get_manifest(
     Path(transfer_id): Path<Uuid>,
 ) -> Result<Json<colab_server_persistence::TransferManifest>, ApiError> {
     let token = capability(&headers)?;
-    state
+    let manifest = state
         .database
         .transfer_manifest(transfer_id, token)
         .await
         .map_err(|_| ApiError::internal("transfer_lookup_failed"))?
+        .ok_or_else(|| ApiError::forbidden("transfer_unavailable"))?;
+    let reader_key = headers
+        .get("x-colab-reader-id")
+        .and_then(|value| value.to_str().ok())
+        .filter(|value| value.len() <= 128 && !value.is_empty())
+        .unwrap_or("unknown-reader");
+    let user_id = if let Some(session_token) = headers
+        .get("x-colab-session")
+        .and_then(|value| value.to_str().ok())
+        .filter(|value| !value.is_empty())
+    {
+        state
+            .database
+            .authenticate(session_token)
+            .await
+            .ok()
+            .flatten()
+    } else {
+        None
+    };
+    state
+        .database
+        .record_transfer_access(transfer_id, token, reader_key, user_id)
+        .await
+        .map_err(|_| ApiError::internal("transfer_access_record_failed"))?;
+    Ok(Json(manifest))
+}
+
+async fn manage(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(transfer_id): Path<Uuid>,
+) -> Result<Json<colab_server_persistence::ManagedTransfer>, ApiError> {
+    let token = capability(&headers)?;
+    state
+        .database
+        .managed_transfer(transfer_id, token)
+        .await
+        .map_err(|_| ApiError::internal("transfer_management_lookup_failed"))?
         .map(Json)
-        .ok_or_else(|| ApiError::forbidden("transfer_unavailable"))
+        .ok_or_else(|| ApiError::forbidden("transfer_management_forbidden"))
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct UpdateExpiryRequest {
+    expires_in_seconds: i64,
+}
+
+async fn update_expiry(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(transfer_id): Path<Uuid>,
+    Json(request): Json<UpdateExpiryRequest>,
+) -> Result<Json<serde_json::Value>, ApiError> {
+    if !(MIN_TTL_SECONDS..=MAX_TTL_SECONDS).contains(&request.expires_in_seconds) {
+        return Err(ApiError::bad_request("invalid_transfer_expiry"));
+    }
+    let token = capability(&headers)?;
+    let expires_at = state
+        .database
+        .update_transfer_expiry(transfer_id, token, request.expires_in_seconds)
+        .await
+        .map_err(|_| ApiError::internal("transfer_expiry_update_failed"))?
+        .ok_or_else(|| ApiError::forbidden("transfer_management_forbidden"))?;
+    Ok(Json(serde_json::json!({"expiresAt":expires_at})))
 }
 
 async fn download_item(

@@ -2,7 +2,7 @@
 
 状态：首版结构稿  
 范围：Channel、Session、Files、Skills、Settings  
-暂缓：群聊、任务、Agent runtime 编排、Agent blueprint 管理
+暂缓实现：Conversation/DM、项目管理、Agent runtime 编排、Agent blueprint 管理
 
 ## 1. 人类故事线
 
@@ -113,9 +113,11 @@ Session、Files 中由成员分享的根对象、Skill，都是 Shared Item 的�
 
 ### Quick Share
 
-未加入 Channel 的贡献者从独立入口选择“Share my context”，再选择一个或多个本机 Files、Session、Skill 来源及过期时间，默认 24 小时。界面必须逐项展示将要上传的来源、静态快照语义、到期时间和提前撤销入口；完成后展示一段可复制提示词。该流程不要求贡献者先创建账号、Organization 或 Channel。
+Quick Share 是全局下拉入口，第一层只做类型分流：`Session`、`Files`、`Skill`，以及重新进入既有分享的 `Manage shared items`。选定类型后复用对应 Channel 共享选择器；Files 对人只暴露一个“选择 Files”动作，文件与目录只是系统选择器返回的不同来源，不是两种产品能力。
 
-提示词对接收者只描述完成任务需要做的动作：已安装 Agent Colab 时直接使用 Quick Share 脚手架；未安装时先运行官方安装命令，再调用同一个脚手架。提示词不泄露服务端内部 ID、Blob key 或鉴权实现。
+每次只分享一个 item。用户选中来源时，固定快照与默认 24 小时的分享立即成立，不再增加一个容易产生误解的“最后确认”步骤；随后进入结果/管理页，展示可复制提示词、有效期设置、已经拉取该分享的人（未登录接收者显示为匿名接收者）和红色撤销操作。关闭弹层不会撤销分享，用户可随时从 `Manage shared items` 返回该页。列表、来源名称和提示词都必须在弹层内截断或换行，不能撑破视口。
+
+该流程不要求贡献者先创建账号、Organization 或 Channel。提示词对接收者只描述完成任务需要做的动作：已安装 Agent Colab 时直接使用 Quick Share 脚手架；未安装时先运行官方安装命令，再调用同一个脚手架。提示词不泄露服务端内部 ID、Blob key 或鉴权实现。
 
 ### 4.4 Files
 
@@ -142,3 +144,13 @@ Channel Skill 清单显示名称、说明、贡献者以及本机各目标的安
 ## 5. 低保真线框
 
 可交互线框位于 [`.trial/interaction-wireframe/`](../.trial/interaction-wireframe/README.md)。它只验证功能布局和对象关系，不表达最终视觉风格。
+
+## 6. Conversation / DM 候选交互（设计完成，尚未实现）
+
+Conversation 是应用级入口，不塞进某个 Channel 的 Sessions/Files/Skills tab。DM 可以直接从 Organization 人员目录发起；群聊可以选择多人；Channel 可以关联一个 Conversation，但聊天成员与 Channel 成员的变更必须显式处理，不能静默互相扩权。
+
+消息编辑器支持普通文本、引用已有 Shared Item 和 `@` 人/Agent。Agent 以 owner、blueprint 名称和运行状态共同呈现，避免用户误以为是在对一个无主的云 bot 发命令。`@agent` 发送后必须出现一个 Agent Request 状态卡：`等待 owner 批准`、`等待 runtime 上线`、`排队`、`执行中`、`已完成`、`失败`或`已取消`。普通消息气泡不承担任务状态机。
+
+owner 的批准/拒绝使用明确按钮并关联 request ID；不依赖模型从“可以”“行”一类自然语言猜授权。离线不是错误：服务端立即写入系统消息，待 runtime 恢复后继续领取未过期请求。Agent 的中间进度和最终结果使用同一张状态卡更新，并保留少量结构化摘要；详细执行过程留在 owner 设备上的 provider session 中，只有 owner 主动分享后才进入 Channel 上下文。
+
+首版 Conversation 不提供项目看板、通用附件仓库、视频会议、reaction、typing indicator 或 read receipt。文件/Session/Skill 继续复用既有 Shared Item 与 Quick Share，聊天只保存引用和必要的小型展示快照。

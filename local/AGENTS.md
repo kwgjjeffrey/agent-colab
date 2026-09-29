@@ -34,8 +34,16 @@ Local Session discovery is separate metadata. `local_session_catalog` stores onl
 
 Another member's Files materialization is a disposable cache, not an editable collaboration copy. Do not rely on filesystem mode bits for authority: every `use` refresh reconciles it to the server-authoritative root, and local edits may be overwritten without merge or upload. Cache enough remote share metadata to return the same `updatedAt`, contributor name and avatar from both fresh and cached materialization paths.
 
-Quick Share lives in `transfers.rs` and is independent of the authenticated Channel graph. Creation freezes each selected source first: Files and Skills reuse a one-off shadow-Git pack, while Sessions are copied to a staging file before a streaming upload so concurrent provider appends cannot change the snapshot boundary. Receipt capabilities live only in the private Local Core SQLite store. Receive streams every immutable item through SHA-256 verification into a temporary file, atomically materializes it under the platform application-data `transfers/` directory, and returns paths/tree metadata without logging the capability. It must not register watchers, silently join an Organization, or reuse Channel share records.
+Quick Share lives in `transfers.rs` and is independent of the authenticated Channel graph. A Transfer accepts exactly one source. Creation freezes it first: Files and Skills reuse a one-off shadow-Git pack, while Sessions are copied to a staging file before a streaming upload so concurrent provider appends cannot change the snapshot boundary. Read/revoke capabilities and the source summary live only in the private Local Core SQLite store; management APIs mediate listing, expiry changes and revoke so the browser never persists revoke secrets. Receive streams the immutable item through SHA-256 verification into a temporary file, atomically materializes it under the platform application-data `transfers/` directory, and returns paths/tree metadata without logging the capability. A random stable local reader ID supports anonymous usage aggregation; attach the current account session when available, but receiving must remain usable without login. It must not register watchers, silently join an Organization, or reuse Channel share records.
 
 Never place cache or mutable runtime data inside the source checkout. Use platform application data/cache directories. Never touch a shared source's own `.git`. Materialization is read-only from Colab's perspective and must use staging plus atomic replacement.
 
 Split adapters (`watcher`, `git`, `server`, `persistence`) from use cases. Comment CAS, retry, atomicity, path-safety, and recovery invariants.
+
+Conversation/DM runtime work is designed but not implemented. A future Local Core keeps an
+outbound authenticated connection, claims an authorized Agent Request with a short lease, and maps
+each Conversation/blueprint binding to one provider-native session in local SQLite. Online presence
+is never execution authority. Provider processes receive only the triggering context and a
+request-bound progress/final reporting command; never accept a remote arbitrary shell command or
+let the model choose another Conversation as the report target. See `docs/technical-design.md`
+section 11.8 before implementing this boundary.

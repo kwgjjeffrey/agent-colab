@@ -184,8 +184,9 @@
 3. [x] **T5.1 Server**：transfer schema、匿名创建限额/滥用防护、capability consume/revoke、到期 GC 与 Blob 引用回收；
 4. [x] **T5.2 Local Core**：复用 Files/Skill shadow Git 与 Session 固定字节边界建立一次静态快照，不注册 watcher；接收端以流式 SHA-256 校验完成隔离物化、token 脱敏和 Files/Session/Skill 分流；
 5. [x] **T5.3 Python Skill**：新增并验证 `colab-transfer create|receive|revoke`；官方 Core 制品携带发布者 OAuth client 配置，公开签名安装器不再要求终端用户选择 JSON；
-6. [x] **T5.4 Desktop**：实现全局 “Share my context” 入口、Files/Session/Skill 多选、TTL、真实上传状态、接收提示词、复制和提前撤销；
-7. [~] **T5.5 黑盒验收（当前）**：release `0.1.56-dev` 已独立发布 Core `0.1.40-dev`、GUI `0.1.34-dev`、Skill `0.1.35-dev`，Electron 保持 `0.1.18-dev`；R2 公网完整回读、实际安装升级、混合对象传输、错误/撤销 token、同层重名冲突已通过。仍需在干净未安装起点验证 bootstrap，并完成自然到期、超额与 GC 黑盒验证。
+6. [x] **T5.4 Desktop**：实现全局 Quick Share 类型下拉、Session/Files/Skill 单 item 选择、选中即创建、弹层内结果管理、TTL、接收提示词、使用者列表、复制和提前撤销；`Manage shared items` 可重新进入已经成立的分享；
+7. [x] **T5.5 管理面**：Server 以 hashed reader identity 聚合领取记录，登录接收者显示账号、未登录接收者保持匿名；Local Core 私有保存管理 capability 和来源摘要，提供 list/detail/update/revoke API；
+8. [~] **T5.6 黑盒验收（当前）**：release `0.1.59-dev` 已部署 Server migration/API，R2 完整回读并在本机实际升级到 Core `0.1.42-dev`、GUI `0.1.36-dev`；Skill `0.1.35-dev` 与 Electron `0.1.18-dev` 未无故升版。真实单 item Files 快照已验证创建、领取、登录账号使用记录、有效期修改、管理清单与撤销；GUI 已目视验证类型下拉、结果页边界和 `Manage shared items`。干净未安装起点、自然到期、超额与 GC 仍为后续黑盒项。
 
 ### M5 之后的固定收口顺序
 
@@ -346,6 +347,16 @@ Windows 首版采用 `%LOCALAPPDATA%\\AgentColab`、目录 junction 和用户级
 - [x] Pass Rust tests and Desktop/Electron checks; release `0.1.54-dev` with Core `0.1.38-dev` and GUI `0.1.32-dev`, while Skill remains `0.1.34-dev` and Electron remains `0.1.18-dev`;
 - [x] Install from stable R2 and verify the authenticated DOCX byte stream returns the correct MIME type, `nosniff`, exact size and SHA-256;
 - [ ] Human visual acceptance for directory navigation, DOCX, XLSX, PDF, image and unsupported-file states.
+
+### T3.1 Adjacent feature decision: project management and Conversation/DM (design completed)
+
+- [x] Record the decision not to build traditional project management or an OKR substitute without evidence of long-running cross-owner dependency failures;
+- [x] Define Conversation as a separate domain object that can reference a Channel without inheriting or mutating Channel membership;
+- [x] Define an Agent participant as owner + blueprint + selected runtime, with one provider-native session binding per Conversation;
+- [x] Define explicit Agent Request authorization, approval, offline queue, lease and summary-reporting semantics;
+- [x] Compare Matrix, XMPP, raw WebSocket and a realtime gateway; recommend PostgreSQL/Rust Server as source of truth plus Centrifugo as non-authoritative realtime transport;
+- [x] Run the existing full repository check after the previous Files/Quick Share work: Desktop build, Local Core tests and Server tests all pass on 2026-09-30;
+- [ ] Before implementation, run V-CHAT-01 against one real provider runtime and one disconnected/reconnected Local Core; this is a feature implementation gate, not a blocker for the present product decision.
 
 ## 已删除的工作
 

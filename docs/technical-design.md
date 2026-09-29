@@ -483,9 +483,11 @@ Session connector 无损读取来源原始文件或 API 输出。大文件按稳
 
 Quick Share 是独立的 `transfer` aggregate，不复用 Organization、Member、Channel 或 `channel_shares` 伪装临时成员关系。服务端只保存固定快照、对象类型、创建时间、到期时间、撤销状态、配额计数和 capability token 的 hash；原始 token 只在创建时返回一次。读取 API 先校验 token hash、到期、撤销和限流，再返回本 Transfer 明确列出的对象，绝不允许由 token 枚举账号、Organization 或 Channel。
 
-Standalone Server 的实际落地使用 `quick_transfers` 与 `quick_transfer_items`。创建时分别生成 upload/read/revoke 三个 256-bit capability，避免可转发的读取凭证获得追加或撤销权；数据库按来源 IP 执行跨进程滚动创建限额。每个 item 以流式 I/O 写入临时 Blob，同时计算 SHA-256，经过单 item 256 MiB、单 Transfer 512 MiB 和 20 item 限额后原子改名并提交元数据。`finalize` 只在所有 item 已持久化后将状态从 `uploading` 推进到 `ready`，之后不再允许修改，因此消费端看到的是固定清单。到期或撤销会立刻使查询失效；周期 GC 先删除 Blob、再删除 PostgreSQL 元数据，删除失败则保留记录供下一轮重试。
+Standalone Server 的实际落地使用 `quick_transfers`、`quick_transfer_items` 与 `quick_transfer_accesses`。每个 Transfer 严格只含一个 item；Server 与 Local Core 都执行该约束，防止旧客户端重新引入批量分享。创建时分别生成 upload/read/revoke 三个 256-bit capability，避免可转发的读取凭证获得追加或撤销权；数据库按来源 IP 执行跨进程滚动创建限额。item 以流式 I/O 写入临时 Blob，同时计算 SHA-256，经过单 item 256 MiB 和单 Transfer 512 MiB 限额后原子改名并提交元数据。`finalize` 只在 item 已持久化后将状态从 `uploading` 推进到 `ready`，之后不再允许修改，因此消费端看到的是固定清单。到期或撤销会立刻使查询失效；周期 GC 先删除 Blob、再删除 PostgreSQL 元数据，删除失败则保留记录供下一轮重试。
 
-贡献端 Local Core 复用 Files/Skill shadow Git，并在 Session 上传前复制已冻结的原始 provider 文件；Quick Share 创建完成后不注册 watcher，也不持续追踪来源。默认 TTL 为 24 小时，服务端设部署级最大 TTL、单 Transfer 大小和下载次数限制；提前撤销立即拒绝新读取，后台 GC 在到期宽限后删除 blob。同一 Transfer 的人类可读名称按大小写不敏感规则判重，避免接收端在大小写不敏感文件系统发生目录覆盖。接收端 Local Core 以 capability token 物化到独立 `transfers/` 缓存，流式下载时计算 SHA-256 并在校验成功后原子落位；不能把 token 写入日志、可读文件名或普通资源 URI。创建端 Local API 只返回可转发的 read capability，revoke token 仅保存在私有 SQLite receipt。
+贡献端 Local Core 复用 Files/Skill shadow Git，并在 Session 上传前复制已冻结的原始 provider 文件；Quick Share 创建完成后不注册 watcher，也不持续追踪来源。默认 TTL 为 24 小时，服务端设部署级最大 TTL、单 Transfer 大小和下载次数限制；创建者可用独立 revoke capability 延长/缩短有效期或提前撤销。创建端 Local API 只返回可转发的 read capability，revoke token 与来源显示元数据只保存在私有 SQLite receipt，因此 `Manage shared items` 不需要把管理权限交给浏览器持久化。
+
+接收端 Local Core 第一次使用时生成稳定、随机且不含设备信息的 reader ID；读取 manifest 时发送该 ID，并在已有 Colab session 时附带登录身份。Server 只保存 reader ID 的 hash，把多次拉取聚合为一次访问者记录；已登录者显示账号名称与头像，未登录者只显示“匿名接收者”。该记录用于创建者管理界面，不是社交 read receipt，也不向 capability 持有人公开其他访问者。接收端把 item 物化到独立 `transfers/` 缓存，流式下载时计算 SHA-256 并在校验成功后原子落位；不能把 token 写入日志、可读文件名或普通资源 URI。
 
 未安装场景使用稳定的公开 bootstrap 命令下载并校验签名后的 Agent Colab Skill/setup；setup 只安装本机制品，真正读取仍由提示词中的一次性 capability 完成。Electron 是可选入口，不能成为消费 Quick Share 的前置。
 
@@ -687,6 +689,46 @@ Setup 还负责：
 - GUI 设置页检查组合版本，但下载和替换调用 Skill setup；setup 更新 GUI 时原子切换静态资源指针，更新 Local Core 时通过 launchd/systemd/Windows Service 安全重启，避免任一前端宿主自覆盖；
 - headless 安装与 Desktop 安装写入同一种 ownership receipt，防止两个 updater 争抢同一个 `colabd`。
 
+### 11.8 Conversation 与 Agent delegation 候选架构（尚未实现）
+
+Conversation 不复用 Channel 表，也不把聊天业务塞进实时网关。Rust Server 与 PostgreSQL 继续拥有身份、成员、权限、消息、Agent Request 和离线队列；Centrifugo 是推荐的独立实时 transport，只发送“某 Conversation 的 cursor 已推进”及短期恢复所需事件。客户端首次进入、恢复失败或离线较久时，始终从 Colab Server 按 cursor 拉取；Centrifugo history 是缓存而不是消息真源。
+
+不采用 Matrix 作为首版底座：它完整解决 room、identity、membership、device、federation 和 event graph，但会与已有 Organization、Member、Channel、Colab session 和权限模型形成双重真源；Application Service 也不能拦截或修改发送中的事件，授权 Agent Request 仍需另一套业务状态机。不采用 XMPP：MUC、archive 和 stream resumption 很成熟，但需要把现有身份和 JSON 业务事件映射为一组 XEP，并没有减少 Colab 特有的授权、设备 lease 和 Shared Item 权限实现。裸 Axum WebSocket 同样不采用，因为重连、短期恢复、连接鉴权、fan-out 和横向扩容不应自研。
+
+推荐拓扑：
+
+```text
+GUI / Local Core (outbound connection)
+        │ HTTPS commands + cursor pull
+        ▼
+Rust Colab Server ── transaction ── PostgreSQL
+        │                               ├─ messages / members
+        │ outbox publish                ├─ agent_requests / approvals
+        ▼                               └─ runtime leases / outbox
+   Centrifugo
+        │ WebSocket publication / recovery
+        └──────────────────────────────► GUI / Local Core
+```
+
+核心表按能力拆分：
+
+- `conversations`：`dm | group | channel_discussion`，可选 `channel_id` 只表示关联，不继承权限；
+- `conversation_members`：人类参与者、角色和加入/离开 cursor；
+- `messages`：append-only、conversation 内单调 cursor、`client_nonce` 幂等键、sender actor、reply/ref 和 redaction 状态；
+- `agent_blueprints`：owner 管理的能力与策略描述，不包含运行进程；
+- `conversation_agents`：blueprint 在某 Conversation 的参与关系、执行策略和独立 session binding；
+- `agent_runtimes`：owner 设备上的 runtime registration、capabilities、last seen 和短 lease；
+- `agent_requests`：由 `@agent` 产生的显式状态机，含 requester、target、approval policy、TTL、active lease、result；
+- `conversation_outbox`：与消息/状态变更同事务提交，worker 至少一次投递到实时层；publication 带稳定 event ID，消费者去重。
+
+Agent Request 状态机为 `awaiting_approval | awaiting_runtime | queued | running | succeeded | failed | rejected | cancelled | expired`。服务端先依据 owner policy 决定是否等待批准；批准必须写入 request ID 和 approver，不能依赖自然语言。在线判断只用于交互提示，真正执行依赖 runtime 原子 claim 的短 lease；断线后 lease 到期可重领，所有副作用操作带 idempotency key。
+
+每个 `conversation_agent` 对应一个独立 agent session。Server 只保存稳定 binding key 和对话侧状态；Local Core 在 owner 设备 SQLite 中把 binding 映射到 provider-native session ID，并由 Codex/Claude Code/MyFlicker adapter 恢复。多设备不自动抢同一 session，首版为 binding 选择一个 active runtime，切换设备必须显式发生。
+
+Agent 收到的输入只包括触发消息、必要的 Conversation 历史窗口和已授权 Shared Item 引用，不获得通用远程 shell 权限。Local Core 启动 provider runtime 时注入一个受约束的上报入口，例如 `colab-agent-request report --request <id> --kind progress|final --message ...`；脚本从本机 claim receipt 取得身份，不允许模型指定任意 Conversation 或冒充其他 Agent。详细推理和工具日志保留在 provider session，聊天只接受进度与结果摘要。
+
+Centrifugo 选择 `stream` recovery；短时断线由官方 SDK 的 epoch/offset 恢复，`recovered=false` 时回退到 Server cursor pull。presence 仅作“可能在线”的展示信号，不能作为任务是否执行或是否授权的依据。首版单 VPS 可使用 memory broker；多实例前切换 Redis broker，PostgreSQL 始终是消息和请求的唯一事实来源。
+
 ## 12. 尚未明确、需要在开工前或纵切中确认
 
 1. **Supabase 恢复时点**：当前冻结；只有独立 Rust 主线形成稳定 Server API 后，才决定是否恢复为第二实现。
@@ -708,7 +750,7 @@ Setup 还负责：
 
 ## 14. 当前不进入实现
 
-- 群聊与群聊中的 agent runtime；
+- Conversation/DM 与其中的 agent runtime（产品与候选架构已完成，等待立项）；
 - Agent blueprint 管理；
 - 结构化任务模块；
 - 多人协同编辑同一来源文件；
