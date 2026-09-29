@@ -145,12 +145,36 @@ Channel Skill 清单显示名称、说明、贡献者以及本机各目标的安
 
 可交互线框位于 [`.trial/interaction-wireframe/`](../.trial/interaction-wireframe/README.md)。它只验证功能布局和对象关系，不表达最终视觉风格。
 
-## 6. Conversation / DM 候选交互（设计完成，尚未实现）
+## 6. Conversation / DM 候选交互（线框已完成，尚未实现）
 
-Conversation 是应用级入口，不塞进某个 Channel 的 Sessions/Files/Skills tab。DM 可以直接从 Organization 人员目录发起；群聊可以选择多人；Channel 可以关联一个 Conversation，但聊天成员与 Channel 成员的变更必须显式处理，不能静默互相扩权。
+可看的扩展线框位于 [conversation-wireframe.html](../.trial/interaction-wireframe/conversation-wireframe.html)，它沿用现有 Channel rail 和内容区，而不是另画一套无关产品。
 
-消息编辑器支持普通文本、引用已有 Shared Item 和 `@` 人/Agent。Agent 以 owner、blueprint 名称和运行状态共同呈现，避免用户误以为是在对一个无主的云 bot 发命令。`@agent` 发送后必须出现一个 Agent Request 状态卡：`等待 owner 批准`、`等待 runtime 上线`、`排队`、`执行中`、`已完成`、`失败`或`已取消`。普通消息气泡不承担任务状态机。
+### 6.1 入口与主布局
 
-owner 的批准/拒绝使用明确按钮并关联 request ID；不依赖模型从“可以”“行”一类自然语言猜授权。离线不是错误：服务端立即写入系统消息，待 runtime 恢复后继续领取未过期请求。Agent 的中间进度和最终结果使用同一张状态卡更新，并保留少量结构化摘要；详细执行过程留在 owner 设备上的 provider session 中，只有 owner 主动分享后才进入 Channel 上下文。
+- Conversation 是左侧 rail 顶部的固定应用级入口；下方仍是各 Channel。它不进入某个 Channel 的 Sessions/Files/Skills tab。
+- 进入后采用三栏：会话列表、消息区、参与者/引用详情。窄屏隐藏详情栏，不改变信息层级。
+- 新建 DM 从 Organization 人员目录选人；新建群聊可选多人。聊天无需先创建 Channel。
+- Channel 是稳定共享上下文空间。消息可引用某个 Channel Shared Item，但这既不把消息存进 Channel，也不扩大聊天成员对该 Shared Item 的权限。
 
-首版 Conversation 不提供项目看板、通用附件仓库、视频会议、reaction、typing indicator 或 read receipt。文件/Session/Skill 继续复用既有 Shared Item 与 Quick Share，聊天只保存引用和必要的小型展示快照。
+### 6.2 Agent blueprint
+
+blueprint 是账号级设置，入口同时出现在左下角设置和 Conversation 顶部。编辑项只包含首版真正参与执行的内容：名称、头像、目的、provider、谁可调用、默认 runtime。runtime 在线状态是当前事实，不是 blueprint 的身份。
+
+“Configure with my coding agent”打开与 Files/Session 相同的 prompt Dialog。主按钮按默认 Agent 显示“Copy and open Codex”，其他已安装目标收进相邻菜单。提示词必须给出专用 blueprint scaffold，以当前登录账号和可读名称定位 blueprint；Agent 直接执行配置并返回校验错误，不要求用户先手动检查或查 UUID。
+
+### 6.3 把 Agent 加入对话
+
+Conversation header 的“Add people or agents”在一个搜索面板中同时列出 Organization 人员和当前用户可用的 blueprint。Agent 行明确显示 owner、provider、runtime 在线状态和调用策略。加入的是 blueprint 在该 Conversation 的实例，不是裸进程；同一 blueprint 在每个 Conversation 中对应独立 provider session。
+
+### 6.4 选择、转发与调用
+
+- 消息 hover/focus 时出现选择框；可以单选或多选。
+- 选择后出现统一操作条：“Forward to person…”发送带原作者、时间和稳定消息引用的转发卡；“Ask agent…”选择对话内 Agent，并把被选消息作为明确输入。
+- 直接输入 @Agent 也会创建 Agent Request。普通聊天消息和远程执行请求不是同一状态：消息旁渲染独立状态卡，展示 awaiting approval、awaiting runtime、queued、running、succeeded、failed、rejected、cancelled 或 expired。
+- owner 的批准/拒绝绑定明确 request ID，不从“行”“可以”等自然语言猜授权。runtime 离线不是失败；状态卡说明等待上线。
+
+### 6.5 Agent 回复与引用
+
+Agent 回复头展示 blueprint 名称和 owner；正文用标准 reply 块引用触发它的消息。引用过的 Channel Shared Item、Session 或 Files 以来源 chip 呈现，点击时再做权限检查。执行状态、简短进度和最终摘要留在 Agent Request 卡中；详细推理和工具日志仍在 owner 设备上的 provider session，除非 owner 主动共享。
+
+首版不做项目看板、通用附件仓库、视频会议、reaction、typing indicator 或 read receipt。

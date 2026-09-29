@@ -280,7 +280,7 @@ Windows 首版采用 `%LOCALAPPDATA%\\AgentColab`、目录 junction 和用户级
 ### T2.2 Files 归因与消费元数据（已完成）
 
 - [x] Files item 去除 root OID 展示，改为头像、贡献者、`(me)`、hover actions 和 destructive Withdraw；
-- [x] 合并为一个可见共享入口，底层仍按跨平台 picker 能力选择文件或目录；
+- [x] Channel Files 与 Quick Share Files 都只保留一个直接选择动作；删除所有“文件/目录”二级菜单，由宿主统一 picker 返回路径后再识别来源类型；
 - [x] Server 返回贡献者头像，Local Core 缓存远端 `updatedAt` 与头像，cached materialization 不再伪造空时间；
 - [x] Core、Server、GUI 本地构建测试通过；
 - [x] Server `0.1.18-dev` 部署；Core `0.1.17-dev` 与 GUI `0.1.18-dev` 发布、安装、重启并验收；消费方真实返回头像与非空 `updatedAt`，GUI 显示新 Files 行结构。
@@ -354,9 +354,19 @@ Windows 首版采用 `%LOCALAPPDATA%\\AgentColab`、目录 junction 和用户级
 - [x] Define Conversation as a separate domain object that can reference a Channel without inheriting or mutating Channel membership;
 - [x] Define an Agent participant as owner + blueprint + selected runtime, with one provider-native session binding per Conversation;
 - [x] Define explicit Agent Request authorization, approval, offline queue, lease and summary-reporting semantics;
-- [x] Compare Matrix, XMPP, raw WebSocket and a realtime gateway; recommend PostgreSQL/Rust Server as source of truth plus Centrifugo as non-authoritative realtime transport;
+- [x] Re-evaluate Matrix, XMPP, Centrifugo and raw WebSocket against the requirement not to rebuild classic IM; select self-hosted Matrix/Synapse as the chat truth while Colab retains only blueprint/request/runtime/context business state;
+- [x] Extend the existing low-fidelity shell with a concrete Conversation entry, three-pane chat, blueprint editor and coding-agent prompt, participant picker, message selection/forwarding, Agent Request state and reply/source references;
+- [x] Add a concrete ER diagram, module placement diagram and Agent Request sequence, with editable Mermaid sources and static SVG renderings;
 - [x] Run the existing full repository check after the previous Files/Quick Share work: Desktop build, Local Core tests and Server tests all pass on 2026-09-30;
-- [ ] Before implementation, run V-CHAT-01 against one real provider runtime and one disconnected/reconnected Local Core; this is a feature implementation gate, not a blocker for the present product decision.
+- [ ] Before implementation, run a narrow Matrix trial for Synapse provisioning, Local Core incremental sync and one Application Service custom event, then run V-CHAT-01 against one real provider runtime and one disconnected/reconnected Local Core.
+
+### T2.10 Unified Files source picker regression (completed)
+
+- [x] Remove the nested file/folder menu from both Channel Files and Quick Share Files; each surface exposes one action only.
+- [x] Keep source-kind inference behind the host adapter and Local Core inspection rather than encoding it as a second product decision.
+- [x] Add a GUI regression test that rejects reintroducing `Choose a file` / `Choose a folder` menu items.
+- [x] Release `0.1.64-dev` with Core `0.1.46-dev`, GUI `0.1.39-dev`, and the independently changed Electron Shell `0.1.19-dev`; publish and verify macOS/Windows artifacts through public R2 readback.
+- [x] Install the release, restart the actual App, and visually verify that Channel Files has one `Share files` action, Quick Share has one `Choose Files` action, and the native picker displays files and folders in the same selectable list.
 
 ## 已删除的工作
 

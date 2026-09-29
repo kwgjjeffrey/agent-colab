@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { CopyIcon, FileIcon, FolderIcon, HistoryIcon, MessageSquareIcon, Share2Icon, SparklesIcon } from "lucide-react";
+import { CopyIcon, FileIcon, HistoryIcon, MessageSquareIcon, Share2Icon, SparklesIcon } from "lucide-react";
 import { trackedFetch } from "@/api/request-activity";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -18,7 +18,7 @@ type SessionSource = Source & { id: string; codingAgent: string; threadId: strin
 type SkillSource = { sourceId: string; sourcePath: string; name: string; discoveredTargets: string[] };
 type TransferAccess = { displayName?: string; avatarUrl?: string; firstAccessedAt: string; lastAccessedAt: string; accessCount: number };
 type ManagedTransfer = { transferId: string; capability: string; state: "ready" | "revoked" | "expired"; expiresAt: string; createdAt: string; itemKind: ShareKind; itemName: string; accesses: TransferAccess[] };
-type Props = { defaultAgent: AgentTarget; installedAgents: Record<string, { installed: boolean }>; onChoose: (directory: boolean) => Promise<string | null> };
+type Props = { defaultAgent: AgentTarget; installedAgents: Record<string, { installed: boolean }>; onChoose: (directory?: boolean) => Promise<string | null> };
 
 const agentRoots: Record<AgentTarget, string> = { codex: "~/.agents", claude: "~/.claude", myflicker: "~/.myflicker" };
 function basename(path: string) { return path.replace(/[\\/]+$/, "").split(/[\\/]/).pop() || "Shared context"; }
@@ -79,7 +79,7 @@ export function QuickShareControl({ defaultAgent, installedAgents, onChoose }: P
       setSelected(await detail.json()); setExpiresInHours(24);
     } catch (reason) { setError(String(reason)); } finally { setBusy(false); }
   }
-  async function chooseFiles(directory: boolean) { const path = await onChoose(directory); if (path) await create({ kind: "files", name: basename(path), sourcePath: path }); }
+  async function chooseFiles() { const path = await onChoose(); if (path) await create({ kind: "files", name: basename(path), sourcePath: path }); }
   async function updateExpiry() {
     if (!selected) return; setBusy(true); setError(undefined);
     try { const response = await trackedFetch(`/v1/transfers/${selected.transferId}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ expiresInSeconds: Math.round(expiresInHours * 3600) }) }); if (!response.ok) throw new Error(await response.text()); setSelected(await response.json()); }
@@ -114,8 +114,8 @@ export function QuickShareControl({ defaultAgent, installedAgents, onChoose }: P
   </>;
 }
 
-function FilePicker({ busy, onChoose }: { busy: boolean; onChoose: (directory: boolean) => Promise<void> }) {
-  return <Empty className="min-h-72 border"><EmptyHeader><EmptyTitle>Choose one file or folder</EmptyTitle><EmptyDescription>Both create the same Files item; the operating system uses separate native pickers.</EmptyDescription></EmptyHeader><DropdownMenu><DropdownMenuTrigger render={<Button disabled={busy} />}>{busy ? "Creating share…" : "Choose Files"}</DropdownMenuTrigger><DropdownMenuContent align="center"><DropdownMenuGroup><DropdownMenuItem onClick={() => void onChoose(false)}><FileIcon />Choose a file</DropdownMenuItem><DropdownMenuItem onClick={() => void onChoose(true)}><FolderIcon />Choose a folder</DropdownMenuItem></DropdownMenuGroup></DropdownMenuContent></DropdownMenu></Empty>;
+function FilePicker({ busy, onChoose }: { busy: boolean; onChoose: () => Promise<void> }) {
+  return <Empty className="min-h-72 border"><EmptyHeader><EmptyTitle>Choose one file or folder</EmptyTitle><EmptyDescription>The selected item becomes one fixed Files snapshot.</EmptyDescription></EmptyHeader><Button disabled={busy} onClick={() => void onChoose()}>{busy ? "Creating share…" : "Choose Files"}</Button></Empty>;
 }
 
 function SourcePicker({ kind, query, setQuery, sessions, skills, busy, error, onCreate }: { kind?: ShareKind; query: string; setQuery: (value: string) => void; sessions: SessionSource[]; skills: SkillSource[]; busy: boolean; error?: string; onCreate: (source: Source) => Promise<void> }) {

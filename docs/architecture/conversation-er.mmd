@@ -1,0 +1,54 @@
+erDiagram
+  USER ||--o{ AGENT_BLUEPRINT : owns
+  USER ||--o{ CONVERSATION_MEMBER : joins
+  CONVERSATION ||--o{ CONVERSATION_MEMBER : contains
+  CONVERSATION ||--o| MATRIX_ROOM_BINDING : maps_to
+  CONVERSATION ||--o{ CONVERSATION_AGENT : includes
+  AGENT_BLUEPRINT ||--o{ CONVERSATION_AGENT : instantiated_as
+  AGENT_BLUEPRINT ||--o{ AGENT_RUNTIME : may_run_on
+  CONVERSATION_AGENT ||--o{ AGENT_REQUEST : receives
+  AGENT_RUNTIME ||--o{ AGENT_REQUEST_LEASE : claims
+  AGENT_REQUEST ||--o{ AGENT_REQUEST_LEASE : attempts
+  AGENT_REQUEST ||--o{ CONTEXT_REFERENCE : uses
+  SHARED_ITEM ||--o{ CONTEXT_REFERENCE : referenced_by
+
+  CONVERSATION {
+    uuid id
+    enum kind
+    string title
+  }
+  MATRIX_ROOM_BINDING {
+    uuid conversation_id
+    string room_id
+  }
+  AGENT_BLUEPRINT {
+    uuid id
+    uuid owner_user_id
+    string name
+    enum provider
+    enum invoke_policy
+  }
+  CONVERSATION_AGENT {
+    uuid id
+    uuid conversation_id
+    uuid blueprint_id
+    string binding_key
+  }
+  AGENT_RUNTIME {
+    uuid id
+    uuid blueprint_id
+    string device_id
+    datetime last_seen_at
+  }
+  AGENT_REQUEST {
+    uuid id
+    uuid conversation_agent_id
+    string matrix_event_id
+    enum status
+    datetime expires_at
+  }
+  CONTEXT_REFERENCE {
+    uuid agent_request_id
+    uuid shared_item_id
+    string revision_id
+  }

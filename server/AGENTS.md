@@ -1,5 +1,12 @@
 # Server deployment
 
+Conversation/DM is still design-only. The selected classic IM foundation is self-hosted Matrix:
+Matrix owns rooms, human membership, messages, reply relations and incremental chat sync. Colab
+PostgreSQL owns only room mapping, Agent blueprint/participation, Agent Request approval/state,
+runtime leases and authorized context references. The Application Service adapter can provision
+and emit events but never decides authorization. Read docs/conversation-design.md before adding
+routes or migrations.
+
 `server/api` is the protocol source. `server/standalone` is the current Rust/PostgreSQL implementation. A future Supabase implementation must implement the same domain API without leaking Supabase types into clients.
 
 The server registers organizations, members, Channels, Shared Items, revisions, sessions, and authorization. Blob content is stored behind a storage port. PostgreSQL migrations are append-only after deployment.

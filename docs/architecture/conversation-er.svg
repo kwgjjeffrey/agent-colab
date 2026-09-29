@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="520" viewBox="0 0 1100 520">
+<defs><marker id="a" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0L8 4L0 8Z" fill="#555"/></marker><style>text{font-family:system-ui,sans-serif;fill:#222}.t{font-size:15px;font-weight:700}.f{font-size:12px}.b{fill:#fff;stroke:#777;stroke-width:1.5}.l{stroke:#555;stroke-width:1.5;marker-end:url(#a)}</style></defs>
+<rect width="1100" height="520" fill="#fafaf8"/>
+<g><rect class="b" x="30" y="40" width="170" height="80" rx="8"/><text class="t" x="45" y="65">User</text><text class="f" x="45" y="88">id, display_name</text></g>
+<g><rect class="b" x="260" y="30" width="210" height="105" rx="8"/><text class="t" x="275" y="55">AgentBlueprint</text><text class="f" x="275" y="78">owner_user_id, name</text><text class="f" x="275" y="98">provider, invoke_policy</text></g>
+<g><rect class="b" x="30" y="205" width="190" height="90" rx="8"/><text class="t" x="45" y="230">Conversation</text><text class="f" x="45" y="253">id, kind, title</text></g>
+<g><rect class="b" x="280" y="200" width="210" height="100" rx="8"/><text class="t" x="295" y="225">ConversationAgent</text><text class="f" x="295" y="248">conversation_id</text><text class="f" x="295" y="268">blueprint_id, binding_key</text></g>
+<g><rect class="b" x="555" y="30" width="190" height="95" rx="8"/><text class="t" x="570" y="55">AgentRuntime</text><text class="f" x="570" y="78">blueprint_id, device_id</text><text class="f" x="570" y="98">last_seen_at</text></g>
+<g><rect class="b" x="555" y="205" width="210" height="105" rx="8"/><text class="t" x="570" y="230">AgentRequest</text><text class="f" x="570" y="253">conversation_agent_id</text><text class="f" x="570" y="273">matrix_event_id, status</text></g>
+<g><rect class="b" x="850" y="40" width="210" height="80" rx="8"/><text class="t" x="865" y="65">MatrixRoomBinding</text><text class="f" x="865" y="88">conversation_id, room_id</text></g>
+<g><rect class="b" x="555" y="390" width="210" height="85" rx="8"/><text class="t" x="570" y="415">ContextReference</text><text class="f" x="570" y="438">request_id, shared_item_id</text><text class="f" x="570" y="458">revision_id</text></g>
+<g><rect class="b" x="850" y="390" width="180" height="80" rx="8"/><text class="t" x="865" y="415">SharedItem</text><text class="f" x="865" y="438">id, active_revision</text></g>
+<path class="l" d="M200 78H260"/><path class="l" d="M220 248H280"/><path class="l" d="M365 135V200"/><path class="l" d="M470 78H555"/><path class="l" d="M490 252H555"/><path class="l" d="M125 205V120"/><path class="l" d="M220 220C500 130 700 80 850 80"/><path class="l" d="M660 310V390"/><path class="l" d="M765 432H850"/>
+</svg>

@@ -107,7 +107,12 @@ app.on('activate', () => { if (!window) createWindow() })
 
 ipcMain.handle('host:open-external', (_event, url) => shell.openExternal(url))
 ipcMain.handle('host:choose-path', async (_event, options) => {
-  const result = await dialog.showOpenDialog(window, { title: options?.title, properties: [options?.directory ? 'openDirectory' : 'openFile'] })
+  const properties = options?.directory === true
+    ? ['openDirectory']
+    : options?.directory === false
+      ? ['openFile']
+      : ['openFile', 'openDirectory']
+  const result = await dialog.showOpenDialog(window, { title: options?.title, properties })
   return result.canceled ? null : result.filePaths[0] || null
 })
 ipcMain.handle('host:show-and-focus', () => { window.show(); window.focus() })

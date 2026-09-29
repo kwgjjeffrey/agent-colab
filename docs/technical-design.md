@@ -180,6 +180,8 @@ Shared Item 名称同样是可读选择器，不强制承担唯一身份。对�
 
 Files 首版已实现 `shadow-git-v1`：Local Core 在应用私有目录创建外置 shadow Git，不向来源目录写入 `.git`；首次 revision 上传完整 Git pack，后续 revision 以当前已发布 root 为 parent 生成 thin incremental pack。Server 对 parent 使用 CAS，成功后才推进 `current_root_oid`。消费方按 revision 顺序把 pack 导入本地 object database，再将当前 root 原子物化到应用数据目录。Server 的 Blob Store 首个 adapter 是本地文件系统，业务接口不依赖其路径布局，部署阶段可替换为 S3-compatible adapter。
 
+Files 来源选择是一个产品动作，不存在“先点共享、再决定文件或目录”的第二层。Electron 使用单次 native dialog 同时返回文件或目录；普通浏览器调用 Local Core 的同语义 picker endpoint。随后 Local Core 依据路径类型执行单文件或目录扫描。受能力约束必须为目录的 Skill source picker 才允许使用 directory-only 模式，该约束不能泄漏回 Files 交互。
+
 每个 Files 来源的 Colab 专属排除规则只存于该 shadow Git 的 `$GIT_DIR/info/exclude`，这是唯一真源，也是 `git add` 实际消费的标准位置。GUI 查看或编辑同步范围时，Local Core 直接读取或重写该文件；SQLite 只记录 `share_id`、来源路径与 shadow Git 路径，不复制排除规则。来源项目自身的 `.gitignore` 仍由 Git 正常读取，Colab 只读、不修改。同步范围是低频管理操作，不为它额外建立数据库索引或重建协议。
 
 当前 Local Core 使用操作系统文件 watcher 监听已登记来源；事件只负责更新 SQLite `local_jobs` 的 publish job，并把 due time 推迟到 2 秒静默窗口之后。独立 worker 原子 claim 后调用统一的 `publish_source`，后者仍执行完整 shadow Git 扫描。generation 在 job 执行期间继续递增，旧 generation 完成时若发现新事件便把 job 留在 pending，避免上传期间的修改丢失。首次登记走同一持久化任务，durable job 接受后立即返回 `preparing`；失败记录错误并按 2、4、8 秒指数退避（上限 5 分钟），手动重试可立即推进。Core 启动把遗留 running lease 恢复为 pending。同步不绑定 Desktop GUI 生命周期。
@@ -690,6 +692,8 @@ Setup 还负责：
 - headless 安装与 Desktop 安装写入同一种 ownership receipt，防止两个 updater 争抢同一个 `colabd`。
 
 ### 11.8 Conversation 与 Agent delegation 候选架构（尚未实现）
+
+本节原候选以 Centrifugo + 自建消息域为基础，已被新的结构化评审取代。当前决策、ER、模块部署图和关键时序以 [conversation-design.md](conversation-design.md) 为准；下文保留为历史推演，不得作为实现依据。
 
 Conversation 不复用 Channel 表，也不把聊天业务塞进实时网关。Rust Server 与 PostgreSQL 继续拥有身份、成员、权限、消息、Agent Request 和离线队列；Centrifugo 是推荐的独立实时 transport，只发送“某 Conversation 的 cursor 已推进”及短期恢复所需事件。客户端首次进入、恢复失败或离线较久时，始终从 Colab Server 按 cursor 拉取；Centrifugo history 是缓存而不是消息真源。
 
