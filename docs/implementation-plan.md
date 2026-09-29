@@ -310,6 +310,7 @@ Windows 首版采用 `%LOCALAPPDATA%\\AgentColab`、目录 junction 和用户级
 - [x] Separate the published-alpha evaluation path from source development and self-hosting prerequisites in the public README.
 - [x] Document the implemented runtime/service boundaries, server and local persistence model, Files/Skills synchronization, and Session synchronization with Mermaid diagrams.
 - [x] Standardize repository metadata and the root license on Apache-2.0 so the public project has permissive commercial reuse plus an explicit contributor patent grant.
+- [x] Add a human-facing Apple-silicon DMG without replacing the ZIP used by machine-driven update flows, and mirror the DMG in the public GitHub prerelease.
 
 ## 已删除的工作
 

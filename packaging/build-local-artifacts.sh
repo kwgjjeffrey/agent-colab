@@ -71,13 +71,21 @@ fi
 # Electron is an optional launcher artifact. It is packaged separately from
 # the required GUI/Core/Skill combination and therefore updates infrequently.
 if $build_shell; then
+  # ZIP remains the machine-consumed launcher/update artifact. DMG is the
+  # human-facing macOS evaluation installer mirrored by GitHub Releases.
   npx --yes pnpm@10.18.3 --dir "$repo_root/desktop/shell" exec electron-builder --mac dir --arm64
   codesign --force --deep --sign - "$repo_root/desktop/shell/dist/mac-arm64/Colab.app"
   codesign --verify --deep --strict "$repo_root/desktop/shell/dist/mac-arm64/Colab.app"
+  # Package only after signing; otherwise the DMG would contain the unsigned
+  # pre-signing App even though the adjacent build directory verifies.
+  npx --yes pnpm@10.18.3 --dir "$repo_root/desktop/shell" exec electron-builder --prepackaged "$repo_root/desktop/shell/dist/mac-arm64/Colab.app" --mac dmg --arm64
   mkdir -p "$dist/electron-shell/$shell_version"
   ditto -c -k --sequesterRsrc --keepParent "$repo_root/desktop/shell/dist/mac-arm64/Colab.app" "$dist/electron-shell/$shell_version/Colab-$shell_version-arm64.zip"
+  cp "$repo_root/desktop/shell/dist/Colab-$shell_version-arm64.dmg" "$dist/electron-shell/$shell_version/"
 fi
 
-for artifact in "$dist/local-core/$core_version/$platform-$arch.tar.gz" "$dist/desktop-ui/$ui_version.zip" "$dist/colab-skill/$skill_version.zip" "$dist/electron-shell/$shell_version/Colab-$shell_version-arm64.zip"; do
+artifacts=("$dist/local-core/$core_version/$platform-$arch.tar.gz" "$dist/desktop-ui/$ui_version.zip" "$dist/colab-skill/$skill_version.zip" "$dist/electron-shell/$shell_version/Colab-$shell_version-arm64.zip")
+$build_shell && artifacts+=("$dist/electron-shell/$shell_version/Colab-$shell_version-arm64.dmg")
+for artifact in "${artifacts[@]}"; do
   shasum -a 256 "$artifact"
 done
