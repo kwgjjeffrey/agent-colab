@@ -20,6 +20,8 @@ use tower_http::{
     timeout::TimeoutLayer,
 };
 
+mod blobs;
+mod email_outbox;
 mod transfers;
 
 #[derive(Clone)]
@@ -27,8 +29,6 @@ struct AppState {
     database: Database,
     http: reqwest::Client,
     google_client_id: String,
-    email: Option<Arc<dyn colab_server_email::EmailSender>>,
-    public_url: String,
     blob_root: PathBuf,
 }
 
@@ -122,14 +122,16 @@ async fn main() -> anyhow::Result<()> {
         .with_context(|| format!("bind Colab server to {}", config.address))?;
     println!("colab-server listening on http://{}", config.address);
     transfers::spawn_expired_transfer_gc(database.clone(), config.blob_root.clone());
+    blobs::spawn_orphan_gc(database.clone(), config.blob_root.clone());
+    if let Some(sender) = email.clone() {
+        email_outbox::spawn(database.clone(), sender, config.public_url.clone());
+    }
     axum::serve(
         listener,
         router(AppState {
             database,
             http: reqwest::Client::new(),
             google_client_id: google.client_id,
-            email,
-            public_url: config.public_url,
             blob_root: config.blob_root,
         })
         .into_make_service_with_connect_info::<SocketAddr>(),
@@ -145,6 +147,7 @@ fn router(state: AppState) -> Router {
         .route("/health/ready", get(ready))
         .route("/v1/status", get(status))
         .route("/v1/auth/google/session", post(create_google_session))
+        .route("/v1/auth/session/refresh", post(refresh_session))
         .route("/v1/auth/logout", post(logout))
         .route(
             "/v1/organizations",
@@ -282,6 +285,28 @@ async fn create_google_session(
             ApiError::internal("session_creation_failed")
         })?;
     Ok(Json(session))
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct RefreshSessionRequest {
+    refresh_token: String,
+}
+
+async fn refresh_session(
+    State(state): State<AppState>,
+    Json(request): Json<RefreshSessionRequest>,
+) -> Result<Json<colab_server_persistence::CreatedSession>, ApiError> {
+    use colab_server_persistence::RefreshSessionError;
+    match state.database.refresh_session(&request.refresh_token).await {
+        Ok(session) => Ok(Json(session)),
+        Err(RefreshSessionError::Invalid) => Err(ApiError::unauthorized("invalid_refresh_token")),
+        Err(RefreshSessionError::Replay) => Err(ApiError::unauthorized("refresh_token_replayed")),
+        Err(RefreshSessionError::Internal(error)) => {
+            eprintln!("refresh session failed: {error:#}");
+            Err(ApiError::internal("session_refresh_failed"))
+        }
+    }
 }
 async fn logout(State(state): State<AppState>, headers: HeaderMap) -> Result<StatusCode, ApiError> {
     let token = bearer_token(&headers)?;
@@ -491,47 +516,13 @@ async fn add_member(
         colab_server_persistence::AddChannelMember::Forbidden => {
             Err(ApiError::forbidden("member_add_forbidden"))
         }
-        colab_server_persistence::AddChannelMember::Invitation {
-            invitation_id: _,
-            token,
-            email,
-            organization_name,
-            inviter_name,
-        } => {
-            let Some(sender) = &state.email else {
-                return Ok((
-                    StatusCode::ACCEPTED,
-                    Json(AddMemberResponse {
-                        status: "invited",
-                        email_delivery: "not_configured",
-                    }),
-                ));
-            };
-            let accept_url = format!(
-                "{}/invitations/{}",
-                state.public_url.trim_end_matches('/'),
-                token
-            );
-            sender
-                .send_organization_invite(colab_server_email::OrganizationInvite {
-                    to: &email,
-                    organization: &organization_name,
-                    inviter: &inviter_name,
-                    accept_url: &accept_url,
-                })
-                .await
-                .map_err(|error| {
-                    eprintln!("send invitation failed: {error:#}");
-                    ApiError::unavailable("invitation_email_failed")
-                })?;
-            Ok((
-                StatusCode::ACCEPTED,
-                Json(AddMemberResponse {
-                    status: "invited",
-                    email_delivery: "sent",
-                }),
-            ))
-        }
+        colab_server_persistence::AddChannelMember::Invitation { .. } => Ok((
+            StatusCode::ACCEPTED,
+            Json(AddMemberResponse {
+                status: "invited",
+                email_delivery: "queued",
+            }),
+        )),
     }
 }
 async fn search_people(
@@ -623,7 +614,7 @@ async fn upload_file_revision(
     headers: HeaderMap,
     Path(share_id): Path<uuid::Uuid>,
     Query(query): Query<UploadRevisionQuery>,
-    body: Bytes,
+    body: Body,
 ) -> Result<(StatusCode, Json<colab_server_persistence::FileRevision>), ApiError> {
     // The HTTP body is an opaque Git pack. The server does not interpret the file tree: it owns
     // authorization, durable blob storage and the atomic revision pointer only. This keeps the
@@ -639,23 +630,12 @@ async fn upload_file_revision(
         return Err(ApiError::bad_request("invalid_git_oid"));
     }
     let blob_key = uuid::Uuid::new_v4().simple().to_string();
-    let path = blob_path(&state.blob_root, &blob_key);
-    if let Some(parent) = path.parent() {
-        tokio::fs::create_dir_all(parent)
-            .await
-            .map_err(|_| ApiError::internal("blob_write_failed"))?;
-    }
-    let temporary = path.with_extension("uploading");
-    tokio::fs::write(&temporary, &body)
-        .await
-        .map_err(|_| ApiError::internal("blob_write_failed"))?;
-    tokio::fs::rename(&temporary, &path)
-        .await
-        .map_err(|_| ApiError::internal("blob_write_failed"))?;
+    let path = blobs::path(&state.blob_root, &blob_key);
+    let byte_size = blobs::write_bounded(&state.blob_root, &blob_key, body).await?;
     // `create_file_revision` checks parent_root_oid and advances current_root_oid in one database
     // transaction. The blob is written first, then removed if CAS fails. Accepted but later
     // withdrawn/replaced blobs require the planned garbage-collection job.
-    let revision = state
+    let revision = match state
         .database
         .create_file_revision(
             user,
@@ -663,10 +643,20 @@ async fn upload_file_revision(
             &query.root_oid,
             query.parent_root_oid.as_deref(),
             &blob_key,
-            body.len() as i64,
+            byte_size as i64,
         )
         .await
-        .map_err(|_| ApiError::internal("file_revision_creation_failed"))?;
+    {
+        Ok(value) => value,
+        Err(error) => {
+            let _ = tokio::fs::remove_file(&path).await;
+            return Err(if error.to_string().contains("storage quota exceeded") {
+                ApiError::payload_too_large("storage_quota_exceeded")
+            } else {
+                ApiError::internal("file_revision_creation_failed")
+            });
+        }
+    };
     match revision {
         Some(value) => Ok((StatusCode::CREATED, Json(value))),
         None => {
@@ -701,14 +691,7 @@ async fn download_file_revision(
         .await
         .map_err(|_| ApiError::internal("file_revision_lookup_failed"))?
         .ok_or_else(|| ApiError::forbidden("file_share_access_forbidden"))?;
-    let bytes = tokio::fs::read(blob_path(&state.blob_root, &key))
-        .await
-        .map_err(|_| ApiError::internal("blob_read_failed"))?;
-    Ok((
-        [(header::CONTENT_TYPE, "application/x-git-packed-objects")],
-        bytes,
-    )
-        .into_response())
+    blobs::response(&state.blob_root, &key, "application/x-git-packed-objects").await
 }
 async fn withdraw_file_share(
     State(state): State<AppState>,
@@ -782,7 +765,7 @@ async fn upload_skill_revision(
     headers: HeaderMap,
     Path(share_id): Path<uuid::Uuid>,
     Query(query): Query<UploadRevisionQuery>,
-    body: Bytes,
+    body: Body,
 ) -> Result<(StatusCode, Json<colab_server_persistence::FileRevision>), ApiError> {
     let user = authenticated_user(&state, &headers).await?;
     if !valid_oid(&query.root_oid)
@@ -796,20 +779,9 @@ async fn upload_skill_revision(
     // Skill packages deliberately use the same opaque Git-pack transport as Files. The Server
     // authorizes and persists bytes but never parses SKILL.md or invents another version model.
     let blob_key = uuid::Uuid::new_v4().simple().to_string();
-    let path = blob_path(&state.blob_root, &blob_key);
-    if let Some(parent) = path.parent() {
-        tokio::fs::create_dir_all(parent)
-            .await
-            .map_err(|_| ApiError::internal("blob_write_failed"))?
-    }
-    let temporary = path.with_extension("uploading");
-    tokio::fs::write(&temporary, &body)
-        .await
-        .map_err(|_| ApiError::internal("blob_write_failed"))?;
-    tokio::fs::rename(&temporary, &path)
-        .await
-        .map_err(|_| ApiError::internal("blob_write_failed"))?;
-    match state
+    let path = blobs::path(&state.blob_root, &blob_key);
+    let byte_size = blobs::write_bounded(&state.blob_root, &blob_key, body).await?;
+    let revision = match state
         .database
         .create_skill_revision(
             user,
@@ -817,11 +789,21 @@ async fn upload_skill_revision(
             &query.root_oid,
             query.parent_root_oid.as_deref(),
             &blob_key,
-            body.len() as i64,
+            byte_size as i64,
         )
         .await
-        .map_err(|_| ApiError::internal("skill_revision_creation_failed"))?
     {
+        Ok(value) => value,
+        Err(error) => {
+            let _ = tokio::fs::remove_file(&path).await;
+            return Err(if error.to_string().contains("storage quota exceeded") {
+                ApiError::payload_too_large("storage_quota_exceeded")
+            } else {
+                ApiError::internal("skill_revision_creation_failed")
+            });
+        }
+    };
+    match revision {
         Some(value) => Ok((StatusCode::CREATED, Json(value))),
         None => {
             let _ = tokio::fs::remove_file(path).await;
@@ -857,14 +839,7 @@ async fn download_skill_revision(
         .await
         .map_err(|_| ApiError::internal("skill_revision_lookup_failed"))?
         .ok_or_else(|| ApiError::forbidden("skill_share_access_forbidden"))?;
-    let bytes = tokio::fs::read(blob_path(&state.blob_root, &key))
-        .await
-        .map_err(|_| ApiError::internal("blob_read_failed"))?;
-    Ok((
-        [(header::CONTENT_TYPE, "application/x-git-packed-objects")],
-        bytes,
-    )
-        .into_response())
+    blobs::response(&state.blob_root, &key, "application/x-git-packed-objects").await
 }
 
 async fn withdraw_skill_share(
@@ -1143,6 +1118,14 @@ impl ApiError {
             status: StatusCode::BAD_REQUEST,
             code,
             message: "The request is invalid",
+            retryable: false,
+        }
+    }
+    fn payload_too_large(code: &'static str) -> Self {
+        Self {
+            status: StatusCode::PAYLOAD_TOO_LARGE,
+            code,
+            message: "The upload exceeds a storage limit",
             retryable: false,
         }
     }

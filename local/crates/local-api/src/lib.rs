@@ -59,6 +59,9 @@ struct Inner {
     http: reqwest::Client,
     pending: Mutex<HashMap<String, PendingLogin>>,
     session: Mutex<Option<ColabSession>>,
+    /// Prevent two callers from presenting the same one-time refresh token concurrently. The
+    /// server treats the second presentation as replay and revokes the session family.
+    auth_refresh_lock: Mutex<()>,
     last_error: Mutex<Option<String>>,
     store: Mutex<rusqlite::Connection>,
     /// Serialize publication per Session share. The periodic publisher, an explicit sync, and a
@@ -89,6 +92,8 @@ struct ColabSession {
     access_token: String,
     refresh_token: String,
     expires_in: i64,
+    #[serde(default)]
+    expires_at: i64,
     user: User,
 }
 #[derive(Clone, Deserialize, Serialize)]
@@ -419,6 +424,7 @@ impl AppState {
                 http: reqwest::Client::new(),
                 pending: Mutex::new(HashMap::new()),
                 session: Mutex::new(session),
+                auth_refresh_lock: Mutex::new(()),
                 last_error: Mutex::new(None),
                 store: Mutex::new(store),
                 session_sync_locks: Mutex::new(HashMap::new()),
@@ -854,17 +860,48 @@ async fn proxy_delete(
     Ok(StatusCode::NO_CONTENT)
 }
 async fn access_token(state: &AppState) -> Result<String, LocalError> {
-    state
+    let _refresh_guard = state.inner.auth_refresh_lock.lock().await;
+    let current = state
         .inner
         .session
         .lock()
         .await
-        .as_ref()
-        .map(|session| session.access_token.clone())
+        .clone()
         .ok_or_else(|| LocalError {
             status: StatusCode::UNAUTHORIZED,
             message: "Sign in first".to_owned(),
-        })
+        })?;
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_err(LocalError::internal)?
+        .as_secs() as i64;
+    if current.expires_at > now + 60 {
+        return Ok(current.access_token);
+    }
+    let response = state
+        .inner
+        .http
+        .post(format!(
+            "{}/v1/auth/session/refresh",
+            state.inner.server_url
+        ))
+        .json(&serde_json::json!({"refreshToken": current.refresh_token}))
+        .send()
+        .await
+        .map_err(LocalError::internal)?;
+    if !response.status().is_success() {
+        if response.status() == reqwest::StatusCode::UNAUTHORIZED {
+            *state.inner.session.lock().await = None;
+        }
+        return Err(remote_error(response).await);
+    }
+    let rotated: ColabSession = response.json().await.map_err(LocalError::internal)?;
+    // Persist before publishing in memory: after a crash the old token is already consumed, while
+    // the newly stored pair remains recoverable when Local Core restarts.
+    auth::save_account(state, &rotated).await?;
+    let token = rotated.access_token.clone();
+    *state.inner.session.lock().await = Some(rotated);
+    Ok(token)
 }
 async fn proxy_json(response: reqwest::Response) -> Result<Json<Vec<Channel>>, LocalError> {
     if !response.status().is_success() {

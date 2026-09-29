@@ -135,7 +135,7 @@ type Organization = {
 };
 type AddMemberResult = {
   status: "joined" | "invited";
-  emailDelivery: "not_required" | "not_configured" | "sent";
+  emailDelivery: "not_required" | "queued";
 };
 type InstallationStatus = {
   installed: boolean;
@@ -647,9 +647,7 @@ function App() {
       setNotice(
         result.status === "joined"
           ? "Member added to this Channel."
-          : result.emailDelivery === "sent"
-            ? "Invitation email sent."
-            : "Invitation created, but email delivery is not configured.",
+          : "Invitation queued for delivery.",
       );
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : String(reason));
