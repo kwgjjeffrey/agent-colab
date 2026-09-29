@@ -1,6 +1,6 @@
 {
   "name": "@colab/electron-shell",
-  "version": "0.1.17-dev",
+  "version": "0.1.18-dev",
   "private": true,
   "main": "electron/main.cjs",
   "scripts": { "dev": "COLAB_UI_DEV_URL=http://127.0.0.1:1420 electron .", "build": "electron-builder --dir", "check": "node --check electron/main.cjs && node --check electron/preload.cjs && node --check electron/windows-bootstrap.cjs && node --check scripts/prepare-windows-bootstrap.cjs", "test": "node --test electron/*.test.cjs" },
