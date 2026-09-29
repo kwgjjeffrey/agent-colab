@@ -283,6 +283,14 @@ Windows 首版采用 `%LOCALAPPDATA%\\AgentColab`、目录 junction 和用户级
 - [x] Publish GUI `0.1.30-dev` in release channel `0.1.47-dev`; all six platform artifacts passed public R2 size and SHA-256 readback verification.
 - [x] Create public repository `kwgjjeffrey/agent-colab`; mirror ten descriptively named installers/artifacts in GitHub prerelease `v0.1.47-dev` and verify anonymous manifest hash plus Windows executable range download.
 
+### T2.6 Windows launcher startup recovery (in progress)
+
+- [x] Identify the silent failure: the portable Electron launcher rejected startup when Local Core discovery was absent, but a GUI process had neither a console nor a top-level error dialog.
+- [x] Ask Windows Task Scheduler to start the setup-owned Core task before discovery, without moving lifecycle/configuration ownership into Electron.
+- [x] Persist startup diagnostics under the Agent Colab application-data directory and show a native dialog linking to installation guidance.
+- [x] Build and publish Electron `0.1.16-dev` in release `0.1.48-dev`; verify the packaged ASAR contains the corrected source and complete R2 public size/SHA-256 readback for both Windows and macOS artifacts.
+- [ ] Validate corrected startup, Task Scheduler activation, and diagnostic dialog on a real Windows machine.
+
 ## 已删除的工作
 
 - `git2`/libgit2 替换验证：不再为实现纯度替换已验证的 Git CLI；真实跨平台问题出现时另建分发任务；
