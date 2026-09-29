@@ -299,6 +299,8 @@ Windows 首版采用 `%LOCALAPPDATA%\\AgentColab`、目录 junction 和用户级
 - [x] Build Electron `0.1.17-dev`, inspect the packaged Windows ASAR and embedded seed resources, then publish release `0.1.49-dev` to R2 with complete public size/SHA-256 readback. GitHub mirror follows the source commit/tag below.
 - [ ] Validate first-run setup and launch on a clean Windows account.
 
+`0.1.17-dev` 的首次自举仍错误地要求终端用户选择 Google OAuth JSON，因此不作为可验收桌面入口。`0.1.18-dev` 已把官方 Desktop OAuth client 改为 ignored release configuration 注入的打包资源，终端用户只执行登录；开源 fork 可在自己的发布环境替换该配置。release `0.1.50-dev` 已通过 R2 全量公网 size/SHA-256 回读，待 Windows 实机验收。
+
 ## 已删除的工作
 
 - `git2`/libgit2 替换验证：不再为实现纯度替换已验证的 Git CLI；真实跨平台问题出现时另建分发任务；

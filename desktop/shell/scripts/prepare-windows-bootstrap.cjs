@@ -5,6 +5,21 @@ const crypto = require('node:crypto')
 
 const repo = path.resolve(__dirname, '../../..')
 const output = path.join(repo, 'desktop/shell/bootstrap/windows')
+const localConfig = path.join(repo, 'packaging/.env.local')
+function configValue(name) {
+  if (process.env[name]) return process.env[name]
+  if (!fs.existsSync(localConfig)) return null
+  const line = fs.readFileSync(localConfig, 'utf8').split(/\r?\n/).find(value => value.startsWith(`${name}=`))
+  return line ? line.slice(name.length + 1).replace(/^['"]|['"]$/g, '') : null
+}
+const oauthSource = configValue('COLAB_DESKTOP_GOOGLE_OAUTH_CREDENTIALS_FILE')
+if (!oauthSource || !fs.existsSync(oauthSource)) {
+  throw new Error('Set COLAB_DESKTOP_GOOGLE_OAUTH_CREDENTIALS_FILE to the official Google Desktop OAuth client JSON')
+}
+const oauth = JSON.parse(fs.readFileSync(oauthSource, 'utf8'))
+if (!oauth.installed?.client_id || !oauth.installed?.client_secret) {
+  throw new Error('COLAB_DESKTOP_GOOGLE_OAUTH_CREDENTIALS_FILE is not a Google Desktop OAuth client JSON')
+}
 const readVersion = relative => fs.readFileSync(path.join(repo, relative), 'utf8').trim()
 const versions = {
   release: readVersion('VERSION'),
@@ -20,6 +35,10 @@ const inputs = [
 
 fs.rmSync(output, { recursive: true, force: true })
 fs.mkdirSync(output, { recursive: true })
+// OAuth desktop client credentials are distribution configuration, not end-user input. The
+// ignored source path keeps an open-source fork independent while the packaged build remains
+// self-contained. Installed-app client secrets are not treated as confidential by OAuth.
+fs.copyFileSync(oauthSource, path.join(output, 'google-oauth.json'))
 const artifacts = {}
 for (const [name, relative] of inputs) {
   const source = path.join(repo, relative)

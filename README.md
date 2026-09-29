@@ -32,7 +32,7 @@ macOS builds are currently ad-hoc signed and not notarized. The installer applie
 
 ### Windows
 
-For the desktop path, download and run `Colab-*-x64.exe`. On first launch it asks for a Google Desktop OAuth client JSON, installs the bundled Local Core, browser UI, and Agent Colab Skill for the current Windows account, registers Local Core to start at sign-in, and then opens Colab. The Windows executable is currently unsigned, so Windows may show a SmartScreen warning during this alpha phase.
+For the desktop path, download and run `Colab-*-x64.exe`. On first launch it installs the bundled Local Core, browser UI, and Agent Colab Skill for the current Windows account, registers Local Core to start at sign-in, and then opens Colab. Sign-in configuration is part of the official build; end users do not provide OAuth configuration files. The Windows executable is currently unsigned, so Windows may show a SmartScreen warning during this alpha phase.
 
 For a headless or Skill-first installation, download `colab-install.ps1`, then run PowerShell:
 

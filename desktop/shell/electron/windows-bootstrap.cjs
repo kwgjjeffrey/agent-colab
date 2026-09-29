@@ -50,25 +50,20 @@ async function ensureWindowsInstallation({ dialog, applicationRoot, resourcesPat
     type: 'info',
     title: 'Set up Agent Colab',
     message: 'Agent Colab will install its Local Core, browser interface, and Codex Skill for this Windows account.',
-    detail: 'Select the Google Desktop OAuth JSON when prompted. Components can update independently after setup.',
+    detail: 'The official desktop build includes its sign-in configuration. Components can update independently after setup.',
     buttons: ['Continue', 'Cancel'],
     defaultId: 0,
     cancelId: 1,
     noLink: true,
   })
   if (consent.response !== 0) throw new Error('Agent Colab setup was canceled')
-  const selection = await dialog.showOpenDialog({
-    title: 'Choose Google Desktop OAuth credentials',
-    properties: ['openFile'],
-    filters: [{ name: 'JSON', extensions: ['json'] }],
-  })
-  if (selection.canceled || !selection.filePaths[0]) throw new Error('Google Desktop OAuth credentials are required')
-  const credentialsPayload = JSON.parse(await fs.readFile(selection.filePaths[0], 'utf8'))
+  const seedRoot = path.join(resourcesPath, 'bootstrap-windows')
+  const bundledCredentials = path.join(seedRoot, 'google-oauth.json')
+  const credentialsPayload = JSON.parse(await fs.readFile(bundledCredentials, 'utf8'))
   if (!credentialsPayload.installed?.client_id || !credentialsPayload.installed?.client_secret) {
-    throw new Error('The selected file is not a Google Desktop OAuth client JSON')
+    throw new Error('The official sign-in configuration in this build is invalid')
   }
 
-  const seedRoot = path.join(resourcesPath, 'bootstrap-windows')
   const metadata = JSON.parse(await fs.readFile(path.join(seedRoot, 'bootstrap.json'), 'utf8'))
   for (const [name, expected] of Object.entries(metadata.artifacts)) {
     await verify(path.join(seedRoot, name), expected)
@@ -92,7 +87,7 @@ async function ensureWindowsInstallation({ dialog, applicationRoot, resourcesPat
   await fs.mkdir(configRoot, { recursive: true })
   await fs.mkdir(dataRoot, { recursive: true })
   const credentials = path.join(configRoot, 'google-oauth.json')
-  await fs.copyFile(selection.filePaths[0], credentials)
+  await fs.copyFile(bundledCredentials, credentials)
   const runner = path.join(applicationRoot, 'run-core.cmd')
   const discovery = path.join(applicationRoot, 'discovery.json')
   const setup = path.join(skillRoot, 'setup', 'colab-setup')

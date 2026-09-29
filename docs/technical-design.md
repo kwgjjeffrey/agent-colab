@@ -580,7 +580,7 @@ flowchart LR
 | 组件 | shadcn/ui + Radix primitives | 保持低定制成本，线框到正式 UI 可渐进演进 |
 | 测试 | Vitest + Testing Library；Playwright 做关键 smoke | 单元、组件与端到端职责分开 |
 
-Shell 和 GUI 都不引入数据库、远端 SDK 或同步实现。Electron main process 只负责窗口、受限 IPC、deep-link 转发，以及 Windows 桌面路径的首次安装编排；业务调用全部经过 `local/api`。Windows Shell 内置一套经过哈希校验的兼容 Core/GUI/Skill 种子版本，首次双击时安装到当前用户应用数据目录、注册并启动 Local Core，最后打开由 Core 托管的同一 GUI。安装完成后，GUI、Core 与 Skill 的检查和更新仍交给统一 setup，Electron 不参与后台轮询或业务生命周期。
+Shell 和 GUI 都不引入数据库、远端 SDK 或同步实现。Electron main process 只负责窗口、受限 IPC、deep-link 转发，以及 Windows 桌面路径的首次安装编排；业务调用全部经过 `local/api`。Windows Shell 内置一套经过哈希校验的兼容 Core/GUI/Skill 种子版本及官方发行渠道的 Desktop OAuth client 配置，首次双击时安装到当前用户应用数据目录、注册并启动 Local Core，最后打开由 Core 托管的同一 GUI。OAuth client 是发行方构建配置，不是终端用户选择的本地文件；开源 fork 通过 ignored build configuration 提供自己的 client。安装完成后，GUI、Core 与 Skill 的检查和更新仍交给统一 setup，Electron 不参与后台轮询或业务生命周期。
 
 ### 11.2 Local Core artifact
 
