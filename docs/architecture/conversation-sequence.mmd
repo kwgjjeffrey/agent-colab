@@ -1,0 +1,31 @@
+sequenceDiagram
+  autonumber
+  participant G as GUI
+  participant C as Requester Local Core
+  participant S as Colab Server
+  participant M as Matrix Synapse
+  participant O as Owner Local Core
+  participant P as Provider runtime
+
+  G->>C: Send @Agent with selected messages and context refs
+  C->>S: Create Agent Request
+  S->>S: Check membership, blueprint policy and context access
+  S->>M: Emit request event into mapped room
+  M-->>C: Incremental room sync
+
+  alt owner approval required
+    S->>M: Emit awaiting approval state
+    O->>S: Approve request by request id
+  end
+
+  alt runtime offline
+    S->>M: Emit awaiting runtime state
+  end
+
+  O->>S: Claim authorized request with short lease
+  S-->>O: Trigger context plus request-bound receipt
+  O->>P: Resume conversation-specific provider session
+  P->>O: Progress or final summary
+  O->>S: Report with request-bound receipt
+  S->>M: Emit state/result event with reply relation
+  M-->>G: Incremental room sync

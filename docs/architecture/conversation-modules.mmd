@@ -1,0 +1,24 @@
+flowchart LR
+  GUI[Desktop GUI]
+  Skill[Agent Colab Skill]
+  Core[Local Core]
+  Provider[Codex / Claude Code / MyFlicker]
+  Server[Colab Server]
+  PG[(Colab PostgreSQL)]
+  AS[Matrix Application Service adapter]
+  Matrix[Matrix Synapse]
+  MDB[(Matrix store)]
+
+  GUI -->|Local API| Core
+  Skill -->|Local API| Core
+  Core -->|HTTPS: blueprint, request, policy| Server
+  Core -->|Matrix Client-Server sync/send| Matrix
+  Server --> PG
+  Server --> AS
+  AS -->|provision room/user; emit custom events| Matrix
+  Matrix --> MDB
+  Core -->|claim authorized request| Server
+  Core -->|provider-native session| Provider
+  Provider -->|request-bound report command| Core
+  Core -->|progress/final| Server
+  Server -->|Application Service event| Matrix

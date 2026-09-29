@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="500" viewBox="0 0 1100 500">
+<defs><marker id="a" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0L8 4L0 8Z" fill="#555"/></marker><style>text{font-family:system-ui,sans-serif;fill:#222}.t{font-size:15px;font-weight:700}.f{font-size:12px}.b{fill:#fff;stroke:#777;stroke-width:1.5}.l{stroke:#555;stroke-width:1.5;marker-end:url(#a);fill:none}</style></defs><rect width="1100" height="500" fill="#fafaf8"/>
+<rect class="b" x="35" y="75" width="160" height="65" rx="8"/><text class="t" x="60" y="105">Desktop GUI</text><text class="f" x="60" y="125">presentation only</text>
+<rect class="b" x="35" y="210" width="160" height="65" rx="8"/><text class="t" x="55" y="240">Colab Skill</text><text class="f" x="55" y="260">agent scaffold</text>
+<rect class="b" x="280" y="135" width="190" height="100" rx="8"/><text class="t" x="320" y="165">Local Core</text><text class="f" x="300" y="188">Matrix sync + Local API</text><text class="f" x="300" y="208">runtime claim + binding</text>
+<rect class="b" x="280" y="335" width="190" height="70" rx="8"/><text class="t" x="300" y="365">Provider runtime</text><text class="f" x="300" y="385">per-conversation session</text>
+<rect class="b" x="570" y="55" width="210" height="105" rx="8"/><text class="t" x="615" y="85">Colab Server</text><text class="f" x="590" y="108">blueprint / policy / request</text><text class="f" x="590" y="128">authorization / lease</text>
+<rect class="b" x="570" y="235" width="210" height="80" rx="8"/><text class="t" x="595" y="265">Matrix AS adapter</text><text class="f" x="595" y="288">provision + emit events</text>
+<rect class="b" x="875" y="135" width="185" height="95" rx="8"/><text class="t" x="910" y="165">Matrix Synapse</text><text class="f" x="900" y="188">room / member / message</text><text class="f" x="900" y="208">history / incremental sync</text>
+<path class="l" d="M195 108L280 160"/><path class="l" d="M195 242L280 205"/><path class="l" d="M470 165L570 115"/><path class="l" d="M470 195L875 180"/><path class="l" d="M675 160V235"/><path class="l" d="M780 275L875 215"/><path class="l" d="M375 235V335"/><path class="l" d="M375 335V235"/>
+</svg>

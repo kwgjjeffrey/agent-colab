@@ -65,7 +65,7 @@ declare global {
       isElectron: boolean;
       openExternal(url: string): Promise<void>;
       choosePath(options: {
-        directory: boolean;
+        directory?: boolean;
         title: string;
       }): Promise<string | null>;
       onDeepLink(callback: (urls: string[]) => void): () => void;
@@ -80,10 +80,9 @@ const host = window.colabHost ?? {
   openExternal: async (url: string) => {
     window.open(url, "_blank", "noopener,noreferrer");
   },
-  choosePath: async (options: { directory: boolean; title: string }) => {
-    const response = await trackedFetch(
-      `/v1/system/choose-path?directory=${options.directory}`,
-    );
+  choosePath: async (options: { directory?: boolean; title: string }) => {
+    const suffix = options.directory === undefined ? "" : `?directory=${options.directory}`;
+    const response = await trackedFetch(`/v1/system/choose-path${suffix}`);
     if (!response.ok) throw new Error(await response.text());
     return ((await response.json()) as { path: string | null }).path;
   },
@@ -544,12 +543,21 @@ function App() {
   // Files UI stays deliberately thin: it selects user intent and delegates scanning, Git pack
   // generation, persistence and synchronization to the GUI-independent Local Core API.
   // This keeps the same workflow available to the future Python Skill when Desktop is not open.
-  async function chooseFiles(directory: boolean) {
+  async function chooseFiles(directory?: boolean) {
+    // Files is one product operation. Electron and Local Core are host adapters for the same
+    // unified intent; neither distinction is exposed as a second UI decision.
+    if (directory === undefined && !host.isElectron) {
+      const response = await trackedFetch("/v1/system/choose-path");
+      if (!response.ok) throw new Error(await response.text());
+      return ((await response.json()) as { path: string | null }).path;
+    }
     return host.choosePath({
       directory,
-      title: directory
-        ? "Share a folder with this Channel"
-        : "Share a file with this Channel",
+      title: directory === true
+        ? "Choose a folder"
+        : directory === false
+          ? "Choose a file"
+          : "Choose a file or folder to share",
     });
   }
   async function shareFiles(path: string, syncExcludes: string[]) {

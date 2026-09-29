@@ -800,15 +800,67 @@ struct ChoosePathQuery {
 async fn choose_path(
     Query(query): Query<ChoosePathQuery>,
 ) -> Result<Json<serde_json::Value>, LocalError> {
-    let dialog = rfd::AsyncFileDialog::new();
-    let selected = if query.directory.unwrap_or(false) {
-        dialog.pick_folder().await
-    } else {
-        dialog.pick_file().await
+    let selected: Option<PathBuf> = match query.directory {
+        Some(true) => rfd::AsyncFileDialog::new()
+            .pick_folder()
+            .await
+            .map(|handle| handle.path().to_owned()),
+        Some(false) => rfd::AsyncFileDialog::new()
+            .pick_file()
+            .await
+            .map(|handle| handle.path().to_owned()),
+        None => pick_file_or_directory().await?,
     };
     Ok(Json(serde_json::json!({
-        "path": selected.map(|handle| handle.path().to_string_lossy().into_owned())
+        "path": selected.map(|path| path.to_string_lossy().into_owned())
     })))
+}
+
+/// Files has one product operation, regardless of whether the selected source is a file or a
+/// directory. rfd exposes those as two separate calls, so macOS uses NSOpenPanel directly with
+/// both capabilities enabled. Other platforms keep the same Local API contract while their
+/// unified picker adapter is completed; Electron supplies the combined native intent today.
+#[cfg(target_os = "macos")]
+async fn pick_file_or_directory() -> Result<Option<PathBuf>, LocalError> {
+    let path = tokio::task::spawn_blocking(|| {
+        let script = r#"ObjC.import('AppKit');
+const panel = $.NSOpenPanel.openPanel;
+panel.canChooseFiles = true;
+panel.canChooseDirectories = true;
+panel.allowsMultipleSelection = false;
+panel.canCreateDirectories = false;
+if (panel.runModal === $.NSModalResponseOK) {
+  console.log(ObjC.unwrap(panel.URL.path));
+}"#;
+        Command::new("/usr/bin/osascript")
+            .args(["-l", "JavaScript", "-e", script])
+            .output()
+    })
+    .await
+    .map_err(LocalError::internal)?
+    .map_err(LocalError::internal)?;
+    if !path.status.success() {
+        return Err(LocalError::internal(anyhow::anyhow!(
+            "Unified file picker failed: {}",
+            String::from_utf8_lossy(&path.stderr).trim()
+        )));
+    }
+    let path = String::from_utf8_lossy(&path.stdout).trim().to_owned();
+    if path.is_empty() {
+        Ok(None)
+    } else {
+        Ok(Some(PathBuf::from(path)))
+    }
+}
+
+#[cfg(not(target_os = "macos"))]
+async fn pick_file_or_directory() -> Result<Option<PathBuf>, LocalError> {
+    // Browser-hosted GUI on non-macOS will move to the same combined platform adapter. Keep a
+    // single endpoint and never re-expose the source kind as a second product decision.
+    Ok(rfd::AsyncFileDialog::new()
+        .pick_file()
+        .await
+        .map(|handle| handle.path().to_owned()))
 }
 async fn current_user_id(state: &AppState) -> Result<String, LocalError> {
     state

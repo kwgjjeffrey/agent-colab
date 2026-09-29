@@ -213,6 +213,8 @@ Agent 的能力与偏好配置，包括 system instruction、skills，以及通�
 
 ### 14.2 Conversation / DM：值得继续设计
 
+产品交互、经典 IM 选型、ER、模块边界与关键时序的当前评审稿见 [conversation-design.md](conversation-design.md)；低保真见 [conversation-wireframe.html](../.trial/interaction-wireframe/conversation-wireframe.html)。
+
 人和人的访谈、方案讨论与即时判断本身就是重要上下文；同时，远程请求另一个人的 agent 在其来源设备上工作，是“共享上下文”自然延伸出的协作方式。因此 DM 和群聊有产品必要性，但其目标不是复制完整 IM，而是闭合两个循环：
 
 1. 人类对话可以直接成为 agent 的上下文；

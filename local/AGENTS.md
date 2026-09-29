@@ -1,5 +1,14 @@
 # Local Core artifact
 
+The Files picker is one product operation. Its default mode must allow selecting either one file or
+one directory and return only the selected path; file-only and directory-only modes exist solely
+for capabilities such as Skill source selection that genuinely require a directory.
+
+Conversation/DM is still design-only. Local Core will own the authenticated Matrix client sync,
+expose it to GUI through Local API, claim authorized Agent Requests from Colab Server, and map each
+Conversation/blueprint binding to one provider-native session. Presence is never authority. Read
+docs/conversation-design.md before implementing this boundary.
+
 Local Core is the only local business process and SQLite writer. It must continue working without Electron or GUI. Desktop and Skill are clients of the same Local API and must observe the same authorization and state.
 
 Local Core also hosts the active Desktop GUI static resources on its loopback origin. Browser-hosted GUI capabilities that require an absolute local path use Local Core's native picker endpoint; Electron may adapt the same intent but is never required.

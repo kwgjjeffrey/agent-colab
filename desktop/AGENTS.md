@@ -1,5 +1,14 @@
 # Desktop artifacts
 
+Files has exactly one visible source-selection action in both Channel Files and Quick Share. Never
+reintroduce a file-versus-folder dropdown: the unified picker returns the selected path and Local
+Core determines whether it is a file or directory.
+
+Conversation/DM is still design-only. Its application-level entry, three-pane layout, blueprint
+settings, message selection/forwarding, Agent Request state card and reply/source references are
+specified in docs/interaction.md section 6 and docs/conversation-design.md. The GUI continues to
+call Local Core only; it must not connect directly to Matrix or Colab Server.
+
 `desktop/ui` is the required, separately versioned React/Vite resource artifact. `desktop/shell` is an optional, infrequently updated Electron launcher for users who want an ordinary App entry. The launcher may own its window, constrained IPC and deep-link forwarding, but it is not the installation/update authority and must never become a requirement for Files or Agent workflows.
 
 Electron resolves the Local Core GUI origin from the protected discovery file once when opening a window. It must not bundle, activate, roll back, independently select GUI resources, or poll discovery; doing so would create a second GUI/update authority and make browser/App behavior diverge.
@@ -24,7 +33,7 @@ Files drill-down UI lives in `ui/src/features/files/FileExplorer.tsx`; format re
 
 The Share Session dialog opens before data loading and searches the Local Core metadata catalog after a short input debounce. Results show the coding Agent and session/thread ID so similarly named sessions remain distinguishable.
 
-Files rows optimize for human attribution, not Git internals: show contributor avatar/name and `(me)` for the current contributor, never expose root OIDs as versions, keep secondary actions hidden until hover/focus, and render Withdraw as destructive. File and folder registration share one visible entry point even if the platform picker needs a second choice internally.
+Files rows optimize for human attribution, not Git internals: show contributor avatar/name and `(me)` for the current contributor, never expose root OIDs as versions, keep secondary actions hidden until hover/focus, and render Withdraw as destructive. File and folder registration share one visible entry point; the UI must never re-expose the source kind as a second choice.
 
 Files scope preview is a low-frequency Local Core operation. React must request it on demand and must not invent a local index or cached exclusion state. Local Core reads and writes the contributor shadow Git `info/exclude` directly.
 

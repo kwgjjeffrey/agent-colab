@@ -4,13 +4,6 @@ import { Button } from "@/components/ui/button";
 import { trackedFetch } from "@/api/request-activity";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
   Empty,
   EmptyDescription,
   EmptyHeader,
@@ -49,7 +42,7 @@ export type FileShare = {
 type Props = {
   shares: FileShare[];
   busy: boolean;
-  onChoose: (directory: boolean) => Promise<string | null>;
+  onChoose: (directory?: boolean) => Promise<string | null>;
   onShare: (path: string, syncExcludes: string[]) => Promise<void>;
   onEnsureLocal: (share: FileShare) => Promise<FileShare>;
   onWithdraw: (share: FileShare) => void;
@@ -165,8 +158,8 @@ Treat localPath as read-only context. Use your file tools to read only the files
     }
   }
 
-  async function choose(directory: boolean) {
-    const path = await onChoose(directory);
+  async function choose() {
+    const path = await onChoose();
     if (path) {
       setScopeShareId(undefined);
       await inspect(path, [], true);
@@ -230,17 +223,9 @@ Treat localPath as read-only context. Use your file tools to read only the files
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-5 py-6">
       <div className="flex justify-end">
-        <DropdownMenu>
-          <DropdownMenuTrigger render={<Button disabled={busy} />}>
-            <PlusIcon /> Share files
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuGroup>
-              <DropdownMenuItem onClick={() => void choose(false)}>Choose a file</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => void choose(true)}>Choose a folder</DropdownMenuItem>
-            </DropdownMenuGroup>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <Button disabled={busy} onClick={() => void choose()}>
+          <PlusIcon /> Share files
+        </Button>
       </div>
       {shares.length === 0 ? (
         <Empty className="min-h-[60vh]">
