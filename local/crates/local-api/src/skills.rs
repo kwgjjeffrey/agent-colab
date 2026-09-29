@@ -202,7 +202,10 @@ async fn refresh_catalog(state: &AppState) -> anyhow::Result<()> {
             .collect::<Vec<_>>()
     };
     for path in stale {
-        store.execute("delete from local_skill_catalog where source_path=?1", [path])?;
+        store.execute(
+            "delete from local_skill_catalog where source_path=?1",
+            [path],
+        )?;
     }
     for (path, mut targets) in discovered {
         targets.sort();
@@ -672,7 +675,9 @@ pub(super) async fn ensure_installed(
     };
     // A Shared Item's display name is user-facing and may differ from the package identity.
     // Agent installation must use the canonical SKILL.md name so native loaders find it.
-    let name = read_skill_metadata(&source).map_err(LocalError::internal)?.0;
+    let name = read_skill_metadata(&source)
+        .map_err(LocalError::internal)?
+        .0;
     let destination = root.join(files::safe_path_component(&name));
     let prior = {
         let store = state.inner.store.lock().await;

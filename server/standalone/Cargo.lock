@@ -239,6 +239,7 @@ dependencies = [
  "colab-server-email",
  "colab-server-persistence",
  "dotenvy",
+ "futures-util",
  "hex",
  "reqwest",
  "serde",
@@ -287,8 +288,10 @@ dependencies = [
  "anyhow",
  "hex",
  "serde",
+ "serde_json",
  "sha2 0.10.9",
  "sqlx",
+ "thiserror",
  "uuid",
 ]
 
@@ -598,6 +601,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "53c0fa8157de1303bfffdaa1cc2a673bfffb60102f76b0ef4441659124373fed"
 
 [[package]]
+name = "futures-macro"
+version = "0.3.34"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9fb9654ba8355388abeb8dcb4fc62f511300867002afc858860463bdd9fe0c44"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 3.0.6",
+]
+
+[[package]]
 name = "futures-sink"
 version = "0.3.34"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -617,6 +631,7 @@ checksum = "0d50a92467f8ba5dd6e3ee5d4bd04d73ab2e4e1c44474a0674821dfce14b79bc"
 dependencies = [
  "futures-core",
  "futures-io",
+ "futures-macro",
  "futures-sink",
  "futures-task",
  "memchr",

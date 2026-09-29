@@ -1,6 +1,6 @@
 interface:
   display_name: "Agent Colab"
-  short_description: "Browse, share, read, and withdraw Colab context"
+  short_description: "Browse, share, transfer, and consume Colab context"
   brand_color: "#DFFF00"
   default_prompt: "Use $agent-colab to browse or manage the relevant Channels, Files, Sessions, and members."
 

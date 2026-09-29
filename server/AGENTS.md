@@ -4,6 +4,8 @@
 
 The server registers organizations, members, Channels, Shared Items, revisions, sessions, and authorization. Blob content is stored behind a storage port. PostgreSQL migrations are append-only after deployment.
 
+Quick Share is implemented by `quick_transfers` / `quick_transfer_items` and the isolated API/persistence modules named `transfers.rs`. It is not a temporary Channel and never creates Organization membership. Upload, read, and revoke capabilities are distinct; PostgreSQL stores only SHA-256 hashes. Item bodies stream directly to immutable Blob files with bounded item/transfer sizes. Finalize freezes the manifest, while expiry/revocation makes it unreadable immediately and the background GC removes Blob files before metadata.
+
 Readable Channel and Shared Item names are selectors, not unique database identities. Do not reject valid product names merely to simplify Agent routing. Local Core scopes resources by active account, active Organization and authorization; Browser narrows candidates using the complete descendant path and returns metadata plus precise UUID refs only when ambiguity remains.
 
 Shared Item list/read responses own remote attribution metadata used by both GUI and cached consumption: contributor display name, avatar, authoritative `updatedAt`, ownership capability and current root. Local Core may cache these values but must not invent empty timestamps or derive user identity from local paths.

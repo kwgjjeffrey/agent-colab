@@ -20,6 +20,8 @@ use tower_http::{
     timeout::TimeoutLayer,
 };
 
+mod transfers;
+
 #[derive(Clone)]
 struct AppState {
     database: Database,
@@ -119,6 +121,7 @@ async fn main() -> anyhow::Result<()> {
         .await
         .with_context(|| format!("bind Colab server to {}", config.address))?;
     println!("colab-server listening on http://{}", config.address);
+    transfers::spawn_expired_transfer_gc(database.clone(), config.blob_root.clone());
     axum::serve(
         listener,
         router(AppState {
@@ -128,7 +131,8 @@ async fn main() -> anyhow::Result<()> {
             email,
             public_url: config.public_url,
             blob_root: config.blob_root,
-        }),
+        })
+        .into_make_service_with_connect_info::<SocketAddr>(),
     )
     .with_graceful_shutdown(shutdown_signal())
     .await
@@ -136,7 +140,7 @@ async fn main() -> anyhow::Result<()> {
 }
 
 fn router(state: AppState) -> Router {
-    Router::new()
+    let standard = Router::new()
         .route("/health/live", get(live))
         .route("/health/ready", get(ready))
         .route("/v1/status", get(status))
@@ -211,13 +215,17 @@ fn router(state: AppState) -> Router {
             get(download_session_segment),
         )
         .route("/invitations/{token}", get(invitation_landing))
-        .with_state(state)
-        .layer(PropagateRequestIdLayer::x_request_id())
-        .layer(SetRequestIdLayer::x_request_id(MakeRequestUuid))
+        // Ordinary metadata calls must fail fast. Streaming transfer upload/download routes are
+        // merged outside this layer and own bounded byte limits instead of a wall-clock timeout.
         .layer(TimeoutLayer::with_status_code(
             StatusCode::REQUEST_TIMEOUT,
             Duration::from_secs(30),
-        ))
+        ));
+    standard
+        .merge(transfers::router())
+        .with_state(state)
+        .layer(PropagateRequestIdLayer::x_request_id())
+        .layer(SetRequestIdLayer::x_request_id(MakeRequestUuid))
         .layer(DefaultBodyLimit::max(256 * 1024 * 1024))
         .layer(CatchPanicLayer::new())
 }
@@ -720,53 +728,161 @@ async fn withdraw_file_share(
     }
 }
 
-async fn list_skill_shares(State(state): State<AppState>, headers: HeaderMap, Path(channel_id): Path<uuid::Uuid>) -> Result<Json<Vec<colab_server_persistence::SkillShare>>, ApiError> {
-    let user=authenticated_user(&state,&headers).await?;
-    state.database.list_skill_shares(user,channel_id).await.map_err(|_|ApiError::internal("skill_share_list_failed"))?.map(Json).ok_or_else(||ApiError::forbidden("channel_access_forbidden"))
+async fn list_skill_shares(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(channel_id): Path<uuid::Uuid>,
+) -> Result<Json<Vec<colab_server_persistence::SkillShare>>, ApiError> {
+    let user = authenticated_user(&state, &headers).await?;
+    state
+        .database
+        .list_skill_shares(user, channel_id)
+        .await
+        .map_err(|_| ApiError::internal("skill_share_list_failed"))?
+        .map(Json)
+        .ok_or_else(|| ApiError::forbidden("channel_access_forbidden"))
 }
 
-async fn create_skill_share(State(state): State<AppState>, headers: HeaderMap, Path(channel_id): Path<uuid::Uuid>, Json(request): Json<CreateSkillShareRequest>) -> Result<(StatusCode,Json<colab_server_persistence::SkillShare>),ApiError> {
-    let user=authenticated_user(&state,&headers).await?;
-    let name=request.name.trim();
-    if name.is_empty() || name.chars().count()>120 { return Err(ApiError::bad_request("invalid_skill_share_name")) }
-    let description=request.description.as_deref().map(str::trim).filter(|value|!value.is_empty());
-    if description.is_some_and(|value|value.chars().count()>500) { return Err(ApiError::bad_request("invalid_skill_description")) }
-    let share=state.database.create_skill_share(user,channel_id,name,description).await.map_err(|error| if colab_server_persistence::is_unique_violation(&error){ApiError::name_conflict("shared_item_name_conflict")}else{ApiError::internal("skill_share_creation_failed")})?.ok_or_else(||ApiError::forbidden("channel_access_forbidden"))?;
-    Ok((StatusCode::CREATED,Json(share)))
+async fn create_skill_share(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(channel_id): Path<uuid::Uuid>,
+    Json(request): Json<CreateSkillShareRequest>,
+) -> Result<(StatusCode, Json<colab_server_persistence::SkillShare>), ApiError> {
+    let user = authenticated_user(&state, &headers).await?;
+    let name = request.name.trim();
+    if name.is_empty() || name.chars().count() > 120 {
+        return Err(ApiError::bad_request("invalid_skill_share_name"));
+    }
+    let description = request
+        .description
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty());
+    if description.is_some_and(|value| value.chars().count() > 500) {
+        return Err(ApiError::bad_request("invalid_skill_description"));
+    }
+    let share = state
+        .database
+        .create_skill_share(user, channel_id, name, description)
+        .await
+        .map_err(|error| {
+            if colab_server_persistence::is_unique_violation(&error) {
+                ApiError::name_conflict("shared_item_name_conflict")
+            } else {
+                ApiError::internal("skill_share_creation_failed")
+            }
+        })?
+        .ok_or_else(|| ApiError::forbidden("channel_access_forbidden"))?;
+    Ok((StatusCode::CREATED, Json(share)))
 }
 
-async fn upload_skill_revision(State(state): State<AppState>, headers: HeaderMap, Path(share_id): Path<uuid::Uuid>, Query(query): Query<UploadRevisionQuery>, body: Bytes) -> Result<(StatusCode,Json<colab_server_persistence::FileRevision>),ApiError> {
-    let user=authenticated_user(&state,&headers).await?;
-    if !valid_oid(&query.root_oid) || query.parent_root_oid.as_deref().is_some_and(|oid|!valid_oid(oid)){return Err(ApiError::bad_request("invalid_git_oid"))}
+async fn upload_skill_revision(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(share_id): Path<uuid::Uuid>,
+    Query(query): Query<UploadRevisionQuery>,
+    body: Bytes,
+) -> Result<(StatusCode, Json<colab_server_persistence::FileRevision>), ApiError> {
+    let user = authenticated_user(&state, &headers).await?;
+    if !valid_oid(&query.root_oid)
+        || query
+            .parent_root_oid
+            .as_deref()
+            .is_some_and(|oid| !valid_oid(oid))
+    {
+        return Err(ApiError::bad_request("invalid_git_oid"));
+    }
     // Skill packages deliberately use the same opaque Git-pack transport as Files. The Server
     // authorizes and persists bytes but never parses SKILL.md or invents another version model.
-    let blob_key=uuid::Uuid::new_v4().simple().to_string();
-    let path=blob_path(&state.blob_root,&blob_key);
-    if let Some(parent)=path.parent(){tokio::fs::create_dir_all(parent).await.map_err(|_|ApiError::internal("blob_write_failed"))?}
-    let temporary=path.with_extension("uploading");
-    tokio::fs::write(&temporary,&body).await.map_err(|_|ApiError::internal("blob_write_failed"))?;
-    tokio::fs::rename(&temporary,&path).await.map_err(|_|ApiError::internal("blob_write_failed"))?;
-    match state.database.create_skill_revision(user,share_id,&query.root_oid,query.parent_root_oid.as_deref(),&blob_key,body.len() as i64).await.map_err(|_|ApiError::internal("skill_revision_creation_failed"))? {
-        Some(value)=>Ok((StatusCode::CREATED,Json(value))),
-        None=>{let _=tokio::fs::remove_file(path).await;Err(ApiError::conflict("skill_revision_conflict"))}
+    let blob_key = uuid::Uuid::new_v4().simple().to_string();
+    let path = blob_path(&state.blob_root, &blob_key);
+    if let Some(parent) = path.parent() {
+        tokio::fs::create_dir_all(parent)
+            .await
+            .map_err(|_| ApiError::internal("blob_write_failed"))?
+    }
+    let temporary = path.with_extension("uploading");
+    tokio::fs::write(&temporary, &body)
+        .await
+        .map_err(|_| ApiError::internal("blob_write_failed"))?;
+    tokio::fs::rename(&temporary, &path)
+        .await
+        .map_err(|_| ApiError::internal("blob_write_failed"))?;
+    match state
+        .database
+        .create_skill_revision(
+            user,
+            share_id,
+            &query.root_oid,
+            query.parent_root_oid.as_deref(),
+            &blob_key,
+            body.len() as i64,
+        )
+        .await
+        .map_err(|_| ApiError::internal("skill_revision_creation_failed"))?
+    {
+        Some(value) => Ok((StatusCode::CREATED, Json(value))),
+        None => {
+            let _ = tokio::fs::remove_file(path).await;
+            Err(ApiError::conflict("skill_revision_conflict"))
+        }
     }
 }
 
-async fn list_skill_revisions(State(state): State<AppState>, headers: HeaderMap, Path(share_id): Path<uuid::Uuid>) -> Result<Json<Vec<colab_server_persistence::FileRevision>>,ApiError>{
-    let user=authenticated_user(&state,&headers).await?;
-    state.database.list_skill_revisions(user,share_id).await.map_err(|_|ApiError::internal("skill_revision_list_failed"))?.map(Json).ok_or_else(||ApiError::forbidden("skill_share_access_forbidden"))
+async fn list_skill_revisions(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(share_id): Path<uuid::Uuid>,
+) -> Result<Json<Vec<colab_server_persistence::FileRevision>>, ApiError> {
+    let user = authenticated_user(&state, &headers).await?;
+    state
+        .database
+        .list_skill_revisions(user, share_id)
+        .await
+        .map_err(|_| ApiError::internal("skill_revision_list_failed"))?
+        .map(Json)
+        .ok_or_else(|| ApiError::forbidden("skill_share_access_forbidden"))
 }
 
-async fn download_skill_revision(State(state): State<AppState>, headers: HeaderMap, Path(revision_id): Path<uuid::Uuid>) -> Result<Response,ApiError>{
-    let user=authenticated_user(&state,&headers).await?;
-    let key=state.database.skill_revision_blob_key(user,revision_id).await.map_err(|_|ApiError::internal("skill_revision_lookup_failed"))?.ok_or_else(||ApiError::forbidden("skill_share_access_forbidden"))?;
-    let bytes=tokio::fs::read(blob_path(&state.blob_root,&key)).await.map_err(|_|ApiError::internal("blob_read_failed"))?;
-    Ok(([(header::CONTENT_TYPE,"application/x-git-packed-objects")],bytes).into_response())
+async fn download_skill_revision(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(revision_id): Path<uuid::Uuid>,
+) -> Result<Response, ApiError> {
+    let user = authenticated_user(&state, &headers).await?;
+    let key = state
+        .database
+        .skill_revision_blob_key(user, revision_id)
+        .await
+        .map_err(|_| ApiError::internal("skill_revision_lookup_failed"))?
+        .ok_or_else(|| ApiError::forbidden("skill_share_access_forbidden"))?;
+    let bytes = tokio::fs::read(blob_path(&state.blob_root, &key))
+        .await
+        .map_err(|_| ApiError::internal("blob_read_failed"))?;
+    Ok((
+        [(header::CONTENT_TYPE, "application/x-git-packed-objects")],
+        bytes,
+    )
+        .into_response())
 }
 
-async fn withdraw_skill_share(State(state): State<AppState>, headers: HeaderMap, Path(share_id): Path<uuid::Uuid>) -> Result<StatusCode,ApiError>{
-    let user=authenticated_user(&state,&headers).await?;
-    if state.database.withdraw_skill_share(user,share_id).await.map_err(|_|ApiError::internal("skill_share_withdraw_failed"))?{Ok(StatusCode::NO_CONTENT)}else{Err(ApiError::forbidden("skill_share_withdraw_forbidden"))}
+async fn withdraw_skill_share(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(share_id): Path<uuid::Uuid>,
+) -> Result<StatusCode, ApiError> {
+    let user = authenticated_user(&state, &headers).await?;
+    if state
+        .database
+        .withdraw_skill_share(user, share_id)
+        .await
+        .map_err(|_| ApiError::internal("skill_share_withdraw_failed"))?
+    {
+        Ok(StatusCode::NO_CONTENT)
+    } else {
+        Err(ApiError::forbidden("skill_share_withdraw_forbidden"))
+    }
 }
 
 async fn list_session_shares(
@@ -1070,6 +1186,15 @@ impl ApiError {
             status: StatusCode::SERVICE_UNAVAILABLE,
             code,
             message: "A required service is unavailable",
+            retryable: true,
+        }
+    }
+
+    fn too_many_requests(code: &'static str) -> Self {
+        Self {
+            status: StatusCode::TOO_MANY_REQUESTS,
+            code,
+            message: "Too many temporary transfers were created from this address",
             retryable: true,
         }
     }

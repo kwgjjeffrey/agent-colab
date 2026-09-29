@@ -183,6 +183,45 @@ paths:
       operationId: withdrawSkillShare
       responses:
         "204": { description: Owned Skill shared item withdrawn }
+  /v1/transfers:
+    post:
+      operationId: createQuickTransfer
+      summary: Create an anonymous, expiring capability-scoped transfer
+      responses:
+        "201": { description: Separate upload, read, and revoke capabilities }
+        "429": { description: Rolling anonymous creation limit exceeded }
+  /v1/transfers/{transferId}/items:
+    post:
+      operationId: addQuickTransferItem
+      summary: Register one Files, Session, or Skill item using the upload capability
+      responses:
+        "201": { description: Empty item registered for streaming upload }
+  /v1/transfers/{transferId}/items/{itemId}/content:
+    put:
+      operationId: uploadQuickTransferItem
+      summary: Stream one opaque item to immutable Blob storage
+      responses:
+        "204": { description: Item accepted, hashed, and committed }
+    get:
+      operationId: downloadQuickTransferItem
+      summary: Stream one item using the read capability
+      responses:
+        "200": { description: Opaque item bytes }
+  /v1/transfers/{transferId}/finalize:
+    post:
+      operationId: finalizeQuickTransfer
+      responses:
+        "204": { description: Fixed snapshot made readable }
+        "409": { description: One or more registered items are incomplete }
+  /v1/transfers/{transferId}:
+    get:
+      operationId: getQuickTransferManifest
+      responses:
+        "200": { description: Ordered fixed-snapshot manifest }
+    delete:
+      operationId: revokeQuickTransfer
+      responses:
+        "204": { description: Transfer revoked; Blob GC follows asynchronously }
 components:
   schemas:
     Organization:

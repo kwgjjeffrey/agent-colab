@@ -8,6 +8,7 @@ import {
   LoaderCircleIcon,
   PlusIcon,
   RefreshCwIcon,
+  Share2Icon,
   SettingsIcon,
   Trash2Icon,
 } from "lucide-react";
@@ -49,6 +50,7 @@ import { FilesView, type FileShare } from "@/features/files/FilesView";
 import type { AgentTarget } from "@/features/agent/AgentPromptDialog";
 import { SessionsView, type SessionShare } from "@/features/sessions/SessionsView";
 import { SkillsView } from "@/features/skills/SkillsView";
+import { QuickShareDialog } from "@/features/transfers/QuickShareDialog";
 import {
   Tooltip,
   TooltipContent,
@@ -157,6 +159,7 @@ function App() {
   const [busy, setBusy] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [showCreateOrganization, setShowCreateOrganization] = useState(false);
+  const [showQuickShare, setShowQuickShare] = useState(false);
   const [error, setError] = useState<string>();
   const [notice, setNotice] = useState<string>();
   const [members, setMembers] = useState<Member[]>([]);
@@ -899,6 +902,11 @@ function App() {
           </Popover>
         </aside>
         <section className="min-w-0 px-10 py-8">
+          <div className="mb-4 flex justify-end">
+            <Button variant="outline" onClick={() => setShowQuickShare(true)}>
+              <Share2Icon />Share my context
+            </Button>
+          </div>
           {initialLoading ? (
             <div className="flex min-h-[80vh] items-center justify-center" role="status">
               <div className="flex flex-col items-center gap-3 text-muted-foreground">
@@ -1003,6 +1011,13 @@ function App() {
             </p>
           )}
         </section>
+        <QuickShareDialog
+          open={showQuickShare}
+          defaultAgent={installation?.defaultAgent ?? "codex"}
+          installedAgents={installation?.targets ?? {}}
+          onChoose={chooseFiles}
+          onClose={() => setShowQuickShare(false)}
+        />
         <Dialog open={showCreate} onOpenChange={setShowCreate}>
           <DialogContent>
             <form onSubmit={(event) => void createChannel(event)}>

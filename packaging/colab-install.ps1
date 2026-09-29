@@ -1,11 +1,11 @@
 param(
-  [Parameter(Mandatory = $true)][string]$GoogleCredentials,
+  [string]$GoogleCredentials,
   [ValidateSet("codex", "claude", "myflicker")][string[]]$Agent = @("codex"),
   [string]$Manifest = "https://artifacts.agent-colab.zhiyuanwangluo.online/channels/stable.json"
 )
 
 $ErrorActionPreference = "Stop"
-if (-not (Test-Path -LiteralPath $GoogleCredentials -PathType Leaf)) {
+if ($GoogleCredentials -and -not (Test-Path -LiteralPath $GoogleCredentials -PathType Leaf)) {
   throw "GoogleCredentials must point to the Google Desktop OAuth JSON file"
 }
 foreach ($command in @("py", "ssh-keygen", "git")) {
@@ -36,7 +36,8 @@ try {
   Expand-Archive -LiteralPath $archive -DestinationPath $expanded
   $setup = Get-ChildItem -Path $expanded -Recurse -File -Filter "colab-setup" | Where-Object { $_.FullName -match '[\\/]setup[\\/]colab-setup$' } | Select-Object -First 1
   if (-not $setup) { throw "Colab Skill setup entry is missing" }
-  $arguments = @($setup.FullName, "install", "--manifest", $Manifest, "--google-credentials", (Resolve-Path $GoogleCredentials).Path)
+  $arguments = @($setup.FullName, "install", "--manifest", $Manifest)
+  if ($GoogleCredentials) { $arguments += @("--google-credentials", (Resolve-Path $GoogleCredentials).Path) }
   foreach ($target in $Agent) { $arguments += @("--agent", $target) }
   & py @arguments
   if ($LASTEXITCODE -ne 0) { throw "Agent Colab setup failed" }
