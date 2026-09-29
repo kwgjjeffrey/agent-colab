@@ -52,10 +52,10 @@
 
 ## 3. 接下来的执行顺序
 
-1. **Files 预览收口**：发布并真人验收全窗树/内容预览，以及文本、图片、PDF、DOCX、XLSX 与不支持格式降级。
-2. **Quick Share**：先做 capability/匿名滥用/GC 纵切，再接三类来源、bootstrap 和 GUI；不能复用 Channel membership 走捷径。
-3. **可靠性收口**：Google refresh rotation 已完成；继续 Files 存储治理、邀请 outbox、健康检查与故障注入。微信开放平台继续等待材料。
-4. **Windows 实机**：完成干净账户首次启动、Google 登录、自启、更新和三类共享闭环。
+1. **真人视觉验收**：Files 全窗树/内容预览，以及文本、图片、PDF、DOCX、XLSX 与不支持格式降级；实现和发布链路已经通过，不替用户标记视觉结论。
+2. **Quick Share 剩余黑盒**：干净未安装起点 bootstrap、自然到期/超额/GC；主体能力与发布已通过。
+3. **外部条件项**：邮件任意公网收件人送达等待 VPS 出站 25/rDNS；Windows 干净账户实机等待设备；微信登录等待开放平台材料。
+4. **后续加固**：健康检查与故障注入；Supabase 仅在路线恢复时运行同一契约套件，不进入当前 standalone 主线。
 
 ## 4. 当前确定原则
 
