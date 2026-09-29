@@ -473,9 +473,9 @@ Session connector 无损读取来源原始文件或 API 输出。大文件按稳
 
 已落地实现明确区分三个位置：贡献端 SQLite 的 `last_byte_offset` 是原始来源同步游标；服务端 `current_snapshot_id` 固定一条不可变 segment 链；Reader 的 opaque cursor 绑定该 snapshot，只负责 turns 分页。正常追加只上传来源游标之后、且以换行结束的完整 JSONL 记录；来源被截断时从 0 建立新基线。每次同步先冻结本轮来源长度，以约 8 MiB 为目标边界聚合完整 JSONL records，每个 Server 已接受的 segment 都立即推进 SQLite source cursor 与 parent snapshot；网络失败从最后一个持久化边界恢复，不重传整份历史。单条 record 不拆分，超过 32 MiB 时明确拒绝并返回来源异常。贡献端 source registration 必须按当前登录 user 查找；另一账号即使共享同一台设备，也只能物化远端 snapshot，不能借用贡献者本地路径上传。
 
-服务端只保存 `channel_shares(kind=session)`、`session_snapshots`、`session_segments` 与 Blob，不加载 provider adapter。消费端依据 manifest 在应用数据目录原子生成 snapshot JSONL，Local Core 的 Codex、MyFlicker、Claude Code adapter 在读取时投影为 `session/snapshot/turns/page/freshness`。Python `colab-session-reader` 只是 Local API 薄客户端，不读取凭证或缓存、不复制 adapter。
+服务端只保存 `channel_shares(kind=session)`、`session_snapshots`、`session_segments` 与 Blob，不加载 provider adapter。消费端逐个流式下载缺失 segment 到磁盘，并依据 manifest 在应用数据目录原子生成 snapshot JSONL；服务端和网络层都不拼装一份完整 Session 响应。Local Core 的 Codex、MyFlicker、Claude Code adapter 在 Agent 明确读取时投影为 `session/snapshot/turns/page/freshness`。Python `colab-session-reader` 只是 Local API 薄客户端，不读取凭证或缓存、不复制 adapter。GUI 清单不调用 Reader、不预览正文，只展示 metadata 与最近一次已提交快照的时间。
 
-稳定边界优先使用来源自身的 turn/record 边界；Codex JSONL 首版按完整 turn 关联的连续原始 records 分 segment，不能拆断单条 JSON record。每个 root manifest 只记录来源 adapter/schema、ordered segment digests、可安全共享的 session 元数据和读取边界。Server 只保存 Share 当前 root、不可变 manifest/segment blob 和同步所需的 snapshot 记录；它不解释 message/tool schema。来源只追加时上传新 segment 和新 manifest；来源发生尾部修订时只重建受影响尾段，无法确认稳定边界时安全退化为新完整 snapshot。
+稳定边界优先使用来源自身的 turn/record 边界；Codex JSONL 首版按完整 turn 关联的连续原始 records 分 segment，不能拆断单条 JSON record。每个 root manifest 只记录来源 adapter/schema、ordered segment digests、可安全共享的 session 元数据和读取边界。Server 只保存 Share 当前 root、不可变 manifest/segment blob 和同步所需的 snapshot 记录；它不解释 message/tool schema。来源只追加时上传新 segment 和新 manifest；来源发生尾部修订时只重建受影响尾段，无法确认稳定边界时安全退化为新完整 snapshot。同一 Local Core 内，同一 Share 的定时、显式和 Reader 触发同步必须使用 share-scoped mutex 串行执行，避免两个调用者携带同一 parent snapshot 并发 CAS。
 
 消费端在应用数据目录保存按账号隔离的 manifest/segment 缓存与 adapter 索引。Reader 读取时把原始结构投影为 Codex-shaped turns；该投影是消费协议，不是持久化格式。opaque cursor 同时绑定 Share、root/revision、adapter 与分页位置，拒绝跨 snapshot 混用。工具输出裁剪发生在最终响应阶段，因此同一原始 snapshot 可以按不同 `includeOutputs`/长度参数读取，无需重新同步。
 

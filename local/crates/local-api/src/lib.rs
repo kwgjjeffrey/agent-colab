@@ -60,6 +60,10 @@ struct Inner {
     session: Mutex<Option<ColabSession>>,
     last_error: Mutex<Option<String>>,
     store: Mutex<rusqlite::Connection>,
+    /// Serialize publication per Session share. The periodic publisher, an explicit sync, and a
+    /// reader-triggered refresh may otherwise race with the same parent snapshot and cause a
+    /// recoverable server CAS conflict to leak into the product UI.
+    session_sync_locks: Mutex<HashMap<String, Arc<Mutex<()>>>>,
     data_root: PathBuf,
 }
 #[derive(Clone, Deserialize)]
@@ -415,6 +419,7 @@ impl AppState {
                 session: Mutex::new(session),
                 last_error: Mutex::new(None),
                 store: Mutex::new(store),
+                session_sync_locks: Mutex::new(HashMap::new()),
                 data_root,
             }),
         })

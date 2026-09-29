@@ -26,7 +26,7 @@
 
 ### 1.3 浏览和选择
 
-用户浏览 Channel 内其他成员共享的 Session、Files 和 Skills，查看贡献者、来源、更新时间和内容概览。
+用户浏览 Channel 内其他成员共享的 Session、Files 和 Skills，查看贡献者、来源和最近同步时间。Session 正文不在 GUI 中预览；人把对象交给 Agent 后，由 Session Reader 按任务需要读取。
 
 用户既可以自己打开对象，也可以直接在具体对象上点击“给 Agent”，避免 agent 从整个 Channel 中自行查找。对象所有者还可以从对象自身的操作中撤回共享。
 
@@ -105,7 +105,7 @@ Session、Files 中由成员分享的根对象、Skill，都是 Shared Item 的�
 
 ### 4.3 Sessions
 
-顶部提供“共享我的 Session”。清单显示标题、贡献者、来源 agent、更新时间和简短概览。每个 item 直接提供“给 Agent”；如果当前用户是所有者，还提供“撤回”。点击 item 打开完整 session，并支持消息级分页、展开和搜索。
+顶部提供“共享我的 Session”。清单显示标题、贡献者、来源 agent 和最近同步时间；首次快照尚未提交时明确显示同步中。每个 item 直接提供“给 Agent”；如果当前用户是所有者，还提供“撤回”。Session item 不以点击打开正文预览：对话渲染不是首版产品重点，也不应让一次 GUI 浏览隐式触发大型 Session 的全量物化和 adapter 投影。正文消费统一交给 Session Reader。
 
 ### 4.4 Files
 
