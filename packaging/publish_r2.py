@@ -17,11 +17,6 @@ from pathlib import Path
 import subprocess
 import tempfile
 
-import boto3
-from botocore.config import Config
-from botocore.exceptions import ClientError
-
-
 def sha256(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as source:
@@ -135,6 +130,12 @@ def current_channel(public_base: str) -> dict[tuple[str, str, str | None, str | 
 
 
 def main() -> None:
+    # Keep provider dependencies local to publication so the checked-in curl
+    # readback verifier remains reusable for GitHub and other public mirrors.
+    import boto3
+    from botocore.config import Config
+    from botocore.exceptions import ClientError
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--repo", type=Path, required=True)
     args = parser.parse_args()
