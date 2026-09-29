@@ -206,7 +206,7 @@ Windows 首版采用 `%LOCALAPPDATA%\\AgentColab`、目录 junction 和用户级
 - [x] Server：Session 原始 segment、snapshot manifest、权限过滤和 Blob API；
 - [x] Local Core：来源发现、首次全量/后续增量上传、消费缓存、adapter 投影和分页；
 - [x] Python Skill：薄封装 `colab-session-reader read`，不在 Skill 内复制业务逻辑；
-- [x] Desktop：Session 列表、共享、阅读、Give to Agent 和撤回；
+- [x] Desktop：Session 列表、共享、最近同步时间、Give to Agent 和撤回；已删除会隐式物化并全量投影大型快照的 GUI 正文预览，正文只由 Agent Session Reader 按需消费；
 - [x] Files/Session Give to Agent 收敛到同一个共享 Dialog：统一响应式宽度、内容换行、默认 Agent 主操作与其他 Agent 下拉；Session 提示词删除 adapter/cursor 实现说明，只保留执行任务所需指令；
 - [x] Codex/MyFlicker 真实来源、双账号消费、增量游标与分页游标验收；
 - [x] Session 来源清单改为 SQLite 元数据索引；MyFlicker 补齐新版 CLI、旧版 CLI 与 Desktop 三类存储，排除 `requests/` 请求碎片，并以独立 Desktop adapter 处理覆盖、rollback 与工具调用；
@@ -214,6 +214,7 @@ Windows 首版采用 `%LOCALAPPDATA%\\AgentColab`、目录 junction 和用户级
 - [x] 更新 API 契约、技术设计、各模块 `AGENTS.md`；当前复验发布为 release `0.1.34-dev`、Core `0.1.27-dev`、Skill `0.1.25-dev`。
 - [x] 修复已安装 Skill 的 sibling-module 导入契约，并从临时安装树直接执行全部五个入口；不再由源码 `PYTHONPATH` 掩盖打包错误；
 - [x] 修复大型 Session 首次同步：冻结本轮长度、按完整 JSONL record 聚合约 8 MiB segment、逐段提交 cursor/snapshot 并支持失败续传；读取不再吞掉贡献端同步错误；
+- [x] 同一 Session 的后台、显式与 Reader 触发同步按 Share 串行，避免并发复用旧 parent snapshot 产生 `session_snapshot_conflict`；
 - [x] contributor source 按当前 user 隔离；`session-sources` 的 catalog id/source path 可被后续 `share --source` 精确查回；
 - [x] 发布 release `0.1.52-dev`（Core `0.1.36-dev`、Skill `0.1.34-dev`，GUI/Electron 不变），并用 `yuzhyuan@gmail.com` → `jeffreyyuzhyuan@gmail.com` 完成 Files/Session/Skill 分享、列表、消费、安装/卸载和撤回的安装后黑盒验收。
 

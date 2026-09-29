@@ -14,7 +14,7 @@ Feature UI belongs under `ui/src/features/<feature>/`; `main.tsx` may compose fe
 
 “Give to Agent” for a known Shared Item emits one directly executable `colab-browser use --ref ...` instruction. It must not expose preliminary `open` checks, cache paths, database UUIDs, or multi-step synchronization plumbing. References use the readable Channel and Shared Item path defined by `docs/agent-interface.md`; Browser handles rare ambiguity explicitly.
 
-Session UI lives in `ui/src/features/sessions`. It lists local Agent sources through Local Core, never scans provider directories in React. Reading and Give-to-Agent use `colab-session-reader read`; unlike Files, no cache path is exposed because provider adapters normalize raw records behind the Reader contract.
+Session UI lives in `ui/src/features/sessions`. It lists local Agent sources through Local Core, never scans provider directories in React. The GUI does not preview Session contents or call the Reader when an item is clicked; it shows metadata and the latest committed synchronization time, then hands explicit consumption to `colab-session-reader read` through Give-to-Agent. Unlike Files, no cache path is exposed because provider adapters normalize raw records behind the Reader contract.
 
 The Share Session dialog opens before data loading and searches the Local Core metadata catalog after a short input debounce. Results show the coding Agent and session/thread ID so similarly named sessions remain distinguishable.
 

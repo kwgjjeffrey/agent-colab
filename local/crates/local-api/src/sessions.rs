@@ -446,6 +446,17 @@ pub(super) async fn sync_session(
 }
 
 async fn sync_source(state: &AppState, share_id: &str) -> Result<(), LocalError> {
+    let sync_lock = {
+        let mut locks = state.inner.session_sync_locks.lock().await;
+        Arc::clone(
+            locks
+                .entry(share_id.to_owned())
+                .or_insert_with(|| Arc::new(Mutex::new(()))),
+        )
+    };
+    // Snapshot append uses compare-and-swap. Read the durable local cursor only after acquiring
+    // this share-specific lock so concurrent background/manual callers cannot reuse one parent.
+    let _sync_guard = sync_lock.lock().await;
     let user = current_user_id(state).await?;
     let source = {
         let store = state.inner.store.lock().await;
