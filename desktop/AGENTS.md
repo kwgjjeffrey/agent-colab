@@ -47,6 +47,10 @@ All context types use `features/agent/AgentPromptDialog` for Give to Agent. A fe
 
 Quick Share lives under `ui/src/features/transfers` and is a global entry independent from authentication and the selected Channel. Its entry is a type dropdown plus `Manage shared items`; one selection creates exactly one fixed-snapshot Transfer immediately. React gathers local Files, Session-catalog and Skill-catalog sources, but Local Core owns snapshot creation, streaming upload, capability receipts, expiry changes and revoke. Closing the result Dialog does not cancel the share. Keep every source row and prompt bounded inside the Dialog. The result surface copies one self-contained receiver prompt; when the selected Agent target is not installed, that prompt uses the signed public installer before calling `colab-transfer receive`. Never expose upload/revoke capabilities in the prompt or imply that the fixed transfer tracks later source changes.
 
+Quick Share uses the standard shadcn Dialog composition. `DialogHeader` and `DialogFooter` are direct
+children of `DialogContent`; only the body scrolls. Do not place `DialogFooter` inside `ScrollArea` or
+another padded wrapper because the primitive's negative margins are defined against DialogContent.
+
 Show the Agent Colab Skill as one independently versioned artifact. Codex, Claude Code, and MyFlicker rows are installation targets for that same artifact, not separately versioned copies. Settings offers one check/update action; per-artifact rows explain what will change instead of exposing redundant update buttons.
 
 The implemented Settings popover calls Local Core's allow-listed system API. Local Core delegates every check/install/update/uninstall mutation to the packaged Python setup; React must not write Skill directories or activate artifacts itself. Agent targets are independent (`codex`, `claude`, `myflicker`) and their state comes from managed links on disk.

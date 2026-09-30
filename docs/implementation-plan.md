@@ -368,6 +368,13 @@ Windows 首版采用 `%LOCALAPPDATA%\\AgentColab`、目录 junction 和用户级
 - [x] Release `0.1.64-dev` with Core `0.1.46-dev`, GUI `0.1.39-dev`, and the independently changed Electron Shell `0.1.19-dev`; publish and verify macOS/Windows artifacts through public R2 readback.
 - [x] Install the release, restart the actual App, and visually verify that Channel Files has one `Share files` action, Quick Share has one `Choose Files` action, and the native picker displays files and folders in the same selectable list.
 
+### T2.11 Quick Share dialog structure regression (completed)
+
+- [x] Trace the malformed footer to a shadcn `DialogFooter` nested inside the independently padded and scrolling result body.
+- [x] Restore the standard Dialog composition: direct Header/body/Footer siblings, with only the body using `ScrollArea`.
+- [x] Add a source-level regression test that rejects putting the footer back inside `ResultView`, and document the layout invariant in `desktop/AGENTS.md`.
+- [x] Build and publish release `0.1.65-dev`, install GUI `0.1.40-dev` without advancing Core/Skill/Electron, then visually verify the real App: the footer remains fully contained inside the rounded Dialog and separated from the scrolling prompt/body.
+
 ## 已删除的工作
 
 - `git2`/libgit2 替换验证：不再为实现纯度替换已验证的 Git CLI；真实跨平台问题出现时另建分发任务；
