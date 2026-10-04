@@ -60,6 +60,7 @@ def _curl_download(url: str, output: Path, byte_range: str | None = None) -> Non
             # reality instead of turning a healthy large artifact into a false
             # release failure.
             "--connect-timeout", "15", "--max-time", "2400",
+            "--speed-time", "20", "--speed-limit", "1024",
             "--user-agent", "agent-colab-release-verifier/1",
             "--output", str(output),
     ]
@@ -88,7 +89,9 @@ def public_download(url: str, output: Path, expected_size: int | None = None) ->
     chunk_size = 1024 * 1024
     # A small pool is faster and more reliable than opening dozens of TLS handshakes
     # through the same consumer uplink; excessive concurrency caused connection timeouts.
-    workers = min(8, (expected_size + chunk_size - 1) // chunk_size)
+    # Two connections saturate the current uplink without creating the TLS-handshake storm seen
+    # with eight concurrent ranges. Reliability matters more than shaving seconds from promotion.
+    workers = min(2, (expected_size + chunk_size - 1) // chunk_size)
     parts = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as executor:
         futures = []
@@ -138,6 +141,18 @@ def main() -> None:
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--repo", type=Path, required=True)
+    parser.add_argument(
+        "--component",
+        action="append",
+        choices=["local-core", "desktop-ui", "colab-skill", "electron-shell"],
+        help="Publish this changed component and retain all other artifacts from stable",
+    )
+    parser.add_argument(
+        "--platform",
+        action="append",
+        choices=["darwin", "windows"],
+        help="Limit a component release to this platform and retain its other stable platforms",
+    )
     args = parser.parse_args()
     repo = args.repo.resolve()
     version = (repo / "VERSION").read_text().strip()
@@ -158,7 +173,33 @@ def main() -> None:
 
     promoted = current_channel(public_base)
     artifacts = []
+    selected = set(args.component or [])
+    selected_platforms = set(args.platform or [])
+    if selected_platforms and not selected:
+        raise SystemExit("--platform requires --component")
+    if selected:
+        # A component-scoped release must not require or accidentally promote half-built artifacts
+        # from unrelated owning directories. The prior signed channel is the source of truth for
+        # every unselected component.
+        retained = [
+            artifact
+            for artifact in promoted.values()
+            if artifact["name"] not in selected
+            or (
+                selected_platforms
+                and artifact.get("platform") is not None
+                and artifact.get("platform") not in selected_platforms
+            )
+        ]
+        missing = {"local-core", "desktop-ui", "colab-skill", "electron-shell"} - selected - {artifact["name"] for artifact in retained}
+        if missing:
+            raise SystemExit(f"stable channel cannot supply unchanged components: {sorted(missing)}")
+        artifacts.extend(retained)
     for name, artifact_version, path, remote_name, platform, arch in artifact_specs(repo):
+        if selected and name not in selected:
+            continue
+        if selected_platforms and platform is not None and platform not in selected_platforms:
+            continue
         if not path.is_file():
             raise SystemExit(f"missing artifact: {path}")
         digest = sha256(path)

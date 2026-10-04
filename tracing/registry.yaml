@@ -1,0 +1,8 @@
+schemaVersion: 1
+project:
+  id: agent-colab
+registries:
+  - ../desktop/ui/tracing/registry.json
+  - ../skills/colab/tracing/registry.json
+  - ../local/tracing/registry.json
+  - ../server/standalone/tracing/registry.json

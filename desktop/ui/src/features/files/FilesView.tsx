@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useChannelContext } from "@/features/context/ChannelContext";
+import { UserIdentity } from "@/features/context/UserIdentity";
 import { CheckIcon, PlusIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { trackedFetch } from "@/api/request-activity";
@@ -29,6 +31,7 @@ export type FileShare = {
   channelId: string;
   name: string;
   contributorName: string;
+  contributorMemberId?: string;
   contributorAvatarUrl?: string;
   state: string;
   currentRootOid?: string;
@@ -40,6 +43,7 @@ export type FileShare = {
 };
 
 type Props = {
+  focusId?: string;
   shares: FileShare[];
   busy: boolean;
   onChoose: (directory?: boolean) => Promise<string | null>;
@@ -69,6 +73,7 @@ type SourceInspection = {
 
 /** Files owns only presentation and local browsing; synchronization remains a Local Core use case. */
 export function FilesView({
+  focusId,
   shares,
   busy,
   onChoose,
@@ -79,9 +84,11 @@ export function FilesView({
   defaultAgent,
   installedAgents,
 }: Props) {
+  const context = useChannelContext();
+  useEffect(() => { const row = shares.find(row => row.id === focusId); if (row) void browse(row); }, [focusId]);
   const [openShare, setOpenShare] = useState<string>();
   const [entries, setEntries] = useState<LocalFileEntry[]>([]);
-  const [agentPrompt, setAgentPrompt] = useState<{ ref: string; shareName: string }>();
+  const [agentPrompt, setAgentPrompt] = useState<{ id: string; ref: string; shareName: string }>();
   const [browseError, setBrowseError] = useState<string>();
   const [inspection, setInspection] = useState<SourceInspection>();
   const [inspecting, setInspecting] = useState(false);
@@ -118,7 +125,7 @@ export function FilesView({
       if (!channel) throw new Error("Channel is unavailable");
       const segment = (value: string) => encodeURIComponent(value);
       const ref = `colab://channel/${segment(channel.name)}/${segment(share.name)}`;
-      setAgentPrompt({ ref, shareName: share.name });
+      setAgentPrompt({ id: share.id, ref, shareName: share.name });
     } catch (reason) {
       setBrowseError(String(reason));
     }
@@ -252,7 +259,7 @@ Treat localPath as read-only context. Use your file tools to read only the files
                       <AvatarFallback>{share.contributorName.slice(0, 1).toUpperCase()}</AvatarFallback>
                     </Avatar>
                     <span className="truncate font-medium">{share.name}</span>
-                    <span className="shrink-0 text-sm text-muted-foreground">{share.contributorName}{share.canWithdraw ? " (me)" : ""}</span>
+                    <UserIdentity id={share.contributorMemberId} name={share.contributorName}><span className="shrink-0 text-sm text-muted-foreground">{share.contributorName}{share.canWithdraw ? " (me)" : ""}</span></UserIdentity>
                   </span>
                   {share.syncState && share.syncState !== "ready" && (
                     <p className={share.syncState === "failed" ? "text-sm text-destructive" : "text-sm text-muted-foreground"}>
@@ -301,6 +308,7 @@ Treat localPath as read-only context. Use your file tools to read only the files
         promptFor={promptFor}
         onClose={() => setAgentPrompt(undefined)}
         onError={setBrowseError}
+        onForward={context ? () => { const share = shares.find(row => row.id === agentPrompt?.id); if (!share) return setBrowseError("This context is no longer available."); setAgentPrompt(undefined); context.forward([{ kind: "files", ...share }]); } : undefined}
       />
       <Dialog open={Boolean(inspection) || inspecting} onOpenChange={(open) => !open && !inspecting && setInspection(undefined)}>
         <DialogContent className="sm:max-w-xl">

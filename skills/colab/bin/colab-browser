@@ -197,6 +197,7 @@ def main() -> int:
     withdraw = operations.add_parser("withdraw", help="Withdraw an owned Files, Session, or Skill item"); withdraw.add_argument("--item", required=True)
     source_list = operations.add_parser("session-sources", help="Search the local indexed Session catalog"); source_list.add_argument("--query", default=""); source_list.add_argument("--limit", type=int, default=200)
     args = parser.parse_args()
+    success = __import__("output_views").writer("browser", args)
     try:
         if args.operation == "open":
             return success(public_result(open_ref(args.core, args.ref)))
@@ -240,4 +241,4 @@ def main() -> int:
         return failure("local_api_error", str(error), error.exit_code)
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(__import__("telemetry").run(main))

@@ -802,6 +802,7 @@ async fn cached_materialization(
         )
         .unwrap_or_else(|_| ("Shared files".into(), "Channel member".into(), None, String::new()));
     Some(FileShare {
+        contributor_member_id: None,
         id: share_id.into(),
         channel_id: String::new(),
         name,
@@ -945,6 +946,7 @@ async fn sync_materialization(state: &AppState, share_id: &str) -> Result<FileSh
         store.execute("insert into file_materializations(share_id,local_path,last_root_oid,user_id) values(?1,?2,?3,?4) on conflict(share_id) do update set local_path=excluded.local_path,last_root_oid=excluded.last_root_oid,user_id=excluded.user_id,updated_at=current_timestamp",rusqlite::params![share_id,target.to_string_lossy(),latest.root_oid,user_id]).map_err(LocalError::internal)?;
     }
     let mut share = FileShare {
+        contributor_member_id: None,
         id: share_id.to_owned(),
         channel_id: String::new(),
         name: String::new(),

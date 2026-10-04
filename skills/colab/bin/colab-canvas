@@ -1,0 +1,132 @@
+#!/usr/bin/env python3
+"""Read and edit collaborative Canvases through Colab Local Core."""
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+from pathlib import Path
+from urllib.parse import unquote, urlparse
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "lib"))
+from local_api import DEFAULT_CORE, LocalApiError, request
+from output import failure, success
+
+
+def channel(core: str, value: str) -> dict:
+    rows = request("GET", "/v1/channels", core=core)
+    matches = [row for row in rows if row["id"] == value or row["name"].casefold() == value.casefold()]
+    if len(matches) != 1:
+        raise ValueError(f"Channel must resolve uniquely: {value}")
+    return matches[0]
+
+
+def parse_ref(value: str) -> tuple[str | None, list[str]]:
+    if not value.startswith("colab://"):
+        return None, [value]
+    parsed = urlparse(value)
+    parts = [unquote(part) for part in parsed.path.split("/") if part]
+    if parsed.netloc != "channel" or len(parts) < 3 or parts[1] != "canvas":
+        raise ValueError("Canvas ref must be colab://channel/<channel>/canvas/<folder...>/<document>")
+    return parts[0], parts[2:]
+
+
+def folder_paths(rows: list[dict]) -> dict[str, list[str]]:
+    by_id = {row["id"]: row for row in rows}
+    result: dict[str, list[str]] = {}
+    for row in rows:
+        path, seen, current = [], set(), row
+        while current and current["id"] not in seen:
+            seen.add(current["id"])
+            path.insert(0, current["name"])
+            current = by_id.get(current.get("parentFolderId"))
+        result[row["id"]] = path
+    return result
+
+
+def canvas(core: str, value: str) -> dict:
+    channel_name, canvas_path = parse_ref(value)
+    if channel_name is None:
+        raise ValueError("Use a full Canvas ref so a title cannot resolve in the wrong Channel")
+    channel_row = channel(core, channel_name)
+    rows = request("GET", f"/v1/channels/{channel_row['id']}/canvases", core=core)
+    folders = request("GET", f"/v1/channels/{channel_row['id']}/canvas-folders", core=core)
+    paths = folder_paths(folders)
+    matches = [row for row in rows if row["id"] == canvas_path[-1] or [part.casefold() for part in paths.get(row.get("folderId"), []) + [row["title"]]] == [part.casefold() for part in canvas_path]]
+    if len(matches) != 1:
+        raise ValueError(f"Canvas must resolve uniquely in {channel_name}: {'/'.join(canvas_path)}")
+    return matches[0]
+
+
+def canvas_ref(channel_name: str, path: list[str]) -> str:
+    from urllib.parse import quote
+    return f"colab://channel/{quote(channel_name, safe='')}/canvas/" + "/".join(quote(part, safe="") for part in path)
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(prog="colab-canvas")
+    parser.add_argument("--core", default=DEFAULT_CORE)
+    operations = parser.add_subparsers(dest="operation", required=True)
+
+    listing = operations.add_parser("list")
+    listing.add_argument("--channel", required=True)
+    creating = operations.add_parser("create")
+    creating.add_argument("--channel", required=True)
+    creating.add_argument("--title", required=True)
+    reading = operations.add_parser("read")
+    reading.add_argument("--ref", required=True)
+    reading.add_argument("--offset", type=int, default=1)
+    reading.add_argument("--limit", type=int, default=200)
+    searching = operations.add_parser("search")
+    searching.add_argument("--ref", required=True)
+    searching.add_argument("--query", required=True)
+    searching.add_argument("--limit", type=int, default=50)
+    patching = operations.add_parser("apply-patch")
+    patching.add_argument("--ref", required=True)
+
+    args = parser.parse_args()
+    success = __import__("output_views").writer("canvas", args)
+    try:
+        if args.operation in {"list", "create"}:
+            channel_row = channel(args.core, args.channel)
+            if args.operation == "create":
+                row = request("POST", f"/v1/channels/{channel_row['id']}/canvases", core=args.core, body={"title": args.title})
+                row["ref"] = canvas_ref(channel_row["name"], [row["title"]])
+                return success(row)
+            rows = request("GET", f"/v1/channels/{channel_row['id']}/canvases", core=args.core)
+            folders = request("GET", f"/v1/channels/{channel_row['id']}/canvas-folders", core=args.core)
+            paths = folder_paths(folders)
+            documents = [{**row, "path": paths.get(row.get("folderId"), []) + [row["title"]], "ref": canvas_ref(channel_row["name"], paths.get(row.get("folderId"), []) + [row["title"]])} for row in rows]
+            return success({"folders": [{**row, "path": paths[row["id"]]} for row in folders], "documents": documents})
+
+        row = canvas(args.core, args.ref)
+        document = request("GET", f"/v1/canvases/{row['id']}/document", core=args.core)
+        document["ref"] = args.ref
+        if args.operation == "read":
+            lines = document["content"].splitlines(keepends=True)
+            start = max(args.offset, 1) - 1
+            end = start + max(1, min(args.limit, 1000))
+            document["content"] = "".join(lines[start:end])
+            document["nextOffset"] = end + 1 if end < len(lines) else None
+            return success(document)
+        if args.operation == "search":
+            needle = args.query.casefold()
+            matches = [
+                {"line": number, "text": line}
+                for number, line in enumerate(document["content"].splitlines(), 1)
+                if needle in line.casefold()
+            ][: max(1, min(args.limit, 500))]
+            return success({"ref": args.ref, "path": "document.md", "revision": document["revision"], "matches": matches})
+
+        patch = sys.stdin.read()
+        if not patch.strip():
+            raise ValueError("apply-patch reads a Codex patch from stdin")
+        return success(request("POST", f"/v1/canvases/{row['id']}/apply-patch", core=args.core, body={"patch": patch}))
+    except ValueError as error:
+        return failure("invalid_argument", str(error), 2)
+    except LocalApiError as error:
+        return failure("local_api_error", str(error), error.exit_code)
+
+
+if __name__ == "__main__":
+    raise SystemExit(__import__("telemetry").run(main))

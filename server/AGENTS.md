@@ -1,11 +1,22 @@
 # Server deployment
 
-Conversation/DM is still design-only. The selected classic IM foundation is self-hosted Matrix:
-Matrix owns rooms, human membership, messages, reply relations and incremental chat sync. Colab
-PostgreSQL owns only room mapping, Agent blueprint/participation, Agent Request approval/state,
-runtime leases and authorized context references. The Application Service adapter can provision
-and emit events but never decides authorization. Read docs/conversation-design.md before adding
-routes or migrations.
+While waiting for `agent.command.accepted`, handle WebSocket Ping/Pong frames and continue waiting for
+the exact request ID. A control frame is transport liveness, never business acknowledgement.
+
+Channel Messages uses the Colab-owned IM domain. PostgreSQL is authoritative for membership,
+ordered messages, cursors, Agent blueprints/participation and Agent Request state. Axum WebSocket
+has two explicit protocols: Conversation carries typed invalidations whose reconnect repairs from
+PostgreSQL sequence cursors, while runtime delivery carries complete executable commands. Do not add
+Matrix identities, an external IM service, or a second message store. Read
+docs/conversation-design.md before changing these boundaries.
+
+The Conversation socket emits a text heartbeat every 15 seconds and reads peer close/control frames.
+This is a transport-liveness invariant, not a message event: proxies and sleeping laptops can leave
+a browser socket half-open without an `onclose`, so the GUI watchdog must be able to observe silence,
+reconnect, and repair from the PostgreSQL message sequence.
+
+Mention authorization uses the structured blueprint UUID. The display `@name` is context only, and
+request state is exposed independently from ordered messages.
 
 `server/api` is the protocol source. `server/standalone` is the current Rust/PostgreSQL implementation. A future Supabase implementation must implement the same domain API without leaking Supabase types into clients.
 
@@ -44,9 +55,39 @@ PostgreSQL rows and Blob Store objects form one logical dataset. During alpha, t
 
 Do not report deployment success until the public or explicitly configured readiness endpoint passes and the activated version is recorded.
 
-Conversation/DM is designed but not implemented. When it is started, PostgreSQL and the Rust
-Server remain authoritative for messages, membership, Agent Request approval, offline queue and
-leases. A realtime gateway may publish cursor invalidations and provide short reconnect recovery,
-but must not become a second message store or decide authorization. Conversation membership never
-silently grants Channel or Shared Item access. See `docs/technical-design.md` section 11.8 before
-adding routes or migrations.
+Channel Messages and Agent runtime commands are separate protocols. PostgreSQL and the Rust Server
+remain authoritative for complete rich-text messages, structured mentions, registered
+member/device/provider runtimes, blueprint policy, reply-chain context and Agent-authored replies.
+After committing a message, Server routes every distinct Agent mention, packages the full task and
+sends an executable command through that exact runtime's authenticated WebSocket. A protocol 2
+runtime must ACK the request id on the same socket after parsing the complete command; otherwise
+release the claim for reconnect delivery. After ACK, keep that socket present and do not claim a
+second command until Local Core reports `agent.command.ready` after provider execution and its
+durable completion/failure receipt. Runtime presence is connection-counted so stale socket teardown
+cannot mark a replacement connection offline. Preserve the explicit legacy handshake branch until all
+published platforms carry protocol 2; silently requiring ACK from old clients creates duplicate
+execution. Conversation
+
+Persist runtime acceptance separately from claim: a claimed request is still `delivering` until the
+protocol-2 client ACKs the exact command. Only accepted, non-terminal requests may project an Agent
+working indicator. Publish request-state invalidations after acceptance and every terminal transition;
+clients repair missed hints by rereading PostgreSQL-backed state.
+WebSocket invalidations remain repairable by message `seq`; runtime commands are not chat events and
+must not be fetched by Local Core through an HTTP long poll. Blueprints must reference an available
+runtime owned by the same member. Request-scoped context/reply endpoints fix the target blueprint,
+Channel and sender identity. An authenticated owner runtime may report execution failure, but
+raw provider stderr must not become Channel content. Public request creation only supports explicit
+message forwarding; clients may not forge the mention-trigger path. Claims record a conservative recovery time
+and capped attempt count; migrations must treat legacy `running` rows with no claim timestamp as
+abandoned. Do not claim full lease hard-kill coverage until the timed restart test passes.
+
+Canvas belongs to the same Colab Server and Channel authorization model. Store opaque Yjs-v1 updates
+as an append-only per-canvas sequence and deduplicate by `(canvas_id, client_update_id)`; projection
+and Tiptap schema logic do not belong in Server. A committed update emits only a small
+`canvas.invalidated` frame on the existing account Conversation socket. Clients repair from the
+PostgreSQL sequence over HTTP, so a missing or duplicated WebSocket frame cannot lose content. Do not
+create a second Canvas socket or treat broadcast delivery as a durable ACK.
+Canvas folders belong to the Channel authorization boundary; validate every parent and document folder
+against that same Channel. A future Canvas Agent mention reuses the Messages blueprint policy/runtime
+delivery machinery, but Server must derive its command context from the authoritative enclosing Heading
+section and keep invocation state outside the CRDT document.

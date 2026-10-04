@@ -47,6 +47,7 @@ type Props = {
   promptFor: (agent: AgentTarget) => string;
   onClose: () => void;
   onError: (message: string) => void;
+  onForward?: () => void;
 };
 
 /**
@@ -62,6 +63,7 @@ export function AgentPromptDialog({
   promptFor,
   onClose,
   onError,
+  onForward,
 }: Props) {
   async function copyAndOpen(agent: AgentTarget) {
     try {
@@ -85,6 +87,8 @@ export function AgentPromptDialog({
           {promptFor(defaultAgent)}
         </pre>
         <DialogFooter>
+          {onForward && <Button variant="outline" onClick={onForward}>Forward to collaborators’ agent</Button>}
+          <Button variant="outline" onClick={async () => { try { await navigator.clipboard.writeText(promptFor(defaultAgent)); onClose(); } catch (reason) { onError(String(reason)); } }}>Copy prompt</Button>
           <ButtonGroup className="min-w-0 max-w-full">
             <Button
               className="min-w-0"

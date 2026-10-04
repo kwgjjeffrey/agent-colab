@@ -1,13 +1,39 @@
 # Local Core artifact
 
+Canvas Markdown conversion is owned by `canvas-codec/`: ProseMirror Markdown plus
+`@tiptap/y-tiptap` reconcile changes into the existing Yjs replica. Package the helper
+and its Node runtime with Core, not GUI or Electron. Keep unaffected nodes intact;
+reject lossy affected regions and changes to mention/component identities before
+applying any update. Rust retains durable replica/outbox ownership.
+
+Implementation boundaries are indexed in `../docs/technical-design.md` §11.8, request payloads in
+`../docs/architecture/agent-request-data-flow.md`, live release gates in
+`../docs/validation-plan.md`, and the provider writer/queue evidence in
+`../.trial/V-AGENT-WRITER-01-codex-writer/README.md`. Update those sources together when the Codex
+runtime lifecycle changes.
+
+Runtime sockets send a delayed 20-second WebSocket heartbeat. Do not emit the first heartbeat
+immediately after connect: the Server may be waiting for the request-scoped command ACK, and control
+frames must never be mistaken for command acceptance. Codex bindings include an adapter version;
+version 1 `codex exec` threads are intentionally abandoned because they are hidden from Desktop;
+version 2 per-request app-server bindings are also abandoned because their writer was released after
+each command. Version 3 bindings belong to the one long-lived Local Core app-server and are the only
+bindings the persistent manager resumes.
+
 The Files picker is one product operation. Its default mode must allow selecting either one file or
 one directory and return only the selected path; file-only and directory-only modes exist solely
 for capabilities such as Skill source selection that genuinely require a directory.
 
-Conversation/DM is still design-only. Local Core will own the authenticated Matrix client sync,
-expose it to GUI through Local API, claim authorized Agent Requests from Colab Server, and map each
-Conversation/blueprint binding to one provider-native session. Presence is never authority. Read
-docs/conversation-design.md before implementing this boundary.
+Channel Messages uses Local Core as the sole authenticated client. Keep Conversation synchronization
+and Agent runtime delivery separate: the Conversation stream reconciles message sequence gaps for
+GUI/Skill, while a runtime-authenticated WebSocket receives complete Server-packaged commands for
+one registered runtime. Local Core must not parse mentions, repeat blueprint policy, or fetch chat
+context to build a task. It maps each Channel/blueprint binding to one provider-native session and
+does not automatically mirror the provider's final response into the Channel. ACK a runtime command
+on its own socket only after its complete envelope parses; provider completion remains a separate
+HTTP receipt, and the request-scoped Skill reply remains the sole Agent-authored Channel path. Codex runtime turns retain `workspaceWrite` filesystem isolation but must enable network access so the Skill can reach the authenticated loopback Local API; do not solve this with `dangerFullAccess` or by exposing remote account credentials to the provider session.
+GUI must never connect directly to Server. Presence is never authority. Read
+docs/conversation-design.md before changing this boundary.
 
 Local Core is the only local business process and SQLite writer. It must continue working without Electron or GUI. Desktop and Skill are clients of the same Local API and must observe the same authorization and state.
 
@@ -49,10 +75,47 @@ Never place cache or mutable runtime data inside the source checkout. Use platfo
 
 Split adapters (`watcher`, `git`, `server`, `persistence`) from use cases. Comment CAS, retry, atomicity, path-safety, and recovery invariants.
 
-Conversation/DM runtime work is designed but not implemented. A future Local Core keeps an
-outbound authenticated connection, claims an authorized Agent Request with a short lease, and maps
-each Conversation/blueprint binding to one provider-native session in local SQLite. Online presence
-is never execution authority. Provider processes receive only the triggering context and a
-request-bound progress/final reporting command; never accept a remote arbitrary shell command or
-let the model choose another Conversation as the report target. See `docs/technical-design.md`
-section 11.8 before implementing this boundary.
+Agent runtime identity is installation-scoped. Store one stable device UUID in Local SQLite and
+register one Server runtime per installed coding-agent Skill target. The first execution adapter is
+Codex: map `(channel, blueprint)` to one provider thread ID locally, create it through Codex
+app-server, and resume it for later requests. A binding is a durable logical conversation. Run one
+long-lived app-server per Local Core and let it retain writer ownership for every Colab-managed
+thread; Codex Desktop may read those threads but cannot write them. New independent commands must
+use `thread/queue/add` with a stable request-derived `clientUserMessageId`. The owning app-server
+persists the queue and automatically starts its next item when the thread is idle. Never use a
+second `turn/start` as a queue operation: during an active turn it steers that same turn. Local Core
+must observe turn/queue events and correlate completion, but must not create a second durable local
+queue. On Core shutdown, unsubscribe all loaded threads before stopping the process; after a crash,
+process exit releases writer ownership and the replacement app-server resumes persisted bindings.
+Never rotate a binding merely because it is busy. Replace it only when Codex explicitly reports the
+thread missing. A Core restart can race with Codex Desktop acquiring the writer; in that case keep
+the original binding and submit through `thread/queue/add` without resuming or mutating the thread.
+Each Local Core receives commands only from its own
+runtime-authenticated WebSocket; the GUI/requesting device must never execute a remote runtime by
+convenience. Provider processes receive the already packaged prompt and request-bound context/reply
+commands; never accept a remote arbitrary shell command or let the model choose another Channel as
+the report target.
+Provider launch, resume, or result failures must be reported so the durable request leaves
+`running`. Bound diagnostics and keep them out of Channel messages because they may contain local
+paths; do not silently swallow execution failures in the polling loop.
+
+Canvas uses one Local-Core-owned Yrs replica per account/canvas. Persist every local update and its
+outbox row before attempting Server delivery, retain the same `clientUpdateId` across retries, and
+advance `last_server_seq` only from ordered Server results. The account WebSocket carries
+`canvas.invalidated` wakeups; durable update submission and cursor repair use HTTP. The Markdown/TXT
+projection is a virtual interface, not a watched physical file. Keep projection rendering and patch
+translation inside Local Core, reject edits to structured-component fences, and never expose CRDT
+node identities to the Skill. The current supported Canvas Agent target is macOS.
+Preserve Canvas folder ancestry when proxying metadata so Skill and GUI resolve the same canonical
+`colab://channel/.../canvas/<folder...>/<document>` reference. Folder CRUD is metadata; it must not be
+encoded as a Yjs document update.
+
+Runtime workers are account-scoped, not foreground-session-scoped. Keep one worker for each
+explicitly saved account/runtime association and refresh that account's credential independently
+of the GUI's current account. Never cross-product legacy runtime IDs or thread bindings with saved
+accounts to guess ownership; installation/registration must persist the scoped association.
+Request-scoped context/reply commands must likewise resolve the request owner across saved
+accounts. Provider child processes are bounded; a hang must become a durable failure rather than
+permanent `running`.
+
+On macOS the updater's `update.lock` OS flock is the running authority; progress JSON is only transfer detail. Never delete the lock file to recover ownership, or assume a download's completed state ends installation. Repeated update callers attach, and activated-versus-resident executable comparison recovers a lost caller's restart step. Read `update_status.rs` and `docs/validation-plan.md` for the installed cross-language lock and Canvas runtime acceptance evidence.

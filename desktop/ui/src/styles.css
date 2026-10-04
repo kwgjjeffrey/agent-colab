@@ -135,3 +135,39 @@ button:not(:disabled), a[href], [role="button"]:not([aria-disabled="true"]), [ro
     @apply font-sans;
   }
 }
+/* Mentions are ProseMirror atom nodes: the label is readable but cannot be edited independently
+   from the stable blueprint id stored in the document. */
+.agent-message-editor { min-height: 1.5rem; max-height: 10rem; overflow-y: auto; outline: none; white-space: pre-wrap; overflow-wrap: anywhere; }
+.agent-message-editor p { margin: 0; }
+.agent-message-editor p.is-editor-empty:first-child::before { color: var(--muted-foreground); content: "@ Agent and User · Enter to send · Shift+Enter for a new line"; float: left; height: 0; pointer-events: none; }
+.agent-mention { display: inline-flex; align-items: center; border-radius: 9999px; background: var(--secondary); color: var(--secondary-foreground); padding: .125rem .5rem; font-size: .875rem; font-weight: 600; line-height: 1.25rem; user-select: all; }
+.member-mention { display: inline-flex; align-items: center; border-radius: 9999px; background: var(--secondary); color: var(--secondary-foreground); padding: .125rem .5rem; font-size: .875rem; font-weight: 600; line-height: 1.25rem; user-select: all; }
+.member-mention-me { background: #1d4ed8; color: white; }
+.canvas-editor-content h1 { font-size: 2rem; line-height: 1.2; font-weight: 700; margin: 1.5rem 0 .75rem; }
+.canvas-editor-content h2 { font-size: 1.5rem; line-height: 1.3; font-weight: 650; margin: 1.25rem 0 .625rem; }
+.canvas-editor-content h3 { font-size: 1.25rem; line-height: 1.4; font-weight: 650; margin: 1rem 0 .5rem; }
+.canvas-editor-content p { margin: .35rem 0; line-height: 1.65; }
+.canvas-editor-content ul { list-style: disc; padding-left: 1.5rem; }
+.canvas-editor-content ol { list-style: decimal; padding-left: 1.5rem; }
+.canvas-editor-content blockquote { border-left: 3px solid var(--border); padding-left: 1rem; color: var(--muted-foreground); }
+.work-markdown p + p { margin-top: .75rem; }
+.work-markdown pre { overflow: auto; border-radius: .5rem; background: var(--muted); padding: .75rem; margin: .75rem 0; font-size: .75rem; white-space: pre-wrap; overflow-wrap: anywhere; }
+.work-markdown :not(pre) > code { border-radius: .25rem; background: var(--muted); padding: .1rem .25rem; font-size: .85em; }
+.work-markdown ul { list-style: disc; padding-left: 1.5rem; }
+.work-markdown ol { list-style: decimal; padding-left: 1.5rem; }
+.work-markdown h1, .work-markdown h2, .work-markdown h3 { font-weight: 650; margin: .75rem 0 .5rem; }
+.work-markdown h1 { font-size: 1.5rem; }
+.work-markdown h2 { font-size: 1.25rem; }
+.work-markdown h3 { font-size: 1.1rem; }
+.work-markdown blockquote { border-left: 3px solid var(--border); padding-left: .75rem; color: var(--muted-foreground); }
+.work-markdown table { border-collapse: collapse; }
+.work-markdown td, .work-markdown th { border: 1px solid var(--border); padding: .25rem .5rem; }
+/* Runtime-acknowledged work pulses only the roster background, not its content. */
+@keyframes agent-member-breathe {
+  0%, 100% { background-color: color-mix(in oklab, var(--accent) 35%, transparent); }
+  50% { background-color: var(--accent); }
+}
+.agent-member-working { animation: agent-member-breathe 2.4s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .agent-member-working { animation: none; background-color: var(--accent); }
+}

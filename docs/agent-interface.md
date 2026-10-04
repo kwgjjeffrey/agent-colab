@@ -1,5 +1,10 @@
 # Agent 脚手架与接口设计
 
+Canvas 投影实现（2026-10-04）：文本接口仍为 `read` / `apply-patch`，不暴露 CRDT
+blocks。读取到的 `[@label](colab-mention:...)` 是胶囊身份的无损 Markdown 表达，
+作为上下文时原样保留。每次提交一个 hunk；歧义上下文或无法往返的修改区域明确拒绝。
+底层框架、保护边界和实现索引见 [Canvas 技术设计](canvas-technical-design.md#2026-10-04转换实现替换)。
+
 状态：第三版契约草案
 
 ## 1. 设计原则
@@ -22,7 +27,8 @@ skills/colab/
 ├── bin/
 │   ├── colab-browser
 │   ├── colab-session-reader      # 已实现 Session 增量同步、投影与分页读取
-│   └── colab-skill-tool          # 来源发现、状态、ensure/install/update/uninstall
+│   ├── colab-skill-tool          # 来源发现、状态、ensure/install/update/uninstall
+│   └── colab-messages            # Channel 消息与 Agent blueprint 管理
 ├── lib/
 │   ├── local_api.py
 │   └── output.py
@@ -32,6 +38,12 @@ skills/colab/
 ```
 
 可执行入口按产品语义分工，不再设置一个包办所有对象的 `colab.py`。它们调用本机 Colab Local API；`lib/` 只放共同的传输和输出代码。stdout 只输出 JSON；诊断写入 stderr；成功退出码为 `0`，输入或调用错误为 `2`，本机服务不可用为 `3`，同步或远端错误为 `4`。
+
+`colab-messages` 与 GUI 调用相同的 Local API：`messages list|send` 按 Channel 名称或 ID 工作；`blueprint runtimes` 返回当前 Member 以“设备 + Coding Agent”登记的跨设备 runtime；`blueprint upsert` 强制接收一个精确、可用的 Codex `--runtime` ID，`list|select|remove` 管理 Agent 及其 Channel 关系。`request context` 只能为指定 request 向前读取其 Channel 历史，`request reply` 只能以该 request 的 target blueprint 向原 Channel 回传，调用者不能另传 Channel、sender、被 mention 成员或 reply target；Server 从 request 自动生成 `@requester` 与触发消息引用。可读名称必须唯一解析；歧义时脚本失败而不猜测。脚本不直连 Server，也不承载执行队列；Server 通过独立 runtime WebSocket 把已授权、已拼装上下文的命令交给精确 runtime。
+
+Server 注入 provider session 的提示词只保留任务所需内容：当前发送人与完整 query、可选 reply chain、前十条去重近期对话、具体的 `request context` 加载命令、可选 blueprint instruction，以及具体的 `request reply` 发送命令。不向 Agent 介绍 blueprint/runtime 等产品实现概念，不注入泛化 Rules，不自动把 provider 的最终回答发往 Channel。准确模板与数据契约见 [`docs/architecture/agent-request-data-flow.md`](architecture/agent-request-data-flow.md)。
+
+`blueprint upsert` 不再接受自由填写的设备名或 Agent 名；必须先用 `blueprint runtimes --channel <channel>` 获取平台已经登记的 runtime UUID。登记发生在该设备 Settings 安装/更新 Agent Colab Skill 时，已安装的旧设备会在读取安装状态时补登记。由此“MacBook 上的 Codex”和“Windows PC 上的 Codex”是两个可独立选择、独立在线状态的 runtime。
 
 Skill 的 canonical name 是 `agent-colab`，Codex 中使用 `$agent-colab` 调用。安装后的稳定入口位于各 Agent 自己的 Skill 根目录，例如 Codex 使用 `~/.agents/skills/agent-colab/bin/colab-browser`。Desktop 根据实际安装 receipt 生成“给 Agent”指令，不向 Agent 暴露源码目录、缓存目录或随机 UUID 目录。
 
@@ -408,3 +420,8 @@ colab-transfer revoke --transfer-id TRANSFER_ID
 ```
 
 Files 返回只读本地路径和树；Session 返回可继续分页的 Reader handle；Skill 返回可检查并安装到目标 Agent 的临时来源。Transfer 到期后已物化的本地副本仍属于接收者设备，服务端不能远程擦除；产品只承诺阻止新的获取和刷新。
+## 11. Canvas document interface
+
+Canvas is exposed to an Agent as a Markdown text projection, never as raw CRDT nodes or internal blocks. The request prompt supplies the exact document reference and presents tools in task order: read the current document first, apply a Codex-style patch only if the task requires an edit, and list other Channel documents only if broader exploration is needed. The prompt introduces optional commands with the unambiguous sentence: `Tools below are at your disposal if the user's task requires them.`
+
+An Agent mention dispatch carries the full visible mention and its containing Heading section. The Server resolves the requester, document title, Channel name, and Agent blueprint from authoritative records; the GUI cannot inject a different identity or runtime destination. The Agent continues the persistent `(Canvas, Agent)` provider thread and edits through `colab-canvas`, so runtime delivery never writes Canvas storage directly.

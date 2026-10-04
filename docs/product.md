@@ -189,7 +189,7 @@ Colab 的定位是面向 agent 协作的上下文共享层，因此第一阶段�
 
 ### Agent runtime
 
-用户接入平台、可以被平台发送指令的 agent 运行时。runtime 本身可以是无状态的；一次运行所呈现的状态由 Colab 为它组装的上下文决定。例如，通过 Claude Code `-p` 发起的一次请求可以视为一次 runtime 执行。
+用户接入平台、可以被平台发送指令的 agent 运行时。runtime 是服务端登记的“Organization Member + 设备实例 + coding agent”对象，而不是任意填写的设备名或 provider 名。在某台设备安装 Agent Colab Skill 时，Local Core 用安装级稳定 device ID 注册或刷新对应 runtime；卸载将其标记不可用。多台设备会产生不同 runtime，例如 `MacBook Pro · Codex` 与 `Windows PC · Codex`。首版执行 adapter 只接 Codex；blueprint 未绑定属于当前 owner 的可用 runtime 时不得创建或进入 Channel。
 
 ### Session
 
@@ -220,9 +220,9 @@ Agent 的能力与偏好配置，包括 system instruction、skills，以及通�
 1. 人类对话可以直接成为 agent 的上下文；
 2. 人可以在对话中请求自己或他人的 agent 工作，agent 只把进度和结果摘要反馈回对话。
 
-Conversation 是独立于 Channel 的沟通对象。DM、群聊和与 Channel 关联的讨论都使用 Conversation；需要长期共享的 Files、Session 和 Skill 仍属于 Channel，消息可以引用这些对象但不改变其权限。轻量 DM 不应为了发一句消息被迫创建 Channel；已有 Channel 也可以绑定一个 Conversation，但二者不合并为同一个领域对象。
+首版 Messages 是 Channel 内的沟通面：每个 Channel 直接拥有一个默认消息房间，成员关系沿用 Channel member，避免在同一页面再维护一套重复成员。未来若出现不依附 Channel 的轻量 DM，再以 Conversation 扩展承载；首版不为尚未出现的场景预建第二套导航与关系模型。需要长期共享的 Files、Session 和 Skill 仍属于 Channel，消息可以引用这些对象但不改变其权限。
 
-被加入 Conversation 的不是一个裸 runtime，而是“某位 owner 的 Agent blueprint + 其指定设备上的 runtime”形成的 Agent participant。同一个 blueprint 加入不同 Conversation 时，每个 Conversation 建立独立的 agent session，使它只记得该对话中的历史。runtime 只是执行位置，可以离线；blueprint、参与关系、授权策略和待处理请求由 Colab 保存。
+被加入 Conversation 的不是一个裸 runtime，而是“某位 owner 的 Agent blueprint + 其指定 runtime 实例”形成的 Agent participant。同一个 blueprint 加入不同 Conversation 时，每个 Conversation 建立独立的 provider thread，使它只记得该对话中的历史。首版 Codex adapter 首次执行创建 thread 并保存 binding，后续请求必须 resume 同一 thread；runtime 可以暂时离线，但不存在或从未登记的 runtime 不能被 blueprint 引用。
 
 `@agent` 首先创建一条可审计的 Agent Request，不等于无条件远程执行。owner 可以选择仅接受自己的命令、每次征求同意或允许指定成员直接请求。runtime 离线时立即在对话中说明请求已排队；需要批准时向 owner 发出显式批准/拒绝操作；只有授权完成且 runtime 取得 lease 后才开始执行。Agent 通过受约束的进度/结果上报工具写回摘要，不把完整推理、终端日志或所有工具调用广播给群成员。
 

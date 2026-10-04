@@ -1,13 +1,20 @@
 # Desktop artifacts
 
+Messages use a compact Discord-style row stream, not identity-colored chat bubbles. Keep every
+sender left-aligned so text, files and other rich content share one stable column. People and Agents
+use the same compact framed avatar; Agents additionally use the owner's avatar with a supernova ring,
+an `AI` badge, and ownership in the display name. Reveal timestamps and secondary actions on hover.
+The workspace touches the tab divider, side boundary and viewport bottom without a rounded card
+shell. The composer has only the workspace separator, no nested input border, and a solid circular
+up-arrow submit action.
+
 Files has exactly one visible source-selection action in both Channel Files and Quick Share. Never
 reintroduce a file-versus-folder dropdown: the unified picker returns the selected path and Local
 Core determines whether it is a file or directory.
 
-Conversation/DM is still design-only. Its application-level entry, three-pane layout, blueprint
-settings, message selection/forwarding, Agent Request state card and reply/source references are
-specified in docs/interaction.md section 6 and docs/conversation-design.md. The GUI continues to
-call Local Core only; it must not connect directly to Matrix or Colab Server.
+Messages is the first Channel tab. Its stream/input and member/Agent sidebar are specified in
+docs/interaction.md section 6. Blueprint selection uses a two-column Dialog and the shared Agent
+prompt component. GUI calls Local Core only; it must not connect directly to Colab Server.
 
 `desktop/ui` is the required, separately versioned React/Vite resource artifact. `desktop/shell` is an optional, infrequently updated Electron launcher for users who want an ordinary App entry. The launcher may own its window, constrained IPC and deep-link forwarding, but it is not the installation/update authority and must never become a requirement for Files or Agent workflows.
 
@@ -43,6 +50,10 @@ Settings must report the actual installed version, channel, location, update sta
 
 An update check must visibly progress to updates available, up to date, or failure inside Settings; a successful no-op must not look like a dead button. The running bundle compares its embedded package version with the active `ui.json` when the window regains focus and reloads after Local Core switches the GUI root. Do not add a permanent update/discovery polling timer.
 
+Initial Channel loading has three distinct states: loading, successfully empty, and failed. A failed
+request must render a retry surface and retain any prior data; it must never masquerade as “Create
+your first Channel.” User-visible subprocess failures are bounded summaries, never raw tracebacks.
+
 All context types use `features/agent/AgentPromptDialog` for Give to Agent. A feature owns only its prompt body; dialog sizing, overflow handling, target availability, default-Agent primary action, clipboard and Agent launch behavior must not be duplicated.
 
 Quick Share lives under `ui/src/features/transfers` and is a global entry independent from authentication and the selected Channel. Its entry is a type dropdown plus `Manage shared items`; one selection creates exactly one fixed-snapshot Transfer immediately. React gathers local Files, Session-catalog and Skill-catalog sources, but Local Core owns snapshot creation, streaming upload, capability receipts, expiry changes and revoke. Closing the result Dialog does not cancel the share. Keep every source row and prompt bounded inside the Dialog. The result surface copies one self-contained receiver prompt; when the selected Agent target is not installed, that prompt uses the signed public installer before calling `colab-transfer receive`. Never expose upload/revoke capabilities in the prompt or imply that the fixed transfer tracks later source changes.
@@ -50,6 +61,14 @@ Quick Share lives under `ui/src/features/transfers` and is a global entry indepe
 Quick Share uses the standard shadcn Dialog composition. `DialogHeader` and `DialogFooter` are direct
 children of `DialogContent`; only the body scrolls. Do not place `DialogFooter` inside `ScrollArea` or
 another padded wrapper because the primitive's negative margins are defined against DialogContent.
+
+Messages mentions use the Tiptap atomic Mention node. Never replace this with a decorated textarea
+or recover Agent identity by parsing `@display name`; the node's blueprint UUID is authoritative.
+Preserve every visible `@Agent` label in the complete message body and submit that body together
+with the rich document. Server derives routing identities from the atomic nodes. Never render
+request lifecycle rows in the timeline. The Agent member item derives “Agent is working” from
+durable request state only after the target runtime ACKs command delivery; reconcile it on request
+invalidation, heartbeat, socket open, focus, and visibility restoration.
 
 Show the Agent Colab Skill as one independently versioned artifact. Codex, Claude Code, and MyFlicker rows are installation targets for that same artifact, not separately versioned copies. Settings offers one check/update action; per-artifact rows explain what will change instead of exposing redundant update buttons.
 
@@ -61,8 +80,46 @@ The launcher is separately downloadable per platform: macOS publishes a human-fa
 
 Keep components and use-case clients out of a monolithic entry file. Shared UI primitives live under `ui/src/components`; feature code lives under `ui/src/features/<feature>`; Local API access lives under `ui/src/api`.
 
-Conversation/DM is designed but not implemented. Its future UI is an application-level surface,
-not a Sessions/Files/Skills tab and not a fake Channel alias. An `@agent` action renders an explicit
-Agent Request state card with approval/offline/queued/running/result states; it must not turn a
-normal message bubble into an implicit remote command. Conversation membership and Channel access
-remain visibly separate. See `docs/interaction.md` section 6 before adding UI.
+Messages currently uses the Channel as its first Conversation scope. Do not imply that execution
+state is conversation content: `@Agent` commits one ordinary rich message, while Server may derive
+separate runtime commands and Agents report only through ordinary messages. A future cross-Channel
+DM surface remains an application-level information architecture decision, not a reason to move
+runtime protocol details into the timeline. See `docs/interaction.md` section 6 before extending it.
+
+The account realtime WebSocket is a singleton shared by Messages and Canvas; never open a feature-local
+socket. It is only a wake-up path. Server text heartbeats keep it observable through the
+Local Core bridge; the GUI records every received frame and closes an otherwise-open socket after 45
+seconds of silence. Treat every heartbeat, matching invalidation, socket open, window focus, and
+document visibility restoration as a reconciliation barrier: run one single-flight
+`after=lastSeq` fetch even when the socket still looks healthy. An invalidation can be lost during
+an account switch, proxy reconnect, or sleep while later heartbeats keep the same socket alive, so
+realtime liveness must never be used as proof that the durable cursor is current.
+
+Canvas uses Tiptap Collaboration on a Y.Doc, but it must fetch and apply the initial ordered update set
+before mounting the editor. Otherwise an empty ProseMirror document can emit a local update before the
+remote state is loaded. GUI updates go to Local Core over HTTP; `canvas.invalidated` only triggers
+ordered repair. `Loading`, `Saving locally`, `Saved locally · Offline`, and `Synced` are distinct states.
+Do not expose Yjs/Yrs structures in GUI-to-Agent contracts or add Canvas logic to Electron Shell.
+Canvas document/folder creation uses the New menu and immediately inserts an inline-editable tree item through real Local Core routes; double-click renames and every folder
+offers an in-place child-document action. Canvas handoff must reuse `AgentPromptDialog` and include exact
+list/read/edit commands. Member and Agent mentions are structured inline nodes; hover/focus opens an identity card, and only an Agent card exposes its Server-backed send action. Agent task
+context is the user-visible enclosing Heading section rather than an internal editor block.
+
+The application shell owns the viewport and must not grow with the message history. Keep the
+Channel rail and composer pinned inside the viewport; only the timeline and participant list may
+scroll. Cache each Channel's loaded rows and cursor while the GUI is alive, fetch only the cursor
+delta when returning, and restore that Channel's timeline scroll offset. Channel identity and Quick
+Share share one compact header row rather than separate vertical bands.
+
+The participant list is a compact flat roster, not a disclosure tree. Render each member and their
+selected Agents without item borders; an Agent reuses the owner's small avatar plus the same
+supernova ring used in the timeline. Only the current member exposes the Agent-count management
+entry. Other members' Agents are immediately visible and read-only.
+
+Global Settings starts with only the active User and Organization plus Switch drill-down actions,
+then My Agents with its count, Skill installation targets, and a collapsed Updates section at the
+bottom. Do not expand every saved account, Organization, or artifact version on the first surface.
+
+Do not reserve a permanent GUI strip for global Loading or Agent activity. If native titlebar status
+is not implemented by Electron, leave the native titlebar alone and show progress only inside the
+feature surface that owns the operation.

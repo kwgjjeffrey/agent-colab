@@ -1,14 +1,17 @@
-import { FormEvent, StrictMode, useEffect, useState, useSyncExternalStore } from "react";
+import { initializeTelemetry } from "@/api/telemetry";
+void initializeTelemetry();
+import { FormEvent, StrictMode, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import packageMetadata from "../package.json";
 import {
-  BotIcon,
   CheckIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
   LogOutIcon,
   LoaderCircleIcon,
   PlusIcon,
-  RefreshCwIcon,
   SettingsIcon,
+  SparklesIcon,
   Trash2Icon,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -49,6 +52,13 @@ import { FilesView, type FileShare } from "@/features/files/FilesView";
 import type { AgentTarget } from "@/features/agent/AgentPromptDialog";
 import { SessionsView, type SessionShare } from "@/features/sessions/SessionsView";
 import { SkillsView } from "@/features/skills/SkillsView";
+import { MessagesView } from "@/features/messages/MessagesView";
+import { CanvasView } from "@/features/canvas/CanvasView";
+import { ChannelContextProvider } from "@/features/context/ChannelContext";
+import type { ContextResource } from "@/features/context/context-model";
+import {useUpdateProgress} from "@/features/updates/useUpdateProgress";
+import {isUpdateRunning} from "@/features/updates/progress";
+import {UpdateProgressView} from "@/features/updates/UpdateProgressView";
 import { QuickShareControl } from "@/features/transfers/QuickShareDialog";
 import {
   Tooltip,
@@ -57,7 +67,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import "./styles.css";
-import { requestActivitySnapshot, subscribeRequestActivity, trackedFetch } from "@/api/request-activity";
+import { trackedFetch } from "@/api/request-activity";
 
 declare global {
   interface Window {
@@ -143,6 +153,7 @@ type InstallationStatus = {
   targets: Record<string, { installed: boolean; path: string }>;
   defaultAgent?: AgentTarget;
   components?: Record<string, { installedVersion?: string; latestVersion?: string; updateAvailable?: boolean; downloadUrl?: string }>;
+  shellUpdatePending?: boolean;
 };
 
 type InstallationAction = "checking" | "updating";
@@ -152,8 +163,10 @@ function App() {
   const [auth, setAuth] = useState<Auth>({ authenticated: false });
   const [authResolved, setAuthResolved] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
+  const [workspaceLoadError, setWorkspaceLoadError] = useState<string>();
   const [channels, setChannels] = useState<Channel[]>([]);
   const [selectedId, setSelectedId] = useState<string>();
+  const [contextFocus, setContextFocus] = useState<ContextResource>();
   const [busy, setBusy] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [showCreateOrganization, setShowCreateOrganization] = useState(false);
@@ -168,9 +181,29 @@ function App() {
   const [installationAction, setInstallationAction] = useState<InstallationAction>();
   const [installationMessage, setInstallationMessage] = useState<InstallationMessage>();
   const [installationMutationBusy, setInstallationMutationBusy] = useState(false);
-  const installationBusy = installationAction !== undefined || installationMutationBusy;
-  const activeRequests = useSyncExternalStore(subscribeRequestActivity, requestActivitySnapshot);
+  const [agentSettingsOpenToken, setAgentSettingsOpenToken] = useState(0);
+  const [workspaceTab, setWorkspaceTab] = useState<string | number>("messages");
+  const [settingsView, setSettingsView] = useState<"main" | "accounts" | "organizations">("main");
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [updatesExpanded, setUpdatesExpanded] = useState(false);
+  const [myAgentCount, setMyAgentCount] = useState(0);
+  const [agentActivity, setAgentActivity] = useState<string>();
+  const {progress: updateProgress, resolved: progressResolved, refresh: refreshUpdateProgress} = useUpdateProgress(settingsOpen || installationAction === "updating");
+  const updateRunning = isUpdateRunning(updateProgress);
+  const updateBusy = installationAction === "updating" || updateRunning;
+  const installationBusy = installationAction !== undefined || installationMutationBusy || updateRunning || (settingsOpen && !progressResolved);
   const selected = channels.find((channel) => channel.id === selectedId);
+  useEffect(() => {
+    if (!error) return;
+    const timeout = window.setTimeout(() => setError(undefined), 8000);
+    return () => window.clearTimeout(timeout);
+  }, [error]);
+  useEffect(() => {
+    if (!notice) return;
+    const timeout = window.setTimeout(() => setNotice(undefined), 4000);
+    return () => window.clearTimeout(timeout);
+  }, [notice]);
+  useEffect(()=>{if(initialLoading||installationAction||(!installation?.shellUpdatePending&&sessionStorage.getItem("agent-colab:resume-shell-update")!=="1"))return;sessionStorage.removeItem("agent-colab:resume-shell-update");void finishShellUpdate()},[initialLoading,installation?.shellUpdatePending]);
 
   async function refreshAuth(initial = false) {
     try {
@@ -194,6 +227,7 @@ function App() {
     if (!response.ok) throw new Error(await response.text());
     const next: Channel[] = await response.json();
     setChannels(next);
+    setWorkspaceLoadError(undefined);
     setSelectedId((current) =>
       current && next.some((channel) => channel.id === current)
         ? current
@@ -215,6 +249,11 @@ function App() {
     setInstallation(next);
     return next;
   }
+  async function messageSettingsAgentCount(channelId: string) {
+    const response = await api(`/v1/channels/${channelId}/participants`, undefined, true);
+    const participants = await response.json() as Array<{ isCurrent: boolean; agentCount: number }>;
+    return participants.find((participant) => participant.isCurrent)?.agentCount ?? 0;
+  }
   async function checkInstallation() {
     setInstallationAction("checking");
     setInstallationMessage(undefined);
@@ -230,19 +269,27 @@ function App() {
           : "All Colab resources are up to date.",
       });
     } catch (reason) {
-      setInstallationMessage({ kind: "error", text: `Update check failed: ${String(reason)}` });
+      setInstallationMessage({ kind: "error", text: `Update check failed: ${readableError(reason)}` });
     } finally {
       setInstallationAction(undefined);
     }
   }
   async function updateInstallation() {
+    const resumeShell=Boolean(installation?.components?.["electron-shell"]?.updateAvailable);
     setInstallationAction("updating");
     setInstallationMessage(undefined);
     try {
-      const response = await api("/v1/system/update", { method: "POST" });
-      const result = await response.json() as { restartScheduled?: boolean; previousPid?: number };
-      if (result.restartScheduled) {
+      if (isUpdateRunning(await refreshUpdateProgress())) return;
+      // A long artifact transfer has its own progress surface; it is not generic page loading.
+      const response = await api("/v1/system/update", { method: "POST" }, true);
+      const result = await response.json() as { restartRequired?: boolean; previousPid?: number; alreadyRunning?: boolean };
+      if (result.alreadyRunning) { await refreshUpdateProgress(); return; }
+      if (result.restartRequired) {
+        if(resumeShell)sessionStorage.setItem("agent-colab:resume-shell-update","1");
         setInstallationMessage({ kind: "success", text: "Colab resources updated. Restarting Local Core…" });
+        // Restart is intentionally fire-and-forget. The old Core may close this connection as soon
+        // as it acknowledges the command; readiness is determined exclusively by the new PID probe.
+        void fetch("/v1/system/restart", { method: "POST", keepalive: true }).catch(()=>undefined);
         // The installation-scoped loopback origin and auth cookie remain stable across a managed
         // Core restart. Poll only while this explicit update is in progress; this is bounded and
         // browser-native, so neither Electron nor a permanent background timer is required.
@@ -275,8 +322,42 @@ function App() {
         setInstallationMessage({ kind: "success", text: "Colab resources installed. Restart Local Core to activate them." });
       }
     } catch (reason) {
-      setInstallationMessage({ kind: "error", text: `Update failed: ${String(reason)}` });
+      // An expired caller or a legacy lock-conflict response must attach to the live updater.
+      const progress = await refreshUpdateProgress().catch(() => undefined);
+      if (!isUpdateRunning(progress)) setInstallationMessage({ kind: "error", text: `Update failed: ${readableError(reason)}` });
     } finally { setInstallationAction(undefined); }
+  }
+  async function restartInstalledCore() {
+    setInstallationAction("updating");
+    try {
+      void fetch("/v1/system/restart", {method:"POST",keepalive:true}).catch(() => undefined);
+      const previousPid = updateProgress?.previousPid;
+      const deadline = Date.now() + 30_000;
+      while (Date.now() < deadline) {
+        await new Promise(resolve => window.setTimeout(resolve, 700));
+        try {
+          const response = await fetch(`/v1/status?restartProbe=${Date.now()}`, {cache:"no-store"});
+          const status = response.ok ? await response.json() : undefined;
+          if (status?.pid && status.pid !== previousPid) {window.location.reload(); return;}
+        } catch { /* launchd is replacing Core */ }
+      }
+      throw new Error("Local Core did not become ready within 30 seconds");
+    } catch(reason) {setInstallationMessage({kind:"error",text:readableError(reason)});}
+    finally {setInstallationAction(undefined);}
+  }
+  async function finishShellUpdate() {
+    setInstallationAction("updating");
+    setInstallationMessage(undefined);
+    try {
+      const response = await api("/v1/system/update-shell", { method: "POST" }, true);
+      await response.json();
+      await loadInstallation(true);
+      setInstallationMessage({ kind: "success", text: "Electron Shell updated. Restart Colab to use the new Shell." });
+    } catch (reason) {
+      setInstallationMessage({ kind: "error", text: `Electron Shell update failed: ${readableError(reason)}` });
+    } finally {
+      setInstallationAction(undefined);
+    }
   }
   async function setAgentSkill(agent: string, installed: boolean) {
     setInstallationMutationBusy(true);
@@ -362,7 +443,7 @@ function App() {
     if (auth.authenticated) {
       void refreshOrganizations()
         .then(() => refreshChannels())
-        .catch((reason) => setError(String(reason)))
+        .catch((reason) => setWorkspaceLoadError(readableError(reason)))
         .finally(() => setInitialLoading(false));
       void finishPendingInvitation();
     } else {
@@ -689,14 +770,10 @@ function App() {
 
   return (
     <TooltipProvider>
-      <main className="grid min-h-screen grid-cols-[76px_1fr] bg-background text-foreground">
-        {!initialLoading && activeRequests > 0 && (
-          <div className="fixed top-0 right-0 left-0 z-50 flex h-8 items-center justify-center gap-2 border-b bg-background/95 text-xs font-medium shadow-sm backdrop-blur" role="status">
-            <LoaderCircleIcon className="size-3.5 animate-spin" /> Loading…
-          </div>
-        )}
+      <main className="flex h-screen flex-col overflow-hidden bg-background text-foreground">
+        <div className="grid min-h-0 flex-1 grid-cols-[72px_1fr] overflow-hidden">
         <aside
-          className="flex flex-col items-center justify-between bg-sidebar-foreground px-3 py-5"
+          className="flex h-full flex-col items-center justify-between bg-sidebar-foreground px-2 py-3"
           aria-label="Channels"
         >
           <div className="flex flex-col items-center gap-3">
@@ -705,11 +782,11 @@ function App() {
                 <TooltipTrigger
                   render={
                     <Button
-                      size="icon-lg"
+                      size="icon"
                       variant={
                         selectedId === channel.id ? "default" : "secondary"
                       }
-                      className="rounded-2xl"
+                      className="size-11 rounded-full"
                       onClick={() => setSelectedId(channel.id)}
                       aria-label={channel.name}
                     />
@@ -725,9 +802,9 @@ function App() {
                 <TooltipTrigger
                   render={
                     <Button
-                      size="icon-lg"
+                      size="icon"
                       variant="outline"
-                      className="rounded-2xl border-dashed"
+                      className="size-11 rounded-full border-dashed"
                       onClick={() => setShowCreate(true)}
                       aria-label="Create channel"
                     />
@@ -739,180 +816,44 @@ function App() {
               </Tooltip>
             )}
           </div>
-          <Popover onOpenChange={(open) => { if (open) void loadInstallation().catch((reason) => setInstallationMessage({ kind: "error", text: `Could not load installation status: ${String(reason)}` })); }}>
+          <Popover open={settingsOpen} onOpenChange={(open) => { setSettingsOpen(open); if (open) { setSettingsView("main"); void loadInstallation().catch((reason) => setInstallationMessage({ kind: "error", text: `Could not load installation status: ${String(reason)}` })); if(selected) void messageSettingsAgentCount(selected.id).then(setMyAgentCount).catch(()=>setMyAgentCount(0)); } }}>
             <PopoverTrigger
               render={
                 <Button
-                  size="icon-lg"
-                  variant="secondary"
+                  size="icon"
+                  variant="ghost"
+                  className="size-10 rounded-full text-sidebar-accent-foreground hover:bg-sidebar-accent"
                   aria-label="Settings"
                 />
               }
             >
               <SettingsIcon />
             </PopoverTrigger>
-            <PopoverContent side="right" align="end" className="max-h-[85vh] w-[28rem] overflow-y-auto">
-              <PopoverHeader>
-                <PopoverTitle>Settings</PopoverTitle>
+            <PopoverContent side="right" align="end" className="max-h-[88vh] w-[28rem] overflow-y-auto p-3">
+              <PopoverHeader className="mb-2 flex-row items-center gap-2">
+                {settingsView!=="main"&&<Button size="icon-sm" variant="ghost" aria-label="Back to Settings" onClick={()=>setSettingsView("main")}><ChevronLeftIcon/></Button>}
+                <PopoverTitle>{settingsView==="accounts"?"Switch user":settingsView==="organizations"?"Switch organization":"Settings"}</PopoverTitle>
               </PopoverHeader>
-              <div className="mb-4 rounded-lg border">
-                <div className="flex items-center gap-3 border-b p-3">
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium">Colab resources</p>
-                    <p className="text-xs text-muted-foreground">Independently distributed local artifacts</p>
-                  </div>
-                  <Button size="sm" variant="outline" disabled={installationBusy} onClick={() => void (Object.values(installation?.components ?? {}).some((component) => component.updateAvailable) ? updateInstallation() : checkInstallation())}>
-                    {installationAction === "checking"
-                      ? "Checking…"
-                      : installationAction === "updating"
-                        ? "Updating…"
-                        : Object.values(installation?.components ?? {}).some((component) => component.updateAvailable)
-                          ? "Update"
-                          : "Check updates"}
-                  </Button>
+              {settingsView==="accounts"?<div className="flex flex-col gap-1">
+                {accounts.map(account=><Button key={account.userId} variant={account.active?"secondary":"ghost"} className="h-auto justify-start gap-3 p-2" disabled={busy||account.active} onClick={()=>void switchAccount(account).then(()=>setSettingsView("main"))}><Avatar><AvatarImage src={account.avatarUrl}/><AvatarFallback>{initials(account.displayName??account.email)}</AvatarFallback></Avatar><span className="min-w-0 flex-1 text-left"><strong className="block truncate">{account.displayName??account.email}</strong><small className="block truncate text-muted-foreground">{account.email}</small></span>{account.active&&<CheckIcon/>}</Button>)}
+                <Button variant="outline" disabled={busy} onClick={()=>void signIn()}><PlusIcon/>Add another account</Button>
+                {auth.authenticated&&<Button variant="ghost" className="text-destructive" disabled={busy} onClick={()=>void logout()}><LogOutIcon/>Sign out</Button>}
+              </div>:settingsView==="organizations"?<div className="flex flex-col gap-1">
+                {organizations.map(organization=><Button key={organization.id} variant={organization.active?"secondary":"ghost"} className="justify-start" disabled={busy||organization.active} onClick={()=>void switchOrganization(organization).then(()=>setSettingsView("main"))}><span className="min-w-0 flex-1 truncate text-left">{organization.name}</span>{organization.active&&<CheckIcon/>}</Button>)}
+                <Button variant="outline" onClick={()=>setShowCreateOrganization(true)}><PlusIcon/>Create Organization</Button>
+              </div>:<div className="flex flex-col gap-4">
+                <div className="flex flex-col gap-1">
+                  <Button variant="ghost" className="h-auto justify-start gap-3 px-2 py-2" onClick={()=>setSettingsView("accounts")}><Avatar><AvatarImage src={auth.user?.avatarUrl}/><AvatarFallback>{initials(auth.user?.displayName??auth.user?.email??"U")}</AvatarFallback></Avatar><span className="min-w-0 flex-1 text-left"><span className="block text-xs text-muted-foreground">User</span><strong className="block truncate">{auth.user?.displayName??auth.user?.email??"Not signed in"}</strong></span><span className="text-xs text-muted-foreground">Switch</span><ChevronRightIcon/></Button>
+                  <Button variant="ghost" className="h-auto justify-start px-2 py-2" onClick={()=>setSettingsView("organizations")}><span className="min-w-0 flex-1 text-left"><span className="block text-xs text-muted-foreground">Organization</span><strong className="block truncate">{organizations.find(item=>item.active)?.name??"No organization"}</strong></span><span className="text-xs text-muted-foreground">Switch</span><ChevronRightIcon/></Button>
                 </div>
-                {installationMessage && (
-                  <p role="status" className={`border-b px-3 py-2 text-xs ${installationMessage.kind === "error" ? "bg-destructive/10 text-destructive" : "bg-muted text-muted-foreground"}`}>
-                    {installationMessage.text}
-                  </p>
-                )}
-                {([['local-core','Local Core'],['desktop-ui','GUI Resources'],['colab-skill','Agent Colab Skill'],['electron-shell','Electron Shell']] as const).map(([id,label]) => {
-                  const component=installation?.components?.[id];
-                  return <div key={id} className="flex items-center gap-3 border-b p-3 last:border-b-0">
-                    <div className="min-w-0 flex-1"><p className="text-sm font-medium">{label}</p><p className="text-xs text-muted-foreground">{component?.installedVersion ?? "Not installed"}{component?.latestVersion ? ` · Latest ${component.latestVersion}` : ""}</p></div>
-                    {component?.updateAvailable && <span className="text-xs font-medium text-primary">Update available</span>}
-                    {id === "electron-shell" && !host.isElectron && component?.downloadUrl && (
-                      <Button size="sm" variant="outline" onClick={() => void host.openExternal(component.downloadUrl!)}>
-                        Download app
-                      </Button>
-                    )}
-                  </div>;
-                })}
-              </div>
-              <p className="mb-2 px-1 text-xs font-medium text-muted-foreground">Agent Skills</p>
-              <div className="mb-4 divide-y rounded-lg border">
-                {([['codex','Codex'],['claude','Claude Code'],['myflicker','MyFlicker']] as const).map(([id,label]) => {
-                  const target = installation?.targets?.[id];
-                  return <div key={id} className="flex items-center gap-3 p-3">
-                    <Button size="sm" variant="ghost" aria-label={`Use ${label} as default Agent`} disabled={installationBusy || !target?.installed || installation?.defaultAgent === id} onClick={() => void setDefaultAgent(id)}>
-                      {installation?.defaultAgent === id && <CheckIcon data-icon="inline-start" />}
-                      {installation?.defaultAgent === id ? "Default" : "Set default"}
-                    </Button>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium">{label}</p>
-                      <p className="truncate text-xs text-muted-foreground">{target?.installed ? "Installed" : "Not installed"}</p>
-                    </div>
-                    <Button size="sm" variant="outline" disabled={installationBusy || !installation} onClick={() => void setAgentSkill(id, Boolean(target?.installed))}>
-                      {target?.installed ? "Uninstall" : "Install"}
-                    </Button>
-                  </div>;
-                })}
-              </div>
-              <p className="mb-2 px-1 text-xs font-medium text-muted-foreground">Accounts</p>
-              {auth.authenticated && (
-                <div className="flex items-center gap-3 rounded-lg bg-muted p-3">
-                  <Avatar size="lg">
-                    <AvatarImage src={auth.user?.avatarUrl} alt="" />
-                    <AvatarFallback>
-                      {initials(
-                        auth.user?.displayName ?? auth.user?.email ?? "U",
-                      )}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex min-w-0 flex-1 flex-col">
-                    <strong className="truncate text-sm">
-                      {auth.user?.displayName ?? auth.user?.email}
-                    </strong>
-                    <span className="truncate text-xs text-muted-foreground">
-                      {auth.user?.email}
-                    </span>
-                  </div>
-                  <Button
-                    size="icon-sm"
-                    variant="ghost"
-                    aria-label="Sign out"
-                    disabled={busy}
-                    onClick={() => void logout()}
-                  >
-                    <LogOutIcon />
-                  </Button>
-                </div>
-              )}
-              {auth.authenticated && (
-                <div className="mt-3 flex flex-col gap-1">
-                  <p className="px-2 text-xs font-medium text-muted-foreground">
-                    Organizations
-                  </p>
-                  {organizations.map((organization) => (
-                    <Button
-                      key={organization.id}
-                      variant="ghost"
-                      className="justify-start"
-                      disabled={busy}
-                      onClick={() => void switchOrganization(organization)}
-                    >
-                      <span className="min-w-0 flex-1 truncate text-left">
-                        {organization.name}
-                      </span>
-                      {organization.active && <CheckIcon />}
-                    </Button>
-                  ))}
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowCreateOrganization(true)}
-                  >
-                    <PlusIcon />
-                    Create Organization
-                  </Button>
-                </div>
-              )}
-              {accounts
-                .filter((account) => !account.active)
-                .map((account) => (
-                  <Button
-                    key={account.userId}
-                    variant="ghost"
-                    className="h-auto justify-start gap-3 p-2"
-                    disabled={busy}
-                    onClick={() => void switchAccount(account)}
-                  >
-                    <Avatar>
-                      <AvatarImage src={account.avatarUrl} />
-                      <AvatarFallback>
-                        {initials(account.displayName ?? account.email)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="min-w-0 flex-1 text-left">
-                      <strong className="block truncate">
-                        {account.displayName ?? account.email}
-                      </strong>
-                      <small className="block truncate text-muted-foreground">
-                        {account.email}
-                      </small>
-                    </span>
-                    <RefreshCwIcon />
-                  </Button>
-                ))}
-              <Button
-                variant={auth.authenticated ? "outline" : "default"}
-                disabled={busy}
-                onClick={() => void signIn()}
-              >
-                {auth.authenticated
-                  ? "Add another account"
-                  : "Sign in with Google"}
-              </Button>
+                {selected&&<Button variant="outline" className="w-full justify-start" onClick={()=>{setSettingsOpen(false);setWorkspaceTab("messages");setAgentSettingsOpenToken(value=>value+1)}}><SparklesIcon/><span className="min-w-0 flex-1 text-left">My Agents</span><span className="text-muted-foreground">{myAgentCount}</span><ChevronRightIcon/></Button>}
+                <section><p className="mb-2 px-1 text-xs font-medium text-muted-foreground">Install Skill to local Agent runtime</p><div className="divide-y rounded-lg border">{([['codex','Codex'],['claude','Claude Code'],['myflicker','MyFlicker']] as const).map(([id,label])=>{const target=installation?.targets?.[id];return <div key={id} className="flex items-center gap-3 p-3"><Button size="sm" variant="ghost" aria-label={`Use ${label} as default Agent`} disabled={installationBusy||!target?.installed||installation?.defaultAgent===id} onClick={()=>void setDefaultAgent(id)}>{installation?.defaultAgent===id&&<CheckIcon data-icon="inline-start"/>}{installation?.defaultAgent===id?"Default":"Set default"}</Button><div className="min-w-0 flex-1"><p className="text-sm font-medium">{label}</p><p className="text-xs text-muted-foreground">{target?.installed?"Installed":"Not installed"}</p></div><Button size="sm" variant="outline" disabled={installationBusy||!installation} onClick={()=>void setAgentSkill(id,Boolean(target?.installed))}>{target?.installed?"Uninstall":"Install"}</Button></div>})}</div></section>
+                <section><div className="flex items-center gap-2"><Button variant="ghost" className="min-w-0 flex-1 justify-start px-1" onClick={()=>setUpdatesExpanded(value=>!value)}><span className="min-w-0 flex-1 text-left">Updates</span><ChevronRightIcon className={updatesExpanded?"rotate-90 transition-transform":"transition-transform"}/></Button><Button size="sm" variant="outline" disabled={installationBusy} onClick={()=>void(updateProgress?.restartRequired?restartInstalledCore():Object.values(installation?.components??{}).some(component=>component.updateAvailable)?updateInstallation():checkInstallation())}>{installationAction==="checking"?"Checking…":updateBusy?"Updating…":updateProgress?.restartRequired?"Restart":Object.values(installation?.components??{}).some(component=>component.updateAvailable)?"Update":"Check updates"}</Button></div>{(updateBusy || updateProgress?.restartRequired || ["failed","interrupted"].includes(updateProgress?.state??""))&&<UpdateProgressView progress={updateProgress}/>} {updatesExpanded&&<div className="mt-2 rounded-lg border"><div className="p-3"><p className="text-sm font-medium">Colab resources</p><p className="text-xs text-muted-foreground">Independently distributed local artifacts</p></div>{installationMessage&&!updateRunning&&<p role="status" className={`max-h-28 overflow-auto break-words border-y px-3 py-2 text-xs ${installationMessage.kind==="error"?"bg-destructive/10 text-destructive":"bg-muted text-muted-foreground"}`}>{installationMessage.text}</p>}{([['local-core','Local Core'],['desktop-ui','GUI Resources'],['colab-skill','Agent Colab Skill'],['electron-shell','Electron Shell']] as const).map(([id,label])=>{const component=installation?.components?.[id];return <div key={id} className="flex items-center gap-3 border-t p-3"><div className="min-w-0 flex-1"><p className="text-sm font-medium">{label}</p><p className="text-xs text-muted-foreground">{component?.installedVersion??"Not installed"}{component?.latestVersion?` · Latest ${component.latestVersion}`:""}</p></div>{component?.updateAvailable&&<span className="text-xs font-medium text-primary">Update available</span>}{id==="electron-shell"&&!host.isElectron&&component?.downloadUrl&&<Button size="sm" variant="outline" onClick={()=>void host.openExternal(component.downloadUrl!)}>Download app</Button>}</div>})}</div>}</section>
+              </div>}
             </PopoverContent>
           </Popover>
         </aside>
-        <section className="min-w-0 px-10 py-8">
-          <div className="mb-4 flex justify-end">
-            <QuickShareControl
-              defaultAgent={installation?.defaultAgent ?? "codex"}
-              installedAgents={installation?.targets ?? {}}
-              onChoose={chooseFiles}
-            />
-          </div>
+        <section className="flex min-h-0 min-w-0 flex-col overflow-hidden">
           {initialLoading ? (
             <div className="flex min-h-[80vh] items-center justify-center" role="status">
               <div className="flex flex-col items-center gap-3 text-muted-foreground">
@@ -920,21 +861,41 @@ function App() {
                 <p className="text-sm">Loading your workspace…</p>
               </div>
             </div>
+          ) : workspaceLoadError ? (
+            <ContextEmpty
+              title="Couldn’t load your workspace"
+              description={workspaceLoadError}
+              action={<Button onClick={() => { setInitialLoading(true); setWorkspaceLoadError(undefined); void refreshOrganizations().then(() => refreshChannels()).catch((reason) => setWorkspaceLoadError(readableError(reason))).finally(() => setInitialLoading(false)); }}>Retry</Button>}
+            />
           ) : selected ? (
-            <Tabs defaultValue="sessions" className="gap-8">
-              <div className="flex items-center justify-between border-b">
+            <ChannelContextProvider key={selected.id} channelId={selected.id} navigate={resource => { setContextFocus({ ...resource }); setWorkspaceTab(resource.kind === "session" ? "sessions" : resource.kind === "message" ? "messages" : resource.kind); }}><Tabs value={workspaceTab} onValueChange={setWorkspaceTab} className="flex min-h-0 flex-1 flex-col gap-0">
+              <div className="flex shrink-0 items-center gap-3 px-8 pt-5 pb-3">
+                <Avatar size="lg"><AvatarFallback>{selected.icon ?? initials(selected.name)}</AvatarFallback></Avatar>
+                <h1 className="min-w-0 truncate text-xl font-semibold">{selected.name}</h1>
+                {agentActivity&&<span role="status" className="min-w-0 flex-1 truncate text-sm text-muted-foreground">{agentActivity}</span>}
+                {!agentActivity&&<span className="flex-1"/>}
+                <QuickShareControl
+                  defaultAgent={installation?.defaultAgent ?? "codex"}
+                  installedAgents={installation?.targets ?? {}}
+                  onChoose={chooseFiles}
+                />
+              </div>
+              <div className="flex items-center border-b px-8">
                 <TabsList variant="line">
+                  <TabsTrigger value="messages">Messages</TabsTrigger>
                   <TabsTrigger value="sessions">Sessions</TabsTrigger>
                   <TabsTrigger value="files">Files</TabsTrigger>
                   <TabsTrigger value="skills">Skills</TabsTrigger>
+                  <TabsTrigger value="canvas">Canvas</TabsTrigger>
                   <TabsTrigger value="settings">Settings</TabsTrigger>
                 </TabsList>
-                <Button>
-                  <BotIcon data-icon="inline-start" />Ask an Agent
-                </Button>
               </div>
+              <TabsContent value="messages" className="min-h-0 flex-1 overflow-hidden">
+                <MessagesView focusId={contextFocus?.kind === "message" ? contextFocus.id : undefined} channelId={selected.id} channelName={selected.name} settingsOpenToken={agentSettingsOpenToken} onSettingsOpenConsumed={()=>setAgentSettingsOpenToken(0)} defaultAgent={installation?.defaultAgent ?? "codex"} installedAgents={installation?.targets ?? {}} onError={setError} onNotice={setNotice} onActivityChange={setAgentActivity}/>
+              </TabsContent>
               <TabsContent value="sessions">
                 <SessionsView
+                  focusId={contextFocus?.kind === "session" ? contextFocus.id : undefined}
                   channelId={selected.id}
                   channelName={selected.name}
                   shares={sessionShares}
@@ -947,6 +908,7 @@ function App() {
               </TabsContent>
               <TabsContent value="files">
                 <FilesView
+                  focusId={contextFocus?.kind === "files" ? contextFocus.id : undefined}
                   shares={fileShares}
                   busy={busy}
                   onChoose={chooseFiles}
@@ -968,6 +930,9 @@ function App() {
                   onChoose={chooseFiles}
                 />
               </TabsContent>
+              <TabsContent value="canvas" className="min-h-0 flex-1 overflow-hidden">
+                <CanvasView focusId={contextFocus?.kind === "canvas" ? contextFocus.id : undefined} channelId={selected.id} channelName={selected.name} defaultAgent={installation?.defaultAgent ?? "codex"} installedAgents={installation?.targets ?? {}} />
+              </TabsContent>
               <TabsContent value="settings" onFocus={() => void loadMembers()}>
                 <ChannelSettings
                   channel={selected}
@@ -980,7 +945,7 @@ function App() {
                   onRemove={removeMember}
                 />
               </TabsContent>
-            </Tabs>
+            </Tabs></ChannelContextProvider>
           ) : (
             <ContextEmpty
               title={
@@ -1007,16 +972,13 @@ function App() {
             />
           )}
           {(error ?? auth.error) && (
-            <p className="fixed right-5 bottom-5 left-24 rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
-              {error ?? auth.error}
-            </p>
+            <div role="alert" className="fixed right-5 bottom-5 left-24 flex items-center gap-3 rounded-lg bg-destructive/10 p-3 text-sm text-destructive"><span className="min-w-0 flex-1 break-words">{error ?? auth.error}</span>{error&&<Button size="sm" variant="ghost" onClick={()=>setError(undefined)}>Dismiss</Button>}</div>
           )}
           {notice && (
-            <p className="fixed right-5 bottom-5 rounded-lg bg-primary px-4 py-3 text-sm text-primary-foreground shadow-lg">
-              {notice}
-            </p>
+            <div role="status" className="fixed right-5 bottom-5 flex items-center gap-3 rounded-lg bg-primary px-4 py-3 text-sm text-primary-foreground shadow-lg"><span>{notice}</span><Button size="sm" variant="ghost" onClick={()=>setNotice(undefined)}>Dismiss</Button></div>
           )}
         </section>
+        </div>
         <Dialog open={showCreate} onOpenChange={setShowCreate}>
           <DialogContent>
             <form onSubmit={(event) => void createChannel(event)}>
@@ -1310,6 +1272,27 @@ function initials(name: string) {
       .map((part) => part[0]?.toUpperCase())
       .join("") || "C"
   );
+}
+
+function readableError(reason: unknown) {
+  const raw = reason instanceof Error ? reason.message : String(reason);
+  const candidate = raw.startsWith("Error: ") ? raw.slice(7) : raw;
+  try {
+    const parsed = JSON.parse(candidate) as { error?: unknown; message?: unknown };
+    const detail = parsed.message ?? parsed.error;
+    if (typeof detail === "string") {
+      try {
+        const nested = JSON.parse(detail) as { message?: unknown; error?: unknown };
+        const nestedDetail = nested.message ?? nested.error;
+        if (typeof nestedDetail === "string") return nestedDetail.slice(0, 500);
+      } catch {
+        return detail.slice(0, 500);
+      }
+    }
+  } catch {
+    // Non-JSON errors are already human-readable; only bound them for layout safety.
+  }
+  return candidate.slice(0, 500);
 }
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

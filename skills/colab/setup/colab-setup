@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Install/update the Core, GUI resources, and this Skill from one manifest."""
 from __future__ import annotations
-import argparse, hashlib, json, os, pathlib, plistlib, shutil, subprocess, sys, tarfile, tempfile, time, urllib.parse, urllib.request, zipfile
+import argparse, hashlib, json, os, pathlib, plistlib, shutil, subprocess, sys, tarfile, tempfile, threading, time, urllib.parse, zipfile
+if sys.platform == "darwin": import fcntl
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 from lib.platform_paths import application_root, platform_id
@@ -12,26 +13,140 @@ DEFAULT_MANIFEST = os.environ.get(
 )
 ROOT = application_root()
 DISCOVERY = ROOT / "discovery.json"
+UPDATE_PROGRESS = ROOT / "update-progress.json"
+PENDING_SHELL_UPDATE = ROOT / "pending-shell-update.json"
+DOWNLOAD_CACHE = ROOT / "downloads"
 TARGETS = {"codex": pathlib.Path.home()/".agents/skills/agent-colab", "claude": pathlib.Path.home()/".claude/skills/agent-colab", "myflicker": pathlib.Path.home()/".myflicker/skills/agent-colab"}
 LEGACY_TARGETS = {"codex": pathlib.Path.home()/".agents/skills/colab", "claude": pathlib.Path.home()/".claude/skills/colab", "myflicker": pathlib.Path.home()/".myflicker/skills/colab"}
-DOWNLOAD_HEADERS = {"User-Agent": "agent-colab-setup/1"}
+def fetch_release_url(url: str, target: pathlib.Path, timeout: int):
+    """Stream public release bytes with the repository's proxy-safe curl policy.
 
-def open_release_url(url: str, timeout: int):
-    """Use an explicit product UA; Cloudflare rejects urllib's default UA."""
-    request = urllib.request.Request(url, headers=DOWNLOAD_HEADERS)
-    return urllib.request.urlopen(request, timeout=timeout)
+    macOS urllib inherits system proxy state which can complete TLS setup and then fail mid-body.
+    curl bypasses proxies for immutable public artifacts, retries transient transport failures, and
+    writes directly to disk so neither manifests nor large artifacts need an in-memory response.
+    """
+    curl = shutil.which("curl")
+    if not curl:
+        raise RuntimeError("curl is required to download Agent Colab releases")
+    command = [curl, "--noproxy", "*", "--fail", "--location", "--silent", "--show-error",
+         "--retry", "5", "--retry-all-errors", "--connect-timeout", "10",
+         "--speed-limit", "1024", "--speed-time", "60", "--continue-at", "-",
+         "--user-agent", "agent-colab-setup/1", "--output", str(target)]
+    # Metadata must fail within a bounded interaction. Large immutable artifacts instead use
+    # low-speed detection plus resume: a healthy slow transfer must not fail merely because the
+    # Electron archive cannot finish inside a fixed wall-clock budget.
+    if timeout > 0:
+        command.extend(["--max-time", str(timeout)])
+    command.append(url)
+    result = subprocess.run(
+        command,
+        stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
+    )
+    if result.returncode:
+        detail = result.stderr.decode(errors="replace").strip().splitlines()
+        raise RuntimeError(detail[-1] if detail else f"download failed: {url}")
+
+def write_update_progress(value: dict):
+    ROOT.mkdir(parents=True, exist_ok=True)
+    temporary = UPDATE_PROGRESS.with_suffix(".tmp")
+    temporary.write_text(json.dumps(value))
+    os.replace(temporary, UPDATE_PROGRESS)
+
+def invoked_by_legacy_combined_update() -> bool:
+    """Detect the old updater invoking the newly activated Skill for its Shell phase.
+
+    Releases before the split update contract called `update-shell` from inside `update`. Returning
+    success here lets that old HTTP request finish and its Core restart; the new GUI then resumes
+    the recorded Shell phase through the dedicated Local Core endpoint.
+    """
+    if sys.platform != "darwin": return False
+    result = subprocess.run(
+        ["ps", "-p", str(os.getppid()), "-o", "command="],
+        stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True,
+    )
+    command = result.stdout.strip()
+    return "colab-setup" in command and " update" in command and "update-shell" not in command
 
 def download(url: str, sha256: str, size: int, target: pathlib.Path):
-    with open_release_url(url, timeout=180) as response, target.open("wb") as output:
-        shutil.copyfileobj(response, output)
-    raw = target.read_bytes()
-    if len(raw) != size or hashlib.sha256(raw).hexdigest() != sha256:
+    DOWNLOAD_CACHE.mkdir(parents=True, exist_ok=True)
+    part = DOWNLOAD_CACHE / f"{sha256}.part"
+    blob = DOWNLOAD_CACHE / f"{sha256}.blob"
+    metadata = DOWNLOAD_CACHE / f"{sha256}.json"
+    name = pathlib.Path(urllib.parse.urlparse(url).path).name
+    expected = {"url":url,"sha256":sha256,"size":size,"artifact":name}
+    if metadata.exists():
+        try: recorded = json.loads(metadata.read_text())
+        except (OSError, json.JSONDecodeError): recorded = None
+        if recorded != expected:
+            part.unlink(missing_ok=True); blob.unlink(missing_ok=True)
+    metadata.write_text(json.dumps(expected))
+
+    def verified(path: pathlib.Path) -> bool:
+        if not path.exists() or path.stat().st_size != size: return False
+        digest = hashlib.sha256()
+        with path.open("rb") as source:
+            for chunk in iter(lambda: source.read(1024 * 1024), b""): digest.update(chunk)
+        return digest.hexdigest() == sha256
+
+    if verified(blob):
+        shutil.copy2(blob,target)
+        write_update_progress({"state":"completed","artifact":name,"received":size,"total":size,"bytesPerSecond":0,"etaSeconds":0,"cached":True})
+        return
+    if blob.exists(): blob.unlink()
+    if part.exists() and part.stat().st_size > size: part.unlink()
+
+    resumed = part.stat().st_size if part.exists() else 0
+    started = time.monotonic(); stop = threading.Event()
+    samples = [(started,resumed)]
+    def report():
+        while not stop.wait(0.5):
+            now=time.monotonic(); received=part.stat().st_size if part.exists() else 0
+            samples.append((now,received))
+            while len(samples)>2 and now-samples[0][0]>5: samples.pop(0)
+            elapsed=max(samples[-1][0]-samples[0][0],0.001)
+            speed=max(0,(samples[-1][1]-samples[0][1])/elapsed)
+            write_update_progress({"state":"downloading","artifact":name,"received":received,"total":size,"bytesPerSecond":speed,"etaSeconds":(size-received)/speed if speed else None,"resumedFrom":resumed})
+    reporter = threading.Thread(target=report, daemon=True); reporter.start()
+    try:
+        write_update_progress({"state":"downloading","artifact":name,"received":resumed,"total":size,"bytesPerSecond":0,"etaSeconds":None,"resumedFrom":resumed})
+        fetch_release_url(url, part, timeout=0)
+    except RuntimeError as error:
+        # A provider that ignores Range cannot resume. Discard only this immutable partial and make
+        # one clean request; transient failures keep the partial for the next invocation.
+        if part.exists() and part.stat().st_size and "byte ranges" in str(error).lower():
+            part.unlink()
+            try:
+                fetch_release_url(url,part,timeout=0)
+            except Exception:
+                received=part.stat().st_size if part.exists() else 0
+                write_update_progress({"state":"interrupted","artifact":name,"received":received,"total":size,"resumedFrom":0})
+                raise
+            else:
+                stop.set(); reporter.join()
+        else:
+            received=part.stat().st_size if part.exists() else 0
+            write_update_progress({"state":"interrupted","artifact":name,"received":received,"total":size,"resumedFrom":resumed})
+            raise
+    except Exception:
+        received=part.stat().st_size if part.exists() else 0
+        write_update_progress({"state":"interrupted","artifact":name,"received":received,"total":size,"resumedFrom":resumed})
+        raise
+    finally:
+        stop.set(); reporter.join()
+    received=part.stat().st_size if part.exists() else 0
+    write_update_progress({"state":"verifying","artifact":name,"received":received,"total":size,"resumedFrom":resumed})
+    if not verified(part):
+        part.unlink(missing_ok=True)
+        write_update_progress({"state":"failed","artifact":name,"received":received,"total":size,"error":"Artifact size or SHA-256 did not match; the corrupt partial was discarded."})
         raise RuntimeError(f"artifact verification failed: {url}")
+    os.replace(part,blob)
+    shutil.copy2(blob,target)
+    write_update_progress({"state":"completed","artifact":name,"received":size,"total":size,"bytesPerSecond":0,"etaSeconds":0,"cached":False})
 
 def load_verified_manifest(url: str, temporary: pathlib.Path):
     manifest=temporary/"release.json"; signature=temporary/"release.json.sig"
-    with open_release_url(url,timeout=30) as response: manifest.write_bytes(response.read())
-    with open_release_url(url+".sig",timeout=30) as response: signature.write_bytes(response.read())
+    fetch_release_url(url,manifest,timeout=30)
+    fetch_release_url(url+".sig",signature,timeout=30)
     allowed=pathlib.Path(__file__).resolve().with_name("release-allowed-signers")
     result=subprocess.run(["ssh-keygen","-Y","verify","-f",str(allowed),"-I","agent-colab","-n","agent-colab-release","-s",str(signature)],input=manifest.read_bytes(),stdout=subprocess.PIPE,stderr=subprocess.PIPE)
     if result.returncode: raise RuntimeError("release manifest signature verification failed")
@@ -180,9 +295,15 @@ def main():
     parser.add_argument("--google-credentials", type=pathlib.Path)
     parser.add_argument("--no-restart", action="store_true")
     args=parser.parse_args()
+    update_lock=None
+    if sys.platform=="darwin" and args.operation in ("install","update","update-shell"):
+        ROOT.mkdir(parents=True,exist_ok=True)
+        update_lock=(ROOT/"update.lock").open("a+")
+        try: fcntl.flock(update_lock.fileno(),fcntl.LOCK_EX|fcntl.LOCK_NB)
+        except BlockingIOError: raise RuntimeError("another Agent Colab update is already running")
     receipt=ROOT/"installation.json"
     def target_status(path):
-        required=(path/"SKILL.md",path/"agents/openai.yaml",path/"bin/colab-open",path/"bin/colab-browser",path/"bin/colab-session-reader",path/"bin/colab-skill-tool",path/"bin/colab-transfer")
+        required=(path/"SKILL.md",path/"agents/openai.yaml",path/"bin/colab-open",path/"bin/colab-browser",path/"bin/colab-messages",path/"bin/colab-session-reader",path/"bin/colab-skill-tool",path/"bin/colab-transfer")
         return {"installed":all(item.exists() for item in required),"path":str(path)}
     def component_status(current, manifest=None):
         # Old receipts had one release-wide version. Keep that as a migration fallback only;
@@ -253,6 +374,9 @@ def main():
         print(json.dumps({"agent":agent,"installed":args.operation=="install-agent","path":str(target)})); return
     if args.operation=="update-shell":
         if sys.platform!="darwin": raise RuntimeError("Electron Shell update is currently available only on macOS")
+        if invoked_by_legacy_combined_update():
+            PENDING_SHELL_UPDATE.write_text(json.dumps({"manifest":args.manifest,"createdAt":time.time()}))
+            print(json.dumps({"component":"electron-shell","deferred":True})); return
         with tempfile.TemporaryDirectory(prefix="colab-shell-") as temporary:
             temporary=pathlib.Path(temporary); manifest=load_verified_manifest(args.manifest,temporary)
             # Mixed-platform channels contain more than one Electron artifact;
@@ -265,6 +389,8 @@ def main():
             if target.exists():
                 backup=backups/f"Colab-{int(time.time())}.app"; shutil.move(target,backup)
             shutil.move(source,target)
+        PENDING_SHELL_UPDATE.unlink(missing_ok=True)
+        write_update_progress({"state":"completed","artifact":archive.name,"received":item["size"],"total":item["size"]})
         print(json.dumps({"component":"electron-shell","version":item.get("version",manifest["version"]),"installed":True})); return
     if not args.manifest: raise SystemExit("--manifest or COLAB_RELEASE_MANIFEST is required")
     if os.name == "nt":
@@ -334,12 +460,19 @@ def main():
             install_windows_task(args.server_url,credentials)
         component_artifacts={name:{key:item.get(key) for key in ("version","url","platform","arch") if item.get(key) is not None} for name,item in items.items()}
         receipt.write_text(json.dumps({"installed":True,"version":release_version,"componentVersions":component_versions,"componentArtifacts":component_artifacts,"manifest":args.manifest,"serverUrl":args.server_url,"agents":agents,"installedAt":time.time()},indent=2)+"\n")
-        # `update` is the single user-facing operation. The Shell stays pinned when its artifact
-        # version is unchanged, and is replaced only when the channel explicitly advances it.
+        # The Shell stays pinned when its artifact version is unchanged. A changed Shell is a
+        # second durable phase: recording it here lets both legacy and current GUIs survive the
+        # Core restart before the large application download starts.
         shell_installed=component_status(existing)["electron-shell"].get("installedVersion")
         shell_latest=component_versions.get("electron-shell")
         if sys.platform=="darwin" and shell_installed and shell_latest and shell_installed!=shell_latest:
-            result=subprocess.run([sys.executable,str(pathlib.Path(__file__).resolve()),"update-shell","--manifest",args.manifest],stdout=subprocess.PIPE,stderr=subprocess.PIPE)
-            if result.returncode: raise RuntimeError(f"Electron Shell update failed: {result.stderr.decode(errors='replace')}")
+            PENDING_SHELL_UPDATE.write_text(json.dumps({"manifest":args.manifest,"createdAt":time.time()}))
     print(receipt.read_text(),end="")
-if __name__=="__main__": main()
+if __name__=="__main__":
+    try:
+        main()
+    except Exception as error:
+        # Local Core presents this stderr to people. Keep it actionable and bounded; diagnostic
+        # tracebacks belong in explicit developer runs, not in the Settings surface.
+        print(f"Agent Colab setup failed: {error}", file=sys.stderr)
+        raise SystemExit(1)

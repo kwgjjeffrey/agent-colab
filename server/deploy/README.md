@@ -36,3 +36,13 @@ the same VPS. Colab Server talks to it through `COLAB_SMTP_URL`. Before SMTP is
 installed, `preflight.sh` must show outbound TCP 25 as reachable, the mail host
 must resolve to the VPS, and the VPS provider must set PTR/rDNS to the same mail
 host.
+
+## OTLP provider configuration
+
+Generate the private exporter env with `observability/tools/configure-server.py` from the named provider profiles. Install it independently of business credentials:
+
+```sh
+COLAB_OBSERVABILITY_ENV=/private/path/server-exporter.env server/deploy/configure-observability.sh
+```
+
+This writes `/etc/agent-colab/observability.env` and a systemd drop-in; the next Server deployment/restart activates it. A provider switch regenerates and reinstalls this file, then restarts Server. Never copy the token into GUI/Skill/Core artifacts. Linux source builds include the shared `observability/rust` crate and inject the selected Server release version.

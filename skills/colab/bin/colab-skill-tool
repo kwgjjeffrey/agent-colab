@@ -61,6 +61,7 @@ def main():
         command.add_argument("--ref", required=True)
         command.add_argument("--target", required=True, choices=["codex", "claude", "myflicker"])
     args = parser.parse_args()
+    success = __import__("output_views").writer("skill-tool", args)
     try:
         if args.operation == "sources":
             query = f"query={quote(args.query, safe='')}&recentHours={max(0, args.recent_hours)}"
@@ -91,4 +92,4 @@ def main():
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(__import__("telemetry").run(main))

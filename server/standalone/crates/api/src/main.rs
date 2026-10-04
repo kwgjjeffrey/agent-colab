@@ -21,7 +21,11 @@ use tower_http::{
 };
 
 mod blobs;
+mod canvas;
+mod observability;
 mod email_outbox;
+mod messaging;
+mod context_prompt;
 mod transfers;
 
 #[derive(Clone)]
@@ -30,6 +34,13 @@ struct AppState {
     http: reqwest::Client,
     google_client_id: String,
     blob_root: PathBuf,
+    message_events: tokio::sync::broadcast::Sender<messaging::MessageInvalidation>,
+    agent_status_events: tokio::sync::broadcast::Sender<messaging::AgentRequestInvalidation>,
+    canvas_events: tokio::sync::broadcast::Sender<canvas::CanvasInvalidation>,
+    agent_request_events: tokio::sync::broadcast::Sender<uuid::Uuid>,
+    // A runtime can reconnect before an older socket has fully torn down. Count live sockets so
+    // one stale connection cannot incorrectly mark the device offline for the newer connection.
+    runtime_presence: Arc<tokio::sync::RwLock<std::collections::HashMap<uuid::Uuid, usize>>>,
 }
 
 struct Config {
@@ -88,6 +99,7 @@ impl Config {
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let _ = dotenvy::from_filename(".env.local");
+    let _telemetry = colab_observability::init("colab-server", option_env!("COLAB_SERVER_VERSION").unwrap_or("development"));
     let config = Config::from_env()?;
     let google =
         colab_server_auth::GoogleDesktopCredentials::load(&config.google_oauth_credentials_file)?;
@@ -126,6 +138,10 @@ async fn main() -> anyhow::Result<()> {
     if let Some(sender) = email.clone() {
         email_outbox::spawn(database.clone(), sender, config.public_url.clone());
     }
+    let (message_events, _) = tokio::sync::broadcast::channel(1024);
+    let (agent_status_events, _) = tokio::sync::broadcast::channel(1024);
+    let (agent_request_events, _) = tokio::sync::broadcast::channel(1024);
+    let (canvas_events, _) = tokio::sync::broadcast::channel(1024);
     axum::serve(
         listener,
         router(AppState {
@@ -133,6 +149,11 @@ async fn main() -> anyhow::Result<()> {
             http: reqwest::Client::new(),
             google_client_id: google.client_id,
             blob_root: config.blob_root,
+            message_events,
+            agent_status_events,
+            agent_request_events,
+            canvas_events,
+            runtime_presence: Arc::new(tokio::sync::RwLock::new(std::collections::HashMap::new())),
         })
         .into_make_service_with_connect_info::<SocketAddr>(),
     )
@@ -144,6 +165,8 @@ async fn main() -> anyhow::Result<()> {
 fn router(state: AppState) -> Router {
     let standard = Router::new()
         .route("/health/live", get(live))
+        .route("/v1/observability/clock", get(colab_observability::clock_reply))
+        .route("/v1/observability/traces", axum::routing::post(observability::traces).layer(axum::extract::DefaultBodyLimit::max(1024*1024)))
         .route("/health/ready", get(ready))
         .route("/v1/status", get(status))
         .route("/v1/auth/google/session", post(create_google_session))
@@ -225,8 +248,11 @@ fn router(state: AppState) -> Router {
             Duration::from_secs(30),
         ));
     standard
+        .merge(messaging::routes())
+        .merge(canvas::routes())
         .merge(transfers::router())
         .with_state(state)
+        .layer(axum::middleware::from_fn(colab_observability::http_span))
         .layer(PropagateRequestIdLayer::x_request_id())
         .layer(SetRequestIdLayer::x_request_id(MakeRequestUuid))
         .layer(DefaultBodyLimit::max(256 * 1024 * 1024))

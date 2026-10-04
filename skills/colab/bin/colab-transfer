@@ -49,6 +49,7 @@ def main() -> int:
     revoke.add_argument("--revoke-token", help="Only needed if the local creator receipt is unavailable")
 
     args = parser.parse_args()
+    success = __import__("output_views").writer("transfer", args)
     try:
         if args.operation == "create":
             value = request("POST", "/v1/transfers", core=args.core, timeout=1800, body={
@@ -73,4 +74,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(__import__("telemetry").run(main))

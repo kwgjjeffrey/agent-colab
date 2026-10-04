@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "unit": "colab-skill",
+  "operations": [
+    {
+      "id": "browser.open",
+      "description": "脚本命令—列出 Colab 中当前可访问的 Channel，或阅读指定共享资源的元信息",
+      "owner": "colab-skill",
+      "status": "instrumented",
+      "entry": {
+        "kind": "command",
+        "executable": "colab-browser",
+        "args": [
+          "open",
+          "--ref",
+          "colab://"
+        ]
+      },
+      "completion": {
+        "success": "stdout.json.exit_zero",
+        "failure": "stdout.error.exit_nonzero"
+      },
+      "source": {
+        "path": "skills/colab/bin/colab-browser",
+        "function": "main"
+      }
+    }
+  ]
+}

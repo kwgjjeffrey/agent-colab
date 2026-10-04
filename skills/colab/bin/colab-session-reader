@@ -44,6 +44,7 @@ def main():
     read.add_argument("--include-outputs", action="store_true")
     read.add_argument("--max-output-chars-per-item", type=int, default=4000)
     args = parser.parse_args()
+    success = __import__("output_views").writer("session-reader", args)
     try:
         session = resolve(args.core, args.ref)
         # First use may materialize a very large historical Session. Local Core streams it to
@@ -57,4 +58,4 @@ def main():
         return failure("local_api_error", str(error), error.exit_code)
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(__import__("telemetry").run(main))

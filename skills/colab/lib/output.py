@@ -3,10 +3,11 @@ from __future__ import annotations
 import json
 import sys
 
-def success(data) -> int:
-    page = data.get("page") if isinstance(data, dict) else None
-    next_cursor = page.get("nextCursor") if isinstance(page, dict) else None
-    json.dump({"ok": True, "data": data, "next_cursor": next_cursor}, sys.stdout, ensure_ascii=False, indent=2)
+def success(data, *, include_cursor=False, page=None) -> int:
+    envelope = {"ok": True, "data": data}
+    if page:
+        envelope["page"] = page
+    json.dump(envelope, sys.stdout, ensure_ascii=False, indent=2)
     sys.stdout.write("\n")
     return 0
 

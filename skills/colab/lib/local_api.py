@@ -42,9 +42,14 @@ def request(method: str, path: str, *, core: str = DEFAULT_CORE, body=None, time
     if payload is not None:
         headers["content-type"] = "application/json"
     request = urllib.request.Request(core.rstrip("/") + path, data=payload, headers=headers, method=method)
+    from telemetry import request_span
     try:
-        with _OPENER.open(request, timeout=timeout) as response:
-            raw = response.read()
+        with request_span(method, headers):
+            # Inject after creating the child span, rather than reusing the root span id.
+            for name, value in headers.items():
+                request.add_header(name, value)
+            with _OPENER.open(request, timeout=timeout) as response:
+                raw = response.read()
     except urllib.error.HTTPError as error:
         detail = error.read().decode("utf-8", errors="replace")
         raise LocalApiError(f"Local Core returned HTTP {error.code}: {detail}") from error

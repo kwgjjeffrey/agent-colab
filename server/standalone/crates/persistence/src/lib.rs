@@ -20,7 +20,14 @@ fn unix_time_after(seconds: i64) -> i64 {
         + seconds
 }
 
+mod canvas;
+mod messaging;
 mod transfers;
+pub use canvas::{Canvas, CanvasFolder, CanvasUpdate};
+pub use messaging::{
+    AgentBlueprint, AgentRequestBundle, AgentRequestStatus, AgentRequestWorkDetails, AgentRuntime, ChannelMessage,
+    ChannelParticipant,
+};
 pub use transfers::{
     AddTransferItemError, CreateTransferError, ExpiredTransfer, ManagedTransfer, TransferAccess,
     TransferItem, TransferManifest,
@@ -125,6 +132,7 @@ pub struct FileShare {
     pub id: Uuid,
     pub channel_id: Uuid,
     pub name: String,
+    pub contributor_member_id: Uuid,
     pub contributor_name: String,
     pub contributor_avatar_url: Option<String>,
     pub state: String,
@@ -165,6 +173,7 @@ pub struct SessionShare {
     pub id: Uuid,
     pub channel_id: Uuid,
     pub name: String,
+    pub contributor_member_id: Uuid,
     pub source_adapter: String,
     pub contributor_name: String,
     pub contributor_avatar_url: Option<String>,
@@ -666,7 +675,7 @@ impl Database {
     ) -> anyhow::Result<Option<Vec<FileShare>>> {
         let actor:Option<Uuid>=sqlx::query_scalar("select cm.organization_member_id from channel_members cm join organization_members om on om.id=cm.organization_member_id where cm.channel_id=$1 and om.user_id=$2").bind(channel_id).bind(user_id).fetch_optional(&self.pool).await?;
         let Some(actor) = actor else { return Ok(None) };
-        let rows=sqlx::query_as::<_,FileShare>("select fs.id,fs.channel_id,fs.name,coalesce(u.display_name,u.email) contributor_name,u.avatar_url contributor_avatar_url,fs.state,fs.current_root_oid,(fs.contributor_member_id=$2) can_withdraw,fs.updated_at::text updated_at from channel_shares fs join organization_members om on om.id=fs.contributor_member_id join users u on u.id=om.user_id where fs.channel_id=$1 and fs.kind='files' and fs.state='active' order by fs.updated_at desc").bind(channel_id).bind(actor).fetch_all(&self.pool).await?;
+let rows=sqlx::query_as::<_,FileShare>("select fs.id,fs.channel_id,fs.name,fs.contributor_member_id,coalesce(u.display_name,u.email) contributor_name,u.avatar_url contributor_avatar_url,fs.state,fs.current_root_oid,(fs.contributor_member_id=$2) can_withdraw,fs.updated_at::text updated_at from channel_shares fs join organization_members om on om.id=fs.contributor_member_id join users u on u.id=om.user_id where fs.channel_id=$1 and fs.kind='files' and fs.state='active' order by fs.updated_at desc").bind(channel_id).bind(actor).fetch_all(&self.pool).await?;
         Ok(Some(rows))
     }
 
@@ -681,7 +690,7 @@ impl Database {
             return Ok(None);
         };
         let id = Uuid::new_v4();
-        let share=sqlx::query_as::<_,FileShare>("insert into channel_shares(id,channel_id,contributor_member_id,name,kind,source_adapter) values($1,$2,$3,$4,'files','shadow-git-v1') returning id,channel_id,name,(select coalesce(u.display_name,u.email) from organization_members om join users u on u.id=om.user_id where om.id=$3) contributor_name,(select u.avatar_url from organization_members om join users u on u.id=om.user_id where om.id=$3) contributor_avatar_url,state,current_root_oid,true can_withdraw,updated_at::text updated_at").bind(id).bind(channel_id).bind(member).bind(name).fetch_one(&self.pool).await?;
+        let share=sqlx::query_as::<_,FileShare>("insert into channel_shares(id,channel_id,contributor_member_id,name,kind,source_adapter) values($1,$2,$3,$4,'files','shadow-git-v1') returning id,channel_id,name,contributor_member_id,(select coalesce(u.display_name,u.email) from organization_members om join users u on u.id=om.user_id where om.id=$3) contributor_name,(select u.avatar_url from organization_members om join users u on u.id=om.user_id where om.id=$3) contributor_avatar_url,state,current_root_oid,true can_withdraw,updated_at::text updated_at").bind(id).bind(channel_id).bind(member).bind(name).fetch_one(&self.pool).await?;
         Ok(Some(share))
     }
 
@@ -885,7 +894,7 @@ impl Database {
     ) -> anyhow::Result<Option<Vec<SessionShare>>> {
         let actor:Option<Uuid>=sqlx::query_scalar("select cm.organization_member_id from channel_members cm join organization_members om on om.id=cm.organization_member_id where cm.channel_id=$1 and om.user_id=$2").bind(channel_id).bind(user_id).fetch_optional(&self.pool).await?;
         let Some(actor) = actor else { return Ok(None) };
-        Ok(Some(sqlx::query_as("select s.id,s.channel_id,s.name,s.source_adapter,coalesce(u.display_name,u.email) contributor_name,u.avatar_url contributor_avatar_url,s.state,s.current_snapshot_id,(s.contributor_member_id=$2) can_withdraw,s.updated_at::text updated_at from channel_shares s join organization_members om on om.id=s.contributor_member_id join users u on u.id=om.user_id where s.channel_id=$1 and s.kind='session' and s.state='active' order by s.updated_at desc").bind(channel_id).bind(actor).fetch_all(&self.pool).await?))
+        Ok(Some(sqlx::query_as("select s.id,s.channel_id,s.name,s.source_adapter,s.contributor_member_id,coalesce(u.display_name,u.email) contributor_name,u.avatar_url contributor_avatar_url,s.state,s.current_snapshot_id,(s.contributor_member_id=$2) can_withdraw,s.updated_at::text updated_at from channel_shares s join organization_members om on om.id=s.contributor_member_id join users u on u.id=om.user_id where s.channel_id=$1 and s.kind='session' and s.state='active' order by s.updated_at desc").bind(channel_id).bind(actor).fetch_all(&self.pool).await?))
     }
 
     pub async fn create_session_share(
@@ -900,7 +909,7 @@ impl Database {
             return Ok(None);
         };
         let id = Uuid::new_v4();
-        Ok(Some(sqlx::query_as("insert into channel_shares(id,channel_id,contributor_member_id,name,kind,source_adapter) values($1,$2,$3,$4,'session',$5) returning id,channel_id,name,source_adapter,(select coalesce(u.display_name,u.email) from organization_members om join users u on u.id=om.user_id where om.id=$3) contributor_name,(select u.avatar_url from organization_members om join users u on u.id=om.user_id where om.id=$3) contributor_avatar_url,state,current_snapshot_id,true can_withdraw,updated_at::text updated_at").bind(id).bind(channel_id).bind(member).bind(name).bind(adapter).fetch_one(&self.pool).await?))
+        Ok(Some(sqlx::query_as("insert into channel_shares(id,channel_id,contributor_member_id,name,kind,source_adapter) values($1,$2,$3,$4,'session',$5) returning id,channel_id,name,contributor_member_id,source_adapter,(select coalesce(u.display_name,u.email) from organization_members om join users u on u.id=om.user_id where om.id=$3) contributor_name,(select u.avatar_url from organization_members om join users u on u.id=om.user_id where om.id=$3) contributor_avatar_url,state,current_snapshot_id,true can_withdraw,updated_at::text updated_at").bind(id).bind(channel_id).bind(member).bind(name).bind(adapter).fetch_one(&self.pool).await?))
     }
 
     pub async fn append_session_segment(

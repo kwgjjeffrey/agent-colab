@@ -3,6 +3,16 @@ info:
   title: Colab Local API
   version: 0.1.0
 paths:
+  /v1/system/update-progress:
+    get:
+      summary: Read current local artifact download progress
+      responses:
+        "200": { description: Update progress }
+  /v1/system/restart:
+    post:
+      summary: Restart a managed Local Core after activated artifacts have been acknowledged
+      responses:
+        "202": { description: Restart accepted; caller should probe for a new process ID }
   /v1/status:
     get:
       operationId: getLocalStatus
@@ -110,6 +120,45 @@ paths:
       operationId: readSharedSession
       responses:
         "200": { description: Snapshot-pinned normalized turns and opaque next cursor }
+  /v1/channels/{channelId}/participants:
+    get:
+      operationId: listLocalChannelMessageParticipants
+      responses:
+        "200": { description: Channel members and selected Agent counts proxied without exposing remote credentials }
+  /v1/channels/{channelId}/blueprints:
+    get:
+      operationId: listLocalAgentBlueprints
+      responses:
+        "200": { description: Organization-wide personal Agent list with Channel selection state }
+    post:
+      operationId: createLocalAgentBlueprint
+      responses:
+        "201": { description: Personal Agent blueprint created }
+  /v1/channels/{channelId}/blueprints/{blueprintId}:
+    patch:
+      operationId: updateLocalAgentBlueprint
+      responses:
+        "200": { description: Owned Agent blueprint updated }
+  /v1/channels/{channelId}/blueprints/{blueprintId}/selection:
+    patch:
+      operationId: setLocalChannelAgentSelection
+      responses:
+        "204": { description: Owned Agent Channel selection updated }
+  /v1/channels/{channelId}/messages:
+    get:
+      operationId: listLocalChannelMessages
+      responses:
+        "200": { description: Cursor-paginated Channel messages }
+    post:
+      operationId: createLocalChannelMessage
+      responses:
+        "201": { description: Idempotent member message committed }
+  /v1/messages/stream:
+    get:
+      operationId: streamLocalMessageInvalidations
+      summary: Upgrade to a loopback WebSocket bridged to the authenticated Server stream
+      responses:
+        "101": { description: WebSocket protocol switched }
   /v1/skill-sources:
     get:
       operationId: listLocalSkillSources
@@ -181,6 +230,80 @@ paths:
       operationId: receiveQuickTransfer
       responses:
         "200": { description: Item streamed, verified, and atomically materialized in application data }
+  /v1/channels/{channelId}/agent-runtimes:
+    get:
+      operationId: listLocalAgentRuntimes
+      responses:
+        "200": { description: Registered device + coding-agent runtime choices }
+  /v1/channels/{channelId}/agent-requests:
+    get:
+      operationId: listLocalAgentRequests
+      responses:
+        "200": { description: Channel Agent task history including summary, createdAt, nullable startedAt, finishedAt and durationMs, proxied without exposing remote credentials }
+    post:
+      operationId: createLocalAgentRequest
+      responses:
+        "201": { description: Forwarded-message request created; ordinary rich-message mentions route server-side }
+  /v1/agent-requests/{requestId}/context:
+    get:
+      operationId: readLocalAgentRequestContext
+      responses:
+        "200": { description: Older authorized messages for this request only }
+  /v1/agent-requests/{requestId}/reply:
+    post:
+      operationId: replyToLocalAgentRequest
+      responses:
+        "201": { description: Result returned as the selected Channel Agent }
+  /v1/channels/{channelId}/canvases:
+    get:
+      operationId: listLocalCanvases
+      responses:
+        "200": { description: Authorized Canvas metadata }
+    post:
+      operationId: createLocalCanvas
+      responses:
+        "201": { description: Canvas created }
+  /v1/channels/{channelId}/canvas-folders:
+    get:
+      operationId: listLocalCanvasFolders
+      responses:
+        "200": { description: Authorized Canvas folders }
+    post:
+      operationId: createLocalCanvasFolder
+      responses:
+        "201": { description: Canvas folder created }
+  /v1/canvases/{canvasId}:
+    patch:
+      operationId: renameLocalCanvas
+      responses:
+        "200": { description: Canvas renamed through the Server use case }
+  /v1/canvas-folders/{folderId}:
+    patch:
+      operationId: renameLocalCanvasFolder
+      responses:
+        "200": { description: Canvas folder renamed through the Server use case }
+  /v1/canvases/{canvasId}/updates:
+    get:
+      operationId: repairLocalCanvasReplica
+      responses:
+        "200": { description: Ordered updates after durable local outbox replay }
+    post:
+      operationId: saveLocalCanvasUpdate
+      summary: Durably enqueue locally before attempting Server delivery
+      responses:
+        "201": { description: Update acknowledged by Server }
+  /v1/canvases/{canvasId}/document:
+    get:
+      operationId: readCanvasMarkdownProjection
+      responses:
+        "200": { description: Deterministic virtual document.md projection and revision }
+  /v1/canvases/{canvasId}/apply-patch:
+    post:
+      operationId: applyCanvasDocumentPatch
+      summary: Apply a Codex Update File patch to the current document.md projection
+      responses:
+        "200": { description: Patch converted into a durable Yrs transaction }
+        "409": { description: Context changed or the patch targets a structured component fence }
 components:
   schemas:
     LocalStatus:

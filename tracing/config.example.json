@@ -1,0 +1,1 @@
+{"grafanaUrl":"https://YOUR-STACK.grafana.net","datasourceUid":"YOUR-TEMPO-UID","queryEndpoint":"https://YOUR-TEMPO-ENDPOINT/tempo","queryInstanceId":"YOUR-QUERY-TENANT","credentialsFile":"/private/path/credentials.json"}

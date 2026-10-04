@@ -2,6 +2,8 @@
 
 Read `docs/product.md`, `docs/interaction.md`, `docs/technical-design.md`, and `docs/agent-interface.md` before changing product behavior or boundaries. `docs/implementation-plan.md` and `docs/validation-plan.md` are live status documents and must be updated with verified results.
 
+Read `docs/canvas-technical-design.md` before changing Canvas. Canvas durable mutations use HTTP through Local Core; Canvas and Conversation invalidations share the one account realtime WebSocket. Local Core owns the Yrs replica, projection codec, durable outbox, retry, and ordered repair. Agent tools receive a Markdown/TXT projection and must never expose CRDT internals. The current Canvas implementation and validation scope is macOS first.
+
 The independently released or deployed units are Electron Shell, Desktop GUI resources, Rust Local Core, Python Colab Skill, and Rust Server. Do not move business logic across these boundaries for convenience. GUI and Skill call Local Core; Local Core calls Server. Server is never bundled into the desktop distribution.
 
 The release channel has its own promotion identifier, while every client artifact has an independent version read from its owning directory. Never advance Electron Shell merely because Core, GUI, or Skill changed. A single user-facing update operation compares all artifact versions and installs only changed artifacts.

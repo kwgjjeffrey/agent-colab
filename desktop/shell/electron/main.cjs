@@ -62,6 +62,7 @@ async function localGuiUrl() {
 async function createWindow() {
   requestCoreStart()
   window = new BrowserWindow({ width: 1280, height: 820, minWidth: 900, minHeight: 600, show: false,
+    ...(process.platform === 'darwin' ? { titleBarStyle: 'hiddenInset' } : {}),
     webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true } })
   // Electron is only a native bookmark for the independently installed Local
   // Core. Local Core owns the active GUI resources, so browser and App users

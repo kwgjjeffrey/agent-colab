@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "activeProvider": "grafana",
+  "providers": {
+    "honeycomb": {
+      "endpoint": "https://api.honeycomb.io",
+      "authentication": "honeycomb",
+      "credentialsFile": "honeycomb-ingest.json"
+    },
+    "grafana": {
+      "endpoint": "https://YOUR-OTLP-GATEWAY.grafana.net/otlp",
+      "authentication": "basic",
+      "instanceId": "YOUR-OTLP-INSTANCE-ID",
+      "credentialsFile": "grafana-ingest.json"
+    }
+  }
+}

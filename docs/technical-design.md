@@ -1,5 +1,9 @@
 # Colab 技术设计
 
+Canvas 的 Markdown/CRDT 转换现由 Local Core 自有 ProseMirror Markdown +
+Tiptap Yjs binding helper 实现，替代原手写转换。能力边界、段尾硬换行映射及
+验证索引见 [Canvas 独立技术设计](canvas-technical-design.md#2026-10-04转换实现替换)。
+
 状态：第一轮验证收敛版  
 当前实现主线：独立 Rust + PostgreSQL；Supabase 原型保留但暂停继续开发  
 范围：Organization、Channel、Session、Files、Skills、Settings
@@ -652,7 +656,7 @@ Files GUI 的原始内容接口只在已鉴权 loopback API 上提供，并以 T
 | Blob | `object_store` 作为内部 port；S3 production adapter | MinIO、R2、S3 和企业兼容存储；授权 URL 由服务端签发 |
 | Jobs | PostgreSQL transactional outbox + worker | 与 root CAS 同事务；`SKIP LOCKED` claim、lease、retry、dead-letter |
 | Search | PostgreSQL FTS | 首版不引入 Elasticsearch/向量库 |
-| Realtime | Axum SSE | 只推送 cursor invalidation；正确性仍依赖 cursor pull |
+| Realtime | Axum WebSocket | Conversation socket 只推 cursor invalidation 并以 cursor pull 修复；独立 runtime socket 下发完整 Agent command，PostgreSQL request 仍是持久真源 |
 | Rate limit | tower-governor | API、登录和签名 URL 限流 |
 | 日志 | `log` facade + JSON/文本日志 | 首版满足问题定位；tracing/OpenTelemetry 后续加入 |
 | 集成验收 | 临时 PostgreSQL、临时 S3-compatible Storage、假的 Google OIDC 端点 | 验证真实跨模块闭环；具体测试工具在进入 Server 阶段再选 |
@@ -691,15 +695,20 @@ Setup 还负责：
 - GUI 设置页检查组合版本，但下载和替换调用 Skill setup；setup 更新 GUI 时原子切换静态资源指针，更新 Local Core 时通过 launchd/systemd/Windows Service 安全重启，避免任一前端宿主自覆盖；
 - headless 安装与 Desktop 安装写入同一种 ownership receipt，防止两个 updater 争抢同一个 `colabd`。
 
-### 11.8 Conversation 与 Agent delegation 候选架构（尚未实现）
+### 11.8 Channel Messages 与 Agent blueprint（首个纵向切片已实现）
 
-本节原候选以 Centrifugo + 自建消息域为基础，已被新的结构化评审取代。当前决策、ER、模块部署图和关键时序以 [conversation-design.md](conversation-design.md) 为准；下文保留为历史推演，不得作为实现依据。
+编辑器、HTTP、持久化、runtime 命令、回传、实时通知和前端投影的准确数据形态，见带完整实例的
+[`architecture/agent-request-data-flow.md`](architecture/agent-request-data-flow.md)。
 
-Conversation 不复用 Channel 表，也不把聊天业务塞进实时网关。Rust Server 与 PostgreSQL 继续拥有身份、成员、权限、消息、Agent Request 和离线队列；Centrifugo 是推荐的独立实时 transport，只发送“某 Conversation 的 cursor 已推进”及短期恢复所需事件。客户端首次进入、恢复失败或离线较久时，始终从 Colab Server 按 cursor 拉取；Centrifugo history 是缓存而不是消息真源。
+消息输入在本地交互层使用 Tiptap；Agent mention 是完整富文本正文中的原子 inline node，同时保存 label 与稳定 blueprint UUID。Server 持久化 rich content 和包含完整 `@Agent` 的派生 plain text，不删除 mention、不保存字符 range、不从展示名反推身份。一条消息可有多个 Agent mention；消息提交后由 Server 对每个不同 blueprint 独立路由，不再由 GUI 发第二个 Agent Request 写请求。
 
-不采用 Matrix 作为首版底座：它完整解决 room、identity、membership、device、federation 和 event graph，但会与已有 Organization、Member、Channel、Colab session 和权限模型形成双重真源；Application Service 也不能拦截或修改发送中的事件，授权 Agent Request 仍需另一套业务状态机。不采用 XMPP：MUC、archive 和 stream resumption 很成熟，但需要把现有身份和 JSON 业务事件映射为一组 XEP，并没有减少 Colab 特有的授权、设备 lease 和 Shared Item 权限实现。裸 Axum WebSocket 同样不采用，因为重连、短期恢复、连接鉴权、fan-out 和横向扩容不应自研。
+当前决策、公开案例、IM 能力阶梯、分层候选矩阵、ER、模块部署图和关键时序以 [conversation-design.md](conversation-design.md) 为准。首版采用现有 Axum Server 的认证 WebSocket + Colab PostgreSQL；不新增 realtime 服务。Matrix 只在 federation、E2EE、第三方 Matrix client 或完整移动 IM 成为确定需求时重新评估。
 
-推荐拓扑：
+首个切片直接以现有 Channel 作为一个默认 room，并复用 `channel_members` 权限；它不提前创建独立 Conversation/DM 对象。Rust Server 与 PostgreSQL 拥有 blueprint、Channel 选择关系和 append-only message；同一 Rust Server 的 WebSocket 首版只发送 `channel_id` 与最新 `seq` 的失效通知。客户端收到通知、首次进入、落后或重连时，都按本地最后 `seq` 拉取缺口；实时事件丢失或服务重启不影响最终一致性。Server 每 15 秒发送一个无业务含义的文本 heartbeat，GUI 记录任意入站帧，已打开的连接连续 45 秒无帧则主动关闭并重连；这是为了解决代理、NAT 或系统休眠留下的半开连接不会触发浏览器 `onclose` 的问题。仅凭持续收到 heartbeat 仍不能证明业务 invalidation 没有丢失：账号切换、代理恢复或休眠窗口可能漏掉失效通知，随后 heartbeat 又让 socket 看似健康。因此每个 heartbeat、匹配的 invalidation、socket open、窗口重新聚焦和页面重新可见都触发一次 single-flight `after=lastSeq` 增量对账；没有缺口时返回空列表，存在缺口时补回 PostgreSQL 已提交消息。heartbeat 不是第二套 cursor 或消息状态，只是低成本 reconciliation barrier。独立 DM/group room 只有在 Channel 内 Messages 验收后再增加自己的 room/member 表。
+
+采用 WebSocket 而非 SSE，是因为两者连接开销同量级，而 Agent runtime 需要双向投递与确认。Conversation 与 runtime 是两套逻辑协议：Conversation WebSocket 只发送 message cursor invalidation，丢失后以 PostgreSQL `seq` 补齐；runtime WebSocket 只在验证精确 runtime 身份后下发 Server 已完成 policy 与上下文包装的执行命令。两者不共用队列或业务状态，也不把 runtime command 当作 chat event。
+
+当前拓扑：
 
 ```text
 GUI / Local Core (outbound connection)
@@ -707,31 +716,65 @@ GUI / Local Core (outbound connection)
         ▼
 Rust Colab Server ── transaction ── PostgreSQL
         │                               ├─ messages / members
-        │ outbox publish                ├─ agent_requests / approvals
-        ▼                               └─ runtime leases / outbox
-   Centrifugo
-        │ WebSocket publication / recovery
-        └──────────────────────────────► GUI / Local Core
+        │ Conversation WS: seq invalidation
+        │ Runtime WS: packaged commands  └─ runtime command recovery
+        └──────────────────────────────► Local Core
+                                            │ Local API
+                                            ▼
+                                           GUI
 ```
 
-核心表按能力拆分：
+首个切片已落地的核心表：
 
-- `conversations`：`dm | group | channel_discussion`，可选 `channel_id` 只表示关联，不继承权限；
-- `conversation_members`：人类参与者、角色和加入/离开 cursor；
-- `messages`：append-only、conversation 内单调 cursor、`client_nonce` 幂等键、sender actor、reply/ref 和 redaction 状态；
 - `agent_blueprints`：owner 管理的能力与策略描述，不包含运行进程；
-- `conversation_agents`：blueprint 在某 Conversation 的参与关系、执行策略和独立 session binding；
+- `channel_agents`：blueprint 是否由 owner 带入某一 Channel；个人 blueprint 列表在同一 Organization 的所有 Channel 中相同；
+- `channel_messages`：append-only、Channel cursor、`client_nonce` 幂等键、member/Agent sender 和一个 reply link；
+- `channel_members`（已有）：直接决定消息与 blueprint 的读权限，不再建立一层映射。
+
+Agent 真正执行与独立 DM/group 后续才增加：
+
+- `conversations` / `conversation_members`：非 Channel room 与参与者；
+- `conversation_agents`：blueprint 在某独立 Conversation 的参与关系和 session binding；
 - `agent_runtimes`：owner 设备上的 runtime registration、capabilities、last seen 和短 lease；
 - `agent_requests`：由 `@agent` 产生的显式状态机，含 requester、target、approval policy、TTL、active lease、result；
-- `conversation_outbox`：与消息/状态变更同事务提交，worker 至少一次投递到实时层；publication 带稳定 event ID，消费者去重。
+- Conversation realtime 不新增 outbox：消息提交后 best-effort 发 WebSocket invalidation；若提交与通知之间崩溃，连接断开后的 cursor catch-up 会读取已提交消息。慢消费者同样断流重连，避免无界缓存。
 
-Agent Request 状态机为 `awaiting_approval | awaiting_runtime | queued | running | succeeded | failed | rejected | cancelled | expired`。服务端先依据 owner policy 决定是否等待批准；批准必须写入 request ID 和 approver，不能依赖自然语言。在线判断只用于交互提示，真正执行依赖 runtime 原子 claim 的短 lease；断线后 lease 到期可重领，所有副作用操作带 idempotency key。
+执行投递在 Server 中可保留内部恢复状态，但 `queued/running/completed` 不是 Conversation 内容。需要 owner 确认时，Server 以 Agent 身份发送 mention owner 的普通消息，不创建可执行命令；owner 的回复若再次 mention Agent，它就是新命令，完整回复是 query，reply chain 是上下文。runtime 离线时，Server 保留待投递命令并以 Agent 身份写普通离线消息。
 
-每个 `conversation_agent` 对应一个独立 agent session。Server 只保存稳定 binding key 和对话侧状态；Local Core 在 owner 设备 SQLite 中把 binding 映射到 provider-native session ID，并由 Codex/Claude Code/MyFlicker adapter 恢复。多设备不自动抢同一 session，首版为 binding 选择一个 active runtime，切换设备必须显式发生。
+Agent activity 不以聊天消息或时间线状态卡表达。Server claim 时先把 request 置为内部 `running`，但只有 protocol 2 Local Core 在同一 runtime WebSocket 上确认完整 command 后，才持久化 `accepted_at`。Channel request 查询把未确认的 claim 映射为 `delivering`，GUI 只把已确认的 `running` 解释为顶部“<Agent> is working…”；因此发不出去的命令不会伪装成工作中。ACK、完成、失败或 Agent reply 都发送 request-state invalidation，GUI 在 invalidation、heartbeat、socket open、focus 和 visibility 恢复时重新读取权威状态。WS 仍只是唤醒信号，丢帧不会留下永久或错误的 typing 状态。
 
-Agent 收到的输入只包括触发消息、必要的 Conversation 历史窗口和已授权 Shared Item 引用，不获得通用远程 shell 权限。Local Core 启动 provider runtime 时注入一个受约束的上报入口，例如 `colab-agent-request report --request <id> --kind progress|final --message ...`；脚本从本机 claim receipt 取得身份，不允许模型指定任意 Conversation 或冒充其他 Agent。详细推理和工具日志保留在 provider session，聊天只接受进度与结果摘要。
+Request-scoped reply 的调用方只提供 `request_id`、正文和幂等 nonce。Server 在同一事务中从 request 反查 `requester_member_id`、显示名与 `trigger_message_id`，生成 member mention rich node、带 mention 的完整 plain body 和 reply link，再以固定 blueprint sender 写入 `channel_messages`。因此 Agent 无需获得群成员 ID 列表，也不能借 reply 工具选择任意 member 身份或引用目标。
 
-Centrifugo 选择 `stream` recovery；短时断线由官方 SDK 的 epoch/offset 恢复，`recovered=false` 时回退到 Server cursor pull。presence 仅作“可能在线”的展示信号，不能作为任务是否执行或是否授权的依据。首版单 VPS 可使用 memory broker；多实例前切换 Redis broker，PostgreSQL 始终是消息和请求的唯一事实来源。
+每个 `conversation_agent` 对应一个独立 agent session。Server 保存稳定 binding key 和对话侧状态；Local Core 在 owner 设备 SQLite 中把 `(channel_id, blueprint_id, runtime_id)` 映射到 provider-native thread ID。首版只实现 Codex adapter：Local Core 使用 Codex app-server 的 `thread/start`/`thread/resume` 创建或恢复非 ephemeral task，因此 owner 能在 Codex Desktop 中直接查看、干预和继续；执行结果通过 request-scoped 上报命令写回 Channel。多设备不自动抢同一 thread，切换 runtime 必须显式发生。
+
+这里必须区分两个生命周期：`provider thread binding` 是长期业务身份，`writer subscription` 是 app-server 连接对该 thread 的进程级独占权。Local Core 只维护一个长期 app-server，由它 resume 并持续持有所有 Colab-managed threads；不再按命令反复启动进程、争抢 writer 和 unsubscribe。Codex Desktop 可以读取并展示被该 app-server 持有的 thread，但在其中直接写入会收到 active-writer 错误。Core 正常退出时逐个 unsubscribe；异常退出时由 app-server 进程终止释放 writer，替代进程再依据 SQLite binding 恢复。只有明确 `thread not found` 才能创建新 thread 并替换 binding。
+
+Codex Desktop 的 writer 生命周期不能按“一个 turn”理解。对安装版实现和运行日志的黑盒核对确认，Desktop 在拥有 conversation-history stream 且 thread 仍有活跃 view、stream follower、正在执行的 turn、审批或用户输入等待项时继续持有 writer。条件全部消失后，Desktop 才把它记为 inactive；inactive writer 超过保留上限 10 个时按最旧顺序立即释放，否则在连续 inactive 3 小时后调用官方 `thread/unsubscribe`，失败每 15 秒重试。仅从主窗口切换页面不保证释放，因为 overlay 等其他 renderer 仍可能订阅该 thread。进程退出则随 app-server 退出释放。
+
+长期 owner 接收新的独立命令时统一调用 `thread/queue/add`，并以 Server request ID 派生稳定 `clientUserMessageId`。Codex app-server 自带 per-thread 持久队列和空闲自动启动：活跃 turn 存在时保留 submission，thread 空闲时立即消费，因此 Local Core 不复制队列表，只观察 `thread/queue/changed`、`turn/started`、`turn/completed` 并完成 request 关联。同一个 app-server 可以同时拥有多个 thread；串行约束只在单个 thread 内，不阻止不同 blueprint thread 并行执行。若 Local Core 重启期间 Desktop 已取得原 thread writer，`thread/resume` 的 active-writer 错误只表示订阅所有权冲突，不表示 thread 丢失；Core 保留原绑定、跳过 settings/name mutation，直接让同一 provider queue 接受命令。只有明确的 thread-not-found 才允许建立替代 thread。
+
+`turn/start` 不是“再提交一个独立任务”的安全接口。协议和黑盒均确认：当 thread 已有 active turn 时，再次 `turn/start` 返回相同 turn ID，并把新输入作为 steer 合并进当前 turn；显式 `turn/steer` 也要求当前 turn ID。只有业务明确要求插入当前任务时才使用 steer。来自 Channel 的每条 Agent command 默认都是独立任务，必须进入 `thread/queue/add`。运行时指令的“已被 provider queue 接受”和“Agent 已执行完成”仍是两个状态，不能在入队时伪报完成。
+
+2026-10-01 的验证证据包括：双 app-server 的 `resume → active writer → owner unsubscribe → same-thread resume`；非 owner `thread/unsubscribe` 返回 `notLoaded`，不存在公开 force/takeover；Desktop 持有期间外部 `thread/queue/add` 成功，随后 Desktop 在原 thread 自动执行并显示该 turn；单 owner app-server 中第二次 `turn/start` 返回原 active turn ID，而 `thread/queue/add` 返回独立 submission，活跃时留在 queue、空闲时被自动消费并创建新 turn。可复现探针、观察限制和实现映射保存在 [V-AGENT-WRITER-01](../.trial/V-AGENT-WRITER-01-codex-writer/README.md)。
+
+`agent_runtimes` 的来源不是远端猜测。Local Core 在 SQLite `local_settings` 保存安装级 `device_id` 与可读 `device_name`；Settings 对某个 coding agent 完成 Agent Colab Skill install/update 后，Local Core 向 Server upsert `(owner_member_id, device_id, provider)`，携带 Skill 版本和 `last_seen_at`，卸载则标记 unavailable。GUI 从 Server 读取当前 member 跨设备的所有已登记 runtime，显示为“设备名 · Coding Agent”的一个 Select；Server blueprint 保存 `runtime_id` 外键并校验 owner/availability/provider。创建提示词直接列出这些 runtime ID，脚手架必须显式选择。首版 blueprint 只接受 Codex runtime；后续接 Claude Code/MyFlicker execution adapter 时不改变登记与 binding 契约。
+
+同一个账号在多台设备安装 Codex Skill 会登记成多条 runtime，而不是合并成一个“Codex”。任务只由 blueprint 绑定的精确 runtime 领取；设备名只是展示标签，稳定寻址键是设备生成并持久化的 `device_id` 与服务端 runtime UUID。Local Core 领取任务后若 provider 启动、恢复或结果回传失败，会显式把 request 从 `running` 转为 `failed`；不能用永久 `running` 掩盖本机故障。
+
+Agent Command Router 在消息提交后以服务端的 blueprint policy、sender 身份、reply chain 和权威消息记录创建命令。Server 直接通过目标 runtime 的认证 WebSocket 下发完整命令，不再让 Local Core 收到 invalidation 后通过 HTTP long-poll/claim 取任务。协议 2 的 Local Core 在握手声明能力，完整解析命令后须在同一连接返回 request-scoped `agent.command.accepted`；发送失败、断连或十秒内未确认时，Server 释放 claim 并在 runtime 重连时重投。ACK 等待循环会处理 Ping/Pong，只把 request ID 精确匹配的 `accepted` 当作业务确认；Local Core 的 20 秒心跳延迟第一次 tick，既能识别半开连接，也不会抢在首条 command ACK 前到达。ACK 后连接在整个 provider 执行期间继续代表该 runtime 在线；Local Core 先通过 HTTP 写入 durable completion/failure receipt，再在同一 socket 发送 `agent.command.ready`，Server 此后才领取该 runtime 的下一条命令。presence 按活跃连接计数，旧 socket 的迟到清理不能覆盖替代连接。Codex thread binding 带 adapter version：旧 `codex exec` 线程因不进入 Desktop 索引而不再恢复，version 2 只使用 app-server `thread/start`/`thread/resume`。未声明协议 2 的已安装旧客户端保留原有“发送即领取”兼容语义，避免服务端先行部署造成重复执行；待所有平台完成升级后再移除该兼容分支。本地只保存 provider thread binding 与完成 receipt，不复制一套服务端命令队列。
+
+Local Core 的 worker 身份是 `(account user id, device runtime id, provider)`，不跟随 GUI
+当前账号切换。每个已保存账号独立刷新自己的凭据；只有安装/注册时持久化的 account-scoped runtime 关联可以启动 worker，禁止把 legacy runtime 或 thread binding 与所有本机账号交叉试探。Server owner 校验仍是最终权限边界。编辑器的 mention
+节点保存 blueprint UUID，完整可见正文与 rich document 同次提交，Server 不解析可编辑的 `@name`
+字符串。Conversation WebSocket 只提示消息序列前进，重连后用 cursor 静默补拉；不再
+每两秒轮询并触发全局 Loading。claim 保存时间与尝试次数，遗弃执行可保守重领，重复崩溃
+进入 failed；本机 provider 子进程也有明确超时。
+
+Server 为 provider 渲染的输入只包括 `{{user name}}: {{complete user query}}`、可选 quote/reply chain、前十条去重 recent conversation、具体的 `colab-messages request context` 命令、可选 blueprint instruction，以及具体的 `colab-messages request reply` 命令。不向 Agent 解释 blueprint/runtime 内部概念，不注入泛化 Rules。Local Core 不自动将 provider 最终回答发送到 Channel；Agent 自己判断是否使用 request-scoped reply 命令。模板和完整实例见 [`architecture/agent-request-data-flow.md`](architecture/agent-request-data-flow.md)。
+
+Codex runtime task 保持 `workspaceWrite` 文件系统隔离，但其 turn 必须显式设置 `networkAccess: true`。这是 request-scoped Skill 工具访问本机随机 loopback Local API 的必要条件；不应改成 `dangerFullAccess`，也不能在提示词里假装一个受沙箱阻断的命令可用。Local Core 仍持有远端凭据并代理 Server，请求级工具不把账号 access token 注入 provider prompt。
+
+Local Core 使用服务端分配订阅的 unidirectional personal stream 和标准 Rust HTTP 栈，不把首版绑定到 community Rust bidirectional SDK。通知只负责唤醒 cursor pull，可以重复、丢失或合并；重连必定补拉。presence 仅作“可能在线”的展示信号，不能作为任务是否执行或是否授权的依据。首版单 VPS 使用 memory broker 且关闭 history；多实例前切换 Redis broker，PostgreSQL 始终是消息和请求的唯一事实来源。
 
 ## 12. 尚未明确、需要在开工前或纵切中确认
 
@@ -754,10 +797,46 @@ Centrifugo 选择 `stream` recovery；短时断线由官方 SDK 的 epoch/offset
 
 ## 14. 当前不进入实现
 
-- Conversation/DM 与其中的 agent runtime（产品与候选架构已完成，等待立项）；
-- Agent blueprint 管理；
+- 独立 DM/group room 与其中的 agent runtime（Channel Messages 和 Agent blueprint 已进入实现）；
 - 结构化任务模块；
 - 多人协同编辑同一来源文件；
 - 跨 Share 全局 object 去重；
 - 第三种 BaaS 或任意云平台兼容层；
 - pgvector 语义搜索。
+## Client artifact download invariants
+
+- Release metadata is fetched with a bounded timeout and signature verification. Immutable artifact
+  bodies have no fixed wall-clock timeout; low-speed detection terminates a dead connection.
+- Partial bodies live under the managed installation root in `downloads/<sha256>.part`, not in a
+  process temporary directory. The adjacent metadata binds the partial to URL, digest, exact size,
+  and artifact name. A later process resumes only an exact metadata match.
+- curl uses HTTP Range resume, proxy bypass, transient retries, and a minimum-speed timeout. If an
+  origin explicitly rejects Range, only that artifact partial is discarded and one clean transfer
+  is attempted.
+- A body is never installed from `.part`. Full length and SHA-256 are verified first; success
+  atomically promotes it to `<sha256>.blob`, which may satisfy later retries without network I/O.
+- `update-progress.json` is atomically replaced and reports state, received/total bytes, rolling
+  bytes per second, ETA, resume offset, artifact identity, cache use, and terminal failure. GUI
+  progress is a projection of this file, not an animation detached from transfer state.
+- macOS update processes take a non-blocking installation lock. Activation remains versioned and
+  atomic; Core acknowledgement and managed-process restart are separate HTTP operations.
+- P2P artifact sourcing is intentionally deferred. A future source may provide the same immutable
+  digest-addressed bytes, but it must pass the identical size/signature/hash boundary before use.
+
+### Agent command work details
+
+The roster opens a shared Agent identity card, not an arbitrary latest request. Channel task history
+includes message and Canvas requests; selected request ID remains the drawer boundary. Server exposes
+createdAt, runtime-ACK startedAt, finishedAt and durationMs. A PostgreSQL terminal-state trigger records
+finishedAt once and retains idempotent receipt behavior. Legacy Codex turn/completed timestamps can
+backfill genuine completion time; absent timing remains unknown. Running elapsed display uses the
+server start time, and only accepted running requests animate the roster background.
+
+GUI conversation rendering (2026-10-04): task events are read by request ID in provider chronological
+order, oldest to newest. The item-ID projection coalesces started/delta/completed notifications.
+Instructions render as highlighted Markdown bubbles; intermediate and final Agent responses remain
+expanded. Typed tool calls render one collapsed input/output entry each. MCP startup, accounting
+and protocol-only events do not render as conversation; classification never searches message text
+for substrings such as “command” or “tool”.
+
+Agent thread bindings remain long-lived per `(Channel, blueprint)`, while observability is scoped to one durable `agent_request`. Local Core pairs the provider's FIFO `turn/started` event with the accepted request, captures only that turn's app-server notifications, and uploads the bounded event list after completion. Server stores the list under the request id; Channel members can read it, while only the Agent owner's authenticated runtime can write it. Failure to upload diagnostics never changes a successfully completed command into a failed request. The GUI therefore opens one task in a Drawer instead of exposing unrelated history from the reusable provider session; tool-like events are collapsed by default.

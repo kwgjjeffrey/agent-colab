@@ -28,4 +28,4 @@ export COLAB_RELEASE_SIGNING_KEY="${COLAB_RELEASE_SIGNING_KEY:-$HOME/.config/age
 
 # boto3 is the maintained S3 implementation. uv keeps this release-only
 # dependency out of all runtime artifacts.
-exec uv run --quiet --with boto3 "$repo_root/packaging/publish_r2.py" --repo "$repo_root"
+exec uv run --quiet --with boto3 "$repo_root/packaging/publish_r2.py" --repo "$repo_root" "$@"

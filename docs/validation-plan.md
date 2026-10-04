@@ -1,5 +1,27 @@
 # 技术验证计划
 
+2026-10-04 信息关联验证（进行中）：GUI 20 文件/51 测试与 TypeScript 检查通过，包含转发先选目标再明确发送、用户指令保留、四类资源提示词；Server 6 测试通过，包含资源引用去重与精确读取命令；Skill 30 测试通过，包含单条消息精确读取且不泄露渲染树；Canvas codec 11 测试通过，四种胶囊 Markdown 往返、相邻 patch 身份不变及伪造 URI 身份拒绝；Local Core `cargo check` 通过。现有安装态只读 CLI 可以列出真实 Channel、Agent 和 Canvas。新 Server/Core/GUI/Skill 的正式部署与更新、跨账号权限测试、真实 Runtime 执行返回、原生窗口交互均未通过门禁；原生窗口工具本轮连续两次超时。完整门禁见 `docs/information-association.md`。
+
+2026-10-04 GUI 0.1.82-dev：47 前端测试与构建通过，R2 发布并正常更新安装；
+实际 Colab 窗口刷新后截图确认消息 Agent 圆形相框完整、角标在右下角，无竖线拉伸。
+
+2026-10-04 Messages avatar identity：前端 18 文件/47 测试通过；新增点击头像、
+任务定位、hover 从头像移至卡片保持以及离开关闭回归，复用标准 HoverCard。
+GUI 0.1.81-dev 经 R2 完整回读发布，正常 update 安装；installation refresh 确认
+installed/latest 均为 0.1.81-dev。原生窗口自动化 getState 超时，因此未宣称原生窗口
+点击验收通过；交互验证来自真实组件的 jsdom 用户事件测试。
+
+2026-10-04 Agent stdout implementation：29 项 Python 与 6 项 Server 测试通过。
+逐操作白名单覆盖六个协作 CLI；回归包含未知字段不透传、消息短回执、分页、
+Markdown/胶囊正文保留、空成员更新回执和 nullable transfer tree。
+Skill 0.1.48-dev 经 R2 公网 size/SHA-256 验证与 stable 0.1.128-dev promotion，
+通过正常 /v1/system/update 安装；installation refresh 确认 installed/latest 均 0.1.48-dev，
+安装版 output_views 与源码 cmp 一致。安装版真实只读验证包含消息、runtime、成员、
+文档读取和 source 发现；隔离 HTTP fixture 执行安装版消息写入/请求回复及 transfer，
+不重发用户历史 request，也不以生产删除/安装动作凑覆盖。
+Server 0.1.127-dev 已部署，公网 ready=ok；recent/quoted 消息标题与正文换行由构造测试验证。
+此项不宣称全部 mutation 已在生产实测，完整审查边界见 agent-output-review。
+
 状态：当前实现主线改为独立 Rust + PostgreSQL；Supabase 与 Cloudflare 验证资产保留，但暂不继续开发。以下只保留会改变当前实现顺序、同步协议、客户端边界或上线可行性的验证项
 
 ## 1. 标记规则
@@ -15,6 +37,10 @@
 
 | ID | 状态 | 要回答的问题 | 已得结论 / 下一步 |
 | --- | --- | --- | --- |
+| F-CANVAS-01 | **通过** | 真实 Tiptap/Yjs 文档能否由 Rust/Yrs 做确定性 Markdown 投影、局部文本 transaction 和前端回放，而不向 Agent 暴露 CRDT block | Tiptap `3.31.4` + Yjs `13.6.27` 生成包含 heading、mark、list 和 component fence 的 update-v1 fixture；Yrs `0.28.0` 正确投影并局部修改 XmlText，JS/Tiptap 回放正确且保留未修改 mark。同一 update 重复应用幂等，与独立并发 update 反向乱序应用收敛；component fence 修改返回 `structured_component_requires_tool`。[可复现 trial](../.trial/F-CANVAS-01-yjs-yrs-projection/README.md)。进入正式 Server/Core/Skill/GUI 实现，恢复与端到端只在正式代码中验证。 |
+| V-CANVAS-02 | **通过（最窄正式纵向链路）** | 正式 Server/Core/Skill 是否真实保存、投影、patch，并在 Server 不可达与 Core 重启后补发 | 部署 Server `0.1.98-dev` + migration 0024；release Core `0.1.67-dev` 和 packaged `colab-canvas` 创建真实 Canvas，Yjs update 获得 seq 1，Codex patch 获得 seq 2。Server 断开时 89-byte update 以固定 clientUpdateId 留在 SQLite pending；同一数据库重启后自动补发为 seq 3/acked，Skill 读回合并内容与 `syncState=synced`。[证据](../.trial/V-CANVAS-02-core-skill-recovery/README.md)。不覆盖 typed components、双用户 GUI 和规模压缩。 |
+| V-CANVAS-GUI-01 | **代码级通过；真实升级目视待用户验收** | GUI 是否在初始 CRDT 状态完成前避免挂载编辑器，并与 Messages 复用一条 account socket | GUI `0.1.60-dev` 先拉取并应用 ordered updates，之后才创建 Tiptap Collaboration editor；源码扫描只有 `api/realtime.ts` 一个 `new WebSocket`，Messages/Canvas 均订阅该 singleton。22 项 Vitest 与 production build 通过，R2 公网回读 size `743949`、SHA-256 `5697b10a…` 一致。按约定未代替用户点击更新，因此不把真实安装后的视觉/交互记为已通过。 |
+| V-CANVAS-RESOURCES-01 | **通过** | Canvas 文档/嵌套目录创建、树渲染、重命名和 Agent handoff 是否使用真实 Core/Server/Skill 链路 | 根资源未渲染的根因是 Server JSON 的 nullable parent 被 GUI 错按 `undefined` 比较；GUI `0.1.62-dev` 统一归一化为 `null`。Server `0.1.100-dev`、Mac Core `0.1.69-dev`、GUI `0.1.62-dev` 经 R2 发布、完整 SHA-256 回读并在本机更新；Electron 保持 `0.1.21-dev`、Skill 保持 `0.1.45-dev`。正式 Local API 对现有 `hello` 完成临时重命名和恢复；实机强制重载后资源树显示两个根文档，New 展开为 Document/Folder 菜单且无弹层，Give to Agent 实际显示“先读 → 按需编辑 → 最后探索”。GUI 26 项、Server 6 项、Local Core 20 项测试及 production build 通过。 |
 | V-GIT-01 | **通过** | shadow Git 能否完全隔离来源仓库并生成稳定 root tree | 能。已覆盖脏仓库、ignored/untracked、symlink、非 Git 目录和嵌套 `.git`；来源 HEAD/index/status 不变。详见 `.trial/V-GIT-01-shadow-git/` |
 | V-GIT-02 | **结论完成，方案已修正** | shadow Git 的扫描与增量成本是否可接受 | 10 万文件首次扫描 192.3 秒，只能后台执行；已知单文件增量 0.98 秒。100 MiB 追加式 Session 会重建 101 MiB blob，因此 Session 改为不可变 segment/chunk；不再重复验证已明确的问题 |
 | V-GIT-03 | **取消，不再需要** | `git2`/libgit2 能否替代已工作的 Git CLI | 这不会验证产品假设，只会替换已通过验证的实现。alpha 沿用 Git CLI；跨平台分发遇到真实兼容问题时捆绑固定 Git executable，不手写 Git object 实现 |
@@ -51,8 +77,26 @@
 | V-TRANSFER-UI-01 | **通过** | Quick Share 结果弹层在内容滚动时，底部操作区是否始终位于弹层边界内 | 根因是 shadcn `DialogFooter` 被嵌入带独立 padding/scroll 的 `ResultView`，其标准负边距相对错误容器计算。release `0.1.65-dev` 改为 `DialogContent` 的直接子节点并让 `ScrollArea` 只包裹正文；GUI 单测/构建、R2 size/SHA-256 回读、真实安装均通过。实机重开历史 Quick Share 后确认 footer 完整收在圆角 Dialog 内，正文滚动区、分隔线和操作按钮互不侵占。 |
 | V-AUTH-WECHAT-01 | **待调研/验证** | 微信开放平台 OAuth 能否与现有 Google identity 安全共存 | 先确认目标客户端类型、所需开放平台资质、回调域名和 unionid 可用范围，再验证 provider identity 映射、显式账号关联与真实登录；不按昵称或未验证邮箱自动合并。 |
 | V-INVITE-OUTBOX-01 | **可靠性通过；任意收件人送达待外部条件** | 邀请是否会因邮件 provider 延迟/失败丢失或让业务请求假失败 | 邀请与 `email_outbox` 在同一 PostgreSQL 事务提交，API 真实返回 202/`queued`；部署环境用不可送达测试地址验证 worker 已领取一次、记录失败并退回 pending，后续按 capped exponential backoff 重试。成功后删除含短期明文 token 的 outbox 行。任意公网收件人送达仍等待 VPS 出站 25 与 rDNS 工单，不标记通过。 |
-| V-CHAT-01 | **待进入实现前验证** | 一个真实 provider session 能否由指定 Local Core runtime 按 Conversation binding 恢复，并在断线重连后恰好领取一次已授权请求 | 产品与架构决策不依赖此项；实现前用一个真实 Agent、一个 Conversation 和一次 runtime 断线验证 session 连续性、owner approval、lease 过期重领、幂等上报及 cursor 补洞。不要用 mock 对话冒充通过。 |
-| V-CHAT-DESIGN-01 | **文档结构通过；真人交互评审待确认** | DM 方案是否把入口、blueprint、消息转发/引用、IM 选型、ER、模块和关键时序说清楚 | 已补独立低保真页面、结构化选型矩阵、ER/模块/时序的 Mermaid 源与静态 SVG；XML、HTML 结构检查通过。该项只证明设计制品完整，不冒充真实 Matrix 或 Agent runtime 验证。进入实现前仍需 Matrix provisioning/sync/Application Service 小型 trial 和 V-CHAT-01。 |
+| V-CHAT-01 | **Codex 主路径通过；崩溃 lease 与 owner approval 待后续** | 一个真实 provider session 能否由指定 Local Core runtime 按 Conversation binding 恢复 | `jeffreyyuzhyuan` 的真实 runtime `kwaideMacBook-Pro.local · Codex` 已由 Skill 安装记录登记；`Runtime Validation Agent` 精确绑定该 runtime。第一次 request 创建 Codex thread `01a0f275-5430-7e11-85bf-4022f842f7c3` 并回传 `runtime validation pass 3`，第二次执行实际使用 `codex exec resume` 同一 thread 并回传 `runtime validation resumed`。启动路径故障曾暴露永久 running 风险，现已增加失败上报把 provider 启动/恢复/回传错误转为 `failed`。进程硬崩后的 lease 重领与他人请求 owner approval 尚未声称通过。 |
+| V-CHAT-DESIGN-01 | **通过；不再重开框架选择** | Messages/DM 方案是否把入口、blueprint、技术选型、ER、模块和关键时序说清楚 | 最终决定由 Colab 在现有 Rust Server/PostgreSQL 中拥有 room/message/Agent 领域，Axum WebSocket 只传失效通知，HTTP+cursor pull 保证正确性。Matrix/Tuwunel/OpenIM/Tinode 会带来独立服务、状态库与身份/房间映射；Centrifugo/Mercure/MQTT只覆盖传输或 broker，并不减少首版领域实现，因此均不进入当前部署。只有未来明确出现 federation、第三方协议客户端或 E2EE 需求，才以新证据重新立项，而不是重复当前选型讨论。 |
+| V-MESSAGES-UX-02 | **主体通过；最终安装包回归待发布后复核** | Message/MessageGroup 组件、空响应、Agent 新建/选择/删除、合并 runtime 选择、提示自动消失 | 真实 GUI 已验证消息时间线、发送/回复、创建后自动加入 Channel、删除入口、`Create by my agent` 主操作、单一 runtime Select 与自动消失通知；HTTP 204 不再被误解析为 JSON。Local Core 补齐 runtime 字段透传后，需要用下一稳定制品再做一次选择器标签截图回归。 |
+| V-AGENT-HANDOFF-01 | **主路径通过；分支与故障注入待验** | `@Agent` 是否以完整富文本正文和结构化 identity 由正确 runtime 执行，并由 Agent 自主回写 | 用户真实 seq 32/33 最终暴露两个剩余根因：空闲 runtime WebSocket 半开后服务端 presence 消失，以及立即触发的心跳 Ping 抢在 command ACK 前到达。Core `0.1.61-dev` 改为 20 秒延迟心跳；Server `0.1.83-dev` 在十秒 ACK 窗口内处理控制帧并只接受精确 request ACK。旧 `codex exec` 绑定以 adapter version 1 作废；app-server version 2 新建 Codex Desktop 可见 task `01a0f5ed-1c88-73b0-a73e-7c5e9a71f520`。两个既有请求均从 queued 转为 succeeded、Local receipt 为 completed，Channel seq 35/36 均收到 `我收到了你的消息`；Codex `list_threads` 直接返回该 task 及真实中文请求摘要。自动测试覆盖两个 Agent 和重复 mention 去重；仍待真实双 Agent 扇出、owner confirmation 与执行中断线重投。 |
+| V-AGENT-WRITER-01 | **macOS 安装态通过；跨 thread 压测待后续** | Codex thread 的 writer 被占用时，后续 Channel command 是否保持同一逻辑会话 | 双 app-server 验证：A resume 成功；B 得到 `already has an active writer`；A unsubscribe 后 B 可在同一 thread resume。非持有者 unsubscribe 返回 `notLoaded`，不存在 force takeover；Desktop 可以读取别的 app-server 持有的 thread。[可复现 trial](../.trial/V-AGENT-WRITER-01-codex-writer/README.md) 又确认 active 期间第二次 `turn/start`/`turn/steer` 都是插入原 turn，而 `thread/queue/add` 产生独立 submission、busy 时可见、idle 时由 owner 自动消费。Core `0.1.62-dev` 安装后，四个真实 Agent request 均使用 Desktop 可见 thread `01a0f6e9-d8d0-7802-8cd8-08a2e15451db`：重启前回传 Channel seq 40/42，强制重启 launchd Local Core 后继续回传 seq 44/46，四个请求最终均为 `succeeded`。Core `0.1.63-dev` 进一步把 Desktop active-writer 作为非致命所有权冲突处理；安装态 request `c47b335d…` 在原 thread `01a0f6e9…` 完成并达到 durable `succeeded`，Agent 工具回传被 Server 构造成 seq 55，包含请求人结构化 mention 且引用触发 seq 54。尚未执行两个不同 blueprint thread 的并行压力验收。 |
+| V-MESSAGES-VIEWPORT-01 | **通过** | 返回 Messages 时是否保留记录与滚动位置，且整页不随历史增长 | GUI `0.1.49-dev` 以 Channel 为键保留 rows/lastSeq，返回时只拉 cursor delta；`sessionStorage` 保存 timeline scrollTop。App shell 固定为 viewport，Channel rail/settings 与 composer 固定，timeline/participant list 独立滚动；Channel identity 与 Quick Share 合并为一行，头像缩至 24px，composer 合并为单一输入表面。11 个 GUI 测试与生产构建通过；R2 公网制品 SHA-256/size 回读通过，安装到真实 macOS App 并强制刷新后，已目视确认紧凑头像、三类气泡、吸底 Settings/composer 和单层输入面。Electron 保持 `0.1.19-dev`。 |
+| V-MESSAGES-RECOVERY-01 | **通过** | 代理/NAT/休眠造成 WebSocket 半开、浏览器不触发 `onclose` 时，已提交消息能否自动恢复 | 用户真实 seq 47 已在 Desktop 可见 thread `01a0f715-a4ee-7380-8528-80afd293b5a7` 完成并提交 Agent seq 48，但旧 GUI 因半开 Conversation socket 永久未刷新。Server `0.1.85-dev` 增加 15 秒文本 heartbeat，GUI `0.1.50-dev` 增加 45 秒无帧 watchdog；黑盒观察到两个 heartbeat 间隔 15.6 秒，并在保持 Local Core bridge socket 时强制重启部署 Server，客户端成功重连且 `after=47` 精确补回 seq 48。真实 Electron 页面随后目视确认请求和回信均存在。13 项 GUI 测试、Server workspace 测试、R2 size/SHA-256 回读与真实安装通过；Electron/Core/Skill 未推进。 |
+| V-MESSAGES-RECOVERY-02 | **通过** | WebSocket 仍有 heartbeat、但某次业务 invalidation 丢失时，已提交消息能否自行补齐 | 用户真实电子云请求对应的 Agent 已在 Desktop-visible thread `01a0f715-a4ee-7380-8528-80afd293b5a7` 完成、上传 `electron-cloud.png` 并提交 Channel seq 50；真实 Local Core 的 `after=49` 精确返回该消息，证明故障只在 GUI 对账。旧 GUI 因 heartbeat 持续到达而不会触发 silence watchdog，也不会再拉 cursor。GUI `0.1.51-dev` 将 heartbeat、匹配 invalidation、socket open、focus 和 visibility 统一为 single-flight `after=lastSeq` reconciliation barrier。13 项 GUI 测试及 production build 通过；stable `0.1.86-dev` 的新 GUI 通过 R2 完整 size/SHA-256 回读并经真实更新路径安装，强制载入后 Electron 直接显示已有 seq 50 及其电子云图片链接，无需重跑 Agent。Electron/Core/Skill 版本未推进。 |
+| V-MESSAGES-UX-03 | **通过** | 消息身份是否能在真实安装界面中一眼区分 | GUI `0.1.48-dev` 使用三类气泡和对齐：本人右侧 primary、其他成员左侧 muted、Agent 左侧 violet；28px 头像与发送者同组，Agent 用 owner 头像加超新星渐变环并显示 `<Agent> (<owner>'s Agent)`，时间和辅助操作 hover 才出现。GUI 11 tests/build 通过；安装后重启真实 Electron App，目视确认三类布局和 Agent 归属样式，Electron 版本未推进。 |
+| V-MESSAGES-UX-04 | **制品已发布，待用户更新与视觉验收** | Discord 式紧凑消息流和重组后的 Settings 是否符合最新交互结论 | 移除三类气泡与本人右对齐，统一为左对齐紧凑行；真人和 Agent 使用同尺寸基础头像框，Agent 增加超新星框和 AI 标签；成员/Agent 侧栏无缩进；Messages 去除卡片外框并贴合 tab/视口；composer 去除内层边框并使用实心上箭头。Settings 首层收敛为当前 User/Organization、My Agents 数量、Skill 安装和默认折叠 Updates。新增结构回归测试，GUI 19 tests 与 production build 通过。2026-10-02 已将 GUI `0.1.53-dev` 作为 promotion `0.1.88-dev` 发布到 R2；公网回读 707,088 bytes、SHA-256 `ccc057206ac68afc741b0ea3e2fb1037577b5d3eee125da3acf5db9a8c7feecf`，stable 清单签名验证通过。Electron 保持 `0.1.19-dev`；未代替用户触发安装，真实 App 更新与视觉验收仍待完成。 |
+| V-MESSAGES-UX-05 | **制品已发布，待用户更新与真人视觉验收** | 原生标题栏能否承载稳定 Loading/typing 状态，且成员 mention 与 IM 键盘习惯是否正确 | macOS Shell 使用 `hiddenInset`，GUI 常驻 36px drag slot，不再临时覆盖内容。Agent activity 只投影 Server `running` 状态；连续 WS invalidation 在 fetch 期间会排定下一轮权威对账。composer 支持 Agent/Channel member 两类不可编辑 mention；member identity 保留在 rich content 且不进入 Agent routing。Enter 发送、Shift+Enter 换行，placeholder 给出指引。GUI 21 tests/build、Shell check/build 通过。stable `0.1.90-dev` 已发布 GUI `0.1.54-dev`（707,494 bytes，SHA-256 `a9b7e466…1d64`）与 macOS Shell `0.1.20-dev`（111,195,212 bytes，SHA-256 `56bbe867…2947`），两者均经 R2 公开域名完整回读；Windows Shell 保持原版本。待用户自行点击更新并验收真实标题栏、typing 与输入交互。 |
+| V-RELEASE-06 | **修复制品已发布；待安装态重试** | 慢速网络下载 111 MB Electron Shell 时，更新是否会被固定总时长误杀 | 用户安装态在 180,078 ms 下载 16,287,562/111,195,212 bytes 后被 curl code 28 中止，证明连接仍有吞吐但旧 `--max-time 180` 不适合大制品。Skill `0.1.41-dev` 删除 artifact 总时限，增加 `--continue-at -`、5 次 transport retry，以及 60 秒/1 KiB/s 低速失活判断；manifest/signature 仍有 30 秒总时限。19 项 Skill tests 通过；stable `0.1.91-dev` 已发布并经公开域名完整回读（37,474 bytes，SHA-256 `e693623f…a5685`），待用户再次点击更新后登记安装结果。 |
+| V-RELEASE-07 | **macOS 安装态通过** | 长更新是否有可见进度且不污染全局 Loading | 更新 POST 改为 feature-owned activity，不进入全局 request counter；Skill 原子输出 artifact/bytes/total/speed/ETA，Core 提供只读进度 API，Updates 折叠时仍保留更新按钮和进度。反复 `Failed to fetch` 的根因不是 R2 下载，而是旧 Core 在 `/v1/system/update` 应答尚未送达时定时退出；promotion `0.1.95-dev` 将安装确认与重启拆为 `/update` + `/restart`。Core `0.1.65-dev`（5,400,053 bytes，SHA-256 `66b408e5…d5fb`）和 GUI `0.1.56-dev`（708,355 bytes，SHA-256 `ef561eab…a528`）已经 R2 完整回读，Electron/Skill 保持 `0.1.20-dev`/`0.1.42-dev`。真实 macOS 安装态验收：正式 setup 将小制品激活到 `0.1.95-dev`，launchd Core PID `57448` 通过新端点收到 HTTP 202 后更换为 `66897`；同一 Local Core HTTP 更新入口完成 Shell `0.1.20-dev` 安装，最终 installation API 报告 Core `0.1.65-dev`、GUI `0.1.56-dev`、Skill `0.1.42-dev`、Shell `0.1.20-dev`，无剩余 update。 |
+| V-RELEASE-08 | **macOS 断点续传与旧版升级通过** | 网络/进程中断后是否保留进度并自主恢复 | promotion `0.1.96-dev` 发布 Core `0.1.66-dev`、GUI `0.1.57-dev`、Skill `0.1.43-dev`，Electron 保持 `0.1.20-dev`。真实已安装 `0.1.95-dev` 不使用源码 setup，通过其 Local Core 认证 HTTP update/restart 完成自升级：HTTP 202，PID `72373` 更换为 `95659`，三个当前链接均指向新版。[Range 中断黑盒](../.trial/V-RELEASE-DOWNLOAD-01/README.md) 使已安装 downloader 首进程失败并保留 65,536 bytes，第二进程续传至 8,388,608 bytes，最终 size/SHA-256 精确匹配且 progress 为 `completed`。Skill 22 tests、GUI 22 tests/build、Core 16 tests 通过；R2 公网回读完成。 |
+| V-RELEASE-09 | **待用户点击验收** | 真实 111 MB Electron 制品是否在 GUI 中显示进度/速度并完成安装 | promotion `0.1.97-dev` 仅推进 Electron `0.1.21-dev`；Electron 源码与 `0.1.20-dev` 一致，Core `0.1.66-dev`、GUI `0.1.57-dev`、Skill `0.1.43-dev` 均保持不变。macOS ZIP 111,195,215 bytes，SHA-256 `00a5e35e…d84`，已经 R2 公开域名完整回读。安装态 refresh 精确报告 Shell `0.1.20-dev → 0.1.21-dev` 可更新，其余三个制品 `updateAvailable=false`；未代替用户点击更新。 |
+| V-AGENT-STATE-RACE-01 | **通过** | 快速执行状态是否会覆盖创建响应；mention 是否只能位于开头 | Conversation 不再读取或渲染 Agent Request 状态，因此不存在 `queued` 响应覆盖 `running` 的界面竞态。Tiptap mention 是不可编辑原子节点，完整可见文本与 UUID rich node 一并提交；自动测试覆盖句中 mention、两个 Agent 与重复 mention 去重。GUI `0.1.47-dev` 安装后，实机输入 `Please @Run` 出现候选并插入同一行胶囊；时间线无 Queued/Working/Completed 卡片，Reply 引用条可出现并取消。 |
+| V-AGENT-ACTIVITY-01 | **通过** | 用户能否看见 Agent 确实已收到任务且仍在处理，同时不把内部状态塞进消息流 | Server 将 claim 与客户端 acceptance 分开：`accepted_at` 只在 protocol-2 Local Core 对精确 request ACK 后持久化，未 ACK 的 claim 对 GUI 映射为 `delivering`；GUI 只把 accepted/running target 投影为消息区域顶部的 `is working…`，终态自动消失。request invalidation、heartbeat、open、focus、visibility 共用权威状态对账。安装态 request `c47b335d…` 在 provider queue 精确 ACK 后显示为 durable `running`，Codex 原 thread 完成后转为 `succeeded`；自动测试覆盖 activity 过滤/去重。 |
+| V-AGENT-REPLY-ADDRESS-01 | **通过** | Agent 回复是否自动指向请求人和原请求，且不授予 Agent 任意 mention 权限 | `report_agent_request` 只接收 request ID/正文/nonce；Server 从权威 request 反查 requester 与 trigger message，在事务内生成 member mention rich node、完整 plain body 和 reply link。真实 request `c47b335d…` 的工具只提交 `writer fallback passed`，Server 生成 Channel seq 55：body 为 `@Zhiyuan Yu writer fallback passed`，member mention ID 为 `4df84d8f…`，`replyToMessageId` 精确指向触发 seq 54。GUI 对当前用户 mention 使用深蓝胶囊并显示引用预览，相关渲染测试通过。 |
+| V-CHAT-SLICE-01 | **Channel + Codex runtime 纵向闭环通过** | Channel Messages、成员侧栏、Agent blueprint 与本机 Codex 是否形成 GUI/Skill/Local Core/Server 纵向闭环 | stable `0.1.72-dev` 已公开验证 Core `0.1.52-dev`（macOS + Windows）、GUI `0.1.42-dev`、Skill `0.1.39-dev`，Electron 仍为独立且未变的 `0.1.19-dev`；Server `0.1.72-dev` 公网 readiness 通过。双账号消息/权限/WebSocket 验收仍成立；新增真实 Skill 注册 runtime、强制蓝图绑定、目标设备 durable claim、首轮 Codex thread 创建、次轮同 thread resume、request-scoped reply 与显式失败终态。已安装 Skill 实测缺少 `--runtime` 返回 exit 2；runtime 清单返回 `kwaideMacBook-Pro.local · Codex`、稳定 runtime UUID 和最新 Skill `0.1.39-dev`。 |
+| V-RELEASE-05 | **通过** | 更新检查网络失败是否仍会破坏界面，首次 Channel 请求失败是否被误报为空数据 | setup 已移除 macOS `urllib`，统一使用 `curl --noproxy '*'`、retry/timeout、落盘流式 hash；Local Core 和 GUI 将错误限制为 500 字符摘要。GUI 把 initial loading、loaded-empty、load-failed 分开，失败显示 Retry 而非 Create first Channel。Skill 18 tests、GUI 6 tests/build、Local Core 16 tests均通过。release `0.1.73-dev` 已完成 R2 公网完整回读并真实安装；已安装 API/GUI 显示三个 Channel，Settings 实际点击返回 `All Colab resources are up to date`，四项独立版本完全匹配且无 traceback。 |
 
 ## 3. 接下来的执行顺序
 
@@ -60,7 +104,7 @@
 2. **Quick Share 剩余黑盒**：干净未安装起点 bootstrap、自然到期/超额/GC；主体能力与发布已通过。
 3. **外部条件项**：邮件任意公网收件人送达等待 VPS 出站 25/rDNS；Windows 干净账户实机等待设备；微信登录等待开放平台材料。
 4. **后续加固**：健康检查与故障注入；Supabase 仅在路线恢复时运行同一契约套件，不进入当前 standalone 主线。
-5. **Conversation 实现门槛**：只有该 feature 获得立项后才执行 V-CHAT-01；当前不为尚未实现的聊天搭建空服务或假 UI。
+5. **Messages 后续**：Codex runtime 主路径已经通过；下一步只补 owner approval、进程硬崩 lease 重领，以及经用户确认后的独立 DM/group，不再重做已完成的 runtime/thread binding。
 
 ## 4. 当前确定原则
 
@@ -81,3 +125,106 @@
 4. 预先定义的通过/失败标准；
 5. 实测结果；
 6. 对设计的影响与最终决策。
+# Canvas mention and header validation (2026-10-03)
+
+- [x] F-CANVAS-03 最终修复：7 个生产 codec 回归、19 个 Local API 回归通过。用原文 237 个真实 updates，在打包 Node/helper 上做只读回放及追加；保留 hardBreak、两处 mention identity，产生 145-byte 增量。首版拒绝的段尾空格+hardBreak 已用显式 `<br>` 修复。最终 Core `0.1.76-dev`、stable `0.1.118-dev` 完成公网全量校验：43,671,073 bytes，SHA-256 `67db8b740a36772fe067099837787fcd0567aede2e572b542dec12e0cc3bb0a5`。
+- [ ] 正式安装态回归：旧安装 Core 的正常更新下载已启动，网络速度约 10–50 KiB/s；验收调用在 600s 等待超时，但 progress 仍在增长，不能标成安装成功或下载失败。未直接复制任何源码构建产物进安装目录。`installed_verify.py` 提供安装完成后的实际 API 创建/patch/同步回读验收。
+
+- [x] 2026-10-04 F-CANVAS-03 实现后体内：生产 `canvas-codec` 6 项回归通过；Rust/Yrs→Node helper→Yjs delta→Yrs 回放桥接测试通过（重复回放幂等、失败不修改原文）；此前 Local API 18 项回归通过。Core `0.1.75-dev` 经 canonical publisher 公网全量核验：43,671,042 bytes，SHA-256 `a80dde3db5aa6c87c813336e861b669118ae5d3b60c2c36bb09ee96e0f304b07`，stable promotion `0.1.117-dev`。GUI/Shell/Skill 不变。安装态正式更新和实际 API patch 回读尚在验收，不将已发布等同于已安装。
+
+- [x] 2026-10-04 F-CANVAS-03 选型假设审计（实现前、体外）：真实 StarterKit/Mention schema 的 14 个往返 fixture 中 9 个 exact-tree 通过、5 个失败；明确记录空段落、标题硬换行、mark 边缘空格、strike 和 link 附加属性损失。strike 的扩展修复、身份完整 mention 链接、保持 mention identity 的段落追加与独立段落并发更新均单独通过。结果见 [.trial/F-CANVAS-03](../.trial/F-CANVAS-03-markdown-roundtrip/README.md)。不能据此声称完整 Markdown patch 适配层、真实 query 组件或安装态无损验收完成。
+
+- [x] Desktop GUI TypeScript build accepts collaborative Mention nodes, member/Agent lookup, identity cards, inline header rename, and real dispatch.
+- [x] Local Core workspace compiles with the Canvas Agent dispatch proxy.
+- [x] Server workspace compiles with Canvas dispatch creation and runtime wake-up.
+- [x] Installed macOS artifact: Agent mention renders as an atomic capsule; its identity card identifies `Runtime Validation Agent` as Jeffrey Yu's Agent and exposes the real dispatch action. Two dispatched requests (`4968a3a1…`, `78fa6f16…`) each reached durable `succeeded` in one attempt and reused visible Codex thread `01a0f715…`; `read_thread` showed the actual requester, Heading section, and ordered optional Canvas tools. The final installed `colab-canvas read` returned `syncState=synced` and the mention projection. The test text contained no actionable edit request, so this row deliberately does not claim an Agent content edit.
+- [x] Installed macOS artifact: double-clicking the same document title in the header and sidebar enters selected inline editing on both surfaces; both call the same rename use case. The header has no lower divider and renders `Synced` immediately beside the title.
+- [x] Failure-path regression: the first real dispatch exposed the pre-migration `agent_requests.kind` constraint and the first provider read exposed the wrong Yjs fragment name. Migration `0026_canvas_agent_requests.sql` and Core `0.1.72-dev` corrected them; a fresh installed CLI read proves the packaged Core uses Tiptap Collaboration's `default` shared type.
+- [x] GUI `0.1.70-dev` activity regression: Messages now consumes the previously orphaned `activeAgentNames` projection. Server `0.1.111-dev` persists `source_canvas_id` for every Canvas request and migration 27 backfills unambiguous historical title matches; Canvas reconciles the matching request against `/agent-requests` on realtime invalidation, reconnect and a five-second fallback interval. The production build and all 28 GUI tests pass. Server records prove the user-observed Canvas request `fb181e53…` and Message request `aae2b3fc…` both reached `succeeded`; the prior absence was a presentation-chain defect rather than an undelivered command.
+- [x] Installed Canvas editor visual acceptance: after formal update and app reload, the old Canvas request is recovered from Server and visibly renders `Runtime Validation Agent completed` in the Channel status area plus `Completed` beside `Synced`. Accessibility state exposes Text style, Bold, Italic, Bullet list, Numbered list, Quote and Code block controls; screenshot confirms centered editor content with symmetric page gutters. Stable `0.1.111-dev` public readback verified GUI `0.1.70-dev` at 748,673 bytes, SHA-256 `d51ae059…64050`.
+- [x] Canvas command/card correction: Server `0.1.112-dev` returns stable `targetBlueprintId`; GUI filters active commands by document+Agent, excludes terminal states, and keeps the send action reusable. All 28 GUI tests, production build, and Server compile pass. Stable `0.1.114-dev` publicly verified GUI `0.1.73-dev` (748,824 bytes, SHA-256 `28c03634…4940d0`) and was installed through the formal updater without changing Electron/Core/Skill. Installed macOS UI shows only `Synced` in the header, no stale completed state, an unchanged `Send to Agent Runtime Validation Agent` action in the Agent card, and the paragraph hover/click handle opens Text, Heading 1–3, Bulleted list, Numbered list, Quote, and Code commands.
+
+- [x] V-AGENT-WORK-DETAILS-01: Local Core workspace tests (20), Server workspace tests (6), GUI tests (28), and production GUI build pass. Verified task identity is derived from queue order plus `turn/started`, not prompt matching; task events close with `turn/completed`; diagnostics upload is best-effort; Drawer is task-scoped and collapses tool records. Installed-macOS validation first exposed a missing Local Core read proxy as a real Drawer HTTP 404; Core `0.1.74-dev` added that route and was installed through the formal updater. The installed GUI then displayed `Working` during a real Canvas dispatch and `Work details` after completion; the task-scoped Drawer loaded persisted `turn/started`, Agent output, retry diagnostics, command execution and tool events, with tool records collapsed by default. The same installed build no longer shows the auxiliary request-list `Error: {\"error\":\"\"}`, and an actual H1 renders visibly larger/bolder than body text. Stable release `0.1.116-dev` publicly verified GUI `0.1.74-dev` (766,873 bytes, SHA-256 `529fedaa7f9fa68f7e88523c1ce5dc138e5f66e2657f5ee4c77fc865fa85f6a4`) and Core `0.1.74-dev` (5,808,428 bytes, SHA-256 `78f8f048b97e9475127854e7da3c2c18a3dcc61a60613b1a5671ec1d03d4f652`). Electron and Skill did not advance.
+
+## Canvas codec 与更新状态：安装后验收（2026-10-04）
+
+- [x] V-WORK-CONVERSATION-01 (development-after implementation): 41 GUI tests pass, including real shadcn HoverCard pointer capsule→card→outside and capsule→outside, focus/Escape, and Drawer conversation/collapsed-output interaction. Installed request `5ce3d4bc…` replay: 136 raw events become one instruction, two Agent responses, three tool calls in forward order; final text confirms the actual Canvas edit. This row proves projection and component behavior, not a new runtime dispatch or live streaming.
+
+- [x] Core 20 tests、GUI 34 tests、生产构建通过。Stable `0.1.120-dev` 经 R2 正式发布/公开 hash readback；实际更新安装 Core `0.1.77-dev` 与 GUI `0.1.75-dev`，managed PID 从 44427 变为 49521。Skill `0.1.45-dev`、Electron `0.1.21-dev` 未变；没有绕过发布链路复制源码构建产物。
+- [x] 安装后普通 patch 验证：Canvas `3a53608c-8f5a-43a3-8611-157b237b48f4`，序号 1→2、synced、追加文字存在，原文/胶囊保留。
+- [x] 真实 Canvas→Agent Runtime：request `5ce3d4bc-3e35-4990-80b2-56b270678774`，Canvas `41ae519e-4a1f-4d2e-94b6-40c851870aec`。Agent 自行执行已安装 Skill 的 read→apply-patch→read，三个 exit 0；指定独立段落 `CANVAS_RUNTIME_ACCEPTANCE_795512d4` 存在，两个 mention identity 均保留，Server seq 1→2、synced、request succeeded。验收脚本只创建初始测试文档和派活，不代替 Agent 编辑结果。
+- [x] 正式安装 GUI：验收文档 H1 显著大于正文；新增段落与两个胶囊可见；Agent 卡片显示 Work details，任务 scoped Drawer 加载 136 个真实事件、工具记录默认折叠。此次约 160s 包含上游 WebSocket 超时重试和 HTTPS fallback，不是 codec 失败。当前过程事件在 turn 结束后上传，不计作实时 streaming 验收。
+- [x] Mac Python flock→已安装 Rust status 的跨语言验证：锁持有时 running=true、state=installing；重复 POST update 返回 alreadyRunning=true 而非失败；释放后 running=false。真实安装 GUI 在折叠 Updates 区自动显示 disabled Updating 与进度。该状态测试是明确的 OS-lock fixture，不是伪造下载成功。
+
+## Engineering tracing 验证（2026-10-04，独立记录）
+
+- [x] V-TRACE-CLOUD-01：Management auth/environment read HTTP 200；官方 MCP workspace context 返回 test/3 datasets；真实安装树 CLI + 两个独立生产 middleware fixture 的 trace `589a7e61…` 查回 5 spans、单根、正确 parent 链、CLI JSON/exit 0。范围为隔离边界 fixture，未连接生产业务 DB，未部署。
+- [x] V-TRACE-CLOCK-UNIT-01：Rust 四时间戳测试包含 5s offset 与 20/80ms 不对称路径，真实 offset 位于估计区间；拒绝回拨/负 RTT/NaN 样本。仅算法测试，不标记系统休眠或实机跨端故障注入通过。
+- [x] V-TRACE-INGEST-01：Rust protobuf schema 解码，invalid IDs 拒绝，credential 属性过滤；原生 relay 的 body/数量限制已经实现。
+- [x] 原有回归：Local workspace 20 tests，Server workspace 6 tests，Skill 24 tests；GUI 31 tests（包含 3 个 tracing 测试）与 TypeScript/production build 已通过。Core、GUI、Skill 的独立本地制品构建通过；未发布。
+- [ ] 真实产品 GUI message 的 root/render return 与真实 CLI reader；Agent durable command/ACK/receipt/reply；Canvas durable mutation/retry/repair；匿名上报；时钟跳变/休眠/重启；Collector/配额与生产启用。
+
+第一轮试验查回 missing root，暴露短命令同步等待云端转发超时；第二轮异步 intake 后五 span 完整。不得把 Local intake accepted 计作 Honeycomb delivered。
+
+- [x] V-TRACE-PACKAGED-01：从新构建 Skill zip 提取 bundled SDK，真实命令 exit 0；官方 Honeycomb MCP 查回 `d381a986088c3fa819e80d6c97fff121` 的 5 spans，单根与四层 parent 链完整。Server 最终 workspace check 与 diff whitespace check 通过。仍为隔离 fixture，不是生产产品验收。
+
+- [x] V-TRACE-LIVE-CLIENT-01：临时只读预览代理读取现有安装 Core 的真实业务数据；GUI 加载并切换 Files/Sessions/Skills，Skill 查询 Channel 列表/内容/成员。官方 MCP 在最近 10 分钟查回 GUI 14 spans、Skill 11 spans。只证明终端采集，现有 Core/Server 未部署 tracing，不能计作内部链路覆盖。实机预览发现并修复 MessagesView effect 中误插入的重复 Hook；修复后真实页面加载、GUI 31 tests 与 production build 通过。
+
+- [x] 双 provider 配置：Honeycomb 私有 env 生成成功；Grafana Basic auth 编码与 `/otlp/v1/traces` endpoint 组合验证通过。未计作 Grafana 云端连接成功。
+
+- [x] V-TRACE-GRAFANA-01：OTLP HTTP 200，Tempo read HTTP 200，UI 按 ID `a67de55fcf4f30f0fe4b7e1325ddb0f9` 显示 3 services/5 spans；真实只读预览查回 GUI 9 traces、Skill 4 traces。Cloud policy 已包含 traces:read/write，查询工具可使用私有凭据读取，不依赖浏览器登录。完整五 span 为隔离 fixture，真实产品 Core/Server tracing 未部署。
+
+### Tracing production rollout — 2026-10-04
+
+- [x] Server 0.1.121-dev 激活于 `/opt/agent-colab/releases/0.1.121-dev`，systemd active，公网 readiness 为 ok；远端与本地 Linux binary SHA-256 一致（4aef58016e76b6574d5017bddfb5227ce48d510ce20805ff3fc5c79e9c4f49e6）。私有 Grafana exporter env 已由独立 systemd drop-in 加载。
+- [x] R2 signed stable channel 0.1.122-dev 发布并执行全部新增制品公网 size/SHA-256 readback。本机正式 updater 成功安装 Core 0.1.78-dev、GUI 0.1.76-dev、Skill 0.1.46-dev；Electron 与 Windows Core 保留原版本。修复 publisher 平台筛选遗漏通用 GUI/Skill 制品的问题。
+- [x] V-TRACE-PRODUCTION-SKILL-01：`observability/tests/validate-production.py` 使用已安装 Skill 查询真实生产 Channel，exit 0、4 channels；Tempo 查回 `46636876e384c1999a3e4be29acc1b23`，7 spans，Skill → Core → Server 父子链完整。
+- [x] V-TRACE-PRODUCTION-GUI-01：已安装 GUI 实际加载并点击 Files/Sessions，页面返回真实文件与会话。Tempo 查回 `0a9d6f4ebba91daff2d87a4129c3354a`，4 spans，GUI 0.1.76-dev → Core 0.1.78-dev → Server 0.1.121-dev。该 span 是 transport_only，不代表页面全部业务完成或 Agent 回复闭环。
+- [x] 实机跨端校准：VPS NTPSynchronized=yes；Core reference=server-estimated，偏移约67 ms、不确定度134–139 ms；GUI/Skill trace quality=estimated，保留各自累积 uncertainty。单端 duration 使用单调时钟。没有执行人工时钟跳变、休眠、漂移注入，不能声称消除所有误差或支持毫秒级跨端排序。
+- [x] 回归：GUI 34 tests 与 production build、Skill 24 tests、Rust Core/Server workspace tests/check、Linux release build 均通过；部署脚本 bash syntax 与 git diff whitespace check 通过。
+- [ ] 全部业务入口/页面结果配对、Agent durable command/ACK/receipt/reply、Canvas outbox/retry/repair、匿名上报、时钟故障注入与生产限流仍待完成。
+### Work details and identity hover installed acceptance — 2026-10-04
+
+- [x] GUI 0.1.77-dev published through canonical R2 publisher, exact public size/hash verified; signed promotion 0.1.123-dev installed through the normal updater. Electron remains 0.1.21-dev. GUI archive: 842208 bytes, SHA-256 `a106dc8766c2db1012b2710d3c5fbfcc8d16659c38f8738a3296cfa67afb67cb`.
+- [x] Installed Colab opened Canvas `CANVAS_RUNTIME_ACCEPTANCE_795512d4`; identity card exposed real Work details. Request `5ce3d4bc-3e35-4990-80b2-56b270678774` displayed highlighted instruction, expanded intermediate/final responses, three initially collapsed tool calls. Expanding the first call exposed its read command input/output. Task-specific oldest-to-newest order is explicit; startup/lifecycle protocol noise absent.
+- [x] Installed card disappeared after leaving its area. Standard HoverCard automated tests separately cover capsule-to-card pointer traversal, leaving both regions, focus and Escape. All 41 GUI tests and production build passed. This acceptance reused a completed real dispatch; it does not claim a new dispatch or live streaming.
+### Agent roster task entry — 2026-10-04
+
+- [x] V-SETTINGS-AGENTS-01: GUI 0.1.80-dev, 45 tests and production build passed; public R2 artifact size 843100 bytes, SHA-256 `dd11f6072ca1f5e990a507f07546d62d5f23786e2664804f7619b10f38be6b57`. Promotion 0.1.126-dev installed through normal update/restart. Native installed GUI verified Canvas → global Settings → My Agents displays Agents dialog with existing blueprint and editable fields. Close → Canvas → Messages leaves dialog closed (consumed intent); no blueprint mutations made.
+
+- [x] V-AGENT-ROSTER-UNIT-01: actual shadcn Popover component test verifies Agent-only task count, two distinct commands, choosing older request, working-to-terminal animation removal, delivering is not working, Escape dismissal, live elapsed and fixed terminal duration, and unknown legacy timing. Owner entry/static header regressions included; GUI 44 tests/build passed.
+- [x] Server workspace 6 tests passed after timestamp/history API extension. No live database migration or installed GUI acceptance is implied by these tests.
+- [x] Server 0.1.124-dev deployed, readiness passed, migration 0029 applied. `.trial/V-AGENT-ROSTER-01/timing-trigger.sql` passed against deployed PostgreSQL in a rolled-back transaction: terminal timestamp recorded once, repeated receipt unchanged, running not prematurely finished, failure recorded.
+- [x] GUI 0.1.79-dev public artifact verified (843023 bytes, SHA-256 `e99f6393d744ca491184398d078e16bca2f476aba6268f931cbcf48d417ab302`), signed promotion 0.1.125-dev installed through authenticated update/restart. Installed Messages has no latest-task header, roster displays 6/27 tasks, owner management unchanged. Shared card shows owner once, summary/start/duration and explicitly unknown legacy timing. Choosing Task 24 opens request `5ce3d4bc-3e35-4990-80b2-56b270678774`, not latest Task 27; instruction/response and three collapsed tools are correct. This acceptance reuses a real completed task; running animation transitions are covered by component tests, not a new live dispatch.
+
+### V-TRACE-ENTRY-01 — 2026-10-04
+
+- [x] `.trial/V-TRACE-ENTRY-01` 四入口可运行样例：真实安装 GUI 三页面定位/呼吸高亮、Skill browser.open 命令显示/复制；浏览器验证通过。Files DOM animationName=trial-breathe，Messages selector 命中发送按钮；定位未触发业务动作。
+- [ ] 全量入口、稳定控件 ID/资源参数、无权限与重启恢复、直接定位 Electron 原窗口、最新 trace 查询未验证；正式服务归属未决定。
+
+### Trace Skill / MCP App foundation — 2026-10-04
+
+- [x] `skills/trace` 新通用 Skill：任务指令与开发 AGENTS.md 分离；init/generate/check/operations/locate/source/executions/performance/trace/app/mcp 脚手架。init 可植入注册目录、OTel JS adapter、校准 adapter 与配置示例。安装副本在 ~/.codex/skills/trace，Codex stdio MCP trace 已注册。
+- [x] `tracing/registry.yaml` 四入口为唯一维护源，包含 description、entry、completion、owner、source；生成 GUI TS 与 Skill JSON snapshots，digest stale 检查覆盖各目标。移除旧手工 operations.json 与 trial entries.json；trial 清单动态派生。
+- [x] GUI messages.send 与控件绑定消费生成定义；Skill browser.open 消费 snapshot source/description 对应定义。trace.entry.id 经批准的 baggage 跨 Rust Core/Server HTTP 边界传播，传输 span 记录代码路径；intake 白名单保留新增字段。代码通过 GUI 47 tests/build、Skill 29 tests、Rust observability tests/check。
+- [x] CLI 与 MCP 使用同一 dispatch；真实 stdio Client 验证 catalog 相同、MCP App HTML resource/mime/meta 有效；通用模块 3 tests（含 clock 过期/非对称样本与 registry 漂移/路径约束）。Skill validator 通过。
+- [x] Browser fallback http://127.0.0.1:53481 展示同源清单。查询生产 browser.open `1bf8cec6f3f3fbc46a4a35ff743c0fa5` 并展开 7 spans / 3 services，Grafana 深链接已生成；从清单定位试验 GUI Files 并高亮真实 Share files 成功。
+- [ ] MCP host 内实际 iframe 渲染尚未验证（本轮用协议测试与普通浏览器 fallback）；GUI locator 仍是 .trial adapter；查询是独立本地工具读取私有 Grafana 配置，尚未实现 Colab Core→Server 查询代理。
+- [ ] 新入口传播/源码字段/校准失效代码尚未发布生产；旧生产 trace 缺源码字段会明确标记。全量入口收敛、异步 outbox/WS 上下文、精确源码 revision 注入、历史 registry 存储与全量 metrics 仍待后续实现。性能结果是最多100条 search sample，不能当总体吞吐量/分位数。
+
+### Trace capability reorganization — 2026-10-04
+
+- [x] 通用 trace 的唯一开发源移至 `~/.codex/skills/trace`；仓库内 skills/trace 副本移除。instrumentation、analysis、catalog 三个能力分别提供 SKILL.md 与 AGENTS.md，公共 dispatch 留在 lib。
+- [x] colab-trace 旧查询脚本曾用于云端验证；通用 Honeycomb adapter 移入 trace/analysis，去除 Colab 默认配置路径，随后移除仓库和 Codex 的旧 colab-trace。
+- [x] MCP 启动配置与 trial adapter 改为引用个人 Skill；独立 repo fixture 的 MCP/catalog 测试与 registry/clock 测试通过，当前项目 snapshot check 通过。
+
+### Unit-owned tracing registries — 2026-10-04
+
+- [x] 总 tracing/registry.yaml 只引用 GUI、Skill、Core、Server 的 tracing/registry.json。操作定义由所属单元维护，Core/Server 尚无注册业务操作，保持空清单而不编造覆盖。
+- [x] GUI 直接 import 本单元 JSON，Skill 使用相同源码/制品相对路径读取 JSON；Skill 打包原样携带 tracing/。移除 targets.json、generated snapshots 和生成命令。
+- [x] 通用 trace loader 实时遍历引用，校验重复 ID、重复引用、循环及 repo 外路径；CLI/MCP/trial 同源。相关 loader/MCP tests、GUI build/tests 与 Skill tests 验证，当前正式生产制品未更新。
+
+### Information-association acceptance — 2026-10-04
+
+- [x] UI regression verifies no Files/Sessions/Canvas/Messages fetch on Channel entry, resource fetch only after opening choices, and no Message history fetch for the Messages chooser. TypeScript check and complete Vitest suite passed.
+- [x] Server prompt tests (6/6) passed, including context identity and deduplicated reading instructions. A real Canvas dispatch returned a prompt with read, patch and optional exploration commands; request `ea96b9f3-46d2-48bc-b81e-0e74444405c5` reached the local Agent Runtime and succeeded. Independent Canvas readback confirmed `CANVAS_HANDOFF_OK_20261004` was appended and both existing mentions survived.

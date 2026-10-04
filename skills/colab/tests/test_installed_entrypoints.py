@@ -37,7 +37,7 @@ class InstalledEntrypointTests(unittest.TestCase):
         return result
 
     def test_all_packaged_cli_entrypoints_import_from_an_installed_tree(self):
-        for command in ("colab-browser", "colab-session-reader", "colab-skill-tool", "colab-transfer"):
+        for command in ("colab-browser", "colab-canvas", "colab-messages", "colab-session-reader", "colab-skill-tool", "colab-transfer"):
             with self.subTest(command=command):
                 self.assertIn("usage:", self.run_command(f"bin/{command}", "--help").stdout)
         self.assertIn("usage:", self.run_command("setup/colab-setup", "--help").stdout)

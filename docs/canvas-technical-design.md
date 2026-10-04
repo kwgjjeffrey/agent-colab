@@ -1,0 +1,906 @@
+# Canvas 技术设计
+
+状态：首个纵向切片已验证；结构化组件与多人协作仍待实现
+范围：多人和多 Agent 协作的结构化文档
+不包含：本轮实现、UI 视觉稿、生产数据迁移
+
+## 1. 结论
+
+### 2026-10-04：转换实现替换
+
+Local Core 的 `local/canvas-codec/` 使用 `prosemirror-markdown` 解析/序列化，
+`@tiptap/y-tiptap` 将目标 ProseMirror tree 增量协调到已有 Yjs fragment。
+Rust/Yrs 继续持有持久副本及 outbox。独立 Node helper/runtime 随 Core 打包，
+不依赖 GUI/Electron，也不向 helper 传递账号凭据。
+
+Markdown patch 只重新解析实际变更覆盖的根节点；其他节点（包括空段落、属性）保留。
+修改区域先验证基线能否往返；无法无损表达则报 `projection_not_representable`，不落库。
+Mention 投影使用带完整身份属性的 `colab-mention:` 链接；改动胶囊身份、删除胶囊或
+修改 `colab-component` 围栏内容须走专用结构接口，本次文本 patch 明确拒绝。
+段尾硬换行采用显式 `<br>` 投影，parser 只接受该 break token，不启用任意 HTML。
+原文真实数据中的段尾空格+硬换行已通过往返及追加验证。
+目前每次支持一个 patch hunk，歧义上下文拒绝；这些是显式边界，不声称任意 Markdown 无损。
+
+Canvas 是 Channel 内的协作型结构化文档，不是共享文件，也不是无限画布。
+
+首版采用：
+
+- **规范数据模型**：Yjs CRDT 文档；GUI 使用 Yjs，Rust Local Core 与 Rust Server 使用 Yrs。
+- **编辑器**：现有 React GUI 中使用 Tiptap/ProseMirror；普通富文本使用原生节点，查询列表等结构化组件使用 React Node View。
+- **同步链路**：GUI 只连接 Local Core；持久写入使用 HTTP，Conversation 与 Canvas 的失效通知复用同一条 account realtime WebSocket。Agent runtime 指令仍使用独立的 runtime-authenticated WebSocket。
+- **持久化**：Server 保存 CRDT 增量 update；Local Core 保存本机 replica、未确认 outbox 和服务端 cursor。WebSocket 只负责低延迟唤醒，断线恢复依赖持久化 update 与单调 `serverSeq`。
+- **Agent 写入**：Agent 不读取 Yjs 二进制或 CRDT block。Agent 对同一份 Markdown/TXT 投影执行读取、搜索和 patch；Local Core 在内部把投影 diff 映射为 CRDT transaction。结构化组件另用类型化工具。
+- **Markdown**：是 Agent 的文本读写界面以及导入/导出格式，不是物理副本或事实来源；不能无损表示的组件以不可直接编辑的稳定占位符出现在投影中。
+
+首版不采用 BlockSuite 作为运行时。它的 block store 与协作能力完整，但会同时引入其内部文档模型、Lit/Web Component 编辑栈和仍在快速变化的 canary 包；Local Core 的 Rust Agent 工具还需要理解其内部 Yjs 布局。当前项目已有 React/Tiptap，Tiptap 官方支持 Yjs Collaboration 与 React Node View，因此沿现有栈定义一套更小、跨 Yjs/Yrs 可验证的 Canvas schema。
+
+## 2. 产品边界
+
+Canvas 解决三类问题：
+
+1. 多人和多 Agent 在同一份长期文档中制定目标、分工和决策；
+2. 对共享上下文做持续加工，而不是反复生成互相隔离的总结文件；
+3. 在普通文本中嵌入可执行、可配置的结构化组件，例如查询列表、筛选器和结果视图。
+
+Canvas 不改变现有 Files 的定位：
+
+- Files 继续使用 shadow Git，同步用户任意程序产生的文件状态；
+- Canvas 是受 Colab schema 管理的协作文档，所有写入都转换成 CRDT transaction；
+- Canvas 可以引用 Files、Session、Skill 或 Message，但不取代这些对象的存储与权限模型。
+
+首版不包含：
+
+- 无限白板、自由坐标节点或连线；
+- 任意第三方数据库查询语言；
+- 把 Canvas 自动导出为本地可编辑 Markdown 并双向监听；
+- 对二进制附件做 CRDT；附件沿用 Blob/Shared Item 能力，Canvas 只保存引用；
+- 未经 schema 注册的任意前端组件代码。
+
+## 3. 技术选型
+
+| 关注点 | 选择 | 原因 |
+| --- | --- | --- |
+| CRDT | Yjs / Yrs，update encoding v1 | Yrs 是 Yjs 的兼容 Rust 实现；前后端不增加另一语言运行时；v1 适合小增量且是默认兼容格式 |
+| GUI 编辑器 | Tiptap + ProseMirror | 已在 Desktop GUI 使用；支持 Yjs Collaboration、自定义 schema 和 React Node View |
+| Server | 现有 Rust Server + Yrs | 保持部署边界，不新增 Hocuspocus/Node 服务 |
+| Local replica | Rust Local Core + Yrs | GUI 与 Skill 均只调用 Local Core；Agent 操作和离线 outbox 共用同一 replica |
+| 在线传输 | HTTPS mutation + 复用 account realtime WebSocket invalidation | 写入先得到 durable HTTP 结果；Conversation 与 Canvas 的唤醒通知复用认证、心跳和重连；runtime command 因身份与 ACK 语义不同继续独立 |
+| 恢复 | ordered update pull + durable server sequence | `after=serverSeq` 拉取缺口；`clientUpdateId` 负责幂等确认，后续压缩再加入 state vector/snapshot |
+| 在线协作者状态 | Yjs Awareness 语义，独立临时帧 | 光标、选区、在线状态不进入持久化文档 |
+| 结构化组件状态 | CRDT 中的嵌套 shared types | 避免把整个组件 JSON 当作一个 LWW 属性，允许不同字段并发合并 |
+| Agent 文本修改 | 上下文 patch → CRDT transaction | 保留 Codex 熟悉的读/搜/patch 工作方式，同时不制造物理 Markdown 副本 |
+| Agent 组件修改 | schema 驱动的类型化命令 | 查询筛选项等不是文本，必须以明确字段和类型修改 |
+
+Yjs update 具有交换律、结合律和幂等性，可以乱序或重复应用；state vector 可以只计算对方缺少的部分。Yjs 官方还明确区分持久化 document update 与临时 awareness。设计不自创 CRDT 算法，只自定义 Colab 的认证、复用连接、持久化和恢复 envelope。
+
+相关资料：
+
+- [Yjs Document Updates](https://docs.yjs.dev/api/document-updates)
+- [Yjs Awareness](https://docs.yjs.dev/api/about-awareness)
+- [Yrs Rust API](https://docs.rs/yrs/latest/yrs/)
+- [Tiptap Collaboration](https://tiptap.dev/docs/editor/extensions/functionality/collaboration)
+- [Tiptap React Node Views](https://tiptap.dev/docs/editor/extensions/custom-extensions/node-views/react)
+- [BlockSuite Store](https://blocksuite.io/guide/store)
+
+## 4. 系统边界与能力归属
+
+### 4.1 Desktop GUI resources
+
+拥有：
+
+- Canvas 列表、编辑器和只读视图；
+- Tiptap schema、编辑命令和 React Node View；
+- 当前浏览器编辑 replica 的 Y.Doc；
+- 本地光标、选区及 awareness 展示；
+- 结构化组件的编辑表单和结果渲染；
+- 将 Yjs update 发送给 Local Core，并只在 Local Core durable ACK 后显示“已保存到本机”。
+
+不拥有：
+
+- Server 凭据、远端连接、持久化队列或权限判断；
+- 查询组件的权威执行；
+- Canvas snapshot/update 的服务端存储。
+
+### 4.2 Electron Shell
+
+Canvas 不增加 Electron 逻辑。Electron 仍只承载窗口、受限 IPC 和 deep link。普通浏览器打开同一个 Local Core GUI 时必须得到相同能力。
+
+### 4.3 Rust Local Core
+
+拥有：
+
+- 每个本机使用过的 Canvas 的 Yrs replica；
+- GUI ↔ Local Core 的本地 Canvas provider；
+- account realtime WebSocket 中 Canvas invalidation 的订阅、重连和 ordered update 补齐；
+- durable outbox、幂等 operation ID、server sequence cursor；
+- Agent Canvas 工具的用例实现；
+- 将 Markdown/TXT 投影 patch 和 component 命令转换为 Yrs transaction；
+- 组件 resolver 的本机入口和缓存；
+- 本机离线、同步中、已同步、冲突和失败状态。
+
+Local Core 是本机唯一 Canvas SQLite writer。GUI 和 Skill 不各自实现同步队列。
+
+### 4.4 Python Agent Colab Skill
+
+新增 `bin/colab-canvas`，它是 Local API 的薄客户端：
+
+- 不读取 Yjs/Yrs 数据；
+- 不连接 Server；
+- 不持有凭据；
+- 不在 Python 中重做 patch、schema 校验或冲突合并；
+- stdout 保持稳定 JSON，诊断写 stderr，沿用现有 Skill 退出码约定。
+
+### 4.5 Rust Server
+
+拥有：
+
+- Canvas 元数据、Channel 权限和成员授权；
+- 每个 Canvas 的 CRDT snapshot、append-only update log 和单调 server sequence；
+- update 去重、大小限制、schema version 门禁及合并后文档校验；
+- account realtime WebSocket 中 Canvas domain 的 invalidation 广播；
+- awareness 的临时转发，不持久化；
+- Server 可执行的结构化组件 resolver；
+- Canvas 操作审计及历史 checkpoint。
+
+Server 不渲染 GUI，不导入 Tiptap React 代码，也不调用本地 Agent。
+
+## 5. Canonical 文档模型
+
+一个 Canvas 对应一个 Y.Doc/Yrs Doc。顶层命名 shared types：
+
+```text
+Y.Doc
+├── meta: Y.Map
+│   ├── schemaVersion: number
+│   ├── title: string
+│   └── createdAt: string
+├── content: Y.XmlFragment
+│   └── ProseMirror/Tiptap document tree
+├── components: Y.Map<componentId, Y.Map>
+│   └── typed component state using nested Y.Map/Y.Array/Y.Text
+└── annotations: Y.Map<annotationId, Y.Map>   # 后续评论/批注预留，首版不开放
+```
+
+### 5.1 Content tree
+
+`content` 保存文档顺序、普通文本、标题、列表、引用、代码块和结构化组件占位节点。普通文档内容不增加产品层 block ID；Yjs/ProseMirror 自己维护协作所需的内部 identity。编辑器只能在初次同步完成后挂载，避免本地空文档覆盖远端内容。
+
+结构化组件节点只保存：
+
+```json
+{
+  "type": "canvasComponent",
+  "attrs": {
+    "componentId": "cmp_01...",
+    "componentType": "queryList",
+    "schemaVersion": 1
+  }
+}
+```
+
+组件的可编辑状态不塞进一个大 JSON attribute，而在 `components[componentId]` 中使用嵌套 shared types。这样两个人分别修改标题和筛选条件时，不会因为同一个 JSON 属性整体覆盖而丢失一方修改。
+
+### 5.2 Component schema registry
+
+组件 schema 是版本化协议，不是前端私有 TypeScript 类型。每一种组件定义：
+
+- `componentType` 与 `schemaVersion`；
+- 可用字段、字段类型、默认值和必填约束；
+- 哪些字段使用 `Y.Text`、`Y.Map`、`Y.Array` 或 scalar；
+- Agent 可执行的 command；
+- GUI Node View 与只读 renderer；
+- resolver 类型、输入和输出 schema；
+- 版本升级函数。
+
+schema 的规范来源放在独立、可由 Rust 与 TypeScript 生成/校验的 JSON Schema 目录，不能分别手写两套含义不同的字段定义。
+
+首个验证组件使用 `queryList@1`：
+
+```json
+{
+  "source": { "kind": "channelItems", "channelRef": "colab://channel/Design" },
+  "filters": [
+    { "field": "itemType", "operator": "in", "value": ["files", "session"] }
+  ],
+  "sort": [{ "field": "updatedAt", "direction": "desc" }],
+  "columns": ["name", "contributor", "updatedAt"],
+  "limit": 20
+}
+```
+
+这里只同步**查询定义**。查询结果是派生数据，由 resolver 按权限实时取得，不写入 CRDT；否则任何刷新都会制造无意义的协作文档变更，并可能把用户无权长期保存的数据固化进文档。
+
+### 5.3 Agent Markdown/TXT projection
+
+Canvas 为 Agent 生成一份确定性的 Markdown/TXT 投影。Agent 的 `read` 返回这份文本，`apply-patch` 也必须作用于同一份文本，二者之间不再插入 block 列表或 CRDT 标识：
+
+```md
+# Release readiness
+
+本周需要完成发布验证。
+
+:::colab-component{type="queryList" id="query_01"}
+Query list: Files and Sessions in Design, sorted by updatedAt descending.
+:::
+```
+
+普通 Markdown 部分可直接 patch。`colab-component` fence 是结构化组件的只读占位符：ID 是 Canvas 产品层的组件句柄，不是 CRDT block ID；修改组件必须调用 component 工具。Local Core 为每次投影在内部保留 source map，把文本范围映射回 ProseMirror/Yrs 节点，该映射不返回给 Agent。
+
+投影规则必须确定且可逆到足以定位修改：相同 CRDT state 必须生成逐字节相同的投影。`read` 返回 projection revision；`apply-patch` 在当前投影上做上下文匹配，并拒绝修改组件 fence。未知组件必须保留稳定占位和 ID，不能静默丢弃后再回写。
+
+### 5.4 Projection Codec：CRDT 与普通文档之间的正式边界
+
+Local Core 新增独立的 `CanvasProjectionCodec` 能力。它不是 UI formatter，而是 Agent 文档工具能够成立的核心双向转换层：
+
+```text
+render(Yrs Doc)
+  -> Projection {
+       text: Markdown/TXT,
+       revision,
+       privateSourceMap
+     }
+
+applyPatch(current Yrs Doc, text patch)
+  -> validated Yrs transaction
+```
+
+#### 读取方向：CRDT → Markdown/TXT
+
+1. 遍历规范 ProseMirror/Yrs 文档结构；
+2. 用确定性规则序列化标题、段落、marks、列表、引用和代码块；
+3. 把结构化组件序列化为只读 fence；
+4. 在 Local Core 内部建立字符区间到 Yrs/ProseMirror 节点的 source map；
+5. 对投影文本、Canvas schema version 和 CRDT state vector 计算 projection revision；
+6. 向 Agent 只返回文本和 revision，不返回 source map 或节点 ID。
+
+分页读取固定在同一个 projection revision 上。Local Core 短期保存该投影；不能让 Agent 读取第一页后，第二页悄悄切换到另一个文档版本。
+
+#### 写入方向：Markdown patch → CRDT transaction
+
+1. 从当前最新 Yrs Doc 生成 current projection 与私有 source map；
+2. 在 current projection 上匹配 patch context；无法安全匹配则返回 `patch_conflict`；
+3. 应用 patch 得到目标 Markdown；
+4. 保护并校验所有 component fence，文本 patch 不得修改其内容、ID、顺序或数量；
+5. 使用正式 Markdown parser 将当前文本和目标文本解析为规范 AST，不用正则猜段落；
+6. 结合私有 source map 对两个 AST 做结构 diff，生成插入、删除、移动、文本和 marks 修改计划；
+7. 在克隆的 Yrs Doc 上试应用修改计划；
+8. 重新 render，结果必须与目标 Markdown 逐字节一致，否则返回 `projection_not_representable`；
+9. 验证通过后，在当前 replica 上以一个 Yrs transaction 原子提交。
+
+这层保证 Agent 始终在编辑普通文档，而 CRDT 节点和 transaction 只存在于实现内部。禁止通过“把修改后的 Markdown 重新导入成一个全新 Y.Doc”完成写入；那会破坏既有 CRDT identity、并发历史和组件引用。
+
+### 5.5 Heading section、成员 mention 与 Agent mention
+
+Identity-card implementation (2026-10-04): each Tiptap mention uses a React Node View with the
+standard shadcn HoverCard trigger/content. The component owns hover bridging, positioning and
+dismissal: moving into the card keeps it open; leaving capsule and card closes it. No bespoke
+card-position or mouse-leave state is retained. Dispatch uses the mention's editor position to
+locate its Heading section, not an unrelated current text selection. Execution records remain
+scoped to document+Agent, not the individual mention occurrence.
+
+Canvas 对产品和 Agent 暴露的是一篇表达力更强的 Markdown 文档，不暴露 block 同步协议。ProseMirror 节点、内部 `blockId` 和 CRDT shared type 只是编辑器/同步实现细节，不能出现在 invocation API、Agent prompt 或普通文档工具中。
+
+Agent 任务上下文以 mention 所在的 **Heading section** 为单位。Server 从权威投影中找到 mention：上下文从最近的所属 Heading 开始，到下一个同级或更高层级 Heading 之前结束；更低层级的子标题及内容包含在当前 section 内。如果 mention 位于第一个 Heading 之前，则上下文是文档开头到第一个 Heading 之前的引言区。没有任何 Heading 时，整篇文档就是一个 section。这样任务上下文由用户可见的文档结构决定，不依赖换行、段落节点或内部 block 边界。
+
+mention 是可序列化的 inline atom node，不是可编辑的 `@显示名` 文本：
+
+```json
+{
+  "type": "mention",
+  "attrs": {
+    "mentionId": "mnt_01...",
+    "targetType": "member | agent",
+    "targetId": "organization-member-or-blueprint-uuid",
+    "label": "@Zhiyuan Yu",
+    "ownerMemberId": "only-for-agent"
+  }
+}
+```
+
+- GUI 复用 Messages 的 mention 查询结果、胶囊视觉和键盘交互，但 Canvas/Tiptap 使用自己的 Node extension；两边复用的是目标身份协议和组件样式，不把消息编辑器嵌入 Canvas。
+- `label` 只负责显示；路由永远使用稳定 `targetId`。重命名不会改变目标，复制为纯文本时才退化为 label。
+- member mention 只产生协作通知/未读语义，不执行 runtime command。
+- hover 或键盘聚焦 member/agent mention 胶囊时，GUI 打开统一身份卡片。member 卡片展示头像、姓名与 Channel 成员身份；Agent 卡片还展示 Agent 名称、owner 和 Agent 标识，卡片底部提供 `Send to <Agent>`。关闭卡片就是忽略本次建议，不另设会遮挡正文的 `Dismiss` 操作条。invocation UI 不属于文档正文，也不进入 Markdown 投影。
+- 同一个 Heading section 可以 mention 多个 Agent。`mentionId` 只负责稳定标识富文本节点和定位 Heading section，不承载按钮状态。执行记录归属 `(canvas_id, blueprint_id)`；同一 Agent 在文档里出现多次时，任一身份卡都汇总显示该 Agent 在本文档内所有未结束 command，完成记录继续保存在数据库中但退出即时状态区。
+
+Agent invocation 是 Server 资源，不是一个特殊 Canvas update。GUI 点击发送时提交：
+
+```json
+{
+  "targetBlueprintId": "...",
+  "sectionMarkdown": "## Goal\n... @Agent ...",
+  "canvasRef": "colab://channel/.../canvas/..."
+}
+```
+
+Server 验证调用人权限和文档上下文，再创建新的 invocation。关闭身份卡不产生服务端状态；发送不能修改 Canvas 文本。身份卡的按钮始终是可重复使用的发送动作，按钮上方只投影该 Canvas、该 blueprint 的 `queued / delivering / running / awaiting_owner` 记录；终态不污染按钮，也不在标题区常驻。
+
+路由复用 Messages 已有的 blueprint policy、owner confirmation、runtime 在线判断、runtime WebSocket command、ACK/lease 和持久 provider writer，但上下文装配器是 Canvas 专用的。每个 `(canvas_id, blueprint_id)` 绑定一个长期 provider session；同一文档再次交给同一个 Agent 时继续该 session，不同 Agent 或不同文档不共享。文档繁忙时沿用 provider writer 的串行 queue，不创建替代 thread。
+
+时序：
+
+```text
+Tiptap inserts structured Agent mention
+  -> hover/focus opens the Agent identity card
+  -> card action posts Canvas invocation intent
+  -> Server reloads authoritative Canvas and validates mention/revision
+  -> Agent policy router (deny / owner confirmation / offline / executable)
+  -> Server renders Canvas task command
+  -> runtime WebSocket delivers to exact registered runtime
+  -> Local Core resumes the Canvas+Agent provider session
+  -> Agent reads/edits through colab-canvas
+  -> ordinary Canvas update/outbox/serverSeq synchronization
+```
+
+Agent 对 Canvas 的修改继续走 `colab-canvas` 与普通 Canvas update 通道，不能让 runtime command handler 直接改 PostgreSQL，也不能伪装成 Channel message。
+
+### 5.6 Canvas Agent command prompt
+
+Server 使用以下最小模板。这里不解释 blueprint、runtime 或 CRDT 等实现概念；Agent 看到的是任务、文档和准确工具：
+
+```text
+{{author_name}} requested work in the collaborative document “{{canvas_title}}”:
+{{containing_heading_section_markdown_with_agent_mention}}
+
+<if blueprint_instruction>
+Instruction: {{blueprint_instruction}}
+</if>
+
+Read this document first:
+  ~/.agents/skills/agent-colab/bin/colab-canvas read --ref '{{canvas_ref}}' --offset 1 --limit 1000
+
+Tools below are at your disposal if the user's task requires them:
+- Search this document:
+  ~/.agents/skills/agent-colab/bin/colab-canvas search --ref '{{canvas_ref}}' --query '<text>'
+- Edit ordinary document content by passing a Codex patch on stdin:
+  ~/.agents/skills/agent-colab/bin/colab-canvas apply-patch --ref '{{canvas_ref}}' <<'PATCH'
+  *** Begin Patch
+  *** Update File: document.md
+  @@
+  -exact existing text
+  +replacement text
+  *** End Patch
+  PATCH
+
+- Explore other Canvas documents in the Channel:
+  ~/.agents/skills/agent-colab/bin/colab-canvas list --channel '{{channel_name}}'
+
+Read again and retry from current content if a patch conflicts. Structured component fences require their dedicated typed tools and must not be edited as text.
+```
+
+`containing_heading_section_markdown_with_agent_mention` 保留 section 的 Heading、所有子标题/正文和完整可见 mention，不删除 `@Agent`。Agent 可通过 `read` 获取整篇权威投影，因此 Server 不把整篇文档重复塞入启动 prompt。后续若任务来自评论或引用，再显式增加 root-to-parent thread；首个 mention 版本不虚构对话 history。
+
+## 6. 同步协议
+
+Conversation 与 Canvas 使用同一条 account realtime WebSocket，但它们是两个逻辑 domain；可靠性不依赖“socket 一直在线”。首个切片不把 durable Canvas update 塞进 WebSocket。
+
+```text
+Tiptap/Y.Doc
+    │ local update
+    ▼
+Local Core/Yrs ── durable replica + outbox ── ACK GUI
+    │ authenticated HTTP mutation / ordered pull
+    ▼
+Rust Server ── PostgreSQL append-only update log
+    │ account realtime WebSocket / canvas.invalidated
+    ▼
+other Local Cores ── HTTP pull missing updates ── local replica / GUI / Agent tools
+```
+
+### 6.1 首次打开与重连
+
+1. GUI 向 Local Core 请求 `after=0` 的 Canvas updates；
+2. Local Core 按自己的 `last_server_seq` 向 Server 拉取缺口，依次应用并持久化 Yrs replica；
+3. Local Core 返回有序 updates，GUI 应用完毕后才挂载 Tiptap，避免空编辑器先产生本地 update；
+4. account realtime socket open、收到 `canvas.invalidated`、系统重新聚焦时，客户端再次按 `after=lastServerSeq` 拉取；
+5. Local Core 将 SQLite outbox 中未确认 update 以相同 `clientUpdateId` 重发；Server 幂等去重；
+6. 拉取结果为空且 outbox 已确认后进入 `Synced`。
+
+不使用“最后看到一条 WebSocket 就认为已同步”。每次 socket open、系统唤醒、网络恢复和收到 invalidation 都重新按持久 cursor 对账。引入 snapshot/压缩后，超出 update 保留窗口的客户端再以 state vector 获取合并差量。
+
+### 6.2 为什么复用一条 WebSocket
+
+复用一条物理连接可以共用登录认证、心跳、休眠恢复和指数退避，避免每增加一种实时能力就新增一套 socket 生命周期。逻辑上仍以 `messages.invalidated`、`agent_requests.invalidated`、`canvas.invalidated` envelope 分开处理，各自拥有独立 cursor、错误和补拉状态。
+
+同一条 socket 只发送小型 invalidation，不承载 CRDT 二进制，因此 Canvas 大 update 不会阻塞聊天通知。update 与未来 snapshot 均走有大小限制、可重试的 HTTP；socket 只通知 `canvasId` 与最新序号。
+
+因此复用的是连接、认证和恢复框架，不是把两套业务状态机揉成一个。Agent runtime command 仍保持独立 socket，因为它以 runtime 身份认证，还有 request ACK、单 runtime 串行领取和执行完成 receipt 等完全不同的语义。
+
+### 6.3 本地写入
+
+1. Tiptap transaction 产生 Yjs update；
+2. GUI 发送 `{canvasId, clientUpdateId, update}` 给 Local Core；
+3. Local Core 在一个 SQLite transaction 中持久化 update/outbox 并更新本机 replica；
+4. 成功后才 ACK GUI；
+5. Local Core 后台 worker 通过 HTTP 异步发往 Server；
+6. Server 去重、鉴权、校验合并结果并提交 update + `serverSeq`；
+7. Server ACK 后 Local Core 删除 outbox 条目并记录 cursor。
+
+连续键入可以在固定的短窗口合并 update 以减少帧数，但不能使用不断延后的 debounce；持续输入必须有最大传输延迟。
+
+### 6.4 远端写入
+
+1. Server commit 后在 account socket 广播 `{type: "canvas.invalidated", canvasId, latestSeq}`；
+2. Local Core/GUI 收到唤醒后通过 HTTP 拉取 `after=lastServerSeq` 的有序 update；
+3. Local Core 幂等应用并持久化，GUI 使用明确的 remote origin 应用 update，避免再次作为本地变更提交；
+4. 如果 `serverSeq` 有缺口，继续按 cursor 拉取，不能把 invalidation 本身当正文或同步结果。
+
+### 6.5 Agent 写入
+
+Agent 命令在 Local Core 内对当前 Yrs replica 开 transaction。提交 transaction 后走与 GUI 完全相同的 durable outbox 和 Server 通道。不存在“Agent 回复专用同步链路”，也不需要物理 Markdown 文件 watcher。
+
+### 6.6 Snapshot 与压缩
+
+Server 保留：
+
+- 当前 compacted snapshot；
+- snapshot 之后的 append-only updates；
+- 每个 update 的 `serverSeq`、`clientUpdateId`、actor、device、大小与时间；
+- 定期 checkpoint，用于恢复和有限历史版本浏览。
+
+达到 update 数量或字节阈值时，后台 worker 用 Yrs 合并并生成新 snapshot。只有新 snapshot 持久化成功后才删除已覆盖 update。压缩不能阻塞在线写入；用 snapshot generation/CAS 防止压缩覆盖并发提交。
+
+### 6.7 Awareness
+
+awareness 只包含 `userId`、显示信息、颜色、当前 selection 和 client instance ID。它通过 account realtime socket 的 `canvas.awareness` 帧临时广播：
+
+- 不写 PostgreSQL；
+- 断线后按 TTL 消失；
+- 不作为权限、锁或保存成功的证据；
+- Agent 默认不发布逐 token 光标，只可发布低频的“正在编辑 Canvas”状态。
+
+## 7. 持久化结构
+
+### 7.1 Server PostgreSQL
+
+```text
+canvases
+  id, channel_id, title, schema_version, created_by, created_at, updated_at, archived_at
+
+canvas_snapshots
+  id, canvas_id, generation, last_server_seq, encoding, blob_key,
+  byte_size, sha256, created_at
+
+canvas_updates
+  canvas_id, server_seq, client_update_id, actor_id, device_id,
+  encoding, blob_or_inline_bytes, byte_size, created_at
+  UNIQUE(canvas_id, client_update_id)
+
+canvas_component_resolutions
+  # 可选缓存元数据；不保存进 CRDT
+  canvas_id, component_id, resolver_key, input_digest, expires_at, result_blob_key
+
+canvas_audit_events
+  canvas_id, actor_id, source, operation_kind, affected_text_ranges,
+  server_seq, created_at
+```
+
+大 snapshot 与大 update 复用 Server Blob Store；小 update 可 inline，但阈值必须固定并有总量配额。PostgreSQL 元数据与 Blob 仍构成一个逻辑数据集。
+
+### 7.2 Local Core SQLite
+
+```text
+canvas_replicas
+  account_id, canvas_id, schema_version, snapshot_bytes,
+  last_server_seq, updated_at
+
+canvas_outbox
+  account_id, canvas_id, client_update_id, update_bytes,
+  attempt_count, next_attempt_at, last_error, created_at
+
+canvas_local_operations
+  operation_id, canvas_id, source, result_state, server_seq, created_at
+
+canvas_component_cache
+  canvas_id, component_id, input_digest, result_json, expires_at
+```
+
+本地 snapshot 和 outbox 都放平台 application data，不进入源码 checkout。Core 崩溃重启后先恢复 replica/outbox，再连接 Server。
+
+## 8. Server API 与统一 Realtime envelope
+
+元数据继续使用普通 Local API → Server API：
+
+```text
+GET    /v1/channels/{channel}/canvases
+POST   /v1/channels/{channel}/canvases
+GET    /v1/canvases/{canvas}
+PATCH  /v1/canvases/{canvas}
+DELETE /v1/canvases/{canvas}          # alpha 可定义为 archive
+POST   /v1/canvases/{canvas}/resolve/{component}
+```
+
+durable mutation 与 recovery 使用 HTTP：
+
+```text
+GET  /v1/canvases/{canvas}/updates?after={serverSeq}&limit={limit}
+POST /v1/canvases/{canvas}/updates
+     { clientUpdateId, encoding: "yjs-v1", update }
+```
+
+同步复用现有 account-authenticated realtime WebSocket。Conversation 与 Canvas 共用物理连接，但 Canvas 首个切片只消费一个唤醒帧：
+
+```json
+{ "type": "canvas.invalidated", "canvasId": "...", "latestSeq": 43 }
+```
+
+Server 必须限制单 update、单文档和单账号速率；不能先无界读取再校验。后续 awareness 仍可使用同一 socket 的临时帧，但它不参与 durable ACK。
+
+## 9. 前端渲染与交互结构
+
+Channel 增加 Canvas tab：
+
+```text
+Canvas list
+  └─ Canvas workspace
+       ├─ compact header: title / sync state / collaborators / actions
+       ├─ Tiptap editor
+       │    ├─ normal rich-text nodes
+       │    └─ canvasComponent React Node Views
+       └─ contextual component editor / resolver state
+```
+
+### 9.1 普通内容
+
+- Tiptap Collaboration 绑定 `Y.Doc.getXmlFragment("content")`；
+- Collaboration 自带 history 时禁用 StarterKit 的普通 Undo/Redo；
+- undo manager 只撤销当前 client origin 的本地操作，不能撤销其他协作者；
+- 普通内容不暴露或维护产品层 block ID；协作 identity 由 Yjs/ProseMirror 内部处理；
+- 远端选区使用 Collaboration Caret/Awareness 语义渲染。
+
+### 9.2 结构化组件
+
+`canvasComponent` 是顶层 atom node。React Node View 展示组件，不允许用户在其可视内容中直接修改派生结果。组件编辑分为：
+
+- inline 快捷属性；
+- 完整配置面板；
+- resolver 结果区；
+- loading/empty/error/stale 状态。
+
+查询组件的数据流：
+
+```text
+CRDT query definition
+  → GUI asks Local Core resolver
+  → Local Core enforces account/context and calls Server
+  → Server executes authorized query
+  → result returns to Node View cache
+```
+
+结果变化不会改写 Canvas。只有用户或 Agent 修改 query definition 时才产生 CRDT update。
+
+### 9.3 保存与离线状态
+
+编辑器展示三个不同状态：
+
+- `Saving locally`：Local Core 尚未 durable ACK；
+- `Saved locally · Offline`：已进入本机 outbox但尚未被 Server ACK；
+- `Synced`：所有已提交 update 已收到 Server sequence ACK。
+
+不能把 WebSocket connected 等同于 `Synced`，也不能在失败时显示假成功。
+
+## 10. Agent 工具设计
+
+### 10.1 脚手架位置
+
+```text
+skills/colab/
+├── bin/
+│   └── colab-canvas
+├── lib/
+│   ├── local_api.py
+│   └── output.py
+└── references/
+    └── canvas-schema.md
+```
+
+安装后的 Codex 稳定入口：
+
+```text
+~/.agents/skills/agent-colab/bin/colab-canvas
+```
+
+首轮只实现和验证 macOS/Codex。此阶段不创建 Windows `.cmd` 入口，不声称 Windows 可用；等 macOS 纵向链路通过后再单独设计和验收 Windows 适配。
+
+### 10.2 与 Codex 文件工具对齐的原则
+
+Agent 看到的是一个虚拟的 `document.md`，而不是 block tree：
+
+- `read` 返回原样 Markdown/TXT，可用 offset/limit 分段；
+- `search` 返回类似 `rg` 的行号和文本命中；
+- `apply-patch` 修改的就是 `read` 返回的同一份 `document.md`；
+- 普通文本用一个 free-form patch，一次原子应用多处修改或调整 Markdown 结构；
+- patch 使用上下文定位，当前内容不匹配就失败并要求重读，不做模糊覆盖；
+- 成功返回简洁 `Done` 及新 revision；
+- Agent 不看到 CRDT block ID、Yjs 类型或内部 source map；
+- 结构化组件使用类型化命令，绝不要求 Agent 手改 Yjs JSON 或 Markdown fence。
+
+stdout 外层仍遵守 Agent Colab 的稳定 JSON 契约。示例中为便于阅读省略通用 `ok/data/error` 外壳。
+
+### 10.3 发现与读取
+
+```bash
+colab-canvas list \
+  --channel 'colab://channel/Developer%20Platform'
+
+colab-canvas read \
+  --ref 'colab://channel/Developer%20Platform/canvas/Release%20readiness' \
+  [--offset 1] \
+  [--limit 200]
+
+colab-canvas search \
+  --ref CANVAS_REF \
+  --query 'rollback' \
+  [--limit 50]
+```
+
+`read` 返回：
+
+```json
+{
+  "ref": "colab://channel/.../canvas/Release%20readiness",
+  "path": "document.md",
+  "revision": "projection:01...",
+  "content": "# Release readiness\n\nRelease validation is pending.\n\n:::colab-component{type=\"queryList\" id=\"query_01\"}\nFiles and Sessions updated this week.\n:::",
+  "nextOffset": null
+}
+```
+
+`search` 的行号只属于该 projection revision。Agent 继续分页读取时仍得到同一 revision；文档发生变化后，新的读取返回新 revision。
+
+### 10.4 普通文本 patch
+
+```bash
+colab-canvas apply-patch --ref CANVAS_REF <<'PATCH'
+*** Begin Patch
+*** Update File: document.md
+@@
+-Release validation is pending.
++Release validation passed on macOS.
+*** End Patch
+PATCH
+```
+
+语义与 Codex `apply_patch` 一致：
+
+- patch 是 free-form stdin，不要求把每行塞进 JSON 参数；
+- `Update File` 的目标固定为本次 Canvas 的虚拟 `document.md`；
+- 所有 hunk 在当前合并后的 Markdown/TXT 投影上进行上下文匹配；
+- 整个 patch 原子成功或失败；
+- Agent 可以用 Markdown 增删段落、标题、列表、引用和代码块，不需要知道它们在 CRDT 中对应什么节点；
+- 修改、删除或手工新增 `colab-component` fence 会返回 `structured_component_requires_tool`；
+- 上下文不匹配返回 `patch_conflict`、当前 projection revision 和有界 excerpt；
+- Local Core 在内部将 patch 应用于精确的原投影，解析前后差异，利用未暴露的 source map 生成一个 Yrs transaction，然后进入正常 outbox。
+
+这里没有公开的 `block insert/move/delete`。对于普通文档结构，Markdown patch 就是完整编辑接口。CRDT block 只是内部实现，不进入 Agent 协议。
+
+### 10.5 投影并发规则
+
+`apply-patch` 不要求 Agent 提交 CRDT state vector 或 projection revision。Local Core 收到 patch 后：
+
+1. 从当前最新 replica 生成投影与私有 source map；
+2. 在当前最新投影中匹配 patch context；
+3. 如果相关文本未被并发修改，则在最新状态上应用 patch；
+4. 如果上下文已变化或 diff 跨越结构化组件 fence，则拒绝并要求 Agent 重新读取；
+5. 成功时只把前后投影的最短文本/结构差异映射为 CRDT operation，不重建整个 Y.Doc。
+
+因此 CRDT 负责合并已经产生的操作，patch context 负责防止 Agent 基于过期文本误改。二者职责不同。
+
+### 10.6 结构化组件操作
+
+```bash
+colab-canvas component types
+
+colab-canvas component inspect \
+  --ref CANVAS_REF \
+  --component query_01
+
+colab-canvas component insert \
+  --ref CANVAS_REF \
+  --type queryList \
+  --after-line 8 \
+  --revision projection:01... \
+  --props-file query-list.json
+
+colab-canvas component patch \
+  --ref CANVAS_REF \
+  --component query_01 \
+  --patch-file filter-patch.json
+
+colab-canvas component resolve \
+  --ref CANVAS_REF \
+  --component query_01 \
+  [--cursor CURSOR] \
+  [--limit 50]
+```
+
+`component patch` 接受标准 JSON Patch（RFC 6902），但只允许 schema 声明为 Agent-editable 的路径。示例：
+
+```json
+[
+  { "op": "replace", "path": "/limit", "value": 50 },
+  { "op": "add", "path": "/filters/-", "value": {
+    "field": "contributorId", "operator": "eq", "value": "u_123"
+  }}
+]
+```
+
+`componentId` 是文档中的产品对象 ID，也是投影 fence 中显示的句柄；它不是 CRDT block ID。Local Core 先对当前 component state 应用 patch、做 schema 和权限校验，再将字段级变化写入嵌套 shared types。数组整体替换、组件删除或数据源切换要求 JSON Patch `test` operation 或 component revision；字段级独立修改可由 CRDT 合并。
+
+组件插入的位置使用同一次 Markdown 投影的 `line + revision` 表达。Local Core 用内部 source map 定位插入点；投影已变化则返回 `revision_conflict`，不猜测位置。组件删除和移动同样使用 component ID 加投影位置工具，不暴露 CRDT 节点。
+
+`resolve` 读取派生结果，不改变 Canvas。Agent 若要把查询结果固化成文字，必须通过 `document.md` patch 显式写入普通文档内容。
+
+### 10.7 原子批处理
+
+Agent 需要同时修改 Markdown 和调整组件时，使用一个事务文件：
+
+```bash
+colab-canvas transaction apply \
+  --ref CANVAS_REF \
+  --file operations.json
+```
+
+operations 是 `applyPatch` 与前述 component 命令的组合。Local Core 在一个 Yrs transaction 中全部校验和应用；任何一步失败则不产生 update。首版不允许事务跨多个 Canvas。
+
+### 10.8 返回与错误
+
+写操作统一返回：
+
+```json
+{
+  "ok": true,
+  "data": {
+    "status": "done",
+    "operationId": "op_01...",
+    "revision": "sv:...",
+    "syncState": "saved_locally"
+  }
+}
+```
+
+`saved_locally` 表示 durable outbox 已接收，不伪装成远端同步完成。需要等待远端确认时显式调用：
+
+```bash
+colab-canvas operation wait --operation op_01... --timeout 30
+```
+
+主要错误码：
+
+```text
+not_found
+ambiguous_reference
+permission_denied
+schema_mismatch
+unsupported_component_version
+patch_conflict
+revision_conflict
+resolver_unavailable
+offline_saved
+local_core_unavailable
+```
+
+## 11. 权限、安全与 schema 升级
+
+- Canvas 继承 Channel membership，但另有 `view/edit/manage` capability，不能用 awareness/presence 推断权限；
+- Server 对每个 update 重新鉴权，断开已撤权订阅；
+- 客户端 update 是不可信输入：先限制大小，再应用到隔离 candidate document，验证 schema/invariant，成功后才持久化并替换热缓存；
+- 文档不得嵌入 access token、Local Core bearer、本地绝对路径或任意可执行代码；
+- component resolver 重新执行来源权限检查，Canvas 可见不等于被引用数据可见；
+- 外部 URL、附件和富内容渲染继续执行 CSP、scheme allowlist 与安全预览；
+- schema 只做向前的版本化迁移。迁移本身是有 actor/source 标记的 CRDT transaction，并记录 audit event；
+- 客户端遇到高于自身支持版本的 Canvas 时只读，不得用旧 schema 回写。
+
+## 12. 失败与恢复语义
+
+| 故障 | 处理 |
+| --- | --- |
+| GUI 刷新/崩溃 | 从 Local Core replica 重建；未获本机 ACK 的 UI 操作明确标为未保存 |
+| Local Core 崩溃 | SQLite 恢复 replica/outbox；幂等重发 `clientUpdateId` |
+| Server socket 半开 | 心跳检测后重连；state vector 求差，不相信 socket 最后一帧 |
+| ACK 丢失 | 重发相同 update ID；Server 返回原有 sequence |
+| update 广播丢失 | sequence gap 或恢复屏障触发 state-vector sync |
+| Server 在 commit 后崩溃 | PostgreSQL 中已提交 update 是事实来源；重连后补齐 |
+| snapshot 压缩崩溃 | 旧 snapshot/update 保留；CAS 未完成前不删除 |
+| schema 校验失败 | Server 拒绝该 update；Local Core 隔离失败 operation 并展示可操作错误，不能无限重试 |
+| resolver 失败 | 组件定义仍可编辑；结果区显示 stale/error，不写 CRDT 错误内容 |
+
+## 13. 可观测性
+
+每个 update/operation 至少关联：
+
+- `canvasId`
+- `clientUpdateId` / `operationId`
+- actor user/device/source (`gui` 或 `agent`)
+- byte size
+- local durable timestamp
+- server sequence/ACK timestamp
+- retry count 与有界错误码
+
+指标：本地 ACK 延迟、远端 ACK 延迟、outbox 深度、state-vector resync 次数、update/snapshot 大小、schema reject、resolver 延迟和失败率。日志不得打印正文或 CRDT 二进制。
+
+跨边界 tracing 作为 Canvas 正确性主链完成后的独立工程接入，方案与 Omni Assistant 调研线索见 [`engineering-tracing.md`](engineering-tracing.md)。一次 GUI 或 Agent operation 的 trace context 经过 Local Core、WebSocket/HTTP 和 Server，至少拆分 `projection.render`、`patch.parse`、`transaction.apply`、`sqlite.commit`、`realtime.send`、`server.validate`、`postgres.commit`、`broadcast` 与 `snapshot.compact` span。span 只记录 operation ID、阶段、大小、耗时和结果码，不记录正文。Tracing 不阻塞当前功能实现和正确性/恢复验收；但在 tracing 接入前不做 Canvas 工程性能结论，因为无法可靠区分投影、CRDT、SQLite、网络、PostgreSQL 或广播中的瓶颈。
+
+## 14. 分阶段验证计划
+
+先判断问题属于哪一类，再决定是否需要开发前体外验证：
+
+1. **不确定能否做到**：如果失败会推翻架构假设，做最小开发前体外验证。
+2. **不确定如何做到**：如果外部契约已确定，只是内部有多种实现，直接选择一个直觉可行方案进入正式开发；只有外部输入输出也无法确定时才做体外 spike。纯审美或接口设计不拿“验证”代替决策。
+3. **不确定是否已经做到**：这是开发后的测试、故障注入和回归，不是技术方案验证。
+4. **不确定性能是否达标**：先实现正式链路和 tracing，再做体内性能测试；只有 tracing 定位到具体算法后，才增加开发后体外 micro-benchmark。
+
+按此标准，Canvas 只保留一个开发前体外验证。
+
+### 14.1 开发前体外可行性验证
+
+#### F-CANVAS-01：真实 Tiptap/Yjs ↔ Rust/Yrs Projection Codec
+
+待回答的唯一问题是：**Rust/Yrs 能否在不重建 Y.Doc、不泄漏 block 模型的前提下，对真实 Tiptap/Yjs 文档完成确定性 Markdown 投影、文本 patch、CRDT transaction 和前端回放？**
+
+最小验证范围：
+
+- JS 使用计划采用的 Tiptap schema 创建包含 paragraph、marks、list 和一个 component fence 的真实 Yjs fixture；
+- Rust/Yrs 载入 fixture，render 为 `document.md + private source map`；
+- 对 `document.md` 执行一个标准 `Update File` patch并生成 Yrs update；
+- JS 应用 update 后内容正确，重复/乱序应用仍收敛；
+- Rust 再次 render 的 Markdown 与 patch 目标逐字节一致；
+- 修改 component fence 必须被拒绝。
+
+它同时回答 Yjs/Yrs wire compatibility 和 Projection Codec 可行性，不拆成两个重复 trial。通过后冻结 fixture 和 Codec 外部契约；失败则重新选择 canonical model 或 Agent 编辑接口。`queryList` 字段设计、WebSocket envelope 和工具命令审美不放进这个 trial。
+
+### 14.2 开发后正式测试与回归
+
+以下项目直接针对正式代码，不在 `.trial` 重写一套功能实现：
+
+| 测试 | 形态 | 回答的问题 |
+| --- | --- | --- |
+| Projection Codec contract tests | 体内单元/契约测试 | 正式 Local Core 是否保持 F-CANVAS-01 的输入输出和 fixture |
+| typed component tests | 体内单元/契约测试 | `queryList@1` schema、字段合并、非法输入和 resolver 边界是否实现正确 |
+| recovery fault injection | 体内集成测试 | SQLite outbox、统一 WebSocket、PostgreSQL commit、ACK 丢失和重启恢复是否真的工作 |
+| macOS end-to-end | 体内系统测试 | GUI、打包 Skill、Local Core、Server 的双用户/双 Agent 主链路是否真的闭环 |
+
+恢复测试必须启动正式 Rust Server、正式 Local Core、真实 SQLite/PostgreSQL 和统一 account realtime WebSocket。端到端测试必须从打包后的 macOS `colab-canvas` 入口进入。直接调用内部函数、用内存 map 代替持久化或手工插入数据库结果，都不能证明主链路已经做到。
+
+### 14.3 开发后性能验证
+
+性能验证在功能正确且第 13 节 tracing 可用后开始：
+
+- 体内生成目标文档规模、并发人数、连续键入和大粘贴负载；
+- 测量真实 snapshot/update 重建、Projection Codec、SQLite、网络、PostgreSQL、广播和压缩耗时；
+- 在压缩期间继续真实写入，检查延迟、内存和数据完整性；
+- 根据体内数据确定 inline/blob、批处理、snapshot 和配额阈值。
+
+只有 tracing 已经把瓶颈定位到某个纯算法（例如 update merge 或 Markdown AST diff）时，才为该算法补一个开发后体外 micro-benchmark。该 micro-benchmark 用于优化比较，不代表整个 Canvas 的容量和延迟。
+
+## 15. 集成顺序
+
+1. 完成唯一的开发前体外门禁 F-CANVAS-01；失败则改设计，不铺产品代码；
+2. 冻结 encoding、Projection Codec 外部契约和 fixture；`queryList@1` schema 作为设计直接进入实现；
+3. 实现最窄纵向链路：Server persistence/realtime domain → Local Core replica/outbox/Projection Codec → macOS Skill → GUI；
+4. 把 F-CANVAS-01 fixture 接入正式 Local Core/GUI contract tests；
+5. 完成正式 typed component tests；
+6. 完成体内 recovery fault injection，修复断线、重启和幂等问题；
+7. 完成 macOS 双用户/双 Agent 体内端到端验收；
+8. 主线正确性与恢复验收完成后，按独立 tracing 设计接入可观测性；tracing 可用后再执行体内规模与压缩测试并确定阈值，只为已定位的热点补体外 micro-benchmark；
+9. 验收后再决定是否开放历史版本、评论、模板和更多 component。
+
+每一步只构建发生变化的独立制品。Canvas 不要求 Electron Shell 变更；除非确实修改 Shell 代码，不得推进 Electron 版本。
+
+## 16. 分阶段冻结的事项
+
+开发前只冻结会影响持久化兼容和外部接口的内容：
+
+1. Yjs/Yrs update encoding 的确切版本与 F-CANVAS-01 fixture；
+2. Projection Codec 的 `read/apply-patch` 契约；
+3. Tiptap schema v1 的允许节点/marks；
+4. component shared-type 编码与 JSON Schema 生成方式。
+
+以下参数不在开发前猜测，等正式链路和 tracing 存在后根据恢复与性能测试确定：
+
+1. snapshot/update inline 与 Blob 阈值；
+2. 本机 outbox 上限和离线保留策略；
+3. server candidate validation 的性能上限；
+4. v1 文档规模和并发人数支持目标。
+
+已经进入发布数据的 schema/encoding 后续必须通过版本迁移，不能靠客户端猜测。

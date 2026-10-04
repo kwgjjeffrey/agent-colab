@@ -1,3 +1,4 @@
+import { telemetryFetch, type Operation } from "./telemetry";
 let activeRequests = 0;
 const listeners = new Set<() => void>();
 
@@ -6,11 +7,11 @@ function publish() {
 }
 
 /** Tracks user-visible Local API work without coupling feature modules to App. */
-export async function trackedFetch(input: RequestInfo | URL, init?: RequestInit) {
+export async function trackedFetch(input: RequestInfo | URL, init?: RequestInit, operation?: Operation) {
   activeRequests += 1;
   publish();
   try {
-    return await fetch(input, init);
+    return await telemetryFetch(input, init, operation);
   } finally {
     activeRequests = Math.max(0, activeRequests - 1);
     publish();

@@ -51,9 +51,16 @@ fi
 # Each archive is independently installable and versioned. The optional
 # Electron launcher is built separately and is not required by Core, GUI, or Skill.
 if $build_core; then
+  # esbuild uses its pinned platform package; no dependency lifecycle scripts are needed.
+  CI=true npx --yes pnpm@10.18.3 --dir "$repo_root/local/canvas-codec" install --frozen-lockfile --ignore-scripts
+  npx --yes pnpm@10.18.3 --dir "$repo_root/local/canvas-codec" build
   cargo build --locked --release --manifest-path "$repo_root/local/Cargo.toml" -p colabd
   mkdir -p "$dist/local-core/$core_version/$platform-$arch"
   cp "$repo_root/local/target/release/colabd" "$dist/local-core/$core_version/$platform-$arch/colabd"
+  mkdir -p "$dist/local-core/$core_version/$platform-$arch/canvas-codec"
+  cp "$repo_root/local/canvas-codec/dist/codec.cjs" "$dist/local-core/$core_version/$platform-$arch/canvas-codec/codec.cjs"
+  node_runtime=$(command -v node)
+  cp "$node_runtime" "$dist/local-core/$core_version/$platform-$arch/canvas-codec/node"
   if [[ -n "${COLAB_DESKTOP_GOOGLE_OAUTH_CREDENTIALS_FILE:-}" ]]; then
     [[ -f "$COLAB_DESKTOP_GOOGLE_OAUTH_CREDENTIALS_FILE" ]] || {
       echo "COLAB_DESKTOP_GOOGLE_OAUTH_CREDENTIALS_FILE does not exist" >&2
@@ -69,6 +76,7 @@ if $build_ui; then
   npx --yes pnpm@10.18.3 --dir ui build
   mkdir -p "$dist/desktop-ui/$ui_version"
   cp -R "$repo_root/desktop/ui/dist/." "$dist/desktop-ui/$ui_version/"
+  cp -R "$repo_root/desktop/ui/tracing" "$dist/desktop-ui/$ui_version/"
   printf '{"package":"colab-desktop-ui","version":"%s","hostProtocol":1,"localApi":">=0.1.0 <0.2.0"}\n' "$ui_version" > "$dist/desktop-ui/$ui_version/ui.json"
   rm -f "$dist/desktop-ui/$ui_version.zip"
   (cd "$dist/desktop-ui/$ui_version" && /usr/bin/zip -qr "$dist/desktop-ui/$ui_version.zip" .)
@@ -78,7 +86,9 @@ if $build_skill; then
   mkdir -p "$dist/colab-skill/$skill_version"
   cp "$repo_root/skills/colab/SKILL.md" "$dist/colab-skill/$skill_version/"
   cp "$repo_root/skills/colab/AGENTS.md" "$dist/colab-skill/$skill_version/"
-  cp -R "$repo_root/skills/colab/agents" "$repo_root/skills/colab/bin" "$repo_root/skills/colab/lib" "$repo_root/skills/colab/setup" "$repo_root/skills/colab/references" "$dist/colab-skill/$skill_version/"
+  cp -R "$repo_root/skills/colab/agents" "$repo_root/skills/colab/bin" "$repo_root/skills/colab/lib" "$repo_root/skills/colab/setup" "$repo_root/skills/colab/references" "$repo_root/skills/colab/tracing" "$dist/colab-skill/$skill_version/"
+  rm -f "$dist/colab-skill/$skill_version/lib/trace-registry.generated.json"
+  python3 "$repo_root/packaging/bundle-skill-telemetry.py" "$dist/colab-skill/$skill_version"
   cp "$repo_root/skills/colab/packaging/artifact.json" "$dist/colab-skill/$skill_version/installed.json"
   rm -f "$dist/colab-skill/$skill_version.zip"
   (cd "$dist/colab-skill" && /usr/bin/zip -qr "$dist/colab-skill/$skill_version.zip" "$skill_version")

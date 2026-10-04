@@ -26,8 +26,14 @@ use url::Url;
 use uuid::Uuid;
 
 mod auth;
+mod observability;
+mod canvas;
+mod canvas_codec;
+mod update_status;
+mod codex_runtime;
 mod collaboration;
 mod files;
+mod messaging;
 mod sessions;
 mod skills;
 mod system;
@@ -56,7 +62,7 @@ struct Inner {
     google: GoogleCredentials,
     callback_url: String,
     server_url: String,
-    http: reqwest::Client,
+    http: colab_observability::Client,
     pending: Mutex<HashMap<String, PendingLogin>>,
     session: Mutex<Option<ColabSession>>,
     /// Prevent two callers from presenting the same one-time refresh token concurrently. The
@@ -69,6 +75,10 @@ struct Inner {
     /// recoverable server CAS conflict to leak into the product UI.
     session_sync_locks: Mutex<HashMap<String, Arc<Mutex<()>>>>,
     data_root: PathBuf,
+    /// One provider process owns every Colab-managed Codex thread for this Local Core process.
+    /// Keeping this handle in application state is the ownership boundary: request handlers may
+    /// enqueue work, but they must never create competing app-server writers.
+    codex: codex_runtime::CodexManager,
 }
 #[derive(Clone, Deserialize)]
 struct GoogleCredentialsFile {
@@ -187,6 +197,8 @@ struct FileShare {
     id: String,
     channel_id: String,
     name: String,
+    #[serde(default)]
+    contributor_member_id: Option<String>,
     contributor_name: String,
     contributor_avatar_url: Option<String>,
     state: String,
@@ -216,6 +228,8 @@ struct SessionShare {
     id: String,
     channel_id: String,
     name: String,
+    #[serde(default)]
+    contributor_member_id: Option<String>,
     source_adapter: String,
     contributor_name: String,
     contributor_avatar_url: Option<String>,
@@ -303,6 +317,24 @@ impl AppState {
         store.execute_batch("create table if not exists local_session_sources(share_id text primary key,channel_id text not null,user_id text not null,source_path text not null,source_adapter text not null,source_thread_id text,last_byte_offset integer not null default 0,last_snapshot_id text,updated_at text not null default current_timestamp);create table if not exists session_materializations(share_id text not null,user_id text not null,snapshot_id text not null,raw_path text not null,updated_at text not null default current_timestamp,primary key(share_id,user_id));create table if not exists session_share_cache(share_id text primary key,name text not null,source_adapter text not null,contributor_name text not null,contributor_avatar_url text,remote_updated_at text not null default '',updated_at text not null default current_timestamp);create table if not exists local_session_catalog(catalog_id text primary key,provider text not null,thread_id text not null,name text not null,source_path text not null unique,source_adapter text not null,size_bytes integer not null,mtime_ns integer not null,updated_at integer not null);create index if not exists local_session_catalog_recent on local_session_catalog(updated_at desc);create index if not exists local_session_catalog_identity on local_session_catalog(provider,thread_id);").context("migrate Session cache")?;
         store.execute_batch("create table if not exists local_skill_catalog(source_id text primary key,source_path text not null unique,name text not null,description text,discovered_targets text not null,last_changed_at integer not null,content_fingerprint text not null,updated_at text not null default current_timestamp);create index if not exists local_skill_catalog_recent on local_skill_catalog(last_changed_at desc);create table if not exists local_skill_sources(share_id text primary key,channel_id text not null,user_id text not null,source_id text not null,source_path text not null,shadow_git_path text not null,last_root_oid text,updated_at text not null default current_timestamp);create table if not exists skill_share_cache(share_id text primary key,name text not null,description text,contributor_name text not null,contributor_avatar_url text,remote_updated_at text not null default '',updated_at text not null default current_timestamp);create table if not exists skill_materializations(share_id text not null,user_id text not null,local_path text not null,last_root_oid text not null,updated_at text not null default current_timestamp,primary key(share_id,user_id));create table if not exists skill_installations(share_id text not null,user_id text not null,target_agent text not null,installed_path text not null,installed_root_oid text not null,content_hash text not null,installed_at text not null default current_timestamp,primary key(share_id,user_id,target_agent));").context("migrate Skill cache")?;
         store.execute_batch("create table if not exists local_quick_transfers(transfer_id text primary key,read_token text not null,revoke_token text not null,expires_at text not null,item_kind text not null default '',item_name text not null default '',revoked_at text,created_at text not null default current_timestamp);create table if not exists received_transfer_items(transfer_id text not null,item_id text not null,kind text not null,name text not null,source_adapter text not null,local_path text not null,digest text not null,expires_at text not null,received_at text not null default current_timestamp,primary key(transfer_id,item_id));").context("migrate Quick Share receipts")?;
+        store.execute_batch("create table if not exists agent_thread_bindings(channel_id text not null,blueprint_id text not null,runtime_id text not null,provider_thread_id text not null,adapter_version integer not null default 3,updated_at text not null default current_timestamp,primary key(channel_id,blueprint_id));create table if not exists agent_command_receipts(request_id text primary key,status text not null check(status in ('completed')),updated_at text not null default current_timestamp);").context("migrate Agent runtime bindings")?;
+        store.execute_batch("create table if not exists canvas_replicas(account_id text not null,canvas_id text not null,schema_version integer not null default 1,snapshot_bytes blob not null,last_server_seq integer not null default 0,updated_at text not null default current_timestamp,primary key(account_id,canvas_id));create table if not exists canvas_outbox(account_id text not null,canvas_id text not null,client_update_id text not null,update_bytes blob not null,state text not null check(state in ('pending','acked')),attempt_count integer not null default 0,next_attempt_at integer not null default 0,last_error text,server_seq integer,created_at text not null default current_timestamp,updated_at text not null default current_timestamp,primary key(account_id,canvas_id,client_update_id));create index if not exists canvas_outbox_due on canvas_outbox(account_id,state,next_attempt_at);").context("migrate Canvas replicas")?;
+        let has_adapter_version = store
+            .prepare("pragma table_info(agent_thread_bindings)")?
+            .query_map([], |row| row.get::<_, String>(1))?
+            .filter_map(Result::ok)
+            .any(|column| column == "adapter_version");
+        if !has_adapter_version {
+            // Old bindings may reference `codex exec` rollouts. They can be read by id but do
+            // not appear as owner-visible Codex Desktop tasks. This migration records them as
+            // version 1 so the persistent app-server adapter will create a safe replacement.
+            store
+                .execute(
+                    "alter table agent_thread_bindings add column adapter_version integer not null default 1",
+                    [],
+                )
+                .context("add Agent runtime adapter version")?;
+        }
         for (column, definition) in [
             (
                 "item_kind",
@@ -439,12 +471,13 @@ impl AppState {
             )
             .ok();
         let session=current.and_then(|id|store.query_row("select session_json from accounts where user_id=$1 and session_json is not null",[id],|row|row.get::<_,String>(0)).ok()).and_then(|value|serde_json::from_str(&value).ok());
+        let codex = codex_runtime::CodexManager::new(messaging::codex_binary());
         Ok(Self {
             inner: Arc::new(Inner {
                 google: file.installed,
                 callback_url,
                 server_url,
-                http: reqwest::Client::new(),
+                http: colab_observability::client(),
                 pending: Mutex::new(HashMap::new()),
                 session: Mutex::new(session),
                 auth_refresh_lock: Mutex::new(()),
@@ -452,6 +485,7 @@ impl AppState {
                 store: Mutex::new(store),
                 session_sync_locks: Mutex::new(HashMap::new()),
                 data_root,
+                codex,
             }),
         })
     }
@@ -467,6 +501,8 @@ impl AppState {
         files::start_file_sync(self);
         sessions::start_session_sync(self);
         skills::start_skill_sync(self);
+        messaging::start_agent_runtime(self);
+        canvas::start_sync(self);
     }
 }
 
@@ -477,10 +513,18 @@ pub fn router(state: AppState, security: LocalSecurity) -> Router {
         // the one-time URL bearer for an HttpOnly cookie.
         .route("/bootstrap", get(|| async { StatusCode::NOT_FOUND }))
         .route("/v1/status", get(status))
+        .route("/v1/observability/config", get(observability::config))
+        .route("/v1/observability/clock", get(colab_observability::clock_reply))
+        .route("/v1/observability/traces", axum::routing::post(observability::traces).layer(axum::extract::DefaultBodyLimit::max(1024*1024)))
         .route("/v1/system/installation", get(system::installation_status))
+        .route("/v1/system/update-progress", get(system::update_progress))
         .route(
             "/v1/system/update",
             axum::routing::post(system::update_installation),
+        )
+        .route(
+            "/v1/system/restart",
+            axum::routing::post(system::restart_managed),
         )
         .route(
             "/v1/system/update-shell",
@@ -544,6 +588,77 @@ pub fn router(state: AppState, security: LocalSecurity) -> Router {
         .route(
             "/v1/channels/{channel_id}/invitations/{email}",
             delete(collaboration::remove_invitation),
+        )
+        .route(
+            "/v1/channels/{channel_id}/participants",
+            get(messaging::participants),
+        )
+        .route(
+            "/v1/channels/{channel_id}/agent-runtimes",
+            get(messaging::runtimes),
+        )
+        .route(
+            "/v1/channels/{channel_id}/blueprints",
+            get(messaging::blueprints).post(messaging::create_blueprint),
+        )
+        .route(
+            "/v1/channels/{channel_id}/blueprints/{blueprint_id}",
+            patch(messaging::update_blueprint).delete(messaging::delete_blueprint),
+        )
+        .route(
+            "/v1/channels/{channel_id}/blueprints/{blueprint_id}/selection",
+            patch(messaging::select_blueprint),
+        )
+        .route(
+            "/v1/channels/{channel_id}/messages",
+            get(messaging::messages).post(messaging::send_message),
+        )
+        .route("/v1/channels/{channel_id}/messages/{message_id}", get(messaging::message_by_id))
+        .route(
+            "/v1/channels/{channel_id}/agent-requests",
+            get(messaging::agent_requests).post(messaging::create_agent_request),
+        )
+        .route(
+            "/v1/agent-requests/{request_id}/context",
+            get(messaging::agent_request_context),
+        )
+        .route(
+            "/v1/agent-requests/{request_id}/reply",
+            axum::routing::post(messaging::agent_request_reply),
+        )
+        .route(
+            "/v1/agent-requests/{request_id}/events",
+            get(messaging::agent_request_events),
+        )
+        .route("/v1/messages/stream", get(messaging::stream))
+        .route(
+            "/v1/channels/{channel_id}/canvases",
+            get(canvas::list_canvases).post(canvas::create_canvas),
+        )
+        .route("/v1/canvases/{canvas_id}", patch(canvas::rename_canvas))
+        .route(
+            "/v1/canvases/{canvas_id}/send-to-agent",
+            axum::routing::post(canvas::send_to_agent),
+        )
+        .route(
+            "/v1/channels/{channel_id}/canvas-folders",
+            get(canvas::list_folders).post(canvas::create_folder),
+        )
+        .route(
+            "/v1/canvas-folders/{folder_id}",
+            patch(canvas::rename_folder),
+        )
+        .route(
+            "/v1/canvases/{canvas_id}/document",
+            get(canvas::read_document),
+        )
+        .route(
+            "/v1/canvases/{canvas_id}/apply-patch",
+            axum::routing::post(canvas::apply_patch),
+        )
+        .route(
+            "/v1/canvases/{canvas_id}/updates",
+            get(canvas::updates).post(canvas::submit_update),
         )
         .route(
             "/v1/channels/{channel_id}/files",
@@ -650,6 +765,7 @@ pub fn router(state: AppState, security: LocalSecurity) -> Router {
             axum::routing::post(transfers::revoke_transfer),
         )
         .with_state(state)
+        .layer(middleware::from_fn(colab_observability::http_span))
         .layer(
             CorsLayer::new()
                 .allow_origin([
@@ -890,7 +1006,7 @@ async fn current_organization_id(state: &AppState) -> Result<String, LocalError>
 }
 
 async fn proxy_one<T: Serialize, R: for<'de> Deserialize<'de>>(
-    request: reqwest::RequestBuilder,
+    request: colab_observability::RequestBuilder,
     state: &AppState,
     body: &T,
 ) -> Result<Json<R>, LocalError> {
@@ -907,7 +1023,7 @@ async fn proxy_one<T: Serialize, R: for<'de> Deserialize<'de>>(
     Ok(Json(response.json().await.map_err(LocalError::internal)?))
 }
 async fn proxy_empty<T: Serialize>(
-    request: reqwest::RequestBuilder,
+    request: colab_observability::RequestBuilder,
     state: &AppState,
     body: &T,
 ) -> Result<StatusCode, LocalError> {
@@ -924,7 +1040,7 @@ async fn proxy_empty<T: Serialize>(
     Ok(StatusCode::NO_CONTENT)
 }
 async fn proxy_delete(
-    request: reqwest::RequestBuilder,
+    request: colab_observability::RequestBuilder,
     state: &AppState,
 ) -> Result<StatusCode, LocalError> {
     let token = access_token(state).await?;
@@ -981,6 +1097,67 @@ async fn access_token(state: &AppState) -> Result<String, LocalError> {
     let token = rotated.access_token.clone();
     *state.inner.session.lock().await = Some(rotated);
     Ok(token)
+}
+
+/// Resolve credentials for a registered runtime owner, independently of the account currently
+/// shown by the GUI. Switching the foreground account must not stop another saved account's
+/// device runtime from servicing durable Agent requests.
+async fn access_token_for_user(state: &AppState, user_id: &str) -> Result<String, LocalError> {
+    let _refresh_guard = state.inner.auth_refresh_lock.lock().await;
+    let current: ColabSession = {
+        let store = state.inner.store.lock().await;
+        let encoded: String = store
+            .query_row(
+                "select session_json from accounts where user_id=?1",
+                [user_id],
+                |row| row.get(0),
+            )
+            .map_err(|_| LocalError::unauthorized("Runtime owner must sign in again"))?;
+        serde_json::from_str(&encoded).map_err(LocalError::internal)?
+    };
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_err(LocalError::internal)?
+        .as_secs() as i64;
+    if current.expires_at > now + 60 {
+        return Ok(current.access_token);
+    }
+    let response = state
+        .inner
+        .http
+        .post(format!(
+            "{}/v1/auth/session/refresh",
+            state.inner.server_url
+        ))
+        .json(&serde_json::json!({"refreshToken": current.refresh_token}))
+        .send()
+        .await
+        .map_err(LocalError::internal)?;
+    if !response.status().is_success() {
+        return Err(remote_error(response).await);
+    }
+    let rotated: ColabSession = response.json().await.map_err(LocalError::internal)?;
+    let encoded = serde_json::to_string(&rotated).map_err(LocalError::internal)?;
+    {
+        let store = state.inner.store.lock().await;
+        store
+            .execute(
+                "update accounts set session_json=?1,last_used_at=current_timestamp where user_id=?2",
+                rusqlite::params![encoded, user_id],
+            )
+            .map_err(LocalError::internal)?;
+    }
+    if state
+        .inner
+        .session
+        .lock()
+        .await
+        .as_ref()
+        .is_some_and(|session| session.user.id == user_id)
+    {
+        *state.inner.session.lock().await = Some(rotated.clone());
+    }
+    Ok(rotated.access_token)
 }
 async fn proxy_json(response: reqwest::Response) -> Result<Json<Vec<Channel>>, LocalError> {
     if !response.status().is_success() {

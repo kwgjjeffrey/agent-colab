@@ -201,6 +201,52 @@ paths:
       operationId: withdrawSkillShare
       responses:
         "204": { description: Owned Skill shared item withdrawn }
+  /v1/channels/{channelId}/participants:
+    get:
+      operationId: listChannelMessageParticipants
+      summary: List Channel members, current member first, with selected Agent counts
+      responses:
+        "200": { description: Channel participants visible to the authenticated Organization Member }
+  /v1/channels/{channelId}/blueprints:
+    get:
+      operationId: listChannelAgentBlueprints
+      summary: List one member's Organization-wide Agent blueprints with Channel selection state
+      parameters:
+        - { name: owner_member_id, in: query, required: false, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: Agent blueprints visible in this Channel }
+    post:
+      operationId: createAgentBlueprint
+      responses:
+        "201": { description: Personal Agent blueprint created }
+  /v1/channels/{channelId}/blueprints/{blueprintId}:
+    patch:
+      operationId: updateAgentBlueprint
+      responses:
+        "200": { description: Owned Agent blueprint updated }
+  /v1/channels/{channelId}/blueprints/{blueprintId}/selection:
+    patch:
+      operationId: setChannelAgentSelection
+      responses:
+        "204": { description: Owned Agent added to or removed from this Channel }
+  /v1/channels/{channelId}/messages:
+    get:
+      operationId: listChannelMessages
+      parameters:
+        - { name: after, in: query, required: false, schema: { type: integer, format: int64, default: 0 } }
+        - { name: limit, in: query, required: false, schema: { type: integer, minimum: 1, maximum: 200, default: 100 } }
+      responses:
+        "200": { description: Messages after the monotonic Channel cursor }
+    post:
+      operationId: createChannelMessage
+      responses:
+        "201": { description: Idempotent member message committed }
+  /v1/messages/stream:
+    get:
+      operationId: streamMessageInvalidations
+      summary: Upgrade to an authenticated WebSocket carrying non-authoritative cursor invalidations
+      responses:
+        "101": { description: WebSocket protocol switched }
   /v1/transfers:
     post:
       operationId: createQuickTransfer
@@ -251,6 +297,109 @@ paths:
       summary: Replace the remaining lifetime of an active transfer with the revoke capability
       responses:
         "200": { description: Updated expiry }
+  /v1/organizations/{organizationId}/agent-runtimes/register:
+    post:
+      operationId: registerAgentRuntime
+      summary: Register one installed coding-agent target on one physical device
+      responses:
+        "200": { description: Stable member-device-provider runtime registration }
+  /v1/channels/{channelId}/agent-runtimes:
+    get:
+      operationId: listAgentRuntimes
+      responses:
+        "200": { description: Current member's registered runtimes across devices }
+  /v1/channels/{channelId}/agent-requests:
+    get:
+      operationId: listAgentRequests
+      summary: Read Channel Agent task history newest first, including Canvas commands
+      responses:
+        "200": { description: All authorized Channel requests with id, targetBlueprintId, state, summary, createdAt, nullable startedAt and finishedAt, and nullable durationMs. Working means runtime-acknowledged running. Unknown legacy timing remains null. }
+    post:
+      operationId: createAgentRequest
+      summary: Bind forwarded messages to one Channel Agent; rich-message mentions route during message commit
+      responses:
+        "201": { description: Durable request queued or awaiting owner approval }
+  /v1/agent-runtimes/{runtimeId}/stream:
+    get:
+      operationId: streamAgentRuntimeCommands
+      summary: Upgrade to the authenticated command WebSocket for one exact device runtime
+      responses:
+        "101": { description: WebSocket protocol switched; client acknowledges each complete command on the same socket and unacknowledged PostgreSQL claims replay on reconnect }
+  /v1/agent-requests/{requestId}/context:
+    get:
+      operationId: readAgentRequestContext
+      responses:
+        "200": { description: Older authorized Channel messages }
+  /v1/agent-requests/{requestId}/reply:
+    post:
+      operationId: replyToAgentRequest
+      responses:
+        "201": { description: Idempotent Agent result committed to the source Channel }
+  /v1/agent-requests/{requestId}/fail:
+    post:
+      operationId: failAgentRequest
+      summary: Move a claimed request out of running after provider execution fails
+      responses:
+        "204": { description: Request marked failed; raw local diagnostics are not published }
+  /v1/agent-requests/{requestId}/complete:
+    post:
+      operationId: completeAgentRequest
+      summary: Record provider completion without publishing its native final response to the Channel
+      responses:
+        "204": { description: Runtime execution marked complete }
+  /v1/agent-requests/{requestId}/events:
+    get:
+      operationId: readAgentRequestWorkDetails
+      summary: Read provider events captured for one durable Agent request
+      responses:
+        "200": { description: Task-scoped work details }
+    post:
+      operationId: saveAgentRequestWorkDetails
+      summary: Persist bounded provider events from the owning local runtime
+      responses:
+        "204": { description: Work details saved }
+  /v1/channels/{channelId}/canvases:
+    get:
+      operationId: listCanvases
+      summary: List collaborative documents visible in a Channel
+      responses:
+        "200": { description: Canvas metadata ordered by latest durable update }
+    post:
+      operationId: createCanvas
+      responses:
+        "201": { description: Empty Canvas metadata created }
+  /v1/channels/{channelId}/canvas-folders:
+    get:
+      operationId: listCanvasFolders
+      responses:
+        "200": { description: Authorized Canvas folders }
+    post:
+      operationId: createCanvasFolder
+      responses:
+        "201": { description: Canvas folder created }
+  /v1/canvases/{canvasId}:
+    patch:
+      operationId: renameCanvas
+      summary: Rename an authorized Canvas document in place
+      responses:
+        "200": { description: Renamed Canvas metadata }
+  /v1/canvas-folders/{folderId}:
+    patch:
+      operationId: renameCanvasFolder
+      summary: Rename an authorized Canvas folder in place
+      responses:
+        "200": { description: Renamed Canvas folder }
+  /v1/canvases/{canvasId}/updates:
+    get:
+      operationId: listCanvasUpdates
+      summary: Repair a replica from the authoritative per-Canvas server sequence
+      responses:
+        "200": { description: Ordered Yjs update-v1 records after the requested sequence }
+    post:
+      operationId: appendCanvasUpdate
+      summary: Idempotently persist one bounded Yjs update-v1 record
+      responses:
+        "201": { description: Durable update and assigned server sequence }
 components:
   schemas:
     Organization:

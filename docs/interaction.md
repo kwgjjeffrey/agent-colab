@@ -1,8 +1,8 @@
 # Colab 交互设计
 
 状态：首版结构稿  
-范围：Channel、Session、Files、Skills、Settings  
-暂缓实现：Conversation/DM、项目管理、Agent runtime 编排、Agent blueprint 管理
+范围：Channel、Messages、Session、Files、Skills、Settings
+暂缓实现：独立于 Channel 的 DM、项目管理、Agent runtime 实际编排
 
 ## 1. 人类故事线
 
@@ -12,7 +12,7 @@
 
 用户也可以直接要求自己的 agent 创建 Channel、设置名称与图标、邀请成员。Agent 使用与 GUI 相同的底层能力，完成后 GUI 立即呈现结果。
 
-进入 Channel 后，用户可以从页面顶部在 Sessions、Files、Skills 和 Settings 四个区域间切换。
+进入 Channel 后，Channel 头像与名称位于页头；用户可以从页面顶部在 Messages、Sessions、Files、Skills 和 Settings 五个区域间切换。
 
 ### 1.2 登记工作上下文与能力
 
@@ -145,36 +145,66 @@ Channel Skill 清单显示名称、说明、贡献者以及本机各目标的安
 
 可交互线框位于 [`.trial/interaction-wireframe/`](../.trial/interaction-wireframe/README.md)。它只验证功能布局和对象关系，不表达最终视觉风格。
 
-## 6. Conversation / DM 候选交互（线框已完成，尚未实现）
+## 6. Channel Messages 与 Agent blueprint（首版实现基线）
 
-可看的扩展线框位于 [conversation-wireframe.html](../.trial/interaction-wireframe/conversation-wireframe.html)，它沿用现有 Channel rail 和内容区，而不是另画一套无关产品。
+首版按用户确认的信息架构进入现有 Channel：Messages 是第一个 tab，中央为消息流和输入区，右侧为 Channel 人员与其带入的 Agent。Channel rail、Sessions、Files、Skills、Settings 保持现有位置。
 
 ### 6.1 入口与主布局
 
-- Conversation 是左侧 rail 顶部的固定应用级入口；下方仍是各 Channel。它不进入某个 Channel 的 Sessions/Files/Skills tab。
-- 进入后采用三栏：会话列表、消息区、参与者/引用详情。窄屏隐藏详情栏，不改变信息层级。
-- 新建 DM 从 Organization 人员目录选人；新建群聊可选多人。聊天无需先创建 Channel。
-- Channel 是稳定共享上下文空间。消息可引用某个 Channel Shared Item，但这既不把消息存进 Channel，也不扩大聊天成员对该 Shared Item 的权限。
+- Messages 是 Channel tab，不新增独立 rail 入口。未来的跨 Channel DM 不混入首版。
+- 中央消息流和输入区占主要空间，右侧是成员与 Agent；窄屏可以收起右栏。
+- 右侧提供与 Settings 相同的 Add user 能力；Settings 暂时保留原入口，待 Messages 稳定后再去重。
+- 当前登录成员排在顶部。成员与其带入 Channel 的 Agent 直接平铺，不使用树状展开、卡片边框或额外层级线。成员头像保持紧凑；Agent 头像复用 owner 头像并增加与消息流一致的超新星头像框。
+- 只有当前登录成员显示其 Agent 数量并把它作为管理入口；其他成员不显示数量入口，其 Agent 直接以只读行列在该成员之后。
+- 消息采用 Discord 式紧凑行流而不是聊天气泡：所有发送者统一左对齐，头像、名称、正文和富内容处于同一稳定网格；整行 hover 才显示时间、回复和选择操作。真人与 Agent 使用相同尺寸、相同基础头像框，Agent 额外增加超新星框与 `AI` 标签。
+- Messages 工作区从 tab 分隔线一直贴到视口底部，左右也不额外增加卡片 margin、圆角或外框。输入区只由工作区的顶部分隔线界定，不在内部再嵌套输入框边框；发送使用实心圆形上箭头。
+- 点击自己的 Agent 数量打开双栏 Dialog：左侧是账号下的 blueprint 清单与 Channel 勾选状态，右侧是 focus blueprint 的配置。
 
 ### 6.2 Agent blueprint
 
-blueprint 是账号级设置，入口同时出现在左下角设置和 Conversation 顶部。编辑项只包含首版真正参与执行的内容：名称、头像、目的、provider、谁可调用、默认 runtime。runtime 在线状态是当前事实，不是 blueprint 的身份。
+blueprint 是 Organization Member 账号级设置，所有 Channel 看到同一份个人列表；Channel 只保存哪些 blueprint 被带入。配置包括 name、loading instruction、loading command、runtime 和 upon request by others（refuse / awaiting owner message / process）。runtime 是 Server 返回的已登记实例选项，显示为“设备名 · Coding Agent”（例如 `MacBook Pro · Codex`、`Windows PC · Codex`），不是 device 与 coding agent 两个自由输入框。登记来源是该成员在对应设备上安装 Agent Colab Skill；多台设备上的同一种 Coding Agent 是不同选项。首版只允许选择 Codex runtime；没有可用 runtime 时只展示安装/连接指引，不允许保存或加入 Channel。
 
-“Configure with my coding agent”打开与 Files/Session 相同的 prompt Dialog。主按钮按默认 Agent 显示“Copy and open Codex”，其他已安装目标收进相邻菜单。提示词必须给出专用 blueprint scaffold，以当前登录账号和可读名称定位 blueprint；Agent 直接执行配置并返回校验错误，不要求用户先手动检查或查 UUID。
+“Create by my agent”是新建界面的主操作，打开与 Files/Session 相同的 prompt Dialog。主按钮按默认 Agent 显示“Copy and open Codex”，其他已安装目标收进相邻菜单。提示词必须列出 Local Core 当前返回的可选 runtime ID，并要求 blueprint scaffold 显式传入其中一个 ID；缺失或无效 ID 必须失败，不能产出半配置 blueprint。
 
 ### 6.3 把 Agent 加入对话
 
-Conversation header 的“Add people or agents”在一个搜索面板中同时列出 Organization 人员和当前用户可用的 blueprint。Agent 行明确显示 owner、provider、runtime 在线状态和调用策略。加入的是 blueprint 在该 Conversation 的实例，不是裸进程；同一 blueprint 在每个 Conversation 中对应独立 provider session。
+个人配置入口展示同一 blueprint 列表但没有 Channel 勾选能力。Messages 的 Agent Dialog 才负责把 blueprint 引入或移出当前 Channel。Agent 行明确显示 owner、runtime 和调用策略；加入的是 blueprint，不是裸进程。
 
 ### 6.4 选择、转发与调用
 
 - 消息 hover/focus 时出现选择框；可以单选或多选。
 - 选择后出现统一操作条：“Forward to person…”发送带原作者、时间和稳定消息引用的转发卡；“Ask agent…”选择对话内 Agent，并把被选消息作为明确输入。
-- 直接输入 @Agent 也会创建 Agent Request。普通聊天消息和远程执行请求不是同一状态：消息旁渲染独立状态卡，展示 awaiting approval、awaiting runtime、queued、running、succeeded、failed、rejected、cancelled 或 expired。
-- owner 的批准/拒绝绑定明确 request ID，不从“行”“可以”等自然语言猜授权。runtime 离线不是失败；状态卡说明等待上线。
+- 输入 `@` 后从 Channel Agent 列表选择，得到不可拆分的胶囊；用户只能整颗删除，不能逐字修改名字。胶囊是完整消息富文本中的 inline node，同时携带 label 和稳定 blueprint UUID；服务端不删除 `@Agent`、不存字符范围、不从可编辑字符串反推身份。
+- 一条消息可同时 mention 多个 Agent。Server 对每个不同 blueprint 独立执行 policy 和 runtime 路由，并把同一份完整消息交给每个 Agent；同一消息重复 mention 同一 Agent 默认只生成一条命令。
+- 需要 owner 确认时，Server 以该 Agent 身份发送一条 mention owner 的普通消息，不创建待执行命令。owner 后续回复并再次 mention Agent 时，这条完整回复就是新命令；Server 沿 reply chain 带上原请求，因此 owner 可以在同意时增补或改写任务。
+- runtime 离线时，Server 以 Agent 身份发送正常离线消息，命令留在服务端待投递。不在对话里暴露 `queued/running/completed` 基础设施状态卡。
 
 ### 6.5 Agent 回复与引用
 
-Agent 回复头展示 blueprint 名称和 owner；正文用标准 reply 块引用触发它的消息。引用过的 Channel Shared Item、Session 或 Files 以来源 chip 呈现，点击时再做权限检查。执行状态、简短进度和最终摘要留在 Agent Request 卡中；详细推理和工具日志仍在 owner 设备上的 provider session，除非 owner 主动共享。
+Agent session 不自动把 provider 的最终回答镜像到 Channel。Agent 在它认为需要时，通过 request-scoped Agent Colab Skill 命令发送进度或结果；这些输出与人类输入走同一 Channel message 通道，只是 sender 身份由 Server 根据 request 固定为目标 blueprint。详细推理和工具日志保留在 owner 设备上的 provider session。
 
-首版不做项目看板、通用附件仓库、视频会议、reaction、typing indicator 或 read receipt。
+Agent 提交回复时不拥有自由 mention 能力。Server 从 request ID 反查 requester 与触发消息，自动在最终正文开头插入结构化 `@requester` member mention，并把 `reply_to_message_id` 指向触发消息；Agent 工具、提示词和参数不重复携带这些可伪造字段。GUI 对提到当前登录成员的胶囊使用深蓝实色，并显示默认引用，使请求人能一眼识别自己的回音。
+
+### 6.6 全局 Settings 信息架构
+
+Settings 首层只显示当前登录 User、当前 Organization、`My Agents (数量)`、本机 Agent runtime 的 Skill 安装区，以及默认折叠的 Updates。User 与 Organization 的新增、切换和登出进入同一 Popover 内的下钻视图，不在首层同时摊开多个账号和组织。My Agents 使用超新星图标并进入既有 blueprint 管理面；Skill 安装行为不变，只把模块名称明确为 `Install Skill to local Agent runtime`。四类独立制品版本、检查和更新操作保持原能力，但移动到末尾的折叠 Updates 中。
+
+首版不做项目看板、通用附件仓库、视频会议、reaction、人类 typing indicator 或 read receipt。Agent 成员行显示任务数量；只有 runtime 已确认且执行中的命令才显示 Working…，背景持续呼吸（降低动态效果时使用静态背景）。点击 Agent 行打开身份卡片，不打开编辑弹层。卡片列出该 Agent 在 Channel 的全部任务，最新在前，每条显示摘要、状态、开始时间和持续时间；点击具体记录才打开该 request 的正序详情。Owner 自己的 Agent 数量入口仍用于设置。顶部不再保留默认指向最新任务的统一入口。
+# Desktop title status and message composition
+
+- macOS Electron uses a hidden-inset title bar so the HTML-owned, fixed-height status slot occupies the native title-bar region without adding or removing layout rows. It reads `Loading…` for foreground HTTP work, `<Agent> is working…` only after runtime acceptance, and `Colab` while idle.
+- WebSocket events are wake-up hints. Consecutive message/request invalidations are drained into authoritative cursor/status reconciliation; an invalidation arriving during an active fetch schedules another pass instead of being discarded.
+- The composer offers atomic Agent and Channel-member mention capsules. Member capsules remain structured IM mentions but never enter Agent command routing.
+- Enter sends; Shift+Enter inserts a line break. The empty composer states these shortcuts in its placeholder.
+- Human avatars use a visible green identity ring. Agent avatars keep the owner image, purple supernova ring/marker, and AI label.
+- Message hover actions sit immediately after the timestamp without a floating border: quote, forward, and enter multi-select. Multi-select moves checkboxes to the left edge of every message row and exposes one batch-forward bar.
+- Updates remain actionable while their detail disclosure is collapsed. Long artifact transfer state is separate from page Loading and shows bytes, total, throughput, and ETA.
+- The application does not reserve a permanent blank strip for global loading or Agent activity.
+  Loading belongs to the surface performing the request; Agent work remains channel/request state.
+  A future native-titlebar indicator requires a real Electron integration rather than compensating
+  page padding.
+Canvas Agent dispatch remains observable in the Agent identity card. For the current document and Agent, the card lists every unfinished `queued / delivering / running / awaiting_owner` command above an always-reusable `Send to Agent` button. Terminal commands disappear from this transient area but remain durable history. Canvas command state is not repeated in the document or Channel title; Messages Agent activity continues to use the Channel-level status projection. WebSocket frames only wake reconciliation; HTTP request lists remain authoritative after missed frames, reconnects, focus changes, or reloads.
+
+Canvas uses a centered document column with symmetric horizontal gutters. It has no permanent toolbar: hovering a top-level paragraph exposes a compact block handle whose menu applies text, Heading 1–3, list, quote, or code styles. These actions produce ordinary collaborative editor transactions and do not introduce a second document protocol.
+
+Updater state belongs to the backend operation, not the browser's button state. Settings opening and focus restore the active operation; a collapsed Updates section still shows progress and disables competing actions. Repeated update requests attach to the existing operation. Mac OS-lock ownership determines running; a stale transfer without a lock is interrupted, and an activated Core different from the resident executable offers Restart. A terminal download record alone does not mean installation has ended.

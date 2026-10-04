@@ -1,0 +1,77 @@
+#!/usr/bin/env python3
+"""Manage Channel messages and Agent blueprints through Colab Local Core."""
+from __future__ import annotations
+import argparse, sys, uuid
+from pathlib import Path
+from urllib.parse import quote
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "lib"))
+from local_api import DEFAULT_CORE, LocalApiError, request
+from output import failure, success
+
+def channel(core, value):
+    rows=request("GET","/v1/channels",core=core)
+    matches=[row for row in rows if row["id"]==value or row["name"].casefold()==value.casefold()]
+    if len(matches)!=1: raise ValueError(f"Channel must resolve uniquely: {value}")
+    return matches[0]
+
+def blueprint(core, channel_id, value):
+    rows=request("GET",f"/v1/channels/{channel_id}/blueprints",core=core)
+    matches=[row for row in rows if row["id"]==value or row["name"].casefold()==value.casefold()]
+    if len(matches)!=1: raise ValueError(f"Agent blueprint must resolve uniquely: {value}")
+    return matches[0]
+
+def runtime(core, channel_id, value):
+    rows=request("GET",f"/v1/channels/{channel_id}/agent-runtimes",core=core)
+    matches=[row for row in rows if row["id"]==value]
+    if len(matches)!=1: raise ValueError(f"Runtime must be a registered runtime ID: {value}")
+    if not matches[0].get("available"): raise ValueError(f"Runtime is unavailable: {value}")
+    if matches[0].get("provider") != "codex": raise ValueError("Only registered Codex runtimes are executable in this release")
+    return matches[0]
+
+def main():
+    parser=argparse.ArgumentParser(prog="colab-messages");parser.add_argument("--core",default=DEFAULT_CORE)
+    group=parser.add_subparsers(dest="group",required=True)
+    messages=group.add_parser("messages");mops=messages.add_subparsers(dest="operation",required=True)
+    listing=mops.add_parser("list");listing.add_argument("--channel",required=True);listing.add_argument("--after",type=int,default=0);listing.add_argument("--limit",type=int,default=100)
+    reading=mops.add_parser("read");reading.add_argument("--channel",required=True);reading.add_argument("--id",required=True)
+    sending=mops.add_parser("send");sending.add_argument("--channel",required=True);sending.add_argument("--body",required=True);sending.add_argument("--reply-to")
+    blueprints=group.add_parser("blueprint");bops=blueprints.add_subparsers(dest="operation",required=True)
+    blist=bops.add_parser("list");blist.add_argument("--channel",required=True);blist.add_argument("--owner-member")
+    runtimes=bops.add_parser("runtimes");runtimes.add_argument("--channel",required=True)
+    upsert=bops.add_parser("upsert");upsert.add_argument("--channel",required=True);upsert.add_argument("--name",required=True);upsert.add_argument("--loading-instruction",default="");upsert.add_argument("--loading-command",default="");upsert.add_argument("--runtime",required=True);upsert.add_argument("--upon-request",choices=["refuse","awaiting_owner","process"],default="awaiting_owner")
+    selection=bops.add_parser("select");selection.add_argument("--channel",required=True);selection.add_argument("--name",required=True);selection.add_argument("--enabled",choices=["true","false"],required=True)
+    remove=bops.add_parser("remove");remove.add_argument("--channel",required=True);remove.add_argument("--name",required=True)
+    requests=group.add_parser("request");rops=requests.add_subparsers(dest="operation",required=True)
+    context=rops.add_parser("context");context.add_argument("--request",required=True);context.add_argument("--before",type=int,required=True);context.add_argument("--limit",type=int,default=20)
+    reply=rops.add_parser("reply");reply.add_argument("--request",required=True);reply.add_argument("--message",required=True)
+    args=parser.parse_args()
+    success = __import__("output_views").writer("messages", args)
+    try:
+        if args.group=="request":
+            if args.operation=="context": return success(request("GET",f"/v1/agent-requests/{args.request}/context?before={args.before}&limit={max(1,min(args.limit,100))}",core=args.core))
+            result = request("POST",f"/v1/agent-requests/{args.request}/reply",core=args.core,body={"message":args.message,"clientNonce":str(uuid.uuid4())})
+            # The persisted IM object serves the GUI; the Agent needs only delivery confirmation
+            # and the handle required to refer to the sent message in a later operation.
+            return success({"sent": True, "messageId": result["id"]}, include_cursor=False)
+        row=channel(args.core,args.channel)
+        if args.group=="messages":
+            if args.operation=="read": return success(request("GET",f"/v1/channels/{row['id']}/messages/{uuid.UUID(args.id)}",core=args.core))
+            if args.operation=="list": return success(request("GET",f"/v1/channels/{row['id']}/messages?after={args.after}&limit={max(1,min(args.limit,200))}",core=args.core))
+            return success(request("POST",f"/v1/channels/{row['id']}/messages",core=args.core,body={"body":args.body,"replyToMessageId":args.reply_to,"clientNonce":str(uuid.uuid4())}))
+        if args.operation=="list":
+            suffix=f"?ownerMemberId={quote(args.owner_member,safe='')}" if args.owner_member else ""
+            return success(request("GET",f"/v1/channels/{row['id']}/blueprints{suffix}",core=args.core))
+        if args.operation=="runtimes": return success(request("GET",f"/v1/channels/{row['id']}/agent-runtimes",core=args.core))
+        if args.operation=="upsert":
+            existing=request("GET",f"/v1/channels/{row['id']}/blueprints",core=args.core);matches=[item for item in existing if item["name"].casefold()==args.name.casefold()]
+            target=runtime(args.core,row["id"],args.runtime);body={"name":args.name,"loadingInstruction":args.loading_instruction,"loadingCommand":args.loading_command,"runtimeId":target["id"],"runtimeDevice":target["deviceName"],"runtimeAgent":target["provider"],"invocationPolicy":args.upon_request}
+            result=request("PATCH",f"/v1/channels/{row['id']}/blueprints/{matches[0]['id']}",core=args.core,body=body) if len(matches)==1 else request("POST",f"/v1/channels/{row['id']}/blueprints",core=args.core,body=body)
+            return success(result)
+        if args.operation=="remove":
+            item=blueprint(args.core,row["id"],args.name);request("DELETE",f"/v1/channels/{row['id']}/blueprints/{item['id']}",core=args.core);return success({"removed":item["name"]})
+        item=blueprint(args.core,row["id"],args.name);request("PATCH",f"/v1/channels/{row['id']}/blueprints/{item['id']}/selection",core=args.core,body={"enabled":args.enabled=="true"})
+        return success({"name":item["name"],"inChannel":args.enabled=="true"})
+    except ValueError as error:return failure("invalid_argument",str(error),2)
+    except LocalApiError as error:return failure("local_api_error",str(error),error.exit_code)
+
+if __name__=="__main__": raise SystemExit(__import__("telemetry").run(main))

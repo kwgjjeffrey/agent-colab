@@ -1,7 +1,60 @@
 # Colab 实现计划
 
+2026-10-04 信息关联主线：独立契约见 `docs/information-association.md`。已实现 Channel 内 Agent/User 身份卡关联 tasks/共享资产；Files、Sessions、Canvas 与 Messages 均可复制上下文提示词或经带用户指令的 Forward to Agent 弹层派发；Messages/Canvas 资源胶囊保存稳定 kind/ID，详情卡可跳至目标；消息操作提供 Copy to use in my agent 与 Tooltip。Server 对跨 Channel/失权引用重新授权，Canvas projection codec 保护胶囊身份。代码级验证：GUI 20 文件/51 测试、Server 6 测试、Skill 30 测试、Canvas codec 11 测试、Local Core cargo check 已通过。安装态、线上派发与视觉验收仍在验证，不据此宣称用户已收到制品。
+
+2026-10-04 GUI 0.1.82-dev：修复新增头像触发按钮造成 inline 相框碎裂的回归，
+相框自身与按钮使用 inline-flex，保留原圆形紫色相框及角标。
+
+2026-10-04 Messages Agent 头像详情入口：复用 shadcn HoverCard 和 AgentIdentityCard，
+支持 hover 与点击；任务选择复用现有 work drawer。47 项前端测试和 GUI 构建通过。
+
+2026-10-04 Agent stdout 审查：独立 review 见 `docs/agent-output-review.md`。
+request reply 已在源码缩为 sent/messageId，Server recent/quoted context 改为独立消息标题与空行。
+用户已批准；六个协作 CLI 已统一接入逐操作 allow-list 和公共 ok/data/page 范式，
+colab-open 使用同一 envelope。安装器保留 updater 消费的机器 receipt。
+29 项 Python 回归、6 项 Server 回归通过；发布/安装结果见 validation-plan。
+
+2026-10-04 Canvas 转换替换：已删除 Rust 手写 Markdown renderer/XmlText patcher，
+改用 Local Core 自有 `canvas-codec`（ProseMirror Markdown + Tiptap Yjs binding）。
+7 个转换回归和 Rust/Yrs 桥接回归通过；原文 237 个真实 updates 的打包运行时回放，
+追加生成 145-byte delta，换行和胶囊保留。首次 `0.1.75-dev` 验收发现段尾硬换行省略，
+已通过显式 `<br>` 映射修复，最终安装制品为 Core `0.1.77-dev`。
+安装态真实 Agent 派活、修改文档与 GUI 读回均已通过；证据见 validation-plan 的
+“Canvas codec 与更新状态：安装后验收”及文末 closure，不以体外测试替代安装态结果。
+
 状态：执行中  
 当前里程碑：M1–M4 主链与 Files 预览已完成；当前主线为 M5 Quick Share，随后依次收口身份生命周期、存储治理和邀请可靠性。Windows 实机验收等待测试设备，微信登录等待开放平台材料，二者不阻塞当前主线。
+
+2026-10-03：主线切换到 Canvas。独立技术设计见 `docs/canvas-technical-design.md`；集中式工程 tracing 后续调研线索见 `docs/engineering-tracing.md`，不阻塞 Canvas 正确性主链。唯一开发前体外门禁 F-CANVAS-01 已通过：真实 Tiptap/Yjs update 可由 Rust/Yrs 投影和局部修改，JS/Tiptap 回放正确，重复/乱序并发更新收敛，结构化组件 fence 修改被拒绝。当前进入正式最窄纵向实现，首轮只做 macOS/Codex。
+
+## M6：Canvas 协作结构化文档（进行中）
+
+1. [x] 技术设计与能力归属；
+2. [x] F-CANVAS-01 Tiptap/Yjs ↔ Rust/Yrs Projection Codec 前置门禁；
+3. [x] Server Canvas persistence、权限与 account realtime invalidation domain；
+4. [x] Local Core Yrs replica、durable outbox、Markdown Projection Codec 与 Local API；
+5. [x] macOS `colab-canvas` Agent 脚手架（list/create/read/search/apply-patch）；
+6. [~] Desktop GUI Canvas list/Tiptap-Yjs editor、同步状态已完成；typed structured component Node View 未完成；
+7. [~] 正式 Projection Codec 普通文本与 component fence 拒绝契约已通过；typed component commands 未实现；
+8. [x] 体内 recovery fault injection：Server 不可达时 update 留在 SQLite outbox，Core 重启恢复后以同一 clientUpdateId ACK；
+9. [ ] macOS 双用户/双 Agent 系统验收；
+10. [ ] 主链完成后接入 engineering tracing，再执行规模与压缩验证。
+
+2026-10-03 实现/验证结果：Server `0.1.98-dev` 已部署且公网 readiness 通过；Mac Core `0.1.67-dev`、GUI `0.1.60-dev`、Skill `0.1.44-dev` 已发布到 stable。本轮 Canvas 没有修改或重建 Electron；stable 保留此前的 Darwin Electron `0.1.21-dev`（Windows `0.1.19-dev`）。Conversation 与 Canvas 复用一个浏览器 account realtime socket；WebSocket 只发可丢失 invalidation，Server sequence/HTTP repair 仍为事实来源。GUI `0.1.60-dev` 进一步保证先应用初始远端 update、再挂载 Tiptap，避免空文档初始化 update 与远端状态竞态；22 项测试和 production build 通过，源码仅有 singleton realtime 模块创建 WebSocket。正式 Core/Skill 链路创建 Canvas、提交真实 Yjs、读取投影、执行 Codex patch、断网持久化与重启补发均通过，证据见 `.trial/V-CANVAS-02-core-skill-recovery/README.md`。typed components、双用户系统验收与规模压缩仍未完成，不标记 Canvas 总里程碑完成。
+
+2026-10-03 Canvas resource UX 修复完成并安装验证：Server `0.1.100-dev`、Mac Core `0.1.69-dev`、GUI `0.1.62-dev` 已发布并安装，Electron 保持 `0.1.21-dev`、Skill 保持 `0.1.45-dev`。根资源统一按 nullable parent 渲染；New 改为菜单直选并立即生成树节点，名称自动全选、Enter/失焦保存、Escape 取消、双击重命名；目录行提供直接新建子文档。Server/Local Core 增加真实 rename use case。Give to Agent 模板严格按“先读当前文档 → 按需编辑 → 最后按需探索其他文档”排序，删除底层投影实现说明。实机强制重载后 Canvas 树显示 `Canvas E2E 2026-10-03` 与 `hello`，New 只出现 Document/Folder 菜单且无创建弹层，Agent Prompt 实机显示新顺序。
+
+2026-10-03 Canvas mention 与文档标题交互完成并安装验证：stable promotion `0.1.109-dev` 安装 GUI `0.1.68-dev` 与 Mac Core `0.1.72-dev`；Electron 保持 `0.1.21-dev`、Skill 保持 `0.1.45-dev`。member/Agent mention 使用带稳定身份 ID 的原子节点，hover/focus 身份卡展示成员或 Agent owner，Agent 卡底部执行真实 Server request；Server 按 mention 所属 Heading section 组装最小任务提示词，并列出按需可用的 read/apply-patch/list 工具。真实请求 `4968a3a1…` 与 `78fa6f16…` 均以一次 attempt 达到 durable `succeeded`，且复用 Desktop 可见 thread `01a0f715…`。首次黑盒发送分别发现并修复旧数据库 kind 约束与 Tiptap Collaboration 默认 shared type（`default`）投影错误；最终安装态 `colab-canvas read` 返回 `syncState=synced` 且包含结构化 mention 的 Markdown 投影。文档标题可在 header 与 sidebar 双击编辑并走同一 rename use case；同步状态紧邻标题，header 下方分割线已移除。
+
+2026-10-03 Agent activity 与 Canvas 编辑器补齐并安装验证：stable promotion `0.1.111-dev` 只推进 GUI 到 `0.1.70-dev`，Core `0.1.72-dev`、Skill `0.1.45-dev`、Electron `0.1.21-dev` 均保持不变；Server `0.1.111-dev` 已部署。Messages 原先已有 `running` 聚合函数但没有接入任何可见组件；现已把 Server 权威 request 状态投影到 Channel 顶部稳定状态位。Canvas request 在 Server 持久关联 `source_canvas_id`，GUI 可跨刷新/设备恢复本篇文档最近一次 `Sent / working / Completed / Failed`，并通过 account realtime invalidation、重连和 5 秒低频对账更新；状态同时显示在文档标题旁和 Agent 身份卡中。编辑正文改为居中的 `max-w-4xl` 页面与 48px 横向 gutter，并基于已有 Tiptap StarterKit 命令提供 Paragraph、Heading 1–3、Bold、Italic、bullet/numbered list、quote、code block 工具栏。安装态实机已从 Server 恢复用户此前请求并同时显示 `Runtime Validation Agent completed` 与标题旁 `Completed`，资源树、页边距及全部格式控件也已出现。
+
+2026-10-03 Canvas command 状态模型与块样式交互修正并完成安装态验收：stable promotion `0.1.114-dev` 安装 GUI `0.1.73-dev`，Server `0.1.112-dev` 已部署；Electron `0.1.21-dev`、Core `0.1.72-dev`、Skill `0.1.45-dev` 均保持不变。Canvas 不再把“最近一次 request”投影为文档或 Channel 的永久完成态，也不让发送按钮兼任状态标签。身份卡按 `(canvas_id, target_blueprint_id)` 汇总该 Agent 的所有未结束 command，终态自动退出即时区域，按钮始终保持发送语义；完整历史仍由 `agent_requests` 保存。常驻格式工具栏删除，改为 top-level block hover 手柄和块类型菜单。Server request list 增加稳定 `targetBlueprintId`，避免按可变显示名关联。安装态确认标题区只保留 `Synced`，Agent 卡只显示 `Send to Agent Runtime Validation Agent`，点击正文块出现 Text、Heading 1–3、Bulleted list、Numbered list、Quote、Code 菜单。
+
+2026-10-02：Messages 紧凑交互补齐：macOS Shell 以 hidden-inset 暴露固定标题状态位；GUI 将 Loading 与 Agent working 投影到同一位置，连续 WebSocket invalidation 使用 drain 对账；composer 支持 Agent/成员原子 mention、Enter 发送与 Shift+Enter 换行；人类头像使用绿色环，Agent 标记使用紫色。GUI/Shell 独立版本分别推进，未改动 Core、Skill 或 Server。
+
+2026-10-02：修复 macOS Shell 大制品更新：安装器不再给 immutable artifact 设置 180 秒总下载时限，改为 curl 断点续传、传输错误重试与 60 秒低速失活检测；manifest/signature 等元数据仍保留有界总超时。该变更只推进 Colab Skill，不重打 GUI/Core/Shell。
+
+2026-10-02：更新交互与 Messages 操作区继续收口。长更新从通用 `trackedFetch` 剥离，Skill 原子写入下载进度，Core 暴露只读进度，GUI 在始终可见的 Updates 行展示进度/速度/ETA；Core/GUI/Skill 先激活重启，再自动续跑 Shell 下载，使新 Core 能观测大文件进度。消息 hover 操作移动到时间后，采用 Quote/Forward/List 图标；多选态统一把 checkbox 放到每条消息左侧。
 
 ## 执行纪律
 
@@ -348,17 +401,59 @@ Windows 首版采用 `%LOCALAPPDATA%\\AgentColab`、目录 junction 和用户级
 - [x] Install from stable R2 and verify the authenticated DOCX byte stream returns the correct MIME type, `nosniff`, exact size and SHA-256;
 - [ ] Human visual acceptance for directory navigation, DOCX, XLSX, PDF, image and unsupported-file states.
 
-### T3.1 Adjacent feature decision: project management and Conversation/DM (design completed)
+### T3.1 Channel Messages and Agent blueprints (runtime protocol replacement implemented; primary black-box path verified)
+
+- [x] Fix the reviewed target design: preserve complete rich-text bodies and inline mention nodes; support several distinct Agent targets in one message; treat an owner's reply-with-mention as a new command whose reply chain supplies prior context; separate Conversation synchronization from runtime command delivery; and reduce the injected prompt to the exact task, quoted/recent context, optional instruction, and concrete context/reply tools.
+- [x] Replace the GUI-driven second Agent Request write with Server-side routing after message commit; persist full rich content, derive immutable mention identities from atomic nodes, and fan out at most one command per distinct mentioned blueprint.
+- [x] Replace account-stream invalidation plus HTTP `/requests/next` claim with a separately authenticated runtime WebSocket carrying complete Server-packaged commands. PostgreSQL remains the pending-command truth; Local Core ACKs a fully parsed command on the same socket, Server releases an unacknowledged claim after ten seconds, and Local Core stores a completion receipt before acknowledging provider completion.
+- [x] Replace `awaiting_owner` and offline status cards with ordinary Agent-authored messages; an owner message that mentions the Agent is evaluated as a new command, while its explicit reply chain and the preceding ten non-duplicate messages are packaged as context.
+- [x] Stop automatically publishing the provider's final assistant message. Keep it in the visible Codex Desktop session and let the Agent use the existing request-scoped `colab-messages request reply` tool when it chooses to report progress or results.
+- [x] Release `0.1.80-dev` retains migration 22/Server and GUI `0.1.47-dev`, and publishes Core `0.1.58-dev` for macOS/Windows. Installed macOS GUI visually confirms inline atomic mention, reply selection, and absence of request-state cards. A real middle-position mention created a visible Codex thread and the Agent independently used `colab-messages request reply`; Channel seq 28 arrived from `Runtime Validation Agent` with `protocol 2 delivery works`. The first attempt exposed that Codex `workspace-write` disables even loopback access on macOS; Core now starts the runtime turn with filesystem isolation retained and `networkAccess: true`, so the documented Local Core reply path is actually executable. Two-Agent fan-out, owner confirmation and offline reconnect delivery remain follow-up fault/branch validation rather than blockers for the primary path.
+- [x] Repair the real post-release delivery failure exposed by Channel seq 29: the protocol-2 Server closed runtime WebSocket immediately after ACK and marked the device offline throughout provider execution, while Local Core also guessed ownership by cross-producting historical runtimes/thread bindings with all saved accounts. Keep one runtime socket through `accepted → provider execution → durable receipt → ready`, count overlapping presence connections, and start workers only from explicit account-scoped registrations. Deploy Server `0.1.82-dev` (the final immutable build also preserves the one-command lifecycle for legacy clients), hot-install Core `0.1.59-dev` on the validation Mac, and let the already queued request `875d98ef…` resume without resending: the existing visible Codex thread completed the exact Chinese task and its request-scoped Skill call created Channel seq 31, `我收到了你的消息`. Public Core promotion remains pending a native Windows `0.1.59-dev` build; GUI/Skill/Electron stay unchanged.
+- [x] Repair the remaining idle/reconnect failure using the user's real seq 32/33 messages. Local Core now sends a delayed 20-second WebSocket heartbeat so a half-open runtime is detected, while Server ignores Ping/Pong control frames until it receives the exact request-scoped `accepted` ACK. Discard legacy hidden `codex exec` thread bindings by adapter version and create/resume only Codex app-server tasks visible in Desktop. Both existing requests recovered without resending, produced Channel seq 35/36 `我收到了你的消息`, and created visible Codex task `01a0f5ed-1c88-73b0-a73e-7c5e9a71f520`. Install Core `0.1.61-dev`, GUI `0.1.48-dev`, and Server `0.1.83-dev`; Electron remains unchanged at `0.1.19-dev`.
+- [x] Replace the flat message list with identity-specific bubbles: current member right/primary, other members left/muted, Agent left/violet with owner avatar plus supernova ring. Keep the compact avatar beside sender content, label Agents as `<name> (<owner>'s Agent)`, and reveal timestamps/reply/select actions only on hover. Verify the installed Electron app after restart rather than relying on component tests alone.
+- [x] Repair the user-exposed Messages regressions: model the `(Channel, blueprint) → provider thread` binding separately from app-server writer ownership. The final architecture is one long-lived app-server per Local Core retaining every Colab-managed thread, while Desktop remains a reader. Protocol black-boxing proved that a second `turn/start` during an active turn steers the same turn; `thread/queue/add` instead creates an independent submission, remains queued while busy, and is automatically consumed by the owning app-server when idle. Local Core now owns one persistent `CodexManager`, stores adapter-version-3 bindings, submits every Server request with its stable ID through `thread/queue/add`, correlates FIFO turn events, treats only `completed` as success, and unsubscribes on orderly manager shutdown without duplicating the provider queue in SQLite. Rust workspace tests cover missing-thread replacement and two-request FIFO completion/failure mapping. GUI keeps a per-Channel message/cursor cache, restores scroll offset, fixes the shell to the viewport, pins the rail/composer, and places Channel identity plus Quick Share on one compact row. Stable now contains Core `0.1.62-dev`, GUI `0.1.49-dev`, Skill `0.1.40-dev`, and deliberately unchanged Electron `0.1.19-dev`. The installed macOS chain executed two ordered requests in visible Codex thread `01a0f6e9-d8d0-7802-8cd8-08a2e15451db`, then survived a forced Local Core restart and executed two more requests in that same thread; Channel seq 40/42/44/46 and all four durable Agent requests completed successfully. The installed GUI was force-refreshed and visually verified for compact avatars, identity-specific bubbles, fixed viewport, bottom-pinned rail settings and composer, and the compact Channel/Quick Share header. Cross-thread concurrency remains a follow-up stress case, not a release gate for this same-thread repair.
+- [x] Repair the false “Agent did nothing” state exposed by the user's real Channel seq 47. The command reached Local Core, ran for 191 seconds in Desktop-visible Codex thread `01a0f715-a4ee-7380-8528-80afd293b5a7`, shared `sine.png`, and committed Agent reply seq 48, but the browser's Conversation WebSocket was half-open: it received neither invalidation nor `onclose`, so the existing reconnect/cursor repair never ran. Server `0.1.85-dev` now emits 15-second text heartbeats and consumes peer frames; GUI `0.1.50-dev` closes an otherwise-open socket after 45 seconds of silence and always catches up from `lastSeq` on open. Server workspace tests, 13 GUI tests/build, immutable R2 readback and real macOS installation passed. Black-box validation observed consecutive heartbeats 15.6 seconds apart, restarted the deployed Server while a Local-Core-bridged socket was open, then reconnected and repaired the exact existing gap with `after=47 → seq 48`; the installed Electron page visibly contained both the real request and reply. Core `0.1.62-dev`, Skill `0.1.40-dev`, and Electron `0.1.19-dev` remained unchanged.
+- [x] Close the remaining healthy-socket reconciliation hole exposed by the user's real electronic-cloud request. The Agent command succeeded in Desktop-visible thread `01a0f715-a4ee-7380-8528-80afd293b5a7`, uploaded `electron-cloud.png`, and committed Agent message seq 50 at 20:02:49 local time; `after=49` through the actual Local Core returned that exact row, but the open GUI had missed its invalidation and later heartbeats prevented the silence watchdog from reconnecting. GUI `0.1.51-dev` now treats every heartbeat, matching invalidation, socket open, window focus, and visibility restoration as a single-flight cursor reconciliation barrier. Stable `0.1.86-dev` was published with only Desktop GUI changed, installed through the real update path, and force-loaded in the installed Electron app; the existing seq 50 reply appeared without rerunning the Agent. GUI 13 tests, production build, immutable R2 size/SHA-256 readback, and installed-app visual acceptance passed; Core `0.1.62-dev`, Skill `0.1.40-dev`, and Electron `0.1.19-dev` remained unchanged.
+- [x] Flatten the Messages participant roster: compact member avatars, no disclosure tree or item cards, owner-ring Agent avatars matching the timeline, and an Agent-count management entry only for the current member. Add a top-of-message-area Agent activity projection backed by durable request state: claim remains `delivering` until protocol-2 Local Core ACKs the exact command, then `accepted_at` makes it eligible for “is working”; terminal transitions clear it. Request invalidation and the existing heartbeat/focus reconciliation repair lost notifications without adding chat messages.
+- [x] Replace the superseded bubble layout with a compact Discord-style row stream: one left-aligned rich-content column, equal framed member/Agent avatars, Agent supernova ring plus AI badge, hover-only metadata/actions, a flat non-indented participant roster, edge-to-edge Messages workspace, and one borderless composer surface with a solid up-arrow action. Reorder global Settings to active User/Organization drill-downs, My Agents count, Skill installation, then collapsed Updates. GUI tests and production build pass. GUI `0.1.53-dev` was published on 2026-10-02 as promotion `0.1.88-dev`, with signed stable-channel and public size/SHA-256 readback verified; user-triggered update and packaged visual acceptance remain pending.
+- [x] Make request-scoped Agent replies address the requester without expanding provider authority: Server derives a structured member mention and trigger-message reply link from request ID, persists both with the Agent message, and GUI renders the current user's mention as a deep-blue pill plus the referenced message preview. Skill and provider prompt remain unchanged.
+- [x] Preserve the `(Channel, blueprint) → provider thread` binding when Local Core restarts after Codex Desktop has acquired that thread's writer. Core `0.1.63-dev` distinguishes active-writer from missing-thread, skips owner-only metadata mutation, and submits the independent command directly to the original thread's provider queue. Release `0.1.88-dev` promotes only Darwin Core while retaining the prior Windows Core, GUI `0.1.52-dev`, Skill `0.1.40-dev`, and Electron `0.1.19-dev`; the publisher now supports an explicit platform-scoped component promotion. Installed request `c47b335d…` ran to `succeeded` in Desktop-visible original thread `01a0f6e9…`, and the request-scoped reply became Channel seq 55 with a Server-derived structured `@Zhiyuan Yu` member mention and `replyToMessageId` pointing to trigger seq 54. This validates delivery, provider completion, automatic requester addressing and reply association without a replacement thread or manual Channel write.
 
 - [x] Record the decision not to build traditional project management or an OKR substitute without evidence of long-running cross-owner dependency failures;
 - [x] Define Conversation as a separate domain object that can reference a Channel without inheriting or mutating Channel membership;
 - [x] Define an Agent participant as owner + blueprint + selected runtime, with one provider-native session binding per Conversation;
 - [x] Define explicit Agent Request authorization, approval, offline queue, lease and summary-reporting semantics;
-- [x] Re-evaluate Matrix, XMPP, Centrifugo and raw WebSocket against the requirement not to rebuild classic IM; select self-hosted Matrix/Synapse as the chat truth while Colab retains only blueprint/request/runtime/context business state;
+- [x] Re-evaluate transport, broker, gateway and full-IM layers against the actual first-slice scope; select authenticated Axum WebSocket in the existing Server with PostgreSQL as durable truth. The later reviewed design supersedes the original HTTP runtime claim: Conversation invalidations and runtime command delivery now use separate WebSocket protocols.
 - [x] Extend the existing low-fidelity shell with a concrete Conversation entry, three-pane chat, blueprint editor and coding-agent prompt, participant picker, message selection/forwarding, Agent Request state and reply/source references;
+- [x] Repair the wireframe's page hierarchy so Conversation and Agent-blueprint settings are mutually exclusive screens, and add public production evidence for Matrix, XMPP/Prosody and Centrifugo/Centrifuge with explicit limits on what each case proves;
 - [x] Add a concrete ER diagram, module placement diagram and Agent Request sequence, with editable Mermaid sources and static SVG renderings;
+- [x] Reconcile the DM ER with the implemented tenant model: visually separate existing and proposed Colab tables, use `organization_members` as the actor, keep transport out of the ER, and remove a Conversation-specific outbox because reconnect cursor repair already closes the commit/publish crash gap;
 - [x] Run the existing full repository check after the previous Files/Quick Share work: Desktop build, Local Core tests and Server tests all pass on 2026-09-30;
-- [ ] Before implementation, run a narrow Matrix trial for Synapse provisioning, Local Core incremental sync and one Application Service custom event, then run V-CHAT-01 against one real provider runtime and one disconnected/reconnected Local Core.
+- [x] Fix the final ownership decision: Colab owns rooms, messages and Agent participation in its existing PostgreSQL. Conversation WebSocket carries repairable message invalidations; a separate runtime WebSocket carries Server-packaged commands. Matrix/Tuwunel and external IM services are rejected because their separate state, service and identity/room mapping cost conflicts with the required embedded Colab model.
+- [x] Implement the first Channel-scoped vertical slice: Messages as the first tab, member-first message stream/input, Add user reuse, expandable member Agents, Organization-wide personal blueprint list, per-Channel Agent selection, requested configuration fields, and the shared Agent prompt component.
+- [x] Add Server persistence/API, Local Core credential-hiding HTTP/WebSocket bridge, and `colab-messages` Skill operations for message list/send and blueprint list/upsert/select.
+- [x] Add reconnect with bounded exponential backoff and cursor catch-up; realtime remains an optimization and cannot create or lose durable messages.
+- [x] Atomically deploy Server `0.1.66-dev`, then publish stable channel `0.1.67-dev` with publicly verified Core `0.1.47-dev`, GUI `0.1.41-dev`, Skill `0.1.37-dev`, and deliberately unchanged Electron `0.1.19-dev`. From the installed Skill, create/select a blueprint and send/list messages; switch to `jeffreyyuzhyuan`, read the message and owner Agent, verify `editable=false` plus HTTP 403 on mutation, and receive the cross-account WebSocket invalidation before restoring `yuzhyuan`.
+- [x] Implement the Codex-only runtime vertical slice: Skill installation registers `(member, stable device ID, coding-agent provider)` with Server; blueprint creation requires the exact available runtime UUID; the target Local Core alone claims its durable request; `(Channel, blueprint, runtime)` binds one Codex thread; first execution uses `codex exec`, later execution uses `codex exec resume`; request-scoped replies return to the originating Channel. Provider launch/resume failures explicitly transition `running` requests to `failed`. Other provider execution adapters remain deferred until the Codex path is accepted.
+- [x] Messages implementation repair: use maintained shadcn message primitives, fix empty successful HTTP responses, make notices dismissible/expiring, add real reply selection, and preserve rich mention documents through Local Core. Packaged-GUI visual acceptance remains part of the release black box above.
+- [x] Agent blueprint interaction repair: creation is immediately selected into the current Channel, removal is supported, `Create by my agent` is the primary path, runtime is one registered “device · Codex” selection, and the generated prompt contains the allowed runtime UUIDs. Legacy empty-runtime blueprints must be saved with a valid registered runtime before they can execute.
+- [x] Agent context handoff: a structured `@Agent` target creates a request containing the complete triggering message, root-to-parent reply chain, preceding ten messages excluding reply-chain duplicates, and request-scoped commands for loading earlier context and replying; forwarding selected messages creates a bounded request with the same reply command but no progressive-history instruction.
+- [x] Repair Agent request projection races: preserve a Tiptap mention at any sentence position, keep UUID routing separate from display text/query, and prevent late create/list responses from regressing `running` or terminal states to `queued`. Document the concrete editor-to-Codex contract in `docs/architecture/agent-request-data-flow.md`.
+- [x] Publish the race repair as release `0.1.77-dev` with only Desktop GUI advanced to `0.1.46-dev`; retain the signed stable Core/Skill/Electron artifacts instead of requiring or promoting unrelated half-built local versions.
+- [x] Replace the editable `Textarea` mention imitation with a Tiptap atomic Mention node carrying
+  the blueprint UUID, preserve its visible label in the full body, and render sent mentions inline.
+  The later reviewed protocol removed request-state cards and status fetching from Conversation;
+  Server alone derives and routes commands from the committed rich message. Earlier account-scoped
+  runtime evidence remains useful, but release acceptance is tracked by the black-box item above.
+
+### T3.2 Update and workspace-loading regression (completed)
+
+- [x] Trace the apparent empty workspace to a failed initial Channel request being rendered as a successful empty result; preserve loading, loaded-empty, and failed states separately with an explicit retry.
+- [x] Remove Python `urllib` from release manifest/artifact reads; use proxy-bypassed curl streaming with bounded retries/timeouts and streaming SHA-256 verification.
+- [x] Bound setup subprocess diagnostics at both the setup and Local Core boundary so Settings never renders raw tracebacks or unbounded local paths.
+- [x] Add regression coverage for the updater transport policy and pass Skill, GUI, and Local Core tests.
+- [x] Publish release `0.1.73-dev`, install it through the existing managed path, and verify real Channel recovery plus Settings update check in the packaged GUI.
 
 ### T2.10 Unified Files source picker regression (completed)
 
@@ -383,6 +478,23 @@ Windows 首版采用 `%LOCALAPPDATA%\\AgentColab`、目录 junction 和用户级
 - Electron 内置业务、内置 GUI 更新器和高频 Electron 发布；
 - “两台物理设备”作为独立验证门槛；账号、权限、远端真源、发布和消费已可由同一设备切换两个真实账号验证。
 
+### T3.3 Atomic updater restart handshake (completed)
+
+- [x] Trace the repeated `Failed to fetch` to Local Core exiting from the same HTTP handler that still owed the GUI an update response; distinguish this transport race from artifact download failure.
+- [x] Split activation and restart into two commands: `/v1/system/update` now returns a durable `restartRequired` acknowledgement, while `/v1/system/restart` is a fire-and-forget managed-service command followed by a new-PID readiness probe.
+- [x] Keep Electron independent: release only Core `0.1.65-dev` and GUI `0.1.56-dev`; retain Shell `0.1.20-dev` and Skill `0.1.42-dev`.
+- [x] Recover the real macOS installation through `colab-setup update --no-restart`, restart the launchd-managed Core, then exercise the same authenticated update/restart HTTP path as the GUI. Verify HTTP 202, PID replacement, all four installed versions, and no remaining update.
+
+### T3.4 Durable artifact transfer (completed for macOS)
+
+- [x] Persist digest-addressed partials across downloader/Core/App process exits; resume with HTTP Range and retain partials after transient or low-speed failure.
+- [x] Report real bytes, total, rolling transfer speed, ETA, resume offset, verification, cached completion, interruption, and hash failure through an atomic progress document and GUI progress bar.
+- [x] Verify exact size and SHA-256 before atomically promoting a partial to a reusable verified blob; prevent concurrent macOS installers with a process lock.
+- [x] Publish promotion `0.1.96-dev` without advancing Electron, then upgrade the actual installed `0.1.95-dev` through its authenticated Local Core HTTP endpoint to Core `0.1.66-dev`, GUI `0.1.57-dev`, and Skill `0.1.43-dev`.
+- [x] Run the installed downloader in two separate processes against a Range server that truncates every first-run response: preserve 65,536 partial bytes, resume to 8,388,608 bytes, and verify the final digest.
+- [ ] Consider P2P sources only after the single-origin transport has production evidence; any P2P source must satisfy the same immutable manifest, exact-size, and SHA-256 verification boundary.
+- [x] Publish a version-only Electron `0.1.21-dev` in promotion `0.1.97-dev` as a user-operated 111 MB updater acceptance target; no Electron source, Core, GUI, or Skill change is included.
+
 ## 明确延后的工作
 
 - Supabase 第二套服务端与双后端 contract parity；只有明确恢复 Supabase 时再立项；
@@ -392,3 +504,97 @@ Windows 首版采用 `%LOCALAPPDATA%\\AgentColab`、目录 junction 和用户级
 - 完整搜索实现；在真源到索引的同步关系确定前不做部分元数据搜索冒充完成品；
 - 任意收件人的邀请邮件；选定可用 SMTP/provider 后连同 outbox 与模板验收一起恢复；
 - query submit hook 的自动 Skill 推荐；当前先完成显式共享、安装与 Give-to-Agent 闭环。
+# Canvas mentions and document header interaction (2026-10-03)
+
+- Canvas mentions use atomic editor nodes carrying immutable member or Agent blueprint IDs.
+- Mention identity cards expose the real Agent dispatch action; dispatch is persisted as an Agent request and the existing runtime WebSocket is only a wake-up hint.
+- The Server owns the Canvas runtime prompt template. The relevant heading section is the immediate task context; read/edit/list Canvas commands are presented as optional tools in task order.
+- Document rename uses the same Server use case from both the sidebar and the document header.
+- The document header keeps synchronization state beside the title and does not render a divider below the header.
+
+- [x] Add task-scoped Agent work details for Messages and Canvas. Core `0.1.73-dev` captures app-server events for the exact FIFO-paired Codex turn and uploads a bounded final record without coupling observability failure to command delivery. Server stores events by durable request id and authorizes owner writes/member reads. GUI `0.1.74-dev` exposes Working/Work details entries and a shadcn Drawer with tool events collapsed. Canvas request-list failures no longer overwrite document-sync errors, and explicit editor typography restores visible H1–H3 hierarchy after Tailwind reset.
+- [x] Installed-Mac validation caught a missing Local Core GET proxy for `/v1/agent-requests/{id}/events`: the deployed Server route and captured work record were healthy, but the Drawer received a local 404. Core `0.1.74-dev` adds the boundary route; release `0.1.116-dev` supersedes `0.1.115-dev` before final acceptance.
+## 2026-10-04 Canvas codec selection audit
+
+F-CANVAS-03 disproves automatic losslessness of the default Markdown codec for the current GUI schema. Existing libraries handle standard syntax, and a custom identity tokenizer round-trips mentions; several richer node/attribute constructions require enhanced syntax or an explicit product normalization decision. Trial and detailed loss matrix: [.trial/F-CANVAS-03-markdown-roundtrip](../.trial/F-CANVAS-03-markdown-roundtrip/README.md). The production source-map/patch adapter remains unfinished; do not reuse earlier simple text replacement validation as evidence of complete edit support.
+
+## Engineering tracing 第一阶段（2026-10-04）
+
+- [x] Honeycomb test 环境认证、独立 ingest key 与官方 MCP 查询；凭据位于仓库外私有配置。
+- [x] 标准 OTel SDK、公共 HTTP 跨进程 propagation、Core authenticated OTLP intake/有界异步队列、Server relay 源码。
+- [x] CLI 七入口 terminal wrapper；GUI transport 与 `messages.send` 呈现出口。
+- [x] 单调 duration、四时间戳 calibration、偏移/uncertainty/quality 元数据。
+- [x] 可重建候选目录与独立只读诊断 Skill；隔离 fixture 云端查回单根五 span。
+- [ ] 候选目录语义分类与全部 GUI entry/result 配对；真实产品 GUI/CLI 纵向验收。
+- [ ] Agent request、WebSocket、outbox/retry 的 durable trace context 与完整回复闭环。
+- [ ] 匿名采集、服务端配额、休眠/时钟漂移/重启故障注入、Windows SDK fallback 实机与生产 rollout。
+
+设计与确切范围见 [engineering-tracing.md](engineering-tracing.md)。隔离公共边界验证不计作已部署产品验收。
+
+- [x] Tracing 本地制品验证：独立构建 Core、GUI、Skill；从刚构建的 Skill zip 提取 vendor 再执行隔离云端协议验证，CLI exit 0。入口候选 184/35、结果候选 448 与初始 operations 注册表已落盘。未发布、未启用生产。
+
+- [x] 双 OTLP provider profile 与私有 env materializer；从 Grafana 登录界面读到 stack endpoint/instance。
+- [ ] Grafana traces:write policy/token 创建、实际上报查回与部署切换（尚未执行）。
+
+- [x] Grafana ingest token 与配置选择、真实 OTLP 上报、Tempo API 查询和 UI 瀑布图；CLI fixture 完整 5 spans。真实数据预览查询查回 GUI 9 traces、Skill 4 traces；未部署生产。
+
+### Canvas framework / updater closure — 2026-10-04
+
+- [x] Identity cards now use shadcn HoverCard on Tiptap React Node Views, with hover/focus/Escape regression coverage. Work details uses an item-ID conversation projection, Markdown instructions/responses, collapsed typed tools and forward task order. GUI tests: 41 passing; TypeScript check passing. Installed acceptance is tracked separately below in validation-plan.md.
+
+- [x] ProseMirror Markdown + official y-tiptap reconciliation replaces handwritten Canvas conversion; packaged Core runtime installed through signed R2 stable channel.
+- [x] Installed Canvas dispatch acceptance: Agent read/patch/read exit 0, actual appended paragraph, preserved both mention identities, Server synced sequence advanced, task succeeded and GUI Work details loaded. Reproducible setup scripts: `.trial/F-CANVAS-03-markdown-roundtrip/{installed_verify,runtime_verify}.py`; exact IDs/results in validation plan.
+- [x] Mac updater lock is the running authority. GUI restores background progress on Settings open/focus and keeps watching active operations; repeated update attaches; stale transfer is interrupted; activation awaiting resident Core restart has its own action. Core 0.1.77 / GUI 0.1.75 installed; Electron unchanged.
+
+### Tracing production rollout — 2026-10-04
+
+- [x] Server 0.1.121-dev 激活于 `/opt/agent-colab/releases/0.1.121-dev`，systemd active，公网 readiness 为 ok；远端与本地 Linux binary SHA-256 一致（4aef58016e76b6574d5017bddfb5227ce48d510ce20805ff3fc5c79e9c4f49e6）。私有 Grafana exporter env 已由独立 systemd drop-in 加载。
+- [x] R2 signed stable channel 0.1.122-dev 发布并执行全部新增制品公网 size/SHA-256 readback。本机正式 updater 成功安装 Core 0.1.78-dev、GUI 0.1.76-dev、Skill 0.1.46-dev；Electron 与 Windows Core 保留原版本。修复 publisher 平台筛选遗漏通用 GUI/Skill 制品的问题。
+- [x] V-TRACE-PRODUCTION-SKILL-01：`observability/tests/validate-production.py` 使用已安装 Skill 查询真实生产 Channel，exit 0、4 channels；Tempo 查回 `46636876e384c1999a3e4be29acc1b23`，7 spans，Skill → Core → Server 父子链完整。
+- [x] V-TRACE-PRODUCTION-GUI-01：已安装 GUI 实际加载并点击 Files/Sessions，页面返回真实文件与会话。Tempo 查回 `0a9d6f4ebba91daff2d87a4129c3354a`，4 spans，GUI 0.1.76-dev → Core 0.1.78-dev → Server 0.1.121-dev。该 span 是 transport_only，不代表页面全部业务完成或 Agent 回复闭环。
+- [x] 实机跨端校准：VPS NTPSynchronized=yes；Core reference=server-estimated，偏移约67 ms、不确定度134–139 ms；GUI/Skill trace quality=estimated，保留各自累积 uncertainty。单端 duration 使用单调时钟。没有执行人工时钟跳变、休眠、漂移注入，不能声称消除所有误差或支持毫秒级跨端排序。
+- [x] 回归：GUI 34 tests 与 production build、Skill 24 tests、Rust Core/Server workspace tests/check、Linux release build 均通过；部署脚本 bash syntax 与 git diff whitespace check 通过。
+- [ ] 全部业务入口/页面结果配对、Agent durable command/ACK/receipt/reply、Canvas outbox/retry/repair、匿名上报、时钟故障注入与生产限流仍待完成。
+### Work details and identity hover closure — 2026-10-04
+
+- [x] Replace custom Canvas identity popover with standard shadcn HoverCard; project request-scoped runtime events into instruction/Agent responses/default-collapsed tools, preserving chronological order.
+- [x] GUI 0.1.77-dev formally published and installed; installed real Canvas task drawer and tool expansion verified. Automated hover traversal and drawer regressions included in 41 passing GUI tests. No Electron version advance. Detailed acceptance in validation plan.
+### Agent roster task entry — 2026-10-04
+
+- [x] Global Settings My Agents cross-tab entry repaired in GUI 0.1.80-dev: select/mount Messages before consuming the management intent; clear intent after handling and report API failures. Signed promotion 0.1.126-dev installed and Canvas → Settings → My Agents opens the real manager; closing and remounting Messages does not reopen it.
+
+- [x] Remove Messages latest-task header; Agent roster item opens the shared identity card through shadcn Popover. Owner management entry preserved. Runtime-acknowledged work animates roster background with reduced-motion fallback.
+- [x] Shared Canvas/roster card displays distinct task summary, state, start time and duration; owner attribution shown once, Send button concise with horizontal padding. Server timestamps use append-only migration 0029 and idempotent terminal trigger.
+- [x] GUI 44 tests/build and Server 6 workspace tests passed. Server 0.1.124-dev deployed with migration 0029; transactional trigger fixture passed. GUI 0.1.79-dev published through signed promotion 0.1.125-dev and installed through the normal updater; installed roster/card and older-task navigation verified.
+
+### V-TRACE-ENTRY-01 — 2026-10-04
+
+- [x] `.trial/V-TRACE-ENTRY-01` 四入口可运行样例：真实安装 GUI 三页面定位/呼吸高亮、Skill browser.open 命令显示/复制；浏览器验证通过。Files DOM animationName=trial-breathe，Messages selector 命中发送按钮；定位未触发业务动作。
+- [ ] 全量入口、稳定控件 ID/资源参数、无权限与重启恢复、直接定位 Electron 原窗口、最新 trace 查询未验证；正式服务归属未决定。
+
+### Trace Skill / MCP App foundation — 2026-10-04
+
+- [x] `skills/trace` 新通用 Skill：任务指令与开发 AGENTS.md 分离；init/generate/check/operations/locate/source/executions/performance/trace/app/mcp 脚手架。init 可植入注册目录、OTel JS adapter、校准 adapter 与配置示例。安装副本在 ~/.codex/skills/trace，Codex stdio MCP trace 已注册。
+- [x] `tracing/registry.yaml` 四入口为唯一维护源，包含 description、entry、completion、owner、source；生成 GUI TS 与 Skill JSON snapshots，digest stale 检查覆盖各目标。移除旧手工 operations.json 与 trial entries.json；trial 清单动态派生。
+- [x] GUI messages.send 与控件绑定消费生成定义；Skill browser.open 消费 snapshot source/description 对应定义。trace.entry.id 经批准的 baggage 跨 Rust Core/Server HTTP 边界传播，传输 span 记录代码路径；intake 白名单保留新增字段。代码通过 GUI 47 tests/build、Skill 29 tests、Rust observability tests/check。
+- [x] CLI 与 MCP 使用同一 dispatch；真实 stdio Client 验证 catalog 相同、MCP App HTML resource/mime/meta 有效；通用模块 3 tests（含 clock 过期/非对称样本与 registry 漂移/路径约束）。Skill validator 通过。
+- [x] Browser fallback http://127.0.0.1:53481 展示同源清单。查询生产 browser.open `1bf8cec6f3f3fbc46a4a35ff743c0fa5` 并展开 7 spans / 3 services，Grafana 深链接已生成；从清单定位试验 GUI Files 并高亮真实 Share files 成功。
+- [ ] MCP host 内实际 iframe 渲染尚未验证（本轮用协议测试与普通浏览器 fallback）；GUI locator 仍是 .trial adapter；查询是独立本地工具读取私有 Grafana 配置，尚未实现 Colab Core→Server 查询代理。
+- [ ] 新入口传播/源码字段/校准失效代码尚未发布生产；旧生产 trace 缺源码字段会明确标记。全量入口收敛、异步 outbox/WS 上下文、精确源码 revision 注入、历史 registry 存储与全量 metrics 仍待后续实现。性能结果是最多100条 search sample，不能当总体吞吐量/分位数。
+
+### Trace capability reorganization — 2026-10-04
+
+- [x] 通用 trace 的唯一开发源移至 `~/.codex/skills/trace`；仓库内 skills/trace 副本移除。instrumentation、analysis、catalog 三个能力分别提供 SKILL.md 与 AGENTS.md，公共 dispatch 留在 lib。
+- [x] colab-trace 旧查询脚本曾用于云端验证；通用 Honeycomb adapter 移入 trace/analysis，去除 Colab 默认配置路径，随后移除仓库和 Codex 的旧 colab-trace。
+- [x] MCP 启动配置与 trial adapter 改为引用个人 Skill；独立 repo fixture 的 MCP/catalog 测试与 registry/clock 测试通过，当前项目 snapshot check 通过。
+
+### Unit-owned tracing registries — 2026-10-04
+
+- [x] 总 tracing/registry.yaml 只引用 GUI、Skill、Core、Server 的 tracing/registry.json。操作定义由所属单元维护，Core/Server 尚无注册业务操作，保持空清单而不编造覆盖。
+- [x] GUI 直接 import 本单元 JSON，Skill 使用相同源码/制品相对路径读取 JSON；Skill 打包原样携带 tracing/。移除 targets.json、generated snapshots 和生成命令。
+- [x] 通用 trace loader 实时遍历引用，校验重复 ID、重复引用、循环及 repo 外路径；CLI/MCP/trial 同源。相关 loader/MCP tests、GUI build/tests 与 Skill tests 验证，当前正式生产制品未更新。
+
+### Information-association loading repair — 2026-10-04
+
+- [x] Channel entry loads member and Agent identity only. Files, Sessions and Canvas catalogs load when an @ chooser or User card opens; Canvas loads Message candidates only when its @ chooser opens. A resource capsule checks its own resource type, and Message capsules use the exact-message endpoint. Message invalidations no longer refetch all resource catalogs.
+- [x] Real Canvas → local Agent Runtime acceptance request `ea96b9f3-46d2-48bc-b81e-0e74444405c5` succeeded. The Agent appended `CANVAS_HANDOFF_OK_20261004`; readback confirmed the edit and both existing mention capsules remained intact.

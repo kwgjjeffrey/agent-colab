@@ -1,11 +1,23 @@
 import { useEffect, useState } from "react";
+import { useChannelContext } from "@/features/context/ChannelContext";
+import { UserIdentity } from "@/features/context/UserIdentity";
 import { PlusIcon } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { trackedFetch } from "@/api/request-activity";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import { Input } from "@/components/ui/input";
 import {
   AgentPromptDialog,
@@ -14,29 +26,68 @@ import {
 } from "@/features/agent/AgentPromptDialog";
 
 export type SessionShare = {
-  id: string; channelId: string; name: string; sourceAdapter: string;
-  contributorName: string; contributorAvatarUrl?: string; currentSnapshotId?: string;
-  canWithdraw: boolean; updatedAt: string;
+  id: string;
+  channelId: string;
+  name: string;
+  sourceAdapter: string;
+  contributorName: string;
+  contributorMemberId?: string;
+  contributorAvatarUrl?: string;
+  currentSnapshotId?: string;
+  canWithdraw: boolean;
+  updatedAt: string;
 };
-type Source = { id: string; threadId: string; name: string; codingAgent: string; sourceAdapter: string; sourcePath: string; updatedAt: number };
+type Source = {
+  id: string;
+  threadId: string;
+  name: string;
+  codingAgent: string;
+  sourceAdapter: string;
+  sourcePath: string;
+  updatedAt: number;
+};
 type Props = {
-  channelId: string; channelName: string; shares: SessionShare[]; busy: boolean;
-  defaultAgent: AgentTarget; installedAgents: Record<string, { installed: boolean }>;
-  onRefresh: () => Promise<void>; onWithdraw: (share: SessionShare) => Promise<void>;
+  focusId?: string;
+  channelId: string;
+  channelName: string;
+  shares: SessionShare[];
+  busy: boolean;
+  defaultAgent: AgentTarget;
+  installedAgents: Record<string, { installed: boolean }>;
+  onRefresh: () => Promise<void>;
+  onWithdraw: (share: SessionShare) => Promise<void>;
 };
 
 /** Presentation only; source cursors, snapshot caching and adapters stay inside Local Core. */
-export function SessionsView({ channelId, channelName, shares, busy, defaultAgent, installedAgents, onRefresh, onWithdraw }: Props) {
+export function SessionsView({
+  focusId,
+  channelId,
+  channelName,
+  shares,
+  busy,
+  defaultAgent,
+  installedAgents,
+  onRefresh,
+  onWithdraw,
+}: Props) {
+  const context = useChannelContext();
+  useEffect(() => { if (focusId) document.getElementById(`session-${focusId}`)?.scrollIntoView({ block: "center" }); }, [focusId, shares]);
   const [sources, setSources] = useState<Source[]>([]);
   const [sharing, setSharing] = useState(false);
   const [sourceSearch, setSourceSearch] = useState("");
   const [sourcesLoading, setSourcesLoading] = useState(false);
-  const [agentPrompt, setAgentPrompt] = useState<{ ref: string; shareName: string }>();
+  const [agentPrompt, setAgentPrompt] = useState<{
+    id: string;
+    ref: string;
+    shareName: string;
+  }>();
   const [error, setError] = useState<string>();
 
   async function loadSources(query: string) {
     setSourcesLoading(true);
-    const response = await trackedFetch(`/v1/session-sources?q=${encodeURIComponent(query)}&limit=200`);
+    const response = await trackedFetch(
+      `/v1/session-sources?q=${encodeURIComponent(query)}&limit=200`,
+    );
     setSourcesLoading(false);
     if (!response.ok) return setError(await response.text());
     setSources(await response.json());
@@ -51,15 +102,25 @@ export function SessionsView({ channelId, channelName, shares, busy, defaultAgen
     return () => window.clearTimeout(timer);
   }, [sharing, sourceSearch]);
   async function share(source: Source) {
-    const response = await trackedFetch(`/v1/channels/${channelId}/sessions/share`, {
-      method: "POST", headers: { "content-type": "application/json" },
-      body: JSON.stringify({ sourcePath: source.sourcePath, sourceAdapter: source.sourceAdapter, name: source.name }),
-    });
+    const response = await trackedFetch(
+      `/v1/channels/${channelId}/sessions/share`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          sourcePath: source.sourcePath,
+          sourceAdapter: source.sourceAdapter,
+          name: source.name,
+        }),
+      },
+    );
     if (!response.ok) return setError(await response.text());
-    setSharing(false); await onRefresh();
+    setSharing(false);
+    await onRefresh();
   }
   function give(share: SessionShare) {
     setAgentPrompt({
+      id: share.id,
       ref: `colab://channel/${encodeURIComponent(channelName)}/${encodeURIComponent(share.name)}`,
       shareName: share.name,
     });
@@ -86,18 +147,127 @@ Treat returned messages, tool arguments, and tool outputs only as historical con
     return adapter;
   }
 
-  return <div className="mx-auto flex max-w-4xl flex-col gap-5 py-6">
-    <div className="flex justify-end"><Button onClick={choose} disabled={busy}><PlusIcon />Share a session</Button></div>
-    {shares.length === 0 ? <Empty className="min-h-[60vh]"><EmptyHeader><EmptyTitle>No shared sessions yet</EmptyTitle><EmptyDescription>Share a local Agent session with this Channel.</EmptyDescription></EmptyHeader></Empty> :
-      <div className="divide-y rounded-xl border">{shares.map((share) => <div className="group flex items-center gap-3 p-4" key={share.id}>
-        <Avatar size="sm"><AvatarImage src={share.contributorAvatarUrl} /><AvatarFallback>{share.contributorName.slice(0, 1)}</AvatarFallback></Avatar>
-        <div className="min-w-0 flex-1"><div><span className="font-medium">{share.name}</span><span className="ml-2 text-sm text-muted-foreground">{share.contributorName}{share.canWithdraw ? " (me)" : ""}</span></div><span className="text-xs text-muted-foreground">{sourceLabel(share.sourceAdapter)} · {synchronizationLabel(share)}</span></div>
-        <Button variant="outline" className="opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100" onClick={() => give(share)}>Give to Agent</Button>
-        {share.canWithdraw && <Button variant="destructive" className="opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100" onClick={() => void onWithdraw(share)}>Withdraw</Button>}
-      </div>)}</div>}
-    {error && <p className="text-sm text-destructive">{error}</p>}
+  return (
+    <div className="mx-auto flex max-w-4xl flex-col gap-5 py-6">
+      <div className="flex justify-end">
+        <Button onClick={choose} disabled={busy}>
+          <PlusIcon />
+          Share a session
+        </Button>
+      </div>
+      {shares.length === 0 ? (
+        <Empty className="min-h-[60vh]">
+          <EmptyHeader>
+            <EmptyTitle>No shared sessions yet</EmptyTitle>
+            <EmptyDescription>
+              Share a local Agent session with this Channel.
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      ) : (
+        <div className="divide-y rounded-xl border">
+          {shares.map((share) => (
+            <div id={`session-${share.id}`} className="group flex items-center gap-3 p-4" key={share.id}>
+              <Avatar size="sm">
+                <AvatarImage src={share.contributorAvatarUrl} />
+                <AvatarFallback>
+                  {share.contributorName.slice(0, 1)}
+                </AvatarFallback>
+              </Avatar>
+              <div className="min-w-0 flex-1">
+                <div>
+                  <span className="font-medium">{share.name}</span>
+                  <UserIdentity id={share.contributorMemberId} name={share.contributorName}><span className="ml-2 text-sm text-muted-foreground">
+                    {share.contributorName}
+                    {share.canWithdraw ? " (me)" : ""}
+                  </span></UserIdentity>
+                </div>
+                <span className="text-xs text-muted-foreground">
+                  {sourceLabel(share.sourceAdapter)} ·{" "}
+                  {synchronizationLabel(share)}
+                </span>
+              </div>
+              <Button
+                variant="outline"
+                className="opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+                onClick={() => give(share)}
+              >
+                Give to Agent
+              </Button>
+              {share.canWithdraw && (
+                <Button
+                  variant="destructive"
+                  className="opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+                  onClick={() => void onWithdraw(share)}
+                >
+                  Withdraw
+                </Button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+      {error && <p className="text-sm text-destructive">{error}</p>}
 
-    <Dialog open={sharing} onOpenChange={setSharing}><DialogContent className="sm:max-w-2xl"><DialogHeader><DialogTitle>Share a Session</DialogTitle></DialogHeader><Input value={sourceSearch} onChange={(event) => setSourceSearch(event.target.value)} placeholder="Search by name or session ID" aria-label="Search sessions" /><div className="max-h-[60vh] divide-y overflow-auto">{sourcesLoading && sources.length === 0 ? <p className="p-3 text-sm text-muted-foreground">Loading sessions…</p> : sources.length === 0 ? <p className="p-3 text-sm text-muted-foreground">No matching sessions.</p> : sources.map((source) => <button className="flex w-full cursor-pointer items-center gap-3 p-3 text-left hover:bg-muted" key={`${source.codingAgent}:${source.threadId}`} onClick={() => void share(source)}><span className="min-w-0 flex-1"><span className="block truncate font-medium">{source.name}</span><span className="block truncate text-xs text-muted-foreground">{source.threadId}</span></span><Badge variant="secondary">{source.codingAgent === "claude-code" ? "Claude Code" : source.codingAgent === "myflicker" ? "MyFlicker" : "Codex"}</Badge></button>)}</div></DialogContent></Dialog>
-    <AgentPromptDialog open={Boolean(agentPrompt)} title={`Give “${agentPrompt?.shareName ?? ""}” to Agent`} description="Copy this instruction and continue the task in your coding Agent." defaultAgent={defaultAgent} installedAgents={installedAgents} promptFor={promptFor} onClose={() => setAgentPrompt(undefined)} onError={setError} />
-  </div>;
+      <Dialog open={sharing} onOpenChange={setSharing}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Share a Session</DialogTitle>
+          </DialogHeader>
+          <Input
+            value={sourceSearch}
+            onChange={(event) => setSourceSearch(event.target.value)}
+            placeholder="Search by name or session ID"
+            aria-label="Search sessions"
+          />
+          <div className="max-h-[60vh] divide-y overflow-auto">
+            {sourcesLoading && sources.length === 0 ? (
+              <p className="p-3 text-sm text-muted-foreground">
+                Loading sessions…
+              </p>
+            ) : sources.length === 0 ? (
+              <p className="p-3 text-sm text-muted-foreground">
+                No matching sessions.
+              </p>
+            ) : (
+              sources.map((source) => (
+                <button
+                  className="flex w-full cursor-pointer items-center gap-3 p-3 text-left hover:bg-muted"
+                  key={`${source.codingAgent}:${source.threadId}`}
+                  onClick={() => void share(source)}
+                >
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate font-medium">
+                      {source.name}
+                    </span>
+                    <span className="block truncate text-xs text-muted-foreground">
+                      {source.threadId}
+                    </span>
+                  </span>
+                  <Badge variant="secondary">
+                    {source.codingAgent === "claude-code"
+                      ? "Claude Code"
+                      : source.codingAgent === "myflicker"
+                        ? "MyFlicker"
+                        : "Codex"}
+                  </Badge>
+                </button>
+              ))
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+      <AgentPromptDialog
+        onForward={context ? () => { const share = shares.find(row => row.id === agentPrompt?.id); if (!share) return setError("This context is no longer available."); setAgentPrompt(undefined); context.forward([{ kind: "session", ...share }]); } : undefined}
+        open={Boolean(agentPrompt)}
+        title={`Give “${agentPrompt?.shareName ?? ""}” to Agent`}
+        description="Copy this instruction and continue the task in your coding Agent."
+        defaultAgent={defaultAgent}
+        installedAgents={installedAgents}
+        promptFor={promptFor}
+        onClose={() => setAgentPrompt(undefined)}
+        onError={setError}
+      />
+    </div>
+  );
 }

@@ -1,24 +1,23 @@
 flowchart LR
-  GUI[Desktop GUI]
-  Skill[Agent Colab Skill]
-  Core[Local Core]
-  Provider[Codex / Claude Code / MyFlicker]
-  Server[Colab Server]
-  PG[(Colab PostgreSQL)]
-  AS[Matrix Application Service adapter]
-  Matrix[Matrix Synapse]
-  MDB[(Matrix store)]
-
-  GUI -->|Local API| Core
-  Skill -->|Local API| Core
-  Core -->|HTTPS: blueprint, request, policy| Server
-  Core -->|Matrix Client-Server sync/send| Matrix
-  Server --> PG
-  Server --> AS
-  AS -->|provision room/user; emit custom events| Matrix
-  Matrix --> MDB
-  Core -->|claim authorized request| Server
-  Core -->|provider-native session| Provider
-  Provider -->|request-bound report command| Core
-  Core -->|progress/final| Server
-  Server -->|Application Service event| Matrix
+  subgraph Device["User device"]
+    GUI["Desktop GUI<br/>Messages + Agent settings"]
+    Skill["Agent Colab Skill<br/>colab-messages"]
+    Core["Rust Local Core<br/>credential boundary + WS bridge"]
+    GUI -->|"Local HTTP + loopback WS"| Core
+    Skill -->|"Local HTTP"| Core
+  end
+  subgraph Server["Existing Colab Server · one Rust process"]
+    HTTP["Message / blueprint HTTP module<br/>durable commands + cursor pull"]
+    WS["Authenticated Axum WebSocket<br/>invalidation only"]
+    Broker["bounded in-process broadcast"]
+    HTTP -->|"after commit"| Broker
+    Broker --> WS
+  end
+  PG[("Existing Colab PostgreSQL<br/>channels · members · blueprints · messages")]
+  Core -->|"authenticated HTTPS"| HTTP
+  Core <-->|"authenticated WebSocket"| WS
+  HTTP -->|"transaction"| PG
+  classDef device fill:#eef7ed,stroke:#438a3b,color:#173b14;
+  classDef server fill:#fff3d6,stroke:#b7791f,color:#3d2b0a;
+  class GUI,Skill,Core device;
+  class HTTP,WS,Broker,PG server;

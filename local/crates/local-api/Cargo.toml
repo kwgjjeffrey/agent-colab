@@ -18,6 +18,8 @@ hex.workspace = true
 tokio.workspace = true
 tokio-util.workspace = true
 futures-util.workspace = true
+tokio-tungstenite.workspace = true
+serde_urlencoded.workspace = true
 tower-http.workspace = true
 mime_guess.workspace = true
 url.workspace = true
@@ -26,3 +28,5 @@ rusqlite.workspace = true
 notify.workspace = true
 rfd.workspace = true
 wait-timeout.workspace = true
+yrs.workspace = true
+colab-observability = { path = "../../../observability/rust" }

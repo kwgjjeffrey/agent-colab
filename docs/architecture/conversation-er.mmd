@@ -1,54 +1,37 @@
-erDiagram
-  USER ||--o{ AGENT_BLUEPRINT : owns
-  USER ||--o{ CONVERSATION_MEMBER : joins
-  CONVERSATION ||--o{ CONVERSATION_MEMBER : contains
-  CONVERSATION ||--o| MATRIX_ROOM_BINDING : maps_to
-  CONVERSATION ||--o{ CONVERSATION_AGENT : includes
-  AGENT_BLUEPRINT ||--o{ CONVERSATION_AGENT : instantiated_as
-  AGENT_BLUEPRINT ||--o{ AGENT_RUNTIME : may_run_on
-  CONVERSATION_AGENT ||--o{ AGENT_REQUEST : receives
-  AGENT_RUNTIME ||--o{ AGENT_REQUEST_LEASE : claims
-  AGENT_REQUEST ||--o{ AGENT_REQUEST_LEASE : attempts
-  AGENT_REQUEST ||--o{ CONTEXT_REFERENCE : uses
-  SHARED_ITEM ||--o{ CONTEXT_REFERENCE : referenced_by
-
-  CONVERSATION {
-    uuid id
-    enum kind
-    string title
-  }
-  MATRIX_ROOM_BINDING {
-    uuid conversation_id
-    string room_id
-  }
-  AGENT_BLUEPRINT {
-    uuid id
-    uuid owner_user_id
-    string name
-    enum provider
-    enum invoke_policy
-  }
-  CONVERSATION_AGENT {
-    uuid id
-    uuid conversation_id
-    uuid blueprint_id
-    string binding_key
-  }
-  AGENT_RUNTIME {
-    uuid id
-    uuid blueprint_id
-    string device_id
-    datetime last_seen_at
-  }
-  AGENT_REQUEST {
-    uuid id
-    uuid conversation_agent_id
-    string matrix_event_id
-    enum status
-    datetime expires_at
-  }
-  CONTEXT_REFERENCE {
-    uuid agent_request_id
-    uuid shared_item_id
-    string revision_id
-  }
+flowchart LR
+  subgraph Existing["EXISTING · Colab PostgreSQL"]
+    U["users<br/>global login identity"]
+    O["organizations<br/>tenant boundary"]
+    OM["organization_members<br/><b>business actor</b>"]
+    CH["channels"]
+    CM["channel_members<br/><b>Messages authorization</b>"]
+    U -->|"1 : N"| OM
+    O -->|"1 : N"| OM
+    O -->|"1 : N"| CH
+    OM -->|"N : N"| CM
+    CH -->|"1 : N"| CM
+  end
+  subgraph Added["NEW · first Channel Messages slice"]
+    AB["agent_blueprints<br/>owner_member_id · name<br/>loading instruction/command<br/>runtime defaults · invocation policy"]
+    CA["channel_agents<br/>channel_id · blueprint_id"]
+    MSG["channel_messages<br/>channel_id · seq · sender<br/>body · reply · client_nonce"]
+    AB -->|"selected into Channels"| CA
+  end
+  subgraph Deferred["DEFERRED · after first-slice acceptance"]
+    CONV["conversations / conversation_members<br/>standalone DM and groups"]
+    RUN["agent_runtimes / requests / leases<br/>actual delegated execution"]
+  end
+  O -->|"1 : N"| AB
+  OM -->|"owns"| AB
+  CH -->|"1 : N"| CA
+  CH -->|"1 : N ordered"| MSG
+  OM -->|"member sender"| MSG
+  MSG -. "optional reply" .-> MSG
+  AB -. "future execution" .-> RUN
+  CONV -. "future rooms" .-> RUN
+  classDef existing fill:#e8f3ff,stroke:#2878b5,color:#102a43,stroke-width:2px;
+  classDef added fill:#fff3d6,stroke:#b7791f,color:#3d2b0a,stroke-width:2px;
+  classDef deferred fill:#f5f5f5,stroke:#888,color:#555,stroke-dasharray:5 5;
+  class U,O,OM,CH,CM existing;
+  class AB,CA,MSG added;
+  class CONV,RUN deferred;

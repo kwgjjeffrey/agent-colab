@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "unit": "desktop-ui",
+  "operations": [
+    {
+      "id": "messages.send",
+      "description": "在 Colab Channel 发送消息，提交成功后将消息展示在终端界面；不包括被提及 Agent 的执行与回复",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "channel.messages",
+        "target": "messages.send",
+        "tab": "Messages",
+        "selector": "button[aria-label='Send message']"
+      },
+      "completion": {
+        "success": "message.rendered",
+        "failure": "message.failed",
+        "cancelled": "view.closed"
+      },
+      "source": {
+        "path": "desktop/ui/src/features/messages/MessagesView.tsx",
+        "function": "send"
+      }
+    },
+    {
+      "id": "files.share",
+      "description": "从本机选择文件或目录，注册为当前 Channel 的共享文件",
+      "owner": "desktop-ui",
+      "status": "candidate",
+      "entry": {
+        "kind": "gui",
+        "page": "channel.files",
+        "target": "files.share",
+        "tab": "Files",
+        "buttonText": "Share files"
+      },
+      "completion": {
+        "success": "share.committed",
+        "failure": "share.failed",
+        "cancelled": "dialog.closed"
+      },
+      "source": {
+        "path": "desktop/ui/src/features/files/FilesView.tsx",
+        "function": "FilesView"
+      }
+    },
+    {
+      "id": "sessions.share",
+      "description": "从本机 Agent 会话目录选择一个会话，注册并同步到当前 Channel",
+      "owner": "desktop-ui",
+      "status": "candidate",
+      "entry": {
+        "kind": "gui",
+        "page": "channel.sessions",
+        "target": "sessions.share",
+        "tab": "Sessions",
+        "buttonText": "Share a session"
+      },
+      "completion": {
+        "success": "share.committed",
+        "failure": "share.failed",
+        "cancelled": "dialog.closed"
+      },
+      "source": {
+        "path": "desktop/ui/src/features/sessions/SessionsView.tsx",
+        "function": "SessionsView"
+      }
+    }
+  ]
+}

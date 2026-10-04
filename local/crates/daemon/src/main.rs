@@ -156,7 +156,7 @@ async fn main() -> anyhow::Result<()> {
             "http://localhost:{}/v1/auth/google/callback",
             address.port()
         ),
-        server_url,
+        server_url.clone(),
     )?;
     state.start_file_sync();
     let endpoint = format!("http://localhost:{}", address.port());
@@ -169,6 +169,16 @@ async fn main() -> anyhow::Result<()> {
             api_version: "v1".into(),
         },
     )?;
+    if let Some(parent) = discovery_path.parent() {
+        let _ = dotenvy::from_path(parent.join("config/observability.env"));
+    }
+    let _telemetry = colab_observability::init_local("colab-local-core", include_str!("../../../VERSION").trim(), format!("{endpoint}/v1/observability/traces"), bearer.clone());
+    let clock_endpoint = format!("{server_url}/v1/observability/clock");
+    if std::env::var("COLAB_TRACING_ENABLED").is_ok_and(|v|v=="1") {
+        tokio::spawn(async move {
+            loop { colab_observability::calibrate(&clock_endpoint).await; tokio::time::sleep(std::time::Duration::from_secs(300)).await; }
+        });
+    }
     println!("colabd listening on {endpoint}");
     axum::serve(
         listener,
