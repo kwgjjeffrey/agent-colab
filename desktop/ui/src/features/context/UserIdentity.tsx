@@ -1,17 +1,16 @@
+import { traceTargets } from "@/api/trace-locators";
+import { runOperation } from "@/api/operation-runner";
 import { useEffect, useState, type ReactNode } from "react";
 import { accountRealtime } from "@/api/realtime";
-import {
-  HoverCard,
-  HoverCardTrigger,
-  HoverCardContent,
-} from "@/components/ui/hover-card";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { AgentMemberItem } from "@/features/messages/AgentMemberItem";
 import { AgentWorkDrawer } from "@/features/agent/AgentWorkDrawer";
 import { messageRequest } from "@/features/messages/api";
 import type { AgentRequestStatus } from "@/features/messages/types";
 import { useChannelContext } from "./ChannelContext";
 import { ContextCapsule } from "./ContextCapsule";
-export function UserIdentityCard({ id, name }: { id?: string; name: string }) {
+import type { Blueprint } from "@/features/messages/types";
+export function UserIdentityCard({ id, name, onGive }: { id?: string; name: string; onGive?: (agent: Blueprint) => void }) {
   const context = useChannelContext(),
     person = context?.people.find((row) => row.memberId === id);
   const [requests, setRequests] = useState<AgentRequestStatus[]>([]),
@@ -21,20 +20,10 @@ export function UserIdentityCard({ id, name }: { id?: string; name: string }) {
     if (!context) return;
     let alive = true;
     const load = () => {
-      void messageRequest<AgentRequestStatus[]>(
-        `/v1/channels/${context.channelId}/agent-requests`,
-        undefined,
-        true,
-      )
-        .then((rows) => {
-          if (alive) {
-            setRequests(rows);
-            setError(undefined);
-          }
-        })
-        .catch((reason) => {
-          if (alive) setError(String(reason));
-        });
+      void runOperation("members.identity.requests", async (operation) => {
+        try { const rows=await operation.message<AgentRequestStatus[]>(`/v1/channels/${context.channelId}/agent-requests`); if (alive) {setRequests(rows);setError(undefined);} else operation.cancel(); }
+        catch(reason) {operation.fail(); if(alive)setError(String(reason));}
+      });
     };
     load();
     const off = accountRealtime.subscribe((frame) => {
@@ -86,6 +75,7 @@ export function UserIdentityCard({ id, name }: { id?: string; name: string }) {
             }
             requests={requests}
             showWork={setWork}
+            onGive={onGive}
           />
         ))}
         {!agents.length && (
@@ -122,37 +112,28 @@ export function UserIdentity({
   id,
   name,
   children,
+  className,
+  onGive,
 }: {
   id?: string;
   name: string;
   children: ReactNode;
+  className?: string;
+  onGive?: (agent: Blueprint) => void;
 }) {
   const [open, setOpen] = useState(false);
   return (
-    <HoverCard open={open} onOpenChange={setOpen}>
-      <HoverCardTrigger
-        delay={150}
-        closeDelay={150}
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger data-trace-target={traceTargets("members.identity.requests")}
         render={
-          <span
-            role="button"
-            tabIndex={0}
-            className="inline-flex cursor-pointer"
-            onClick={(event) => {
-              event.stopPropagation();
-              setOpen((value) => !value);
-            }}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") setOpen((value) => !value);
-            }}
-          />
+          <span data-trace-target={traceTargets("members.identity.requests")} role="button" tabIndex={0} className={className ?? "inline-flex cursor-pointer text-left"} onClick={(event) => event.stopPropagation()} />
         }
       >
         {children}
-      </HoverCardTrigger>
-      <HoverCardContent className="w-80 p-4">
-        <UserIdentityCard id={id} name={name} />
-      </HoverCardContent>
-    </HoverCard>
+      </PopoverTrigger>
+      <PopoverContent className="w-80 p-4">
+        <UserIdentityCard id={id} name={name} onGive={onGive} />
+      </PopoverContent>
+    </Popover>
   );
 }

@@ -27,7 +27,7 @@ it("loads only people on entry and waits for an explicit resource choice", async
     return [];
   });
   render(<ChannelContextProvider channelId="channel" navigate={vi.fn()}><Consumer /></ChannelContextProvider>);
-  await waitFor(() => expect(request).toHaveBeenCalledWith("/v1/channels/channel/participants", undefined, true));
+  await waitFor(() => expect(request).toHaveBeenCalledWith("/v1/channels/channel/participants", undefined, true, expect.anything()));
   expect(request.mock.calls.some(([path]) => /\/(files|sessions|canvases|messages)(?:\?|$)/.test(path))).toBe(false);
   await userEvent.setup().click(screen.getByRole("button", { name: "Open resource choices" }));
   await waitFor(() => expect(request.mock.calls.some(([path]) => path.endsWith("/canvases"))).toBe(true));

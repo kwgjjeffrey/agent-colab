@@ -1,3 +1,5 @@
+import { traceTargets } from "@/api/trace-locators";
+import { runOperation } from "@/api/operation-runner";
 import { useEffect, useMemo, useState } from "react";
 import { PlusIcon, SearchIcon } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -79,6 +81,9 @@ export function SkillsView({ channelId, channelName, busy, defaultAgent, install
   const [agentPrompt, setAgentPrompt] = useState<{ share: SkillShare; rows: Installation[] }>();
 
   async function loadShares(silent = false) {
+return runOperation("skills.list", async (operation) => {
+
+
     const request = silent ? fetch : trackedFetch;
     const response = await request(`/v1/channels/${channelId}/skills`);
     if (!response.ok) throw new Error(await response.text());
@@ -89,14 +94,21 @@ export function SkillsView({ channelId, channelName, busy, defaultAgent, install
       return [share.id, result.ok ? await result.json() as Installation[] : []] as const;
     }));
     setInstallations(Object.fromEntries(states));
-  }
+
+});
+}
 
   async function loadSources(search = query) {
+return runOperation("skills.sources", async (operation) => {
+const trackedFetch = operation.fetch;
+
     const params = new URLSearchParams({ query: search, recentHours: "48", channelId });
     const response = await trackedFetch(`/v1/skill-sources?${params}`);
     if (!response.ok) throw new Error(await response.text());
     setSources(await response.json());
-  }
+
+});
+}
 
   useEffect(() => {
     void loadShares().catch((reason) => setError(String(reason)));
@@ -111,6 +123,9 @@ export function SkillsView({ channelId, channelName, busy, defaultAgent, install
   }, [showShare, query, channelId]);
 
   async function share(source: { sourceId?: string; sourcePath?: string }) {
+return runOperation("skills.share", async (operation) => {
+const trackedFetch = operation.fetch;
+
     setWorking("share"); setError(undefined);
     try {
       const response = await trackedFetch(`/v1/channels/${channelId}/skills/share`, {
@@ -118,9 +133,11 @@ export function SkillsView({ channelId, channelName, busy, defaultAgent, install
       });
       if (!response.ok) throw new Error(await response.text());
       setShowShare(false); setQuery(""); await loadShares();
-    } catch (reason) { setError(String(reason)); }
+    } catch (reason) { operation.fail(); setError(String(reason)); }
     finally { setWorking(undefined); }
-  }
+
+});
+}
 
   async function chooseSource() {
     const path = await onChoose(true);
@@ -128,24 +145,34 @@ export function SkillsView({ channelId, channelName, busy, defaultAgent, install
   }
 
   async function mutateInstallation(share: SkillShare, target: AgentTarget, remove: boolean) {
+return runOperation("skills.installation", async (operation) => {
+const trackedFetch = operation.fetch;
+
     setWorking(`${share.id}:${target}`); setError(undefined);
     try {
       const response = await trackedFetch(`/v1/skills/${share.id}/targets/${target}${remove ? "" : "/ensure"}`, { method: remove ? "DELETE" : "POST" });
       if (!response.ok) throw new Error(await response.text());
       await loadShares();
-    } catch (reason) { setError(String(reason)); }
+    } catch (reason) { operation.fail(); setError(String(reason)); }
     finally { setWorking(undefined); }
-  }
+
+});
+}
 
   async function withdraw(share: SkillShare) {
+return runOperation("skills.withdraw", async (operation) => {
+const trackedFetch = operation.fetch;
+
     setWorking(share.id); setError(undefined);
     try {
       const response = await trackedFetch(`/v1/skills/${share.id}`, { method: "DELETE" });
       if (!response.ok) throw new Error(await response.text());
       await loadShares();
-    } catch (reason) { setError(String(reason)); }
+    } catch (reason) { operation.fail(); setError(String(reason)); }
     finally { setWorking(undefined); }
-  }
+
+});
+}
 
   function readableRef(share: SkillShare) {
     return `colab://channel/${encodeURIComponent(channelName)}/${encodeURIComponent(share.name)}`;
@@ -164,7 +191,7 @@ export function SkillsView({ channelId, channelName, busy, defaultAgent, install
   const sourceRows = useMemo(() => sources, [sources]);
   return (
     <div className="grid gap-6">
-      <div className="flex justify-end"><Button onClick={() => setShowShare(true)}><PlusIcon />Share skill</Button></div>
+      <div className="flex justify-end"><Button data-trace-target={traceTargets("skills.share", "skills.sources")} onClick={() => setShowShare(true)}><PlusIcon />Share skill</Button></div>
       {shares.length === 0 ? (
         <Empty><EmptyHeader><EmptyTitle>No shared skills yet</EmptyTitle><EmptyDescription>Share a recently changed Agent Skill or choose its source folder.</EmptyDescription></EmptyHeader></Empty>
       ) : (
@@ -175,13 +202,13 @@ export function SkillsView({ channelId, channelName, busy, defaultAgent, install
                 <Avatar className="size-9"><AvatarImage src={share.contributorAvatarUrl} /><AvatarFallback>{initials(share.contributorName)}</AvatarFallback></Avatar>
                 <div className="min-w-0 flex-1"><strong className="block truncate">{share.name}</strong><span className="text-sm text-muted-foreground">{share.contributorName}{share.canWithdraw ? " (me)" : ""}{share.description ? ` · ${share.description}` : ""}</span></div>
                 <Button variant="outline" className="opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100" onClick={() => setAgentPrompt({ share, rows: installations[share.id] ?? [] })}>Give to Agent</Button>
-                {share.canWithdraw && <Button variant="destructive" disabled={working === share.id} onClick={() => void withdraw(share)}>Withdraw</Button>}
+                {share.canWithdraw && <Button data-trace-target={traceTargets("skills.withdraw")} variant="destructive" disabled={working === share.id} onClick={() => void withdraw(share)}>Withdraw</Button>}
               </div>
               <div className="flex flex-wrap gap-2 pl-12">
                 {targets.map((target) => {
                   const state = installations[share.id]?.find((item) => item.targetAgent === target.id)?.state ?? "not_installed";
                   const active = state === "installed" || state === "update_available" || state === "conflict";
-                  return <div key={target.id} className="flex items-center gap-2 rounded-lg border px-3 py-2 text-sm"><span>{target.label}</span><Badge variant={state === "conflict" ? "destructive" : "secondary"}>{state.replace("_", " ")}</Badge><Button size="sm" variant="outline" disabled={busy || Boolean(working) || state === "conflict"} onClick={() => void mutateInstallation(share, target.id, active)}>{active ? "Uninstall" : "Install"}</Button>{state === "update_available" && <Button size="sm" onClick={() => void mutateInstallation(share, target.id, false)}>Update</Button>}</div>;
+                  return <div key={target.id} className="flex items-center gap-2 rounded-lg border px-3 py-2 text-sm"><span>{target.label}</span><Badge variant={state === "conflict" ? "destructive" : "secondary"}>{state.replace("_", " ")}</Badge><Button data-trace-target={traceTargets("skills.installation")} size="sm" variant="outline" disabled={busy || Boolean(working) || state === "conflict"} onClick={() => void mutateInstallation(share, target.id, active)}>{active ? "Uninstall" : "Install"}</Button>{state === "update_available" && <Button data-trace-target={traceTargets("skills.installation")} size="sm" onClick={() => void mutateInstallation(share, target.id, false)}>Update</Button>}</div>;
                 })}
               </div>
             </div>

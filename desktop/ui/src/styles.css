@@ -149,7 +149,10 @@ button:not(:disabled), a[href], [role="button"]:not([aria-disabled="true"]), [ro
 .canvas-editor-content p { margin: .35rem 0; line-height: 1.65; }
 .canvas-editor-content ul { list-style: disc; padding-left: 1.5rem; }
 .canvas-editor-content ol { list-style: decimal; padding-left: 1.5rem; }
-.canvas-editor-content blockquote { border-left: 3px solid var(--border); padding-left: 1rem; color: var(--muted-foreground); }
+.canvas-editor-content blockquote { border-left: 4px solid var(--foreground); margin: 1rem 0; padding: .25rem 0 .25rem 1rem; color: var(--muted-foreground); font-style: italic; }
+.canvas-editor-content pre { margin: 1rem 0; overflow-x: auto; border-radius: .5rem; background: var(--muted); padding: 1rem; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .875rem; line-height: 1.6; }
+.canvas-editor-content code { border-radius: .25rem; background: var(--muted); padding: .125rem .25rem; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .875em; }
+.canvas-editor-content pre code { background: transparent; padding: 0; font-size: inherit; }
 .work-markdown p + p { margin-top: .75rem; }
 .work-markdown pre { overflow: auto; border-radius: .5rem; background: var(--muted); padding: .75rem; margin: .75rem 0; font-size: .75rem; white-space: pre-wrap; overflow-wrap: anywhere; }
 .work-markdown :not(pre) > code { border-radius: .25rem; background: var(--muted); padding: .1rem .25rem; font-size: .85em; }

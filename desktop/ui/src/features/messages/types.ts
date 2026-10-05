@@ -57,6 +57,7 @@ export type ChannelMessage = {
   createdAt: string;
 };
 export type AgentRequestStatus = {
+  traceContext?: {version: number; traceparent?: string; entryId?: string} | null;
   id: string;
   state: string;
   triggerMessageId?: string;

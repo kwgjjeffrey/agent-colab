@@ -1,3 +1,5 @@
+import type { Operation } from "@/api/telemetry";
+import { runOperation } from "@/api/operation-runner";
 import {
   createContext,
   useContext,
@@ -25,7 +27,7 @@ type Context = {
   navigate: (resource: ContextResource) => void;
   forward: (resources: ContextResource[], messageIds?: string[]) => void;
   refresh: (includeMessages?: boolean) => Promise<void>;
-  lookup: (kind: ContextResource["kind"], id: string) => Promise<ContextResource | undefined>;
+  lookup: (kind: ContextResource["kind"], id: string, parent?: Operation) => Promise<ContextResource | undefined>;
 };
 const ChannelContext = createContext<Context | null>(null);
 export function useChannelContext() {
@@ -51,7 +53,9 @@ export function ChannelContextProvider({
     }>();
   const active = useRef(false),
     inFlight = useRef<Map<string, Promise<void>>>(new Map());
-  async function fetchPeople() {
+  async function fetchPeople() {return runOperation("context.people", async (operation)=>{
+const messageRequest=operation.message;
+
     const participants = await messageRequest<Participant[]>(
       `/v1/channels/${channelId}/participants`, undefined, true,
     );
@@ -67,8 +71,11 @@ export function ChannelContextProvider({
     if (!active.current) return;
     setPeople(participants);
     setAgents(groups.flat().filter((row) => row.inChannel));
-  }
-  async function fetchResources(includeMessages: boolean) {
+
+});}
+  async function fetchResources(includeMessages: boolean) {return runOperation("context.resources", async (operation)=>{
+const messageRequest=operation.message;
+
     const [files, sessions, canvases, messages] =
       await Promise.all([
         messageRequest<
@@ -138,7 +145,8 @@ export function ChannelContextProvider({
       ...previous.filter((row) => row.kind === "message"),
     ]);
     setError(undefined);
-  }
+
+});}
   function refresh(includeMessages = false) {
     const key = includeMessages ? "with-messages" : "assets";
     const existing = inFlight.current.get(key);
@@ -149,7 +157,9 @@ export function ChannelContextProvider({
     inFlight.current.set(key, task);
     return task;
   }
-  async function lookup(kind: ContextResource["kind"], id: string) {
+  async function lookup(kind: ContextResource["kind"], id: string, parent?: Operation) {return runOperation("context.lookup", async (operation)=>{
+const messageRequest=operation.message;
+
     const cached = resources.find((row) => row.kind === kind && row.id === id);
     if (cached) return cached;
     const path = kind === "files" ? "files" : kind === "session" ? "sessions" : kind === "canvas" ? "canvases" : null;
@@ -166,7 +176,8 @@ export function ChannelContextProvider({
       contributorMemberId: row.contributorMemberId ?? row.createdByMemberId,
       updatedAt: row.updatedAt,
     };
-  }
+
+}, {parent});}
   useEffect(() => {
     active.current = true;
     let mounted = true;
@@ -222,7 +233,9 @@ export function ChannelContextProvider({
           `${handoff?.messageIds.length ?? 0} selected messages`
         }
         onClose={() => setHandoff(undefined)}
-        onSend={async (agent, instruction) => {
+        onSend={async (agent, instruction) => {return runOperation("context.forward", async (operation)=>{
+const messageRequest=operation.message;
+
           if (!handoff) return;
           await messageRequest(`/v1/channels/${channelId}/agent-requests`, {
             method: "POST",
@@ -237,7 +250,8 @@ export function ChannelContextProvider({
               })),
             }),
           });
-        }}
+
+});}}
       />
     </ChannelContext.Provider>
   );

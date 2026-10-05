@@ -1,3 +1,6 @@
+import { beginOperation, type Operation } from "@/api/telemetry";
+import { operations } from "@/api/trace-operations";
+import { runOperation } from "@/api/operation-runner";
 import { useEffect, useRef, useState } from "react";
 import { FileQuestionIcon, LoaderCircleIcon } from "lucide-react";
 import { trackedFetch } from "@/api/request-activity";
@@ -28,6 +31,7 @@ const rawUrl = (shareId: string, path: string) =>
 /** Renderers are deliberately local-only: preview never uploads document contents to a third party. */
 export function FilePreview({ shareId, path, size = 0 }: Props) {
   const [state, setState] = useState<PreviewState>({ kind: "empty" });
+  const nativeOperation=useRef<Operation | undefined>(undefined);
 
   useEffect(() => {
     let active = true;
@@ -36,13 +40,10 @@ export function FilePreview({ shareId, path, size = 0 }: Props) {
       return () => { active = false; };
     }
     const extension = extensionOf(path);
-    if (IMAGE_EXTENSIONS.has(extension)) {
-      setState({ kind: "native", type: "image", url: rawUrl(shareId, path) });
-      return () => { active = false; };
-    }
-    if (extension === "pdf") {
-      setState({ kind: "native", type: "pdf", url: rawUrl(shareId, path) });
-      return () => { active = false; };
+    if (IMAGE_EXTENSIONS.has(extension) || extension === "pdf") {
+      const operation=beginOperation(operations["files.preview.native"]); nativeOperation.current=operation;
+      setState({ kind: "native", type: extension === "pdf" ? "pdf" : "image", url: operation.nativeUrl(rawUrl(shareId,path)) });
+      return () => { active=false; operation.finish("cancelled","view.closed"); if (nativeOperation.current===operation) nativeOperation.current=undefined; };
     }
     if (![...TEXT_EXTENSIONS, "docx", "xlsx"].includes(extension)) {
       setState({ kind: "unsupported", message: `Preview is not available for .${extension || "unknown"} files.` });
@@ -53,7 +54,9 @@ export function FilePreview({ shareId, path, size = 0 }: Props) {
       return () => { active = false; };
     }
     setState({ kind: "loading" });
-    void (async () => {
+    void (async () => {return runOperation("files.preview", async (operation)=>{
+const trackedFetch=operation.fetch;
+
       try {
         if (TEXT_EXTENSIONS.has(extension)) {
           const response = await trackedFetch(`/v1/files/${shareId}/content?path=${encodeURIComponent(path)}`);
@@ -92,10 +95,11 @@ export function FilePreview({ shareId, path, size = 0 }: Props) {
           sheetName: sheet.name,
           truncated: sheet.actualRowCount > rowLimit || sheet.actualColumnCount > columnLimit,
         });
-      } catch (error) {
+      } catch (error) {operation.fail();
         if (active) setState({ kind: "unsupported", message: `Preview failed: ${error instanceof Error ? error.message : String(error)}` });
       }
-    })();
+
+});})();
     return () => { active = false; };
   }, [path, shareId, size]);
 
@@ -103,9 +107,9 @@ export function FilePreview({ shareId, path, size = 0 }: Props) {
   if (state.kind === "loading") return <PreviewNotice message="Loading preview…" loading />;
   if (state.kind === "unsupported") return <PreviewNotice message={state.message} />;
   if (state.kind === "native" && state.type === "image") {
-    return <div className="flex size-full items-center justify-center overflow-auto bg-muted/20 p-8"><img src={state.url} alt={path ?? ""} className="max-h-full max-w-full object-contain" /></div>;
+    return <div className="flex size-full items-center justify-center overflow-auto bg-muted/20 p-8"><img onLoad={()=>nativeOperation.current?.finish("success","preview.loaded")} onError={()=>nativeOperation.current?.finish("error","preview.failed")} src={state.url} alt={path ?? ""} className="max-h-full max-w-full object-contain" /></div>;
   }
-  if (state.kind === "native") return <iframe title={path} src={state.url} className="size-full border-0" />;
+  if (state.kind === "native") return <iframe onLoad={()=>nativeOperation.current?.finish("success","preview.frame_loaded")} title={path} src={state.url} className="size-full border-0" />;
   if (state.kind === "docx") return <DocxPreview buffer={state.buffer} />;
   if (state.kind === "sheet") {
     return (

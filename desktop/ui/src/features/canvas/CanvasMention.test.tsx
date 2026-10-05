@@ -17,6 +17,10 @@ vi.mock("@tiptap/react", () => ({
 }));
 afterEach(cleanup);
 describe("Canvas identity HoverCard", () => {
+  it("highlights the current member mention like Messages", () => {
+    render(<CanvasMentionContext.Provider value={{ canvasId: "doc", agents: [], participants: [{ memberId: "me", displayName: "Alice", email: "", isCurrent: true, agentCount: 0 }], requests: [], prepareSend: vi.fn(), showWork: vi.fn() }}><CanvasMention {...({ node: { attrs: { id: "me", kind: "member", label: "Alice" } }, getPos: () => 1 } as unknown as NodeViewProps)} /></CanvasMentionContext.Provider>);
+    expect(screen.getByText("@Alice").className).toContain("member-mention-me");
+  });
   it("stays open from capsule into card and closes after leaving both", async () => {
     const user = userEvent.setup();
     const props = {
@@ -30,7 +34,7 @@ describe("Canvas identity HoverCard", () => {
           agents: [],
           participants: [],
           requests: [],
-          send: vi.fn(),
+          prepareSend: vi.fn(),
           showWork: vi.fn(),
         }}
       >

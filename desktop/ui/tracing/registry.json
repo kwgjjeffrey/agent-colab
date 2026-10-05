@@ -12,7 +12,13 @@
         "page": "channel.messages",
         "target": "messages.send",
         "tab": "Messages",
-        "selector": "button[aria-label='Send message']"
+        "selector": "[data-trace-target~=\"messages.send\"]",
+        "locator": {
+          "region": "messages",
+          "steps": [],
+          "kind": "control",
+          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+        }
       },
       "completion": {
         "success": "message.rendered",
@@ -25,47 +31,2726 @@
       }
     },
     {
-      "id": "files.share",
-      "description": "从本机选择文件或目录，注册为当前 Channel 的共享文件",
+      "id": "channels.list",
+      "description": "列出当前账号可访问的 Channel",
       "owner": "desktop-ui",
-      "status": "candidate",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "application",
+        "target": "channels.list",
+        "selector": "[data-trace-target~=\"channels.list\"]",
+        "locator": {
+          "region": "channels",
+          "steps": [],
+          "kind": "region"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/ui/src/main.tsx",
+        "function": "refreshChannels"
+      }
+    },
+    {
+      "id": "accounts.list",
+      "description": "查询本机保存的账号",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "application.settings",
+        "target": "accounts.list",
+        "selector": "[data-trace-target~=\"accounts.list\"]",
+        "locator": {
+          "region": "settings",
+          "steps": [
+            {
+              "selector": "[data-trace-nav=\"settings\"]",
+              "unless": "[data-trace-region=\"settings\"]"
+            },
+            {
+              "selector": "[data-trace-nav=\"settings.main\"]",
+              "optional": true
+            },
+            {
+              "selector": "[data-trace-nav=\"accounts\"]"
+            }
+          ],
+          "kind": "region"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/ui/src/main.tsx",
+        "function": "refreshAccounts"
+      }
+    },
+    {
+      "id": "system.installation",
+      "description": "查看本机各制品与 Agent 的安装状态",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "application.settings",
+        "target": "system.installation",
+        "selector": "[data-trace-target~=\"system.installation\"]",
+        "locator": {
+          "region": "settings",
+          "steps": [
+            {
+              "selector": "[data-trace-nav=\"settings\"]",
+              "unless": "[data-trace-region=\"settings\"]"
+            },
+            {
+              "selector": "[data-trace-nav=\"settings.main\"]",
+              "optional": true
+            }
+          ],
+          "kind": "region"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/ui/src/main.tsx",
+        "function": "loadInstallation"
+      }
+    },
+    {
+      "id": "system.check-update",
+      "description": "检查 Colab 制品更新",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "application.settings",
+        "target": "system.check-update",
+        "selector": "[data-trace-target~=\"system.check-update\"]",
+        "locator": {
+          "region": "settings",
+          "steps": [
+            {
+              "selector": "[data-trace-nav=\"settings\"]",
+              "unless": "[data-trace-region=\"settings\"]"
+            },
+            {
+              "selector": "[data-trace-nav=\"settings.main\"]",
+              "optional": true
+            }
+          ],
+          "kind": "control",
+          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/ui/src/main.tsx",
+        "function": "checkInstallation"
+      }
+    },
+    {
+      "id": "system.update",
+      "description": "安装已验证的 Colab 制品；完成边界为 updater 返回与重启恢复",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "application.settings",
+        "target": "system.update",
+        "selector": "[data-trace-target~=\"system.update\"]",
+        "locator": {
+          "region": "settings",
+          "steps": [
+            {
+              "selector": "[data-trace-nav=\"settings\"]",
+              "unless": "[data-trace-region=\"settings\"]"
+            },
+            {
+              "selector": "[data-trace-nav=\"settings.main\"]",
+              "optional": true
+            }
+          ],
+          "kind": "control",
+          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试",
+          "stateNote": "检查更新、更新、重启共用此按钮；当前可执行动作以按钮文字为准"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/ui/src/main.tsx",
+        "function": "updateInstallation"
+      }
+    },
+    {
+      "id": "system.restart",
+      "description": "重启 Local Core 并等待 readiness",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "application.settings",
+        "target": "system.restart",
+        "selector": "[data-trace-target~=\"system.restart\"]",
+        "locator": {
+          "region": "settings",
+          "steps": [
+            {
+              "selector": "[data-trace-nav=\"settings\"]",
+              "unless": "[data-trace-region=\"settings\"]"
+            },
+            {
+              "selector": "[data-trace-nav=\"settings.main\"]",
+              "optional": true
+            }
+          ],
+          "kind": "control",
+          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试",
+          "stateNote": "检查更新、更新、重启共用此按钮；当前可执行动作以按钮文字为准"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/ui/src/main.tsx",
+        "function": "restartInstalledCore"
+      }
+    },
+    {
+      "id": "system.skill-target",
+      "description": "安装或卸载目标 Agent 的 Colab Skill",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "application.settings",
+        "target": "system.skill-target",
+        "selector": "[data-trace-target~=\"system.skill-target\"]",
+        "locator": {
+          "region": "settings",
+          "steps": [
+            {
+              "selector": "[data-trace-nav=\"settings\"]",
+              "unless": "[data-trace-region=\"settings\"]"
+            },
+            {
+              "selector": "[data-trace-nav=\"settings.main\"]",
+              "optional": true
+            }
+          ],
+          "kind": "control",
+          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/ui/src/main.tsx",
+        "function": "setAgentSkill"
+      }
+    },
+    {
+      "id": "system.default-agent",
+      "description": "设置设备默认 Agent",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "application.settings",
+        "target": "system.default-agent",
+        "selector": "[data-trace-target~=\"system.default-agent\"]",
+        "locator": {
+          "region": "settings",
+          "steps": [
+            {
+              "selector": "[data-trace-nav=\"settings\"]",
+              "unless": "[data-trace-region=\"settings\"]"
+            },
+            {
+              "selector": "[data-trace-nav=\"settings.main\"]",
+              "optional": true
+            }
+          ],
+          "kind": "control",
+          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/ui/src/main.tsx",
+        "function": "setDefaultAgent"
+      }
+    },
+    {
+      "id": "organizations.list",
+      "description": "列出可访问的 Organization",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "application.settings",
+        "target": "organizations.list",
+        "selector": "[data-trace-target~=\"organizations.list\"]",
+        "locator": {
+          "region": "settings",
+          "steps": [
+            {
+              "selector": "[data-trace-nav=\"settings\"]",
+              "unless": "[data-trace-region=\"settings\"]"
+            },
+            {
+              "selector": "[data-trace-nav=\"settings.main\"]",
+              "optional": true
+            },
+            {
+              "selector": "[data-trace-nav=\"organizations\"]"
+            }
+          ],
+          "kind": "region"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/ui/src/main.tsx",
+        "function": "refreshOrganizations"
+      }
+    },
+    {
+      "id": "auth.sign-in",
+      "description": "获取登录入口并打开身份平台",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "application.settings",
+        "target": "auth.sign-in",
+        "selector": "[data-trace-target~=\"auth.sign-in\"]",
+        "locator": {
+          "region": "settings",
+          "steps": [
+            {
+              "selector": "[data-trace-nav=\"settings\"]",
+              "unless": "[data-trace-region=\"settings\"]"
+            },
+            {
+              "selector": "[data-trace-nav=\"settings.main\"]",
+              "optional": true
+            },
+            {
+              "selector": "[data-trace-nav=\"accounts\"]"
+            }
+          ],
+          "kind": "control",
+          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/ui/src/main.tsx",
+        "function": "signIn"
+      }
+    },
+    {
+      "id": "auth.switch",
+      "description": "切换本机账号并刷新可见资源",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "application.settings",
+        "target": "auth.switch",
+        "selector": "[data-trace-target~=\"auth.switch\"]",
+        "locator": {
+          "region": "settings",
+          "steps": [
+            {
+              "selector": "[data-trace-nav=\"settings\"]",
+              "unless": "[data-trace-region=\"settings\"]"
+            },
+            {
+              "selector": "[data-trace-nav=\"settings.main\"]",
+              "optional": true
+            },
+            {
+              "selector": "[data-trace-nav=\"accounts\"]"
+            }
+          ],
+          "kind": "control",
+          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/ui/src/main.tsx",
+        "function": "switchAccount"
+      }
+    },
+    {
+      "id": "auth.logout",
+      "description": "退出当前账号",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "application.settings",
+        "target": "auth.logout",
+        "selector": "[data-trace-target~=\"auth.logout\"]",
+        "locator": {
+          "region": "settings",
+          "steps": [
+            {
+              "selector": "[data-trace-nav=\"settings\"]",
+              "unless": "[data-trace-region=\"settings\"]"
+            },
+            {
+              "selector": "[data-trace-nav=\"settings.main\"]",
+              "optional": true
+            },
+            {
+              "selector": "[data-trace-nav=\"accounts\"]"
+            }
+          ],
+          "kind": "control",
+          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/ui/src/main.tsx",
+        "function": "logout"
+      }
+    },
+    {
+      "id": "channels.create",
+      "description": "创建 Channel 并选择新 Channel",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "application",
+        "target": "channels.create",
+        "selector": "[data-trace-target~=\"channels.create\"]",
+        "locator": {
+          "region": "application",
+          "steps": [],
+          "kind": "control",
+          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/ui/src/main.tsx",
+        "function": "createChannel"
+      }
+    },
+    {
+      "id": "organizations.switch",
+      "description": "切换活动 Organization",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "application.settings",
+        "target": "organizations.switch",
+        "selector": "[data-trace-target~=\"organizations.switch\"]",
+        "locator": {
+          "region": "settings",
+          "steps": [
+            {
+              "selector": "[data-trace-nav=\"settings\"]",
+              "unless": "[data-trace-region=\"settings\"]"
+            },
+            {
+              "selector": "[data-trace-nav=\"settings.main\"]",
+              "optional": true
+            },
+            {
+              "selector": "[data-trace-nav=\"organizations\"]"
+            }
+          ],
+          "kind": "control",
+          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/ui/src/main.tsx",
+        "function": "switchOrganization"
+      }
+    },
+    {
+      "id": "organizations.create",
+      "description": "创建 Organization",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "application.settings",
+        "target": "organizations.create",
+        "selector": "[data-trace-target~=\"organizations.create\"]",
+        "locator": {
+          "region": "settings",
+          "steps": [
+            {
+              "selector": "[data-trace-nav=\"settings\"]",
+              "unless": "[data-trace-region=\"settings\"]"
+            },
+            {
+              "selector": "[data-trace-nav=\"settings.main\"]",
+              "optional": true
+            },
+            {
+              "selector": "[data-trace-nav=\"organizations\"]"
+            }
+          ],
+          "kind": "control",
+          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/ui/src/main.tsx",
+        "function": "createOrganization"
+      }
+    },
+    {
+      "id": "invitations.accept",
+      "description": "接受待处理的 Organization 邀请",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "application",
+        "target": "invitations.accept",
+        "selector": "[data-trace-target~=\"invitations.accept\"]",
+        "locator": {
+          "region": "application",
+          "steps": [],
+          "kind": "region",
+          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试",
+          "stateNote": "接受邀请由登录后的回调自动承接，页面没有独立按钮"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/ui/src/main.tsx",
+        "function": "finishPendingInvitation"
+      }
+    },
+    {
+      "id": "members.list",
+      "description": "读取 Channel 成员清单",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "channel.settings",
+        "target": "members.list",
+        "tab": "Settings",
+        "selector": "[data-trace-target~=\"members.list\"]",
+        "locator": {
+          "region": "channel-settings",
+          "steps": [],
+          "kind": "region"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/ui/src/main.tsx",
+        "function": "loadMembers"
+      }
+    },
+    {
+      "id": "files.list",
+      "description": "读取 Channel 共享 Files 清单",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "channel.files",
+        "target": "files.list",
+        "tab": "Files",
+        "selector": "[data-trace-target~=\"files.list\"]",
+        "locator": {
+          "region": "files",
+          "steps": [],
+          "kind": "region"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/ui/src/main.tsx",
+        "function": "loadFileShares"
+      }
+    },
+    {
+      "id": "sessions.list",
+      "description": "读取 Channel 共享 Session 清单",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "channel.sessions",
+        "target": "sessions.list",
+        "tab": "Sessions",
+        "selector": "[data-trace-target~=\"sessions.list\"]",
+        "locator": {
+          "region": "sessions",
+          "steps": [],
+          "kind": "region"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/ui/src/main.tsx",
+        "function": "loadSessionShares"
+      }
+    },
+    {
+      "id": "sessions.withdraw",
+      "description": "撤回自己的共享 Session",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "channel.sessions",
+        "target": "sessions.withdraw",
+        "tab": "Sessions",
+        "selector": "[data-trace-target~=\"sessions.withdraw\"]",
+        "locator": {
+          "region": "sessions",
+          "steps": [],
+          "kind": "control",
+          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/ui/src/main.tsx",
+        "function": "withdrawSession"
+      }
+    },
+    {
+      "id": "files.share",
+      "description": "登记 Files 并返回本地受理状态；后台同步是独立阶段",
+      "owner": "desktop-ui",
+      "status": "instrumented",
       "entry": {
         "kind": "gui",
         "page": "channel.files",
         "target": "files.share",
         "tab": "Files",
-        "buttonText": "Share files"
+        "selector": "[data-trace-target~=\"files.share\"]",
+        "locator": {
+          "region": "files",
+          "steps": [],
+          "kind": "control",
+          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+        }
       },
       "completion": {
-        "success": "share.committed",
-        "failure": "share.failed",
-        "cancelled": "dialog.closed"
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/ui/src/main.tsx",
+        "function": "shareFiles"
+      }
+    },
+    {
+      "id": "files.materialize",
+      "description": "刷新并物化共享 Files",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "channel.files",
+        "target": "files.materialize",
+        "tab": "Files",
+        "selector": "[data-trace-target~=\"files.materialize\"]",
+        "locator": {
+          "region": "files",
+          "steps": [],
+          "kind": "control",
+          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/ui/src/main.tsx",
+        "function": "ensureLocalFiles"
+      }
+    },
+    {
+      "id": "files.withdraw",
+      "description": "撤回自己的共享 Files",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "channel.files",
+        "target": "files.withdraw",
+        "tab": "Files",
+        "selector": "[data-trace-target~=\"files.withdraw\"]",
+        "locator": {
+          "region": "files",
+          "steps": [],
+          "kind": "control",
+          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/ui/src/main.tsx",
+        "function": "withdrawFiles"
+      }
+    },
+    {
+      "id": "files.retry",
+      "description": "手动重试 Files 同步任务",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "channel.files",
+        "target": "files.retry",
+        "tab": "Files",
+        "selector": "[data-trace-target~=\"files.retry\"]",
+        "locator": {
+          "region": "files",
+          "steps": [],
+          "kind": "control",
+          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/ui/src/main.tsx",
+        "function": "retryFiles"
+      }
+    },
+    {
+      "id": "channels.update",
+      "description": "修改 Channel 名称与图标",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "channel.settings",
+        "target": "channels.update",
+        "tab": "Settings",
+        "selector": "[data-trace-target~=\"channels.update\"] button[type=\"submit\"]",
+        "locator": {
+          "region": "channel-settings",
+          "steps": [],
+          "kind": "control",
+          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/ui/src/main.tsx",
+        "function": "saveChannel"
+      }
+    },
+    {
+      "id": "members.add",
+      "description": "添加或邀请 Channel 成员",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "channel.settings",
+        "target": "members.add",
+        "tab": "Settings",
+        "selector": "[data-trace-target~=\"members.add\"]",
+        "locator": {
+          "region": "channel-settings",
+          "steps": [],
+          "kind": "control",
+          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/ui/src/main.tsx",
+        "function": "addMember"
+      }
+    },
+    {
+      "id": "members.role",
+      "description": "修改 Channel 成员角色",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "channel.settings",
+        "target": "members.role",
+        "tab": "Settings",
+        "selector": "[data-trace-target~=\"members.role\"]",
+        "locator": {
+          "region": "channel-settings",
+          "steps": [],
+          "kind": "control",
+          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/ui/src/main.tsx",
+        "function": "changeRole"
+      }
+    },
+    {
+      "id": "members.remove",
+      "description": "移除 Channel 成员",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "channel.settings",
+        "target": "members.remove",
+        "tab": "Settings",
+        "selector": "[data-trace-target~=\"members.remove\"]",
+        "locator": {
+          "region": "channel-settings",
+          "steps": [],
+          "kind": "control",
+          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/ui/src/main.tsx",
+        "function": "removeMember"
+      }
+    },
+    {
+      "id": "members.search",
+      "description": "搜索 Organization 人员",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "channel.settings",
+        "target": "members.search",
+        "tab": "Settings",
+        "selector": "[data-trace-target~=\"members.search\"]",
+        "locator": {
+          "region": "channel-settings",
+          "steps": [],
+          "kind": "control",
+          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/ui/src/main.tsx",
+        "function": "searchPeople"
+      }
+    },
+    {
+      "id": "files.browse",
+      "description": "打开共享 Files 目录树",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "channel.files",
+        "target": "files.browse",
+        "tab": "Files",
+        "selector": "[data-trace-target~=\"files.browse\"]",
+        "locator": {
+          "region": "files",
+          "steps": [],
+          "kind": "control",
+          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
       },
       "source": {
         "path": "desktop/ui/src/features/files/FilesView.tsx",
-        "function": "FilesView"
+        "function": "browse"
+      }
+    },
+    {
+      "id": "files.handoff",
+      "description": "为共享 Files 准备 Agent 交接提示词",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "channel.files",
+        "target": "files.handoff",
+        "tab": "Files",
+        "selector": "[data-trace-target~=\"files.handoff\"]",
+        "locator": {
+          "region": "files",
+          "steps": [],
+          "kind": "control",
+          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/ui/src/features/files/FilesView.tsx",
+        "function": "giveToAgent"
+      }
+    },
+    {
+      "id": "files.inspect",
+      "description": "检查 Files 来源的同步范围与体积",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "channel.files",
+        "target": "files.inspect",
+        "tab": "Files",
+        "selector": "[data-trace-target~=\"files.inspect\"]",
+        "locator": {
+          "region": "files",
+          "steps": [],
+          "kind": "control",
+          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/ui/src/features/files/FilesView.tsx",
+        "function": "inspect"
+      }
+    },
+    {
+      "id": "files.scope.read",
+      "description": "打开自己的 Files 同步范围",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "channel.files",
+        "target": "files.scope.read",
+        "tab": "Files",
+        "selector": "[data-trace-target~=\"files.scope.read\"]",
+        "locator": {
+          "region": "files",
+          "steps": [],
+          "kind": "control",
+          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/ui/src/features/files/FilesView.tsx",
+        "function": "editScope"
+      }
+    },
+    {
+      "id": "files.scope.commit",
+      "description": "确认 Files 同步范围或提交共享",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "channel.files",
+        "target": "files.scope.commit",
+        "tab": "Files",
+        "selector": "[data-trace-target~=\"files.scope.commit\"]",
+        "locator": {
+          "region": "files",
+          "steps": [],
+          "kind": "control",
+          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/ui/src/features/files/FilesView.tsx",
+        "function": "confirmShare"
+      }
+    },
+    {
+      "id": "sessions.sources",
+      "description": "搜索本机 Agent Session 来源",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "channel.sessions",
+        "target": "sessions.sources",
+        "tab": "Sessions",
+        "selector": "[data-trace-target~=\"sessions.sources\"]",
+        "locator": {
+          "region": "sessions",
+          "steps": [],
+          "kind": "control",
+          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/ui/src/features/sessions/SessionsView.tsx",
+        "function": "loadSources"
       }
     },
     {
       "id": "sessions.share",
-      "description": "从本机 Agent 会话目录选择一个会话，注册并同步到当前 Channel",
+      "description": "登记 Session 并返回持久化受理结果",
       "owner": "desktop-ui",
-      "status": "candidate",
+      "status": "instrumented",
       "entry": {
         "kind": "gui",
         "page": "channel.sessions",
         "target": "sessions.share",
         "tab": "Sessions",
-        "buttonText": "Share a session"
+        "selector": "[data-trace-target~=\"sessions.share\"]",
+        "locator": {
+          "region": "sessions",
+          "steps": [],
+          "kind": "control",
+          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+        }
       },
       "completion": {
-        "success": "share.committed",
-        "failure": "share.failed",
-        "cancelled": "dialog.closed"
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
       },
       "source": {
         "path": "desktop/ui/src/features/sessions/SessionsView.tsx",
-        "function": "SessionsView"
+        "function": "share"
+      }
+    },
+    {
+      "id": "skills.list",
+      "description": "读取 Channel Skills 与本机安装状态",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "channel.skills",
+        "target": "skills.list",
+        "tab": "Skills",
+        "selector": "[data-trace-target~=\"skills.list\"]",
+        "locator": {
+          "region": "skills",
+          "steps": [],
+          "kind": "region"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/ui/src/features/skills/SkillsView.tsx",
+        "function": "loadShares"
+      }
+    },
+    {
+      "id": "skills.sources",
+      "description": "发现本机可共享的 Skill",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "channel.skills",
+        "target": "skills.sources",
+        "tab": "Skills",
+        "selector": "[data-trace-target~=\"skills.sources\"]",
+        "locator": {
+          "region": "skills",
+          "steps": [],
+          "kind": "control",
+          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/ui/src/features/skills/SkillsView.tsx",
+        "function": "loadSources"
+      }
+    },
+    {
+      "id": "skills.share",
+      "description": "登记 Skill 为持续共享来源",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "channel.skills",
+        "target": "skills.share",
+        "tab": "Skills",
+        "selector": "[data-trace-target~=\"skills.share\"]",
+        "locator": {
+          "region": "skills",
+          "steps": [],
+          "kind": "control",
+          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/ui/src/features/skills/SkillsView.tsx",
+        "function": "share"
+      }
+    },
+    {
+      "id": "skills.installation",
+      "description": "安装或卸载选定 Skill 的目标 Agent 副本",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "channel.skills",
+        "target": "skills.installation",
+        "tab": "Skills",
+        "selector": "[data-trace-target~=\"skills.installation\"]",
+        "locator": {
+          "region": "skills",
+          "steps": [],
+          "kind": "control",
+          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/ui/src/features/skills/SkillsView.tsx",
+        "function": "mutateInstallation"
+      }
+    },
+    {
+      "id": "skills.withdraw",
+      "description": "撤回自己的共享 Skill",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "channel.skills",
+        "target": "skills.withdraw",
+        "tab": "Skills",
+        "selector": "[data-trace-target~=\"skills.withdraw\"]",
+        "locator": {
+          "region": "skills",
+          "steps": [],
+          "kind": "control",
+          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/ui/src/features/skills/SkillsView.tsx",
+        "function": "withdraw"
+      }
+    },
+    {
+      "id": "canvas.create",
+      "description": "创建 Canvas 文档或文件夹并显示新条目",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "channel.canvas",
+        "target": "canvas.create",
+        "tab": "Canvas",
+        "selector": "[data-trace-target~=\"canvas.create\"]",
+        "locator": {
+          "region": "canvas-tree",
+          "steps": [],
+          "kind": "control",
+          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/ui/src/features/canvas/CanvasResourceTree.tsx",
+        "function": "create"
+      }
+    },
+    {
+      "id": "canvas.rename",
+      "description": "保存 Canvas 文档或文件夹名称",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "channel.canvas",
+        "target": "canvas.rename",
+        "tab": "Canvas",
+        "selector": "[data-trace-target~=\"canvas.rename\"]",
+        "locator": {
+          "region": "canvas-tree",
+          "steps": [],
+          "kind": "control",
+          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/ui/src/features/canvas/CanvasResourceTree.tsx",
+        "function": "commit"
+      }
+    },
+    {
+      "id": "canvas.list",
+      "description": "打开 Canvas 页并读取文档和文件夹",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "channel.canvas",
+        "target": "canvas.list",
+        "tab": "Canvas",
+        "selector": "[data-trace-target~=\"canvas.list\"]",
+        "locator": {
+          "region": "canvas-tree",
+          "steps": [],
+          "kind": "region"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/ui/src/features/canvas/CanvasView.tsx",
+        "function": "load"
+      }
+    },
+    {
+      "id": "canvas.title",
+      "description": "保存当前 Canvas 文档标题",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "channel.canvas",
+        "target": "canvas.title",
+        "tab": "Canvas",
+        "selector": "[data-trace-target~=\"canvas.title\"]",
+        "locator": {
+          "region": "canvas",
+          "steps": [],
+          "kind": "control",
+          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/ui/src/features/canvas/CanvasView.tsx",
+        "function": "commitTitle"
+      }
+    },
+    {
+      "id": "canvas.agent.prepare",
+      "description": "将当前 Heading 区域与任务发送给目标 Agent",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "channel.canvas",
+        "target": "canvas.agent.prepare",
+        "tab": "Canvas",
+        "selector": "[data-trace-target~=\"canvas.agent.prepare\"]",
+        "locator": {
+          "region": "canvas",
+          "steps": [],
+          "kind": "control",
+          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/ui/src/features/canvas/CanvasView.tsx",
+        "function": "prepareSend"
+      }
+    },
+    {
+      "id": "messages.participants",
+      "description": "读取 Channel 成员和 Agent roster",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "channel.messages",
+        "target": "messages.participants",
+        "tab": "Messages",
+        "selector": "[data-trace-target~=\"messages.participants\"]",
+        "locator": {
+          "region": "participants",
+          "steps": [],
+          "kind": "region"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/ui/src/features/messages/MessagesView.tsx",
+        "function": "loadParticipants"
+      }
+    },
+    {
+      "id": "messages.list",
+      "description": "读取或修复消息游标并提交显示状态",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "channel.messages",
+        "target": "messages.list",
+        "tab": "Messages",
+        "selector": "[data-trace-target~=\"messages.list\"]",
+        "locator": {
+          "region": "messages",
+          "steps": [],
+          "kind": "region"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/ui/src/features/messages/MessagesView.tsx",
+        "function": "loadMessages"
+      }
+    },
+    {
+      "id": "agents.list",
+      "description": "读取个人 Agent blueprint 清单",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "channel.messages",
+        "target": "agents.list",
+        "tab": "Messages",
+        "selector": "[data-trace-target~=\"agents.list\"]",
+        "locator": {
+          "region": "participants",
+          "steps": [],
+          "kind": "region"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/ui/src/features/messages/MessagesView.tsx",
+        "function": "loadAgents"
+      }
+    },
+    {
+      "id": "agents.runtimes",
+      "description": "读取可执行的已登记 Agent runtime",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "channel.messages",
+        "target": "agents.runtimes",
+        "tab": "Messages",
+        "selector": "[data-trace-target~=\"agents.runtimes\"]",
+        "locator": {
+          "region": "agents-manager",
+          "steps": [
+            {
+              "selector": "[data-trace-nav=\"agents.manager\"]",
+              "unless": "[data-trace-region=\"agents-manager\"]"
+            }
+          ],
+          "kind": "region",
+          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/ui/src/features/messages/MessagesView.tsx",
+        "function": "loadRuntimes"
+      }
+    },
+    {
+      "id": "agents.requests",
+      "description": "读取持久化 Agent 请求状态",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "channel.messages",
+        "target": "agents.requests",
+        "tab": "Messages",
+        "selector": "[data-trace-target~=\"agents.requests\"]",
+        "locator": {
+          "region": "participants",
+          "steps": [],
+          "kind": "region"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/ui/src/features/messages/MessagesView.tsx",
+        "function": "loadRequests"
+      }
+    },
+    {
+      "id": "agents.forward",
+      "description": "将明确选择的消息转发为 Agent 任务",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "channel.messages",
+        "target": "agents.forward",
+        "tab": "Messages",
+        "selector": "[data-trace-target~=\"agents.forward\"]",
+        "locator": {
+          "region": "messages",
+          "steps": [],
+          "kind": "control",
+          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/ui/src/features/messages/MessagesView.tsx",
+        "function": "createRequest"
+      }
+    },
+    {
+      "id": "messages.member.add",
+      "description": "从 Messages 邀请或添加成员",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "channel.messages",
+        "target": "messages.member.add",
+        "tab": "Messages",
+        "selector": "[data-trace-target~=\"messages.member.add\"]",
+        "locator": {
+          "region": "messages",
+          "steps": [],
+          "kind": "control",
+          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/ui/src/features/messages/MessagesView.tsx",
+        "function": "addUser"
+      }
+    },
+    {
+      "id": "agents.manager",
+      "description": "打开个人 Agent 配置清单",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "channel.messages",
+        "target": "agents.manager",
+        "tab": "Messages",
+        "selector": "[data-trace-target~=\"agents.manager\"]",
+        "locator": {
+          "region": "messages",
+          "steps": [],
+          "kind": "control",
+          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/ui/src/features/messages/MessagesView.tsx",
+        "function": "openManager"
+      }
+    },
+    {
+      "id": "agents.save",
+      "description": "保存个人 Agent blueprint",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "channel.messages",
+        "target": "agents.save",
+        "tab": "Messages",
+        "selector": "[data-trace-target~=\"agents.save\"] button[type=\"submit\"]",
+        "locator": {
+          "region": "agents-manager",
+          "steps": [
+            {
+              "selector": "[data-trace-nav=\"agents.manager\"]",
+              "unless": "[data-trace-region=\"agents-manager\"]"
+            }
+          ],
+          "kind": "control",
+          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/ui/src/features/messages/MessagesView.tsx",
+        "function": "saveBlueprint"
+      }
+    },
+    {
+      "id": "agents.select",
+      "description": "将个人 Agent 引入或移出 Channel",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "channel.messages",
+        "target": "agents.select",
+        "tab": "Messages",
+        "selector": "[data-trace-target~=\"agents.select\"]",
+        "locator": {
+          "region": "agents-manager",
+          "steps": [
+            {
+              "selector": "[data-trace-nav=\"agents.manager\"]",
+              "unless": "[data-trace-region=\"agents-manager\"]"
+            }
+          ],
+          "kind": "control",
+          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/ui/src/features/messages/MessagesView.tsx",
+        "function": "setInChannel"
+      }
+    },
+    {
+      "id": "agents.remove",
+      "description": "删除个人 Agent blueprint",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "channel.messages",
+        "target": "agents.remove",
+        "tab": "Messages",
+        "selector": "[data-trace-target~=\"agents.remove\"]",
+        "locator": {
+          "region": "agents-manager",
+          "steps": [
+            {
+              "selector": "[data-trace-nav=\"agents.manager\"]",
+              "unless": "[data-trace-region=\"agents-manager\"]"
+            }
+          ],
+          "kind": "control",
+          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/ui/src/features/messages/MessagesView.tsx",
+        "function": "removeAgent"
+      }
+    },
+    {
+      "id": "transfers.list",
+      "description": "查看本机创建的 Quick Share",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "application",
+        "target": "transfers.list",
+        "selector": "[data-trace-target~=\"transfers.list\"]",
+        "locator": {
+          "region": "transfers",
+          "steps": [
+            {
+              "selector": "[data-trace-nav=\"quick-share\"]",
+              "unless": "[data-trace-region=\"transfers\"]"
+            },
+            {
+              "selector": "[data-trace-nav=\"transfers.manage\"]",
+              "unless": "[data-trace-region=\"transfers\"]"
+            }
+          ],
+          "kind": "region",
+          "unavailable": "先打开 Quick Share 并选择相应分享；定位不会创建、撤销分享或修改有效期"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/ui/src/features/transfers/QuickShareDialog.tsx",
+        "function": "loadManaged"
+      }
+    },
+    {
+      "id": "transfers.create",
+      "description": "创建固定快照 Quick Share 并展示管理结果",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "application",
+        "target": "transfers.create",
+        "selector": "[data-trace-target~=\"transfers.create\"]",
+        "locator": {
+          "region": "application",
+          "steps": [],
+          "kind": "control",
+          "unavailable": "先打开 Quick Share 并选择相应分享；定位不会创建、撤销分享或修改有效期"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/ui/src/features/transfers/QuickShareDialog.tsx",
+        "function": "create"
+      }
+    },
+    {
+      "id": "transfers.expiry",
+      "description": "修改自己的 Quick Share 有效期",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "application",
+        "target": "transfers.expiry",
+        "selector": "[data-trace-target~=\"transfers.expiry\"]",
+        "locator": {
+          "region": "transfers",
+          "steps": [
+            {
+              "selector": "[data-trace-nav=\"quick-share\"]",
+              "unless": "[data-trace-region=\"transfers\"]"
+            },
+            {
+              "selector": "[data-trace-nav=\"transfers.manage\"]",
+              "unless": "[data-trace-region=\"transfers\"]"
+            }
+          ],
+          "kind": "control",
+          "unavailable": "先打开 Quick Share 并选择相应分享；定位不会创建、撤销分享或修改有效期"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/ui/src/features/transfers/QuickShareDialog.tsx",
+        "function": "updateExpiry"
+      }
+    },
+    {
+      "id": "transfers.revoke",
+      "description": "撤销自己的 Quick Share",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "application",
+        "target": "transfers.revoke",
+        "selector": "[data-trace-target~=\"transfers.revoke\"]",
+        "locator": {
+          "region": "transfers",
+          "steps": [
+            {
+              "selector": "[data-trace-nav=\"quick-share\"]",
+              "unless": "[data-trace-region=\"transfers\"]"
+            },
+            {
+              "selector": "[data-trace-nav=\"transfers.manage\"]",
+              "unless": "[data-trace-region=\"transfers\"]"
+            }
+          ],
+          "kind": "control",
+          "unavailable": "先打开 Quick Share 并选择相应分享；定位不会创建、撤销分享或修改有效期"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/ui/src/features/transfers/QuickShareDialog.tsx",
+        "function": "revoke"
+      }
+    },
+    {
+      "id": "prompt.open-agent",
+      "description": "组装最终交接提示词、复制并请求打开选定 Agent",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "application",
+        "target": "prompt.open-agent",
+        "selector": "[data-trace-target~=\"prompt.open-agent\"]",
+        "locator": {
+          "region": "prompt",
+          "steps": [],
+          "kind": "control",
+          "unavailable": "先打开任一资源的 Give to Agent 提示词弹层，再定位复制/打开控件"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/ui/src/features/agent/AgentPromptDialog.tsx",
+        "function": "copyAndOpen"
+      }
+    },
+    {
+      "id": "prompt.copy",
+      "description": "复制最终组装的上下文交接提示词",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "application",
+        "target": "prompt.copy",
+        "selector": "[data-trace-target~=\"prompt.copy\"]",
+        "locator": {
+          "region": "prompt",
+          "steps": [],
+          "kind": "control",
+          "unavailable": "先打开任一资源的 Give to Agent 提示词弹层，再定位复制/打开控件"
+        }
+      },
+      "completion": {
+        "success": "clipboard.written",
+        "failure": "clipboard.failed"
+      },
+      "source": {
+        "path": "desktop/ui/src/features/agent/AgentPromptDialog.tsx",
+        "function": "copyPrompt"
+      }
+    },
+    {
+      "id": "transfers.prompt.copy",
+      "description": "复制 Quick Share 最终提示词；观测记录屏蔽 capability",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "application",
+        "target": "transfers.prompt.copy",
+        "selector": "[data-trace-target~=\"transfers.prompt.copy\"]",
+        "locator": {
+          "region": "transfers",
+          "steps": [
+            {
+              "selector": "[data-trace-nav=\"quick-share\"]",
+              "unless": "[data-trace-region=\"transfers\"]"
+            },
+            {
+              "selector": "[data-trace-nav=\"transfers.manage\"]",
+              "unless": "[data-trace-region=\"transfers\"]"
+            }
+          ],
+          "kind": "control",
+          "unavailable": "先打开 Quick Share 并选择相应分享；定位不会创建、撤销分享或修改有效期"
+        }
+      },
+      "completion": {
+        "success": "clipboard.written",
+        "failure": "clipboard.failed"
+      },
+      "source": {
+        "path": "desktop/ui/src/features/transfers/QuickShareDialog.tsx",
+        "function": "copyPrompt"
+      }
+    },
+    {
+      "id": "canvas.participants",
+      "description": "打开 Canvas 时加载 Channel 人员与 Agent",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "channel.canvas",
+        "target": "canvas.participants",
+        "tab": "Canvas",
+        "selector": "[data-trace-target~=\"canvas.participants\"]",
+        "locator": {
+          "region": "canvas",
+          "steps": [],
+          "kind": "region"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/ui/src/features/canvas/CanvasView.tsx",
+        "function": "CanvasView.effect"
+      }
+    },
+    {
+      "id": "canvas.tree.rename",
+      "description": "从文档树保存 Canvas 名称",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "channel.canvas",
+        "target": "canvas.tree.rename",
+        "tab": "Canvas",
+        "selector": "[data-trace-target~=\"canvas.tree.rename\"]",
+        "locator": {
+          "region": "canvas-tree",
+          "steps": [],
+          "kind": "control",
+          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/ui/src/features/canvas/CanvasView.tsx",
+        "function": "CanvasView.effect"
+      }
+    },
+    {
+      "id": "canvas.agent.requests",
+      "description": "读取当前 Canvas 中 Agent 任务的持久化状态",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "channel.canvas",
+        "target": "canvas.agent.requests",
+        "tab": "Canvas",
+        "selector": "[data-trace-target~=\"canvas.agent.requests\"]",
+        "locator": {
+          "region": "canvas",
+          "steps": [],
+          "kind": "region"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/ui/src/features/canvas/CanvasView.tsx",
+        "function": "refreshRequests"
+      }
+    },
+    {
+      "id": "canvas.reconcile",
+      "description": "打开或修复 Canvas，按持久化序列应用更新",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "channel.canvas",
+        "target": "canvas.reconcile",
+        "tab": "Canvas",
+        "selector": "[data-trace-target~=\"canvas.reconcile\"]",
+        "locator": {
+          "region": "canvas",
+          "steps": [],
+          "kind": "region"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/ui/src/features/canvas/CanvasView.tsx",
+        "function": "CanvasView.effect"
+      }
+    },
+    {
+      "id": "canvas.edit",
+      "description": "编辑 Canvas，将更新持久化并提交显示状态",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "channel.canvas",
+        "target": "canvas.edit",
+        "tab": "Canvas",
+        "selector": "[data-trace-target~=\"canvas.edit\"]",
+        "locator": {
+          "region": "canvas",
+          "steps": [],
+          "kind": "control",
+          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/ui/src/features/canvas/CanvasView.tsx",
+        "function": "CanvasView.effect"
+      }
+    },
+    {
+      "id": "canvas.agent.send",
+      "description": "提交已审阅的 Canvas 提示词与用户任务到 Agent runtime",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "channel.canvas",
+        "target": "canvas.agent.send",
+        "tab": "Canvas",
+        "selector": "[data-trace-target~=\"canvas.agent.send\"]",
+        "locator": {
+          "region": "canvas",
+          "steps": [],
+          "kind": "control",
+          "unavailable": "先打开对应 Agent 发送/转发弹层；定位不会发送指令"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/ui/src/features/canvas/CanvasView.tsx",
+        "function": "CanvasView.effect"
+      }
+    },
+    {
+      "id": "context.people",
+      "description": "上下文选择器加载 Channel 成员与 Agent",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "channel.messages",
+        "target": "context.people",
+        "tab": "Messages",
+        "selector": "[data-trace-target~=\"context.people\"]",
+        "locator": {
+          "region": "messages",
+          "steps": [],
+          "kind": "region"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/ui/src/features/context/ChannelContext.tsx",
+        "function": "fetchPeople"
+      }
+    },
+    {
+      "id": "context.resources",
+      "description": "上下文选择器加载 Files、Session、Canvas 与消息资源",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "channel.messages",
+        "target": "context.resources",
+        "tab": "Messages",
+        "selector": "[data-trace-target~=\"context.resources\"]",
+        "locator": {
+          "region": "messages",
+          "steps": [],
+          "kind": "region"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/ui/src/features/context/ChannelContext.tsx",
+        "function": "fetchResources"
+      }
+    },
+    {
+      "id": "context.lookup",
+      "description": "按资源类型与 ID 解析共享上下文元信息",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "channel.messages",
+        "target": "context.lookup",
+        "tab": "Messages",
+        "selector": "[data-trace-target~=\"context.lookup\"]",
+        "locator": {
+          "region": "messages",
+          "steps": [],
+          "kind": "control",
+          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/ui/src/features/context/ChannelContext.tsx",
+        "function": "lookup"
+      }
+    },
+    {
+      "id": "context.forward",
+      "description": "将选择的上下文资源转发给目标 Agent",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "channel.messages",
+        "target": "context.forward",
+        "tab": "Messages",
+        "selector": "[data-trace-target~=\"context.forward\"]",
+        "locator": {
+          "region": "messages",
+          "steps": [],
+          "kind": "control",
+          "unavailable": "先打开对应 Agent 发送/转发弹层；定位不会发送指令"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/ui/src/features/context/ChannelContext.tsx",
+        "function": "ChannelContext.effect"
+      }
+    },
+    {
+      "id": "files.preview",
+      "description": "读取共享文件并生成文本或 Office 本地预览",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "channel.files",
+        "target": "files.preview",
+        "tab": "Files",
+        "selector": "[data-trace-target~=\"files.preview\"]",
+        "locator": {
+          "region": "file-preview",
+          "steps": [],
+          "kind": "region",
+          "unavailable": "先打开共享文件并选择一个可预览的文件"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/ui/src/features/files/FilePreview.tsx",
+        "function": "FilePreview.effect"
+      }
+    },
+    {
+      "id": "transfers.sources",
+      "description": "搜索本机 Session 或 Skill 来源以创建 Quick Share",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "application",
+        "target": "transfers.sources",
+        "selector": "[data-trace-target~=\"transfers.sources\"]",
+        "locator": {
+          "region": "application",
+          "steps": [],
+          "kind": "control",
+          "unavailable": "先打开 Quick Share 并选择相应分享；定位不会创建、撤销分享或修改有效期"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/ui/src/features/transfers/QuickShareDialog.tsx",
+        "function": "QuickShareDialog.effect"
+      }
+    },
+    {
+      "id": "system.choose-path",
+      "description": "通过 Local Core 打开本机文件或目录选择器",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "channel.files",
+        "target": "system.choose-path",
+        "tab": "Files",
+        "selector": "[data-trace-target~=\"system.choose-path\"]",
+        "locator": {
+          "region": "files",
+          "steps": [],
+          "kind": "control",
+          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/ui/src/main.tsx",
+        "function": "main.effect"
+      }
+    },
+    {
+      "id": "auth.status",
+      "description": "读取当前账号登录状态并提交界面状态",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "application",
+        "target": "auth.status",
+        "selector": "[data-trace-target~=\"auth.status\"]",
+        "locator": {
+          "region": "application",
+          "steps": [],
+          "kind": "region"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/ui/src/main.tsx",
+        "function": "refreshAuth"
+      }
+    },
+    {
+      "id": "system.gui-version",
+      "description": "检查 GUI 资源版本并在更新后刷新界面",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "application.settings",
+        "target": "system.gui-version",
+        "selector": "[data-trace-target~=\"system.gui-version\"]",
+        "locator": {
+          "region": "settings",
+          "steps": [
+            {
+              "selector": "[data-trace-nav=\"settings\"]",
+              "unless": "[data-trace-region=\"settings\"]"
+            },
+            {
+              "selector": "[data-trace-nav=\"settings.main\"]",
+              "optional": true
+            }
+          ],
+          "kind": "region"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/ui/src/main.tsx",
+        "function": "reloadIfGuiChanged"
+      }
+    },
+    {
+      "id": "files.choose",
+      "description": "打开文件或目录选择器以准备共享 Files",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "channel.files",
+        "target": "files.choose",
+        "tab": "Files",
+        "selector": "[data-trace-target~=\"files.choose\"]",
+        "locator": {
+          "region": "files",
+          "steps": [],
+          "kind": "control",
+          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/ui/src/main.tsx",
+        "function": "chooseFiles"
+      }
+    },
+    {
+      "id": "files.preview.native",
+      "description": "在本机原生 image/PDF 预览中打开共享文件；PDF 完成边界为 frame load，不能证明 PDF 内部渲染成功",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "channel.files",
+        "target": "files.preview.native",
+        "tab": "Files",
+        "selector": "[data-trace-target~=\"files.preview.native\"]",
+        "locator": {
+          "region": "file-preview",
+          "steps": [],
+          "kind": "region",
+          "unavailable": "先打开共享文件并选择一个可预览的文件"
+        }
+      },
+      "completion": {
+        "success": "preview.loaded_or_frame_loaded",
+        "failure": "preview.failed",
+        "cancelled": "view.closed"
+      },
+      "source": {
+        "path": "desktop/ui/src/features/files/FilePreview.tsx",
+        "function": "FilePreview.native"
+      }
+    },
+    {
+      "id": "agents.work.read",
+      "description": "打开指定 Agent 任务的工作明细",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "channel.messages",
+        "target": "agents.work.read",
+        "tab": "Messages",
+        "selector": "[data-trace-target~=\"agents.work.read\"]",
+        "locator": {
+          "region": "agent-work",
+          "steps": [],
+          "kind": "region",
+          "unavailable": "先打开某条 Agent 任务的 Work details"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "view.closed"
+      },
+      "source": {
+        "path": "desktop/ui/src/features/agent/AgentWorkDrawer.tsx",
+        "function": "AgentWorkDrawer.effect"
+      }
+    },
+    {
+      "id": "members.identity.requests",
+      "description": "打开成员身份卡并读取任务清单",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "channel.messages",
+        "target": "members.identity.requests",
+        "tab": "Messages",
+        "selector": "[data-trace-target~=\"members.identity.requests\"]",
+        "locator": {
+          "region": "messages",
+          "steps": [],
+          "kind": "control",
+          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "view.closed"
+      },
+      "source": {
+        "path": "desktop/ui/src/features/context/UserIdentity.tsx",
+        "function": "UserIdentityCard.load"
+      }
+    },
+    {
+      "id": "context.preview",
+      "description": "展开上下文胶囊并读取资源元信息或消息正文",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "channel.messages",
+        "target": "context.preview",
+        "tab": "Messages",
+        "selector": "[data-trace-target~=\"context.preview\"]",
+        "locator": {
+          "region": "messages",
+          "steps": [],
+          "kind": "control",
+          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "view.closed"
+      },
+      "source": {
+        "path": "desktop/ui/src/features/context/ContextCapsule.tsx",
+        "function": "ContextCapsule.effect"
+      }
+    },
+    {
+      "id": "canvas.move",
+      "description": "在文档树中移动 Canvas 文档或调整排序",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "channel.canvas",
+        "target": "canvas.move",
+        "tab": "Canvas",
+        "selector": "[data-trace-target~=\"canvas.move\"]",
+        "locator": {
+          "region": "canvas-tree",
+          "steps": [],
+          "kind": "control",
+          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "view.closed"
+      },
+      "source": {
+        "path": "desktop/ui/src/features/canvas/CanvasResourceTree.tsx",
+        "function": "move"
+      }
+    },
+    {
+      "id": "canvas.remove",
+      "description": "删除选定 Canvas 文档并刷新文档树",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "channel.canvas",
+        "target": "canvas.remove",
+        "tab": "Canvas",
+        "selector": "[data-trace-target~=\"canvas.remove\"]",
+        "locator": {
+          "region": "canvas-tree",
+          "steps": [],
+          "kind": "control",
+          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "view.closed"
+      },
+      "source": {
+        "path": "desktop/ui/src/features/canvas/CanvasResourceTree.tsx",
+        "function": "remove"
+      }
+    },
+    {
+      "id": "system.shell-update",
+      "description": "下载并安装新的 Electron Shell 制品",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "application.settings",
+        "target": "system.shell-update",
+        "selector": "[data-trace-target~=\"system.shell-update\"]",
+        "locator": {
+          "region": "settings",
+          "steps": [
+            {
+              "selector": "[data-trace-nav=\"settings\"]",
+              "unless": "[data-trace-region=\"settings\"]"
+            },
+            {
+              "selector": "[data-trace-nav=\"settings.main\"]",
+              "optional": true
+            }
+          ],
+          "kind": "region",
+          "unavailable": "仅 Electron 宿主的更新流程提供此动作；普通浏览器没有对应操作控件",
+          "stateNote": "Electron 更新后的自动承接；普通浏览器没有独立按钮"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "view.closed"
+      },
+      "source": {
+        "path": "desktop/ui/src/main.tsx",
+        "function": "finishShellUpdate"
+      }
+    },
+    {
+      "id": "members.agent-count",
+      "description": "打开成员消息设置时查询可用 Agent 数量",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "application.settings",
+        "target": "members.agent-count",
+        "selector": "[data-trace-target~=\"members.agent-count\"]",
+        "locator": {
+          "region": "settings",
+          "steps": [
+            {
+              "selector": "[data-trace-nav=\"settings\"]",
+              "unless": "[data-trace-region=\"settings\"]"
+            },
+            {
+              "selector": "[data-trace-nav=\"settings.main\"]",
+              "optional": true
+            }
+          ],
+          "kind": "control",
+          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "view.closed"
+      },
+      "source": {
+        "path": "desktop/ui/src/main.tsx",
+        "function": "messageSettingsAgentCount"
+      }
+    },
+    {
+      "id": "canvas.handoff",
+      "description": "读取 Canvas 最终投影并打开 Agent 交接提示词界面",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "channel.canvas",
+        "target": "canvas.handoff",
+        "tab": "Canvas",
+        "selector": "[data-trace-target~=\"canvas.handoff\"]",
+        "locator": {
+          "region": "canvas",
+          "steps": [],
+          "kind": "control",
+          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "view.closed"
+      },
+      "source": {
+        "path": "desktop/ui/src/features/canvas/CanvasView.tsx",
+        "function": "CanvasView"
+      }
+    },
+    {
+      "id": "messages.focus",
+      "description": "通过定位入口读取并显示指定消息",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "channel.messages",
+        "target": "messages.focus",
+        "tab": "Messages",
+        "selector": "[data-trace-target~=\"messages.focus\"]",
+        "locator": {
+          "region": "messages",
+          "steps": [],
+          "kind": "region",
+          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "view.closed"
+      },
+      "source": {
+        "path": "desktop/ui/src/features/messages/MessagesView.tsx",
+        "function": "MessagesView"
+      }
+    },
+    {
+      "id": "agents.identity.requests",
+      "description": "打开 Agent 身份卡并读取持久化任务清单",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "channel.messages",
+        "target": "agents.identity.requests",
+        "tab": "Messages",
+        "selector": "[data-trace-target~=\"agents.identity.requests\"]",
+        "locator": {
+          "region": "messages",
+          "steps": [],
+          "kind": "control",
+          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "view.closed"
+      },
+      "source": {
+        "path": "desktop/ui/src/features/context/AgentIdentityLink.tsx",
+        "function": "AgentIdentityLink"
       }
     }
   ]

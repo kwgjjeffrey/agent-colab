@@ -1,3 +1,4 @@
+import { traceTargets } from "@/api/trace-locators";
 import { useMemo, useState } from "react";
 import { ArrowLeftIcon, FileIcon, FolderIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -45,7 +46,7 @@ export function FileExplorer({ shareId, shareName, entries, onClose }: Props) {
             ))}
           </div>
         </ScrollArea>
-        <main className="min-h-0 min-w-0"><FilePreview shareId={shareId} path={selected?.path} size={selected?.size} /></main>
+        <main data-trace-region={"file-preview"} data-trace-target={traceTargets("files.preview", "files.preview.native")} className="min-h-0 min-w-0"><FilePreview shareId={shareId} path={selected?.path} size={selected?.size} /></main>
       </div>
     </div>
   );

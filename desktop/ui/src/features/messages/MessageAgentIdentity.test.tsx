@@ -5,14 +5,14 @@ import userEvent from "@testing-library/user-event";
 import { MessageAgentIdentity } from "./MessageAgentIdentity";
 import type { Blueprint, AgentRequestStatus } from "./types";
 afterEach(cleanup);
-it("keeps the card while hovering it and closes after leaving", async () => {
+it("opens on click and closes on a second click", async () => {
   const user = userEvent.setup();
   render(<MessageAgentIdentity agent={{id:"agent",name:"Researcher",ownerName:"Alice"} as Blueprint} name="Researcher" requests={[]} showWork={vi.fn()} />);
-  await user.hover(screen.getByRole("button", {name:"About Researcher"}));
-  const identity = await screen.findByText("Alice's Agent");
-  await user.hover(identity);
+  const trigger = screen.getByRole("button", {name:"About Researcher"});
+  await user.click(trigger);
+  await screen.findByText("Alice's Agent");
   expect(screen.queryByText("Alice's Agent")).not.toBeNull();
-  await user.unhover(identity);
+  await user.click(trigger);
   await waitFor(() => expect(screen.queryByText("Alice's Agent")).toBeNull());
 });
 it("opens the shared identity card on click and routes the selected task", async () => {

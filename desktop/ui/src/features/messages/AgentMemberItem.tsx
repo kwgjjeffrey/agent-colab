@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/popover";
 import { AgentIdentityCard } from "@/features/agent/AgentIdentityCard";
 import { AgentAvatar } from "./AgentAvatar";
+import { Button } from "@/components/ui/button";
 import type { Blueprint, Participant, AgentRequestStatus } from "./types";
 
 export function AgentMemberItem({
@@ -15,11 +16,13 @@ export function AgentMemberItem({
   owner,
   requests,
   showWork,
+  onGive,
 }: {
   agent: Blueprint;
   owner: Participant;
   requests: AgentRequestStatus[];
   showWork: (request: AgentRequestStatus) => void;
+  onGive?: (agent: Blueprint) => void;
 }) {
   const [open, setOpen] = useState(false);
   const tasks = requests.filter(
@@ -64,7 +67,7 @@ export function AgentMemberItem({
             setOpen(false);
             showWork(request);
           }}
-        />
+        >{onGive && <Button size="sm" className="mt-3 w-full px-4" onClick={() => { setOpen(false); onGive(agent); }}>Give Messages to Agent</Button>}</AgentIdentityCard>
       </PopoverContent>
     </Popover>
   );

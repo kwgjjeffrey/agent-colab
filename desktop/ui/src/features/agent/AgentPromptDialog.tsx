@@ -1,7 +1,11 @@
+import { traceTargets } from "@/api/trace-locators";
+import { runOperation } from "@/api/operation-runner";
+import { useState } from "react";
 import { ChevronDownIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { trackedFetch } from "@/api/request-activity";
 import { ButtonGroup } from "@/components/ui/button-group";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -48,6 +52,8 @@ type Props = {
   onClose: () => void;
   onError: (message: string) => void;
   onForward?: () => void;
+  sendTraceTarget?: string;
+  onSend?: (query: string) => Promise<void>;
 };
 
 /**
@@ -64,33 +70,57 @@ export function AgentPromptDialog({
   onClose,
   onError,
   onForward,
+  onSend,
+  sendTraceTarget,
 }: Props) {
+  const [query, setQuery] = useState("");
+  const [sending, setSending] = useState(false);
+  const completePrompt = (agent: AgentTarget) => `${promptFor(agent)}${query.trim() ? `\n\nUser query:\n${query.trim()}` : ""}`;
   async function copyAndOpen(agent: AgentTarget) {
+return runOperation("prompt.open-agent", async (operation) => {
+const trackedFetch = operation.fetch;
+
     try {
-      await navigator.clipboard.writeText(promptFor(agent));
+      const content = completePrompt(agent);
+      operation.prompt(content, "context.handoff", agent);
+      await navigator.clipboard.writeText(content);
       const response = await trackedFetch(`/v1/system/agents/${agent}/open`, { method: "POST" });
       if (!response.ok) throw new Error(await response.text());
       onClose();
-    } catch (reason) {
+    } catch (reason) { operation.fail();
       onError(String(reason));
     }
+
+});
+}
+
+  async function copyPrompt() {
+    return runOperation("prompt.copy", async (operation) => {
+      try { const content = completePrompt(defaultAgent); operation.prompt(content, "context.handoff", defaultAgent); await navigator.clipboard.writeText(content); onClose(); }
+      catch (reason) { operation.fail(); onError(String(reason)); }
+    });
   }
 
   return (
     <Dialog open={open} onOpenChange={(next) => { if (!next) onClose(); }}>
-      <DialogContent className="min-w-0 sm:max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
+      <DialogContent data-trace-region={"prompt"} className="min-w-0 sm:max-w-2xl">
+        <DialogHeader className="min-w-0 pr-10">
+          <DialogTitle className="min-w-0 break-words">{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
         <pre className="max-h-[50vh] min-w-0 max-w-full overflow-auto whitespace-pre-wrap break-words rounded-lg bg-muted p-4 text-sm">
-          {promptFor(defaultAgent)}
+          {completePrompt(defaultAgent)}
         </pre>
+        <div className="space-y-2">
+          <label htmlFor="agent-prompt-query" className="text-sm font-medium">User query</label>
+          <Textarea id="agent-prompt-query" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Add an instruction for this task (optional)" />
+        </div>
         <DialogFooter>
           {onForward && <Button variant="outline" onClick={onForward}>Forward to collaborators’ agent</Button>}
-          <Button variant="outline" onClick={async () => { try { await navigator.clipboard.writeText(promptFor(defaultAgent)); onClose(); } catch (reason) { onError(String(reason)); } }}>Copy prompt</Button>
+          {onSend && <Button data-trace-target={sendTraceTarget} disabled={sending} onClick={async () => { setSending(true); try { await onSend(query.trim()); onClose(); setQuery(""); } catch (reason) { onError(String(reason)); } finally { setSending(false); } }}>{sending ? "Sending…" : "Send to Agent"}</Button>}
+          <Button data-trace-target={traceTargets("prompt.copy")} variant="outline" onClick={() => void copyPrompt()}>Copy prompt</Button>
           <ButtonGroup className="min-w-0 max-w-full">
-            <Button
+            <Button data-trace-target={traceTargets("prompt.open-agent")}
               className="min-w-0"
               disabled={!installedAgents[defaultAgent]?.installed}
               onClick={() => void copyAndOpen(defaultAgent)}
@@ -106,7 +136,7 @@ export function AgentPromptDialog({
                   {(Object.keys(agentLabels) as AgentTarget[])
                     .filter((agent) => agent !== defaultAgent)
                     .map((agent) => (
-                      <DropdownMenuItem
+                      <DropdownMenuItem data-trace-target={traceTargets("prompt.open-agent")}
                         key={agent}
                         disabled={!installedAgents[agent]?.installed}
                         onClick={() => void copyAndOpen(agent)}

@@ -1,3 +1,4 @@
+import { traceTargets } from "@/api/trace-locators";
 import { createContext, useContext, useState } from "react";
 import { NodeViewWrapper, type NodeViewProps } from "@tiptap/react";
 import { SparklesIcon } from "lucide-react";
@@ -23,7 +24,7 @@ export const CanvasMentionContext = createContext<{
   agents: Blueprint[];
   participants: Participant[];
   requests: Request[];
-  send: (id: string, label: string, position: number) => Promise<void>;
+  prepareSend: (id: string, label: string, position: number) => Promise<void>;
   showWork: (request: Request) => void;
 } | null>(null);
 
@@ -63,7 +64,7 @@ export function CanvasMention({ node, getPos }: NodeViewProps) {
                   data-mention-id={id}
                   data-mention-kind={kind}
                   className={
-                    kind === "member" ? "member-mention" : "agent-mention"
+                    kind === "member" ? `member-mention${person?.isCurrent ? " member-mention-me" : ""}` : "agent-mention"
                   }
                 />
               }
@@ -80,7 +81,7 @@ export function CanvasMention({ node, getPos }: NodeViewProps) {
                   requests={requests}
                   showWork={(request) => context?.showWork(request as Request)}
                 >
-                  <Button
+                  <Button data-trace-target={traceTargets("canvas.agent.prepare")}
                     className="mt-3 w-full px-4"
                     size="sm"
                     disabled={sending}
@@ -89,14 +90,14 @@ export function CanvasMention({ node, getPos }: NodeViewProps) {
                       if (!context || position == null) return;
                       setSending(true);
                       try {
-                        await context.send(id, label, position);
+                        await context.prepareSend(id, label, position);
                       } finally {
                         setSending(false);
                       }
                     }}
                   >
                     <SparklesIcon />
-                    {sending ? "Sending…" : "Send to Agent"}
+                    {sending ? "Preparing…" : "Send to Agent"}
                   </Button>
                 </AgentIdentityCard>
               )}

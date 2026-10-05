@@ -1,3 +1,8 @@
+import { traceTargets } from "@/api/trace-locators";
+import { useAgentResultObservation } from "@/api/agent-result-observation";
+import { beginOperation } from "@/api/telemetry";
+import { operations } from "@/api/trace-operations";
+import { runOperation, type OperationScope } from "@/api/operation-runner";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type React from "react";
 import type { Dispatch, MutableRefObject, SetStateAction } from "react";
@@ -16,7 +21,6 @@ import {
 } from "@/features/context/context-model";
 import * as Y from "yjs";
 import {
-  BotIcon,
   CodeIcon,
   GripVerticalIcon,
   Heading1Icon,
@@ -27,8 +31,8 @@ import {
   PilcrowIcon,
   QuoteIcon,
   SparklesIcon,
-  UserIcon,
 } from "lucide-react";
+import { ContextIcon } from "@/features/context/ContextIcon";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { trackedFetch } from "@/api/request-activity";
@@ -109,7 +113,10 @@ export function CanvasView({
     [promptOpen, setPromptOpen] = useState(false),
     [participants, setParticipants] = useState<Participant[]>([]),
     [agents, setAgents] = useState<Blueprint[]>([]);
-  async function load() {
+  async function load(parent?: OperationScope) {
+return runOperation("canvas.list", async (operation) => {
+const canvasJson = operation.json;
+
     const [documents, directories] = await Promise.all([
       canvasJson<CanvasDocument[]>(`/v1/channels/${channelId}/canvases`),
       canvasJson<CanvasFolder[]>(`/v1/channels/${channelId}/canvas-folders`),
@@ -121,11 +128,15 @@ export function CanvasView({
         ? current
         : documents[0]?.id,
     );
-  }
+
+}, {parent:parent?.operation});
+}
   useEffect(() => {
     setSelected(undefined);
     void load().catch((reason) => setError(String(reason)));
-    void (async () => {
+    void (async () => {return runOperation("canvas.participants", async (operation)=>{
+const canvasJson=operation.json;
+
       const people = await canvasJson<Participant[]>(
         `/v1/channels/${channelId}/participants`,
       );
@@ -138,7 +149,8 @@ export function CanvasView({
         ),
       );
       setAgents(groups.flat().filter((agent) => agent.inChannel));
-    })().catch((reason) => setError(String(reason)));
+
+});})().catch((reason) => setError(String(reason)));
   }, [channelId]);
   const folderById = useMemo(
     () => new Map(folders.map((folder) => [folder.id, folder])),
@@ -215,27 +227,23 @@ ${readInstructions(promptResources, agent)}`;
             canvasRef={canvasRef(current)}
             participants={participants}
             agents={agents}
-            onRename={async (name) => {
+            defaultAgent={defaultAgent}
+            installedAgents={installedAgents}
+            onRename={async (name) => {return runOperation("canvas.tree.rename", async (operation)=>{
+const canvasJson=operation.json;
+
               await canvasJson(`/v1/canvases/${current.id}`, {
                 method: "PATCH",
                 body: JSON.stringify({ name }),
               });
-              await load();
-            }}
+              await load(operation);
+
+});}}
             onGive={() => {
-              void canvasJson<{ content: string }>(
-                `/v1/canvases/${current.id}/document`,
-              )
-                .then((row) => {
-                  setPromptResources(
-                    projectionResources(
-                      row.content,
-                      channelId,
-                      context?.resources ?? [],
-                    ),
-                  );
+              void runOperation("canvas.handoff", async operation => operation.json<{content:string}>(`/v1/canvases/${current.id}/document`).then(row => {
+                  setPromptResources(projectionResources(row.content,channelId,context?.resources ?? []));
                   setPromptOpen(true);
-                })
+                }))
                 .catch((reason) => setError(String(reason)));
             }}
           />
@@ -283,6 +291,8 @@ function CanvasEditor({
   canvasRef,
   participants,
   agents,
+  defaultAgent,
+  installedAgents,
   onRename,
   onGive,
 }: {
@@ -292,6 +302,8 @@ function CanvasEditor({
   canvasRef: string;
   participants: Participant[];
   agents: Blueprint[];
+  defaultAgent: AgentTarget;
+  installedAgents: Record<string, { installed: boolean }>;
   onRename: (name: string) => Promise<void>;
   onGive: () => void;
 }) {
@@ -305,16 +317,22 @@ function CanvasEditor({
     ),
     [error, setError] = useState<string>(),
     [requests, setRequests] = useState<AgentRequestStatus[]>([]);
-  async function refreshRequests() {
+  useAgentResultObservation(requests);
+  async function refreshRequests() {return runOperation("canvas.agent.requests", async (operation)=>{
+const canvasJson=operation.json;
+
     setRequests(
       await canvasJson<AgentRequestStatus[]>(
         `/v1/channels/${channelId}/agent-requests`,
       ),
     );
-  }
+
+});}
   function pull() {
     if (pullInFlight.current) return pullInFlight.current;
-    const pending = (async () => {
+    const pending = (async () => {return runOperation("canvas.reconcile", async (operation)=>{
+const canvasJson=operation.json;
+
       const rows = await canvasJson<CanvasUpdate[]>(
         `/v1/canvases/${canvasId}/updates?after=${seq.current}&limit=1000`,
       );
@@ -327,7 +345,8 @@ function CanvasEditor({
         setState("synced");
         setError(undefined);
       }
-    })().finally(() => {
+
+});})().finally(() => {
       if (pullInFlight.current === pending) pullInFlight.current = undefined;
     });
     pullInFlight.current = pending;
@@ -379,13 +398,18 @@ function CanvasEditor({
   const [editingTitle, setEditingTitle] = useState(false),
     [draft, setDraft] = useState(title);
   async function commitTitle() {
+return runOperation("canvas.title", async (operation) => {
+
+
     setEditingTitle(false);
     const value = draft.trim();
     if (value && value !== title) await onRename(value);
     else setDraft(title);
-  }
+
+});
+}
   return (
-    <section className="flex h-full min-h-0 flex-col">
+    <section data-trace-target={traceTargets("canvas.edit", "canvas.reconcile", "canvas.participants", "canvas.agent.requests")} className="flex h-full min-h-0 flex-col">
       <header className="flex h-12 shrink-0 items-center gap-3 px-5">
         <div className="flex min-w-0 flex-1 items-center gap-2">
           {editingTitle ? (
@@ -405,7 +429,7 @@ function CanvasEditor({
               }}
             />
           ) : (
-            <h2
+            <h2 data-trace-target={traceTargets("canvas.title")}
               className="truncate font-medium"
               onDoubleClick={() => setEditingTitle(true)}
             >
@@ -424,7 +448,7 @@ function CanvasEditor({
                   : "Synced"}
           </span>
         </div>
-        <Button size="sm" variant="outline" onClick={onGive}>
+        <Button data-trace-target={traceTargets("canvas.handoff")} size="sm" variant="outline" onClick={onGive}>
           <SparklesIcon data-icon="inline-start" />
           Give to Agent
         </Button>
@@ -437,6 +461,8 @@ function CanvasEditor({
             document={document}
             participants={participants}
             agents={agents}
+            defaultAgent={defaultAgent}
+            installedAgents={installedAgents}
             requests={requests}
             onRequest={(request) =>
               setRequests((current) => [
@@ -469,6 +495,7 @@ type MentionCandidate = {
   label: string;
   kind: "agent" | "member" | ResourceKind;
   description: string;
+  avatarUrl?: string;
   agent?: Blueprint;
   person?: Participant;
 };
@@ -478,6 +505,8 @@ function LoadedCanvasEditor({
   document,
   participants,
   agents,
+  defaultAgent,
+  installedAgents,
   requests,
   onRequest,
   seq,
@@ -490,6 +519,8 @@ function LoadedCanvasEditor({
   document: Y.Doc;
   participants: Participant[];
   agents: Blueprint[];
+  defaultAgent: AgentTarget;
+  installedAgents: Record<string, { installed: boolean }>;
   requests: AgentRequestStatus[];
   onRequest: (request: AgentRequestStatus) => void;
   seq: MutableRefObject<number>;
@@ -514,6 +545,7 @@ function LoadedCanvasEditor({
     open: boolean;
   }>();
   const [workRequest, setWorkRequest] = useState<AgentRequestStatus>();
+  const [handoff, setHandoff] = useState<{ id: string; label: string; prompt: string; body: { targetBlueprintId: string; sectionMarkdown: string; contextRefs: { kind: string; id: string }[]; canvasRef: string } }>();
   const mentionExtension = useMemo(
     () =>
       Mention.extend({
@@ -591,24 +623,42 @@ function LoadedCanvasEditor({
         kind: "agent" as const,
         description: `${agent.ownerName}'s Agent`,
         agent,
+        avatarUrl: agent.ownerAvatarUrl,
       })),
       ...participants.map((person) => ({
         id: person.memberId,
         label: person.displayName,
         kind: "member" as const,
-        description: person.email,
+        description: "",
         person,
+        avatarUrl: person.avatarUrl,
       })),
-      ...(context?.resources.map((row) => ({
+      ...(context?.resources.slice().sort((a, b) => ({ session: 0, files: 1, canvas: 2, message: 3 }[a.kind] - { session: 0, files: 1, canvas: 2, message: 3 }[b.kind])).map((row) => ({
         id: row.id,
         label: row.name,
         kind: row.kind,
-        description: row.kind,
+        description: "",
       })) ?? []),
     ]
       .filter((item) => item.label.toLocaleLowerCase().includes(query))
-      .slice(0, 8);
+      .slice(0, 20);
   }, [agents, participants, suggestion, context?.resources]);
+  const suggestionPosition = (() => {
+    if (!editor || !suggestion) return undefined;
+    const caret = editor.view.coordsAtPos(suggestion.to);
+    const width = 320;
+    const left = caret.right + 8 + width <= window.innerWidth - 12
+      ? caret.right + 8
+      : Math.max(12, caret.left - width - 8);
+    const heightBelow = window.innerHeight - caret.bottom - 16;
+    const openAbove = heightBelow < 160 && caret.top > 180;
+    const maxHeight = Math.min(360, Math.max(80, openAbove ? caret.top - 20 : heightBelow));
+    return {
+      left,
+      top: openAbove ? Math.max(8, caret.top - maxHeight - 8) : caret.bottom + 8,
+      maxHeight,
+    };
+  })();
   function choose(candidate: MentionCandidate) {
     if (!editor || !suggestion) return;
     editor
@@ -681,7 +731,10 @@ function LoadedCanvasEditor({
       atomText,
     );
   }
-  async function send(id: string, label: string, position: number) {
+  async function prepareSend(id: string, label: string, position: number) {
+return runOperation("canvas.agent.prepare", async (operation) => {
+const canvasJson = operation.json;
+
     try {
       if (!context) throw new Error("Channel context is unavailable.");
       const section = sectionMarkdown(position);
@@ -702,29 +755,15 @@ function LoadedCanvasEditor({
         throw new Error(
           "Wait for document synchronization before sending referenced context.",
         );
-      const row = await canvasJson<{ id: string; state: string }>(
-        `/v1/canvases/${canvasId}/send-to-agent`,
-        {
-          method: "POST",
-          body: JSON.stringify({
-            targetBlueprintId: id,
-            sectionMarkdown: section,
-            contextRefs,
-            canvasRef,
-          }),
-        },
-      );
-      onRequest({
-        id: row.id,
-        state: row.state,
-        targetBlueprintId: id,
-        targetName: label,
-        sourceCanvasId: canvasId,
-      });
-    } catch (reason) {
+      const body = { targetBlueprintId: id, sectionMarkdown: section, contextRefs, canvasRef };
+      const preview = await canvasJson<{ prompt: string }>(`/v1/canvases/${canvasId}/agent-prompt`, { method: "POST", body: JSON.stringify(body) });
+      setHandoff({ id, label, prompt: preview.prompt, body });
+    } catch (reason) { operation.fail();
       setError(String(reason));
     }
-  }
+
+});
+}
   function trackBlock(event: React.MouseEvent) {
     if (blockMenu?.open || !editor || !containerRef.current) return;
     const node = event.target;
@@ -780,7 +819,10 @@ function LoadedCanvasEditor({
       if (origin === REMOTE) return;
       setState("saving");
       const id = crypto.randomUUID();
-      queue.current = queue.current.then(async () => {
+      const started = beginOperation(operations["canvas.edit"]);
+      queue.current = queue.current.then(async () => {return runOperation("canvas.edit", async (operation)=>{
+const canvasJson=operation.json;
+
         try {
           const row = await canvasJson<CanvasUpdate>(
             `/v1/canvases/${canvasId}/updates`,
@@ -797,13 +839,14 @@ function LoadedCanvasEditor({
             setState("synced");
             setError(undefined);
           }
-        } catch (reason) {
+        } catch (reason) {operation.fail();
           if (mounted.current) {
             setState("offline");
             setError(String(reason));
           }
         }
-      });
+
+}, {started});});
     };
     document.on("update", onUpdate);
     return () => document.off("update", onUpdate);
@@ -815,7 +858,7 @@ function LoadedCanvasEditor({
         agents,
         participants,
         requests,
-        send,
+        prepareSend,
         showWork: setWorkRequest,
       }}
     >
@@ -896,7 +939,10 @@ function LoadedCanvasEditor({
           </div>
         )}
         {suggestion && (
-          <div className="absolute left-10 top-16 z-20 w-80 rounded-lg border bg-popover p-1 shadow-lg">
+          <div
+            className="fixed z-50 w-80 overflow-y-auto rounded-lg border bg-popover p-1 shadow-lg"
+            style={suggestionPosition}
+          >
             {candidates.length ? (
               candidates.map((candidate) => (
                 <button
@@ -905,15 +951,11 @@ function LoadedCanvasEditor({
                   onMouseDown={(event) => event.preventDefault()}
                   onClick={() => choose(candidate)}
                 >
-                  {candidate.kind === "agent" ? (
-                    <BotIcon className="size-4" />
-                  ) : (
-                    <UserIcon className="size-4" />
+                  <ContextIcon kind={candidate.kind} name={candidate.label} avatarUrl={candidate.avatarUrl} />
+                  <strong className="min-w-0 flex-1 truncate">{candidate.label}</strong>
+                  {candidate.kind === "agent" && candidate.description && (
+                    <span className="max-w-28 shrink-0 truncate text-xs text-muted-foreground">{candidate.description}</span>
                   )}
-                  <strong className="truncate">{candidate.label}</strong>
-                  <span className="ml-auto truncate text-xs text-muted-foreground">
-                    {candidate.description}
-                  </span>
                 </button>
               ))
             ) : (
@@ -929,6 +971,25 @@ function LoadedCanvasEditor({
           onOpenChange={(open) => {
             if (!open) setWorkRequest(undefined);
           }}
+        />
+        <AgentPromptDialog
+          sendTraceTarget={traceTargets("canvas.agent.send")}
+          open={Boolean(handoff)}
+          title={`Give “${handoff?.label ?? "Agent"}” this Canvas task`}
+          description="Review the exact instruction, add a query if needed, then send or copy it."
+          defaultAgent={defaultAgent}
+          installedAgents={installedAgents}
+          promptFor={(agent) => (handoff?.prompt ?? "").replaceAll("~/.agents/skills/agent-colab/bin/colab-canvas", agentSkillCommand(agent, "colab-canvas"))}
+          onSend={async (query) => {return runOperation("canvas.agent.send", async (operation)=>{
+const canvasJson=operation.json;
+
+            if (!handoff) return;
+            const row = await canvasJson<{ id: string; state: string }>(`/v1/canvases/${canvasId}/send-to-agent`, { method: "POST", body: JSON.stringify({ ...handoff.body, userQuery: query }) });
+            onRequest({ id: row.id, state: row.state, targetBlueprintId: handoff.id, targetName: handoff.label, sourceCanvasId: canvasId });
+
+});}}
+          onClose={() => setHandoff(undefined)}
+          onError={(message) => setError(message)}
         />
       </div>
     </CanvasMentionContext.Provider>

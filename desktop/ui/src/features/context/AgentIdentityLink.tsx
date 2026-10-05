@@ -1,9 +1,7 @@
+import { traceTargets } from "@/api/trace-locators";
+import { runOperation } from "@/api/operation-runner";
 import { useEffect, useState, type ReactNode } from "react";
-import {
-  HoverCard,
-  HoverCardContent,
-  HoverCardTrigger,
-} from "@/components/ui/hover-card";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { AgentIdentityCard } from "@/features/agent/AgentIdentityCard";
 import { AgentWorkDrawer } from "@/features/agent/AgentWorkDrawer";
 import { messageRequest } from "@/features/messages/api";
@@ -29,7 +27,7 @@ export function AgentIdentityLink({
     if (!context || !open) return;
     let alive = true;
     const load = () => {
-      void messageRequest<AgentRequestStatus[]>(
+      void runOperation("agents.identity.requests", async operation => operation.message<AgentRequestStatus[]>(
         `/v1/channels/${context.channelId}/agent-requests`,
         undefined,
         true,
@@ -41,8 +39,8 @@ export function AgentIdentityLink({
           }
         })
         .catch((reason) => {
-          if (alive) setError(String(reason));
-        });
+          operation.fail(); if (alive) setError(String(reason));
+        }));
     };
     load();
     const off = accountRealtime.subscribe((frame) => {
@@ -56,25 +54,15 @@ export function AgentIdentityLink({
   }, [context?.channelId, open]);
   return (
     <>
-      <HoverCard open={open} onOpenChange={setOpen}>
-        <HoverCardTrigger
-          delay={150}
-          closeDelay={150}
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger data-trace-target={traceTargets("agents.identity.requests")}
           render={
-            <span
-              role="button"
-              tabIndex={0}
-              className="inline-flex cursor-pointer"
-              onClick={() => setOpen((value) => !value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") setOpen((value) => !value);
-              }}
-            />
+            <button data-trace-target={traceTargets("agents.identity.requests")} type="button" className="inline-flex cursor-pointer text-left" />
           }
         >
           {children}
-        </HoverCardTrigger>
-        <HoverCardContent className="w-80 p-4">
+        </PopoverTrigger>
+        <PopoverContent className="w-80 p-4">
           <AgentIdentityCard
             name={agent?.name ?? label}
             ownerName={agent?.ownerName ?? "Unavailable"}
@@ -89,8 +77,8 @@ export function AgentIdentityLink({
               Unable to load tasks.
             </p>
           )}
-        </HoverCardContent>
-      </HoverCard>
+        </PopoverContent>
+      </Popover>
       <AgentWorkDrawer
         request={requests.find((row) => row.id === work?.id) ?? work}
         open={Boolean(work)}

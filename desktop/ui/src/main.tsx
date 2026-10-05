@@ -1,3 +1,5 @@
+import { traceTargets } from "@/api/trace-locators";
+import { runOperation, type OperationScope } from "@/api/operation-runner";
 import { initializeTelemetry } from "@/api/telemetry";
 void initializeTelemetry();
 import { FormEvent, StrictMode, useEffect, useState } from "react";
@@ -90,12 +92,15 @@ const host = window.colabHost ?? {
   openExternal: async (url: string) => {
     window.open(url, "_blank", "noopener,noreferrer");
   },
-  choosePath: async (options: { directory?: boolean; title: string }) => {
+  choosePath: async (options: { directory?: boolean; title: string }) => {return runOperation("system.choose-path", async (operation)=>{
+const trackedFetch=operation.fetch;
+
     const suffix = options.directory === undefined ? "" : `?directory=${options.directory}`;
     const response = await trackedFetch(`/v1/system/choose-path${suffix}`);
     if (!response.ok) throw new Error(await response.text());
     return ((await response.json()) as { path: string | null }).path;
-  },
+
+});},
   onDeepLink: (_callback: (urls: string[]) => void) => () => undefined,
   showAndFocus: async () => {
     window.focus();
@@ -205,7 +210,9 @@ function App() {
   }, [notice]);
   useEffect(()=>{if(initialLoading||installationAction||(!installation?.shellUpdatePending&&sessionStorage.getItem("agent-colab:resume-shell-update")!=="1"))return;sessionStorage.removeItem("agent-colab:resume-shell-update");void finishShellUpdate()},[initialLoading,installation?.shellUpdatePending]);
 
-  async function refreshAuth(initial = false) {
+  async function refreshAuth(initial = false, parent?: OperationScope) {return runOperation("auth.status", async (operation)=>{
+const fetch=operation.fetch;
+
     try {
       const response = await fetch("/v1/auth/status");
       if (response.ok) {
@@ -215,14 +222,18 @@ function App() {
         setAuth({ authenticated: false, error: await response.text() });
         setAuthResolved(true);
       }
-    } catch (reason) {
+    } catch (reason) {operation.fail();
       if (initial) {
         setAuth({ authenticated: false, error: String(reason) });
         setAuthResolved(true);
       }
     }
-  }
-  async function refreshChannels() {
+
+}, {parent:parent?.operation});}
+  async function refreshChannels(parent?: OperationScope) {
+return runOperation("channels.list", async (operation) => {
+const trackedFetch = operation.fetch;
+
     const response = await trackedFetch("/v1/channels");
     if (!response.ok) throw new Error(await response.text());
     const next: Channel[] = await response.json();
@@ -233,8 +244,13 @@ function App() {
         ? current
         : next[0]?.id,
     );
-  }
-  async function refreshAccounts() {
+
+}, {parent:parent?.operation});
+}
+  async function refreshAccounts(parent?: OperationScope) {
+return runOperation("accounts.list", async (operation) => {
+const trackedFetch = operation.fetch;
+
     try {
       setAccounts(
         await (await trackedFetch("/v1/auth/accounts")).json(),
@@ -242,23 +258,38 @@ function App() {
     } catch {
       /* Local Core may be starting. */
     }
-  }
-  async function loadInstallation(refresh = false) {
+
+}, {parent:parent?.operation});
+}
+  async function loadInstallation(refresh = false, parent?: OperationScope) {
+return runOperation("system.installation", async (operation) => {
+const api = operation.response;
+
     const response = await api(`/v1/system/installation${refresh ? "?refresh=true" : ""}`);
     const next: InstallationStatus = await response.json();
     setInstallation(next);
     return next;
-  }
+
+}, {parent:parent?.operation});
+}
   async function messageSettingsAgentCount(channelId: string) {
+return runOperation("members.agent-count", async operation => {
+const api=operation.response;
+
     const response = await api(`/v1/channels/${channelId}/participants`, undefined, true);
     const participants = await response.json() as Array<{ isCurrent: boolean; agentCount: number }>;
     return participants.find((participant) => participant.isCurrent)?.agentCount ?? 0;
-  }
+
+});
+}
   async function checkInstallation() {
+return runOperation("system.check-update", async (operation) => {
+
+
     setInstallationAction("checking");
     setInstallationMessage(undefined);
     try {
-      const next = await loadInstallation(true);
+      const next = await loadInstallation(true, operation);
       const updates = Object.entries(next.components ?? {})
         .filter(([, component]) => component.updateAvailable)
         .map(([id]) => id);
@@ -268,13 +299,19 @@ function App() {
           ? `Updates available: ${updates.join(", ")}.`
           : "All Colab resources are up to date.",
       });
-    } catch (reason) {
+    } catch (reason) { operation.fail();
       setInstallationMessage({ kind: "error", text: `Update check failed: ${readableError(reason)}` });
     } finally {
       setInstallationAction(undefined);
     }
-  }
+
+});
+}
   async function updateInstallation() {
+return runOperation("system.update", async (operation) => {
+const api = operation.response;
+const fetch = operation.fetch;
+
     const resumeShell=Boolean(installation?.components?.["electron-shell"]?.updateAvailable);
     setInstallationAction("updating");
     setInstallationMessage(undefined);
@@ -318,16 +355,21 @@ function App() {
         }
         window.location.reload();
       } else {
-        await loadInstallation(true);
+        await loadInstallation(true, operation);
         setInstallationMessage({ kind: "success", text: "Colab resources installed. Restart Local Core to activate them." });
       }
-    } catch (reason) {
+    } catch (reason) { operation.fail();
       // An expired caller or a legacy lock-conflict response must attach to the live updater.
       const progress = await refreshUpdateProgress().catch(() => undefined);
       if (!isUpdateRunning(progress)) setInstallationMessage({ kind: "error", text: `Update failed: ${readableError(reason)}` });
     } finally { setInstallationAction(undefined); }
-  }
+
+});
+}
   async function restartInstalledCore() {
+return runOperation("system.restart", async (operation) => {
+const fetch = operation.fetch;
+
     setInstallationAction("updating");
     try {
       void fetch("/v1/system/restart", {method:"POST",keepalive:true}).catch(() => undefined);
@@ -342,47 +384,69 @@ function App() {
         } catch { /* launchd is replacing Core */ }
       }
       throw new Error("Local Core did not become ready within 30 seconds");
-    } catch(reason) {setInstallationMessage({kind:"error",text:readableError(reason)});}
+    } catch(reason) { operation.fail();setInstallationMessage({kind:"error",text:readableError(reason)});}
     finally {setInstallationAction(undefined);}
-  }
+
+});
+}
   async function finishShellUpdate() {
+return runOperation("system.shell-update", async operation => {
+const api=operation.response;
+
     setInstallationAction("updating");
     setInstallationMessage(undefined);
     try {
       const response = await api("/v1/system/update-shell", { method: "POST" }, true);
       await response.json();
-      await loadInstallation(true);
+      await loadInstallation(true, operation);
       setInstallationMessage({ kind: "success", text: "Electron Shell updated. Restart Colab to use the new Shell." });
-    } catch (reason) {
+    } catch (reason) {operation.fail();
       setInstallationMessage({ kind: "error", text: `Electron Shell update failed: ${readableError(reason)}` });
     } finally {
       setInstallationAction(undefined);
     }
-  }
+
+});
+}
   async function setAgentSkill(agent: string, installed: boolean) {
+return runOperation("system.skill-target", async (operation) => {
+const api = operation.response;
+
     setInstallationMutationBusy(true);
     try {
       await api(`/v1/system/agents/${agent}/${installed ? "uninstall" : "install"}`, { method: "POST" });
-      await loadInstallation();
+      await loadInstallation(false, operation);
       setNotice(`Agent Colab Skill ${installed ? "uninstalled from" : "installed for"} ${agent}.`);
-    } catch (reason) { setError(String(reason)); }
+    } catch (reason) { operation.fail(); setError(String(reason)); }
     finally { setInstallationMutationBusy(false); }
-  }
+
+});
+}
   async function setDefaultAgent(agent: AgentTarget) {
+return runOperation("system.default-agent", async (operation) => {
+const api = operation.response;
+
     setInstallationMutationBusy(true);
     try {
       await api(`/v1/system/agents/${agent}/default`, { method: "POST" });
-      await loadInstallation();
+      await loadInstallation(false, operation);
       setNotice(`${agent} is now the default Agent.`);
-    } catch (reason) { setError(String(reason)); }
+    } catch (reason) { operation.fail(); setError(String(reason)); }
     finally { setInstallationMutationBusy(false); }
-  }
-  async function refreshOrganizations() {
+
+});
+}
+  async function refreshOrganizations(parent?: OperationScope) {
+return runOperation("organizations.list", async (operation) => {
+const api = operation.response;
+
     const response = await api("/v1/organizations");
     const next: Organization[] = await response.json();
     setOrganizations(next);
     return next;
-  }
+
+}, {parent:parent?.operation});
+}
   useEffect(() => {
     void refreshAuth(true);
     void refreshAccounts();
@@ -398,7 +462,9 @@ function App() {
     // GUI resources are independently replaceable while Electron keeps running.
     // Compare this bundle's embedded version with the active ui.json whenever the
     // window regains focus, then reload only when Local Core has switched roots.
-    async function reloadIfGuiChanged() {
+    async function reloadIfGuiChanged() {return runOperation("system.gui-version", async (operation)=>{
+const fetch=operation.fetch;
+
       try {
         const response = await fetch(`/ui.json?checkedAt=${Date.now()}`, { cache: "no-store" });
         if (!response.ok) return;
@@ -407,7 +473,8 @@ function App() {
       } catch {
         /* Local Core can be restarting during an artifact update. */
       }
-    }
+
+});}
     const onFocus = () => void reloadIfGuiChanged();
     window.addEventListener("focus", onFocus);
     return () => {
@@ -468,6 +535,9 @@ function App() {
   }, [selectedId]);
 
   async function signIn(loginHint?: string) {
+return runOperation("auth.sign-in", async (operation) => {
+const trackedFetch = operation.fetch;
+
     setBusy(true);
     setError(undefined);
     try {
@@ -477,13 +547,18 @@ function App() {
       if (!response.ok) throw new Error(await response.text());
       const body = await response.json();
       await host.openExternal(body.authorizationUrl);
-    } catch (reason) {
+    } catch (reason) { operation.fail();
       setError(reason instanceof Error ? reason.message : String(reason));
     } finally {
       setBusy(false);
     }
-  }
+
+});
+}
   async function switchAccount(account: Account) {
+return runOperation("auth.switch", async (operation) => {
+const trackedFetch = operation.fetch;
+
     setBusy(true);
     try {
       const response = await trackedFetch("/v1/auth/switch", {
@@ -496,31 +571,41 @@ function App() {
         return;
       }
       if (!response.ok) throw new Error(await response.text());
-      await refreshAuth();
-      await refreshAccounts();
-      await refreshOrganizations();
-      await refreshChannels();
-    } catch (reason) {
+      await refreshAuth(false, operation);
+      await refreshAccounts(operation);
+      await refreshOrganizations(operation);
+      await refreshChannels(operation);
+    } catch (reason) { operation.fail();
       setError(String(reason));
     } finally {
       setBusy(false);
     }
-  }
+
+});
+}
   async function logout() {
+return runOperation("auth.logout", async (operation) => {
+const api = operation.response;
+
     setBusy(true);
     try {
       await api("/v1/auth/logout", { method: "POST" });
       setAuth({ authenticated: false });
       setChannels([]);
       setSelectedId(undefined);
-      await refreshAccounts();
-    } catch (reason) {
+      await refreshAccounts(operation);
+    } catch (reason) { operation.fail();
       setError(String(reason));
     } finally {
       setBusy(false);
     }
-  }
+
+});
+}
   async function createChannel(event: FormEvent<HTMLFormElement>) {
+return runOperation("channels.create", async (operation) => {
+const trackedFetch = operation.fetch;
+
     event.preventDefault();
     setBusy(true);
     setError(undefined);
@@ -533,16 +618,21 @@ function App() {
       });
       if (!response.ok) throw new Error(await response.text());
       const channel: Channel = await response.json();
-      await refreshChannels();
+      await refreshChannels(operation);
       setSelectedId(channel.id);
       setShowCreate(false);
-    } catch (reason) {
+    } catch (reason) { operation.fail();
       setError(reason instanceof Error ? reason.message : String(reason));
     } finally {
       setBusy(false);
     }
-  }
+
+});
+}
   async function switchOrganization(organization: Organization) {
+return runOperation("organizations.switch", async (operation) => {
+const api = operation.response;
+
     if (organization.active) return;
     setBusy(true);
     setError(undefined);
@@ -550,15 +640,20 @@ function App() {
       await api(`/v1/organizations/${organization.id}/activate`, {
         method: "POST",
       });
-      await refreshOrganizations();
-      await refreshChannels();
-    } catch (reason) {
+      await refreshOrganizations(operation);
+      await refreshChannels(operation);
+    } catch (reason) { operation.fail();
       setError(String(reason));
     } finally {
       setBusy(false);
     }
-  }
+
+});
+}
   async function createOrganization(event: FormEvent<HTMLFormElement>) {
+return runOperation("organizations.create", async (operation) => {
+const api = operation.response;
+
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     setBusy(true);
@@ -569,15 +664,17 @@ function App() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ name: form.get("name") }),
       });
-      await refreshOrganizations();
-      await refreshChannels();
+      await refreshOrganizations(operation);
+      await refreshChannels(operation);
       setShowCreateOrganization(false);
-    } catch (reason) {
+    } catch (reason) { operation.fail();
       setError(String(reason));
     } finally {
       setBusy(false);
     }
-  }
+
+});
+}
   async function api(path: string, init?: RequestInit, silent = false) {
     // Durable background reconciliation must not make the foreground loading indicator pulse.
     const response = await (silent ? fetch(path, init) : trackedFetch(path, init));
@@ -585,6 +682,9 @@ function App() {
     return response;
   }
   async function finishPendingInvitation() {
+return runOperation("invitations.accept", async (operation) => {
+const trackedFetch = operation.fetch;
+
     const token = localStorage.getItem("pendingOrganizationInvitation");
     if (!token) return false;
     const status: Auth = await (
@@ -600,31 +700,55 @@ function App() {
       return false;
     }
     localStorage.removeItem("pendingOrganizationInvitation");
-    await refreshChannels();
+    await refreshChannels(operation);
     return true;
-  }
-  async function loadMembers() {
+
+});
+}
+  async function loadMembers(parent?: OperationScope) {
+return runOperation("members.list", async (operation) => {
+const api = operation.response;
+
     if (!selectedId) return;
     setMembers(await (await api(`/v1/channels/${selectedId}/members`)).json());
-  }
-  async function loadFileShares(silent = false) {
+
+}, {parent:parent?.operation});
+}
+  async function loadFileShares(silent = false, parent?: OperationScope) {
+return runOperation("files.list", async (operation) => {
+const api = operation.response;
+
     if (!selectedId) return;
     setFileShares(await (await api(`/v1/channels/${selectedId}/files`, undefined, silent)).json());
-  }
-  async function loadSessionShares(silent = false) {
+
+}, {parent:parent?.operation});
+}
+  async function loadSessionShares(silent = false, parent?: OperationScope) {
+return runOperation("sessions.list", async (operation) => {
+const api = operation.response;
+
     if (!selectedId) return;
     setSessionShares(await (await api(`/v1/channels/${selectedId}/sessions`, undefined, silent)).json());
-  }
+
+}, {parent:parent?.operation});
+}
   async function withdrawSession(share: SessionShare) {
+return runOperation("sessions.withdraw", async (operation) => {
+const api = operation.response;
+
     setBusy(true); setError(undefined);
-    try { await api(`/v1/sessions/${share.id}`, { method: "DELETE" }); await loadSessionShares(); setNotice("Shared Session withdrawn."); }
-    catch (reason) { setError(String(reason)); }
+    try { await api(`/v1/sessions/${share.id}`, { method: "DELETE" }); await loadSessionShares(false, operation); setNotice("Shared Session withdrawn."); }
+    catch (reason) { operation.fail(); setError(String(reason)); }
     finally { setBusy(false); }
-  }
+
+});
+}
   // Files UI stays deliberately thin: it selects user intent and delegates scanning, Git pack
   // generation, persistence and synchronization to the GUI-independent Local Core API.
   // This keeps the same workflow available to the future Python Skill when Desktop is not open.
-  async function chooseFiles(directory?: boolean) {
+  async function chooseFiles(directory?: boolean) {return runOperation("files.choose", async (operation)=>{
+const trackedFetch=operation.fetch;
+
     // Files is one product operation. Electron and Local Core are host adapters for the same
     // unified intent; neither distinction is exposed as a second UI decision.
     if (directory === undefined && !host.isElectron) {
@@ -640,8 +764,12 @@ function App() {
           ? "Choose a file"
           : "Choose a file or folder to share",
     });
-  }
-  async function shareFiles(path: string, syncExcludes: string[]) {
+
+});}
+  async function shareFiles(path: string, syncExcludes: string[], parent?: OperationScope) {
+return runOperation("files.share", async (operation) => {
+const api = operation.response;
+
     if (!selectedId) return;
     setBusy(true);
     setError(undefined);
@@ -652,45 +780,65 @@ function App() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ localPath: path, syncExcludes }),
       });
-      await loadFileShares();
+      await loadFileShares(false, operation);
       setNotice(
         "Files shared with this Channel. Future changes sync automatically.",
       );
-    } catch (reason) {
+    } catch (reason) { operation.fail();
       setError(reason instanceof Error ? reason.message : String(reason));
     } finally {
       setBusy(false);
     }
-  }
+
+}, {parent:parent?.operation});
+}
   async function ensureLocalFiles(share: FileShare) {
+return runOperation("files.materialize", async (operation) => {
+const api = operation.response;
+
     if (share.canWithdraw) return share;
     setError(undefined);
     const response = await api(`/v1/files/${share.id}/materialize`, {
       method: "POST",
     });
     const result: FileShare = await response.json();
-    await loadFileShares();
+    await loadFileShares(false, operation);
     return result;
-  }
+
+});
+}
   async function withdrawFiles(share: FileShare) {
+return runOperation("files.withdraw", async (operation) => {
+const api = operation.response;
+
     setBusy(true);
     setError(undefined);
     try {
       await api(`/v1/files/${share.id}`, { method: "DELETE" });
-      await loadFileShares();
+      await loadFileShares(false, operation);
       setNotice("Shared folder withdrawn.");
-    } catch (reason) {
+    } catch (reason) { operation.fail();
       setError(String(reason));
     } finally {
       setBusy(false);
     }
-  }
+
+});
+}
   async function retryFiles(share: FileShare) {
+return runOperation("files.retry", async (operation) => {
+const api = operation.response;
+
     setError(undefined);
     await api(`/v1/files/${share.id}/retry`, { method: "POST" });
-    await loadFileShares();
-  }
+    await loadFileShares(false, operation);
+
+});
+}
   async function saveChannel(event: FormEvent<HTMLFormElement>) {
+return runOperation("channels.update", async (operation) => {
+const api = operation.response;
+
     event.preventDefault();
     if (!selected) return;
     const form = new FormData(event.currentTarget);
@@ -704,14 +852,19 @@ function App() {
           icon: form.get("icon") || null,
         }),
       });
-      await refreshChannels();
-    } catch (reason) {
+      await refreshChannels(operation);
+    } catch (reason) { operation.fail();
       setError(String(reason));
     } finally {
       setBusy(false);
     }
-  }
+
+});
+}
   async function addMember(event: FormEvent<HTMLFormElement>) {
+return runOperation("members.add", async (operation) => {
+const api = operation.response;
+
     event.preventDefault();
     if (!selected) return;
     const formElement = event.currentTarget;
@@ -730,19 +883,24 @@ function App() {
       });
       const result: AddMemberResult = await response.json();
       formElement.reset();
-      await loadMembers();
+      await loadMembers(operation);
       setNotice(
         result.status === "joined"
           ? "Member added to this Channel."
           : "Invitation queued for delivery.",
       );
-    } catch (reason) {
+    } catch (reason) { operation.fail();
       setError(reason instanceof Error ? reason.message : String(reason));
     } finally {
       setBusy(false);
     }
-  }
+
+});
+}
   async function changeRole(member: Member, role: string) {
+return runOperation("members.role", async (operation) => {
+const api = operation.response;
+
     if (!selected || !member.memberId) return;
     try {
       await api(`/v1/channels/${selected.id}/members/${member.memberId}`, {
@@ -750,29 +908,36 @@ function App() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ role }),
       });
-      await loadMembers();
-    } catch (reason) {
+      await loadMembers(operation);
+    } catch (reason) { operation.fail();
       setError(String(reason));
     }
-  }
+
+});
+}
   async function removeMember(member: Member) {
+return runOperation("members.remove", async (operation) => {
+const api = operation.response;
+
     if (!selected) return;
     const target = member.memberId
       ? `members/${member.memberId}`
       : `invitations/${encodeURIComponent(member.email)}`;
     try {
       await api(`/v1/channels/${selected.id}/${target}`, { method: "DELETE" });
-      await loadMembers();
-    } catch (reason) {
+      await loadMembers(operation);
+    } catch (reason) { operation.fail();
       setError(String(reason));
     }
-  }
+
+});
+}
 
   return (
     <TooltipProvider>
-      <main className="flex h-screen flex-col overflow-hidden bg-background text-foreground">
+      <main data-trace-target={traceTargets("auth.status", "invitations.accept")} data-trace-region="application" className="flex h-screen flex-col overflow-hidden bg-background text-foreground">
         <div className="grid min-h-0 flex-1 grid-cols-[72px_1fr] overflow-hidden">
-        <aside
+        <aside data-trace-target={traceTargets("channels.list")} data-trace-region={"channels"}
           className="flex h-full flex-col items-center justify-between bg-sidebar-foreground px-2 py-3"
           aria-label="Channels"
         >
@@ -799,9 +964,9 @@ function App() {
             ))}
             {auth.authenticated && (
               <Tooltip>
-                <TooltipTrigger
+                <TooltipTrigger data-trace-target={traceTargets("channels.create")}
                   render={
-                    <Button
+                    <Button data-trace-target={traceTargets("channels.create")}
                       size="icon"
                       variant="outline"
                       className="size-11 rounded-full border-dashed"
@@ -817,9 +982,9 @@ function App() {
             )}
           </div>
           <Popover open={settingsOpen} onOpenChange={(open) => { setSettingsOpen(open); if (open) { setSettingsView("main"); void loadInstallation().catch((reason) => setInstallationMessage({ kind: "error", text: `Could not load installation status: ${String(reason)}` })); if(selected) void messageSettingsAgentCount(selected.id).then(setMyAgentCount).catch(()=>setMyAgentCount(0)); } }}>
-            <PopoverTrigger
+            <PopoverTrigger data-trace-nav={"settings"}
               render={
-                <Button
+                <Button data-trace-nav={"settings"}
                   size="icon"
                   variant="ghost"
                   className="size-10 rounded-full text-sidebar-accent-foreground hover:bg-sidebar-accent"
@@ -829,26 +994,26 @@ function App() {
             >
               <SettingsIcon />
             </PopoverTrigger>
-            <PopoverContent side="right" align="end" className="max-h-[88vh] w-[28rem] overflow-y-auto p-3">
+            <PopoverContent data-trace-region={"settings"} side="right" align="end" className="max-h-[88vh] w-[28rem] overflow-y-auto p-3">
               <PopoverHeader className="mb-2 flex-row items-center gap-2">
-                {settingsView!=="main"&&<Button size="icon-sm" variant="ghost" aria-label="Back to Settings" onClick={()=>setSettingsView("main")}><ChevronLeftIcon/></Button>}
+                {settingsView!=="main"&&<Button data-trace-nav={"settings.main"} size="icon-sm" variant="ghost" aria-label="Back to Settings" onClick={()=>setSettingsView("main")}><ChevronLeftIcon/></Button>}
                 <PopoverTitle>{settingsView==="accounts"?"Switch user":settingsView==="organizations"?"Switch organization":"Settings"}</PopoverTitle>
               </PopoverHeader>
               {settingsView==="accounts"?<div className="flex flex-col gap-1">
-                {accounts.map(account=><Button key={account.userId} variant={account.active?"secondary":"ghost"} className="h-auto justify-start gap-3 p-2" disabled={busy||account.active} onClick={()=>void switchAccount(account).then(()=>setSettingsView("main"))}><Avatar><AvatarImage src={account.avatarUrl}/><AvatarFallback>{initials(account.displayName??account.email)}</AvatarFallback></Avatar><span className="min-w-0 flex-1 text-left"><strong className="block truncate">{account.displayName??account.email}</strong><small className="block truncate text-muted-foreground">{account.email}</small></span>{account.active&&<CheckIcon/>}</Button>)}
-                <Button variant="outline" disabled={busy} onClick={()=>void signIn()}><PlusIcon/>Add another account</Button>
-                {auth.authenticated&&<Button variant="ghost" className="text-destructive" disabled={busy} onClick={()=>void logout()}><LogOutIcon/>Sign out</Button>}
+                {accounts.map(account=><Button data-trace-target={traceTargets("auth.switch", "accounts.list")} key={account.userId} variant={account.active?"secondary":"ghost"} className="h-auto justify-start gap-3 p-2" disabled={busy||account.active} onClick={()=>void switchAccount(account).then(()=>setSettingsView("main"))}><Avatar><AvatarImage src={account.avatarUrl}/><AvatarFallback>{initials(account.displayName??account.email)}</AvatarFallback></Avatar><span className="min-w-0 flex-1 text-left"><strong className="block truncate">{account.displayName??account.email}</strong><small className="block truncate text-muted-foreground">{account.email}</small></span>{account.active&&<CheckIcon/>}</Button>)}
+                <Button data-trace-target={traceTargets("auth.sign-in")} variant="outline" disabled={busy} onClick={()=>void signIn()}><PlusIcon/>Add another account</Button>
+                {auth.authenticated&&<Button data-trace-target={traceTargets("auth.logout")} variant="ghost" className="text-destructive" disabled={busy} onClick={()=>void logout()}><LogOutIcon/>Sign out</Button>}
               </div>:settingsView==="organizations"?<div className="flex flex-col gap-1">
-                {organizations.map(organization=><Button key={organization.id} variant={organization.active?"secondary":"ghost"} className="justify-start" disabled={busy||organization.active} onClick={()=>void switchOrganization(organization).then(()=>setSettingsView("main"))}><span className="min-w-0 flex-1 truncate text-left">{organization.name}</span>{organization.active&&<CheckIcon/>}</Button>)}
-                <Button variant="outline" onClick={()=>setShowCreateOrganization(true)}><PlusIcon/>Create Organization</Button>
+                {organizations.map(organization=><Button data-trace-target={traceTargets("organizations.switch", "organizations.list")} key={organization.id} variant={organization.active?"secondary":"ghost"} className="justify-start" disabled={busy||organization.active} onClick={()=>void switchOrganization(organization).then(()=>setSettingsView("main"))}><span className="min-w-0 flex-1 truncate text-left">{organization.name}</span>{organization.active&&<CheckIcon/>}</Button>)}
+                <Button data-trace-target={traceTargets("organizations.create")} variant="outline" onClick={()=>setShowCreateOrganization(true)}><PlusIcon/>Create Organization</Button>
               </div>:<div className="flex flex-col gap-4">
                 <div className="flex flex-col gap-1">
-                  <Button variant="ghost" className="h-auto justify-start gap-3 px-2 py-2" onClick={()=>setSettingsView("accounts")}><Avatar><AvatarImage src={auth.user?.avatarUrl}/><AvatarFallback>{initials(auth.user?.displayName??auth.user?.email??"U")}</AvatarFallback></Avatar><span className="min-w-0 flex-1 text-left"><span className="block text-xs text-muted-foreground">User</span><strong className="block truncate">{auth.user?.displayName??auth.user?.email??"Not signed in"}</strong></span><span className="text-xs text-muted-foreground">Switch</span><ChevronRightIcon/></Button>
-                  <Button variant="ghost" className="h-auto justify-start px-2 py-2" onClick={()=>setSettingsView("organizations")}><span className="min-w-0 flex-1 text-left"><span className="block text-xs text-muted-foreground">Organization</span><strong className="block truncate">{organizations.find(item=>item.active)?.name??"No organization"}</strong></span><span className="text-xs text-muted-foreground">Switch</span><ChevronRightIcon/></Button>
+                  <Button data-trace-nav={"accounts"} variant="ghost" className="h-auto justify-start gap-3 px-2 py-2" onClick={()=>setSettingsView("accounts")}><Avatar><AvatarImage src={auth.user?.avatarUrl}/><AvatarFallback>{initials(auth.user?.displayName??auth.user?.email??"U")}</AvatarFallback></Avatar><span className="min-w-0 flex-1 text-left"><span className="block text-xs text-muted-foreground">User</span><strong className="block truncate">{auth.user?.displayName??auth.user?.email??"Not signed in"}</strong></span><span className="text-xs text-muted-foreground">Switch</span><ChevronRightIcon/></Button>
+                  <Button data-trace-nav={"organizations"} variant="ghost" className="h-auto justify-start px-2 py-2" onClick={()=>setSettingsView("organizations")}><span className="min-w-0 flex-1 text-left"><span className="block text-xs text-muted-foreground">Organization</span><strong className="block truncate">{organizations.find(item=>item.active)?.name??"No organization"}</strong></span><span className="text-xs text-muted-foreground">Switch</span><ChevronRightIcon/></Button>
                 </div>
-                {selected&&<Button variant="outline" className="w-full justify-start" onClick={()=>{setSettingsOpen(false);setWorkspaceTab("messages");setAgentSettingsOpenToken(value=>value+1)}}><SparklesIcon/><span className="min-w-0 flex-1 text-left">My Agents</span><span className="text-muted-foreground">{myAgentCount}</span><ChevronRightIcon/></Button>}
-                <section><p className="mb-2 px-1 text-xs font-medium text-muted-foreground">Install Skill to local Agent runtime</p><div className="divide-y rounded-lg border">{([['codex','Codex'],['claude','Claude Code'],['myflicker','MyFlicker']] as const).map(([id,label])=>{const target=installation?.targets?.[id];return <div key={id} className="flex items-center gap-3 p-3"><Button size="sm" variant="ghost" aria-label={`Use ${label} as default Agent`} disabled={installationBusy||!target?.installed||installation?.defaultAgent===id} onClick={()=>void setDefaultAgent(id)}>{installation?.defaultAgent===id&&<CheckIcon data-icon="inline-start"/>}{installation?.defaultAgent===id?"Default":"Set default"}</Button><div className="min-w-0 flex-1"><p className="text-sm font-medium">{label}</p><p className="text-xs text-muted-foreground">{target?.installed?"Installed":"Not installed"}</p></div><Button size="sm" variant="outline" disabled={installationBusy||!installation} onClick={()=>void setAgentSkill(id,Boolean(target?.installed))}>{target?.installed?"Uninstall":"Install"}</Button></div>})}</div></section>
-                <section><div className="flex items-center gap-2"><Button variant="ghost" className="min-w-0 flex-1 justify-start px-1" onClick={()=>setUpdatesExpanded(value=>!value)}><span className="min-w-0 flex-1 text-left">Updates</span><ChevronRightIcon className={updatesExpanded?"rotate-90 transition-transform":"transition-transform"}/></Button><Button size="sm" variant="outline" disabled={installationBusy} onClick={()=>void(updateProgress?.restartRequired?restartInstalledCore():Object.values(installation?.components??{}).some(component=>component.updateAvailable)?updateInstallation():checkInstallation())}>{installationAction==="checking"?"Checking…":updateBusy?"Updating…":updateProgress?.restartRequired?"Restart":Object.values(installation?.components??{}).some(component=>component.updateAvailable)?"Update":"Check updates"}</Button></div>{(updateBusy || updateProgress?.restartRequired || ["failed","interrupted"].includes(updateProgress?.state??""))&&<UpdateProgressView progress={updateProgress}/>} {updatesExpanded&&<div className="mt-2 rounded-lg border"><div className="p-3"><p className="text-sm font-medium">Colab resources</p><p className="text-xs text-muted-foreground">Independently distributed local artifacts</p></div>{installationMessage&&!updateRunning&&<p role="status" className={`max-h-28 overflow-auto break-words border-y px-3 py-2 text-xs ${installationMessage.kind==="error"?"bg-destructive/10 text-destructive":"bg-muted text-muted-foreground"}`}>{installationMessage.text}</p>}{([['local-core','Local Core'],['desktop-ui','GUI Resources'],['colab-skill','Agent Colab Skill'],['electron-shell','Electron Shell']] as const).map(([id,label])=>{const component=installation?.components?.[id];return <div key={id} className="flex items-center gap-3 border-t p-3"><div className="min-w-0 flex-1"><p className="text-sm font-medium">{label}</p><p className="text-xs text-muted-foreground">{component?.installedVersion??"Not installed"}{component?.latestVersion?` · Latest ${component.latestVersion}`:""}</p></div>{component?.updateAvailable&&<span className="text-xs font-medium text-primary">Update available</span>}{id==="electron-shell"&&!host.isElectron&&component?.downloadUrl&&<Button size="sm" variant="outline" onClick={()=>void host.openExternal(component.downloadUrl!)}>Download app</Button>}</div>})}</div>}</section>
+                {selected&&<Button data-trace-target={traceTargets("members.agent-count")} variant="outline" className="w-full justify-start" onClick={()=>{setSettingsOpen(false);setWorkspaceTab("messages");setAgentSettingsOpenToken(value=>value+1)}}><SparklesIcon/><span className="min-w-0 flex-1 text-left">My Agents</span><span className="text-muted-foreground">{myAgentCount}</span><ChevronRightIcon/></Button>}
+                <section><p className="mb-2 px-1 text-xs font-medium text-muted-foreground">Install Skill to local Agent runtime</p><div className="divide-y rounded-lg border">{([['codex','Codex'],['claude','Claude Code'],['myflicker','MyFlicker']] as const).map(([id,label])=>{const target=installation?.targets?.[id];return <div key={id} className="flex items-center gap-3 p-3"><Button data-trace-target={traceTargets("system.default-agent")} size="sm" variant="ghost" aria-label={`Use ${label} as default Agent`} disabled={installationBusy||!target?.installed||installation?.defaultAgent===id} onClick={()=>void setDefaultAgent(id)}>{installation?.defaultAgent===id&&<CheckIcon data-icon="inline-start"/>}{installation?.defaultAgent===id?"Default":"Set default"}</Button><div className="min-w-0 flex-1"><p className="text-sm font-medium">{label}</p><p className="text-xs text-muted-foreground">{target?.installed?"Installed":"Not installed"}</p></div><Button data-trace-target={traceTargets("system.skill-target")} size="sm" variant="outline" disabled={installationBusy||!installation} onClick={()=>void setAgentSkill(id,Boolean(target?.installed))}>{target?.installed?"Uninstall":"Install"}</Button></div>})}</div></section>
+                <section><div className="flex items-center gap-2"><Button data-trace-target={traceTargets("system.installation", "system.gui-version", "system.shell-update")} variant="ghost" className="min-w-0 flex-1 justify-start px-1" onClick={()=>setUpdatesExpanded(value=>!value)}><span className="min-w-0 flex-1 text-left">Updates</span><ChevronRightIcon className={updatesExpanded?"rotate-90 transition-transform":"transition-transform"}/></Button><Button data-trace-target={traceTargets("system.check-update", "system.update", "system.restart")} size="sm" variant="outline" disabled={installationBusy} onClick={()=>void(updateProgress?.restartRequired?restartInstalledCore():Object.values(installation?.components??{}).some(component=>component.updateAvailable)?updateInstallation():checkInstallation())}>{installationAction==="checking"?"Checking…":updateBusy?"Updating…":updateProgress?.restartRequired?"Restart":Object.values(installation?.components??{}).some(component=>component.updateAvailable)?"Update":"Check updates"}</Button></div>{(updateBusy || updateProgress?.restartRequired || ["failed","interrupted"].includes(updateProgress?.state??""))&&<UpdateProgressView progress={updateProgress}/>} {updatesExpanded&&<div className="mt-2 rounded-lg border"><div className="p-3"><p className="text-sm font-medium">Colab resources</p><p className="text-xs text-muted-foreground">Independently distributed local artifacts</p></div>{installationMessage&&!updateRunning&&<p role="status" className={`max-h-28 overflow-auto break-words border-y px-3 py-2 text-xs ${installationMessage.kind==="error"?"bg-destructive/10 text-destructive":"bg-muted text-muted-foreground"}`}>{installationMessage.text}</p>}{([['local-core','Local Core'],['desktop-ui','GUI Resources'],['colab-skill','Agent Colab Skill'],['electron-shell','Electron Shell']] as const).map(([id,label])=>{const component=installation?.components?.[id];return <div key={id} className="flex items-center gap-3 border-t p-3"><div className="min-w-0 flex-1"><p className="text-sm font-medium">{label}</p><p className="text-xs text-muted-foreground">{component?.installedVersion??"Not installed"}{component?.latestVersion?` · Latest ${component.latestVersion}`:""}</p></div>{component?.updateAvailable&&<span className="text-xs font-medium text-primary">Update available</span>}{id==="electron-shell"&&!host.isElectron&&component?.downloadUrl&&<Button size="sm" variant="outline" onClick={()=>void host.openExternal(component.downloadUrl!)}>Download app</Button>}</div>})}</div>}</section>
               </div>}
             </PopoverContent>
           </Popover>
@@ -890,10 +1055,10 @@ function App() {
                   <TabsTrigger value="settings">Settings</TabsTrigger>
                 </TabsList>
               </div>
-              <TabsContent value="messages" className="min-h-0 flex-1 overflow-hidden">
+              <TabsContent data-trace-target={traceTargets("context.people", "context.resources")} data-trace-region={"messages"} value="messages" className="min-h-0 flex-1 overflow-hidden">
                 <MessagesView focusId={contextFocus?.kind === "message" ? contextFocus.id : undefined} channelId={selected.id} channelName={selected.name} settingsOpenToken={agentSettingsOpenToken} onSettingsOpenConsumed={()=>setAgentSettingsOpenToken(0)} defaultAgent={installation?.defaultAgent ?? "codex"} installedAgents={installation?.targets ?? {}} onError={setError} onNotice={setNotice} onActivityChange={setAgentActivity}/>
               </TabsContent>
-              <TabsContent value="sessions">
+              <TabsContent data-trace-target={traceTargets("sessions.list")} data-trace-region={"sessions"} value="sessions">
                 <SessionsView
                   focusId={contextFocus?.kind === "session" ? contextFocus.id : undefined}
                   channelId={selected.id}
@@ -906,7 +1071,7 @@ function App() {
                   onWithdraw={withdrawSession}
                 />
               </TabsContent>
-              <TabsContent value="files">
+              <TabsContent data-trace-target={traceTargets("files.list")} data-trace-region={"files"} value="files">
                 <FilesView
                   focusId={contextFocus?.kind === "files" ? contextFocus.id : undefined}
                   shares={fileShares}
@@ -920,7 +1085,7 @@ function App() {
                   installedAgents={installation?.targets ?? {}}
                 />
               </TabsContent>
-              <TabsContent value="skills">
+              <TabsContent data-trace-target={traceTargets("skills.list")} data-trace-region={"skills"} value="skills">
                 <SkillsView
                   channelId={selected.id}
                   channelName={selected.name}
@@ -930,10 +1095,10 @@ function App() {
                   onChoose={chooseFiles}
                 />
               </TabsContent>
-              <TabsContent value="canvas" className="min-h-0 flex-1 overflow-hidden">
+              <TabsContent data-trace-region={"canvas"} value="canvas" className="min-h-0 flex-1 overflow-hidden">
                 <CanvasView focusId={contextFocus?.kind === "canvas" ? contextFocus.id : undefined} channelId={selected.id} channelName={selected.name} defaultAgent={installation?.defaultAgent ?? "codex"} installedAgents={installation?.targets ?? {}} />
               </TabsContent>
-              <TabsContent value="settings" onFocus={() => void loadMembers()}>
+              <TabsContent data-trace-target={traceTargets("members.list")} data-trace-region={"channel-settings"} value="settings" onFocus={() => void loadMembers()}>
                 <ChannelSettings
                   channel={selected}
                   members={members}
@@ -1098,6 +1263,9 @@ function ChannelSettings({
   const [people, setPeople] = useState<OrganizationPerson[]>([]);
   useEffect(onLoad, [channel.id]);
   async function searchPeople(query: string) {
+return runOperation("members.search", async (operation) => {
+const trackedFetch = operation.fetch;
+
     if (!query.trim()) {
       setPeople([]);
       return;
@@ -1110,7 +1278,9 @@ function ChannelSettings({
     } catch {
       /* Search is progressive enhancement. */
     }
-  }
+
+});
+}
   const canManage = channel.role === "owner" || channel.role === "admin";
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-10 py-6">
@@ -1121,7 +1291,7 @@ function ChannelSettings({
             Name and compact icon shown in the Channel rail.
           </p>
         </div>
-        <form onSubmit={onSave}>
+        <form data-trace-target={traceTargets("channels.update")} onSubmit={onSave}>
           <FieldGroup>
             <div className="grid grid-cols-[1fr_120px] gap-4">
               <Field>
@@ -1159,7 +1329,7 @@ function ChannelSettings({
           </p>
         </div>
         {canManage && (
-          <form onSubmit={onAdd}>
+          <form data-trace-target={traceTargets("members.add", "members.search")} onSubmit={onAdd}>
             <FieldGroup>
               <div className="flex items-end gap-3">
                 <Field className="flex-1">
@@ -1233,7 +1403,7 @@ function ChannelSettings({
                   value={member.role}
                   onValueChange={(value) => onRole(member, value as string)}
                 >
-                  <SelectTrigger size="sm">
+                  <SelectTrigger data-trace-target={traceTargets("members.role")} size="sm">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -1247,7 +1417,7 @@ function ChannelSettings({
                 <Badge variant="secondary">{member.role}</Badge>
               )}
               {channel.role === "owner" && member.role !== "owner" && (
-                <Button
+                <Button data-trace-target={traceTargets("members.remove")}
                   size="icon-sm"
                   variant="ghost"
                   aria-label={`Remove ${member.email}`}

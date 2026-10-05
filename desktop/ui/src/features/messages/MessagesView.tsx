@@ -1,3 +1,6 @@
+import { traceTargets } from "@/api/trace-locators";
+import { useAgentResultObservation } from "@/api/agent-result-observation";
+import { runOperation } from "@/api/operation-runner";
 import { operations } from "@/api/trace-operations";
 import { beginOperation, type Operation } from "@/api/telemetry";
 import {
@@ -89,7 +92,8 @@ export function MessagesView({
 }: Props) {
   const context = useChannelContext();
   const [copyMessages, setCopyMessages] = useState<ChannelMessage[]>();
-  useEffect(() => { if (!focusId) return; void messageRequest<ChannelMessage>(`/v1/channels/${channelId}/messages/${focusId}`).then(row => setMessages(current => [...current.filter(value => value.id !== row.id), row].sort((a, b) => a.seq - b.seq))).catch(reason => onError(String(reason))); }, [focusId, channelId]);
+  const [giveAgent, setGiveAgent] = useState<Blueprint>();
+  useEffect(() => { if (!focusId) return; void runOperation("messages.focus", async operation => operation.message<ChannelMessage>(`/v1/channels/${channelId}/messages/${focusId}`).then(row => setMessages(current => [...current.filter(value => value.id !== row.id), row].sort((a, b) => a.seq - b.seq)))).catch(reason => onError(String(reason))); }, [focusId, channelId]);
   const pendingPresentation = useRef(new Map<string, Operation>());
   useLayoutEffect(() => {
     for (const message of messages) {
@@ -113,6 +117,7 @@ export function MessagesView({
     [messages, setMessages] = useState<ChannelMessage[]>(cached?.rows ?? []),
     [agents, setAgents] = useState<Record<string, Blueprint[]>>({}),
     [requests, setRequests] = useState<AgentRequestStatus[]>([]);
+  useAgentResultObservation(requests);
   const [runtimes, setRuntimes] = useState<AgentRuntime[]>([]),
     [addOpen, setAddOpen] = useState(false),
     [agentsOpen, setAgentsOpen] = useState(false),
@@ -131,13 +136,21 @@ export function MessagesView({
     catchUpQueuedRef = useRef(false),
     managerMode = useRef<"channel" | "settings">("channel");
   async function loadParticipants() {
+return runOperation("messages.participants", async (operation) => {
+const messageRequest = operation.message;
+
     const rows = await messageRequest<Participant[]>(
       `/v1/channels/${channelId}/participants`,
     );
     setParticipants(rows);
     return rows;
-  }
+
+});
+}
   async function loadMessages(after = 0, background = false) {
+return runOperation("messages.list", async (operation) => {
+const messageRequest = operation.message;
+
     const rows = await messageRequest<ChannelMessage[]>(
       `/v1/channels/${channelId}/messages?after=${after}&limit=200`,
       undefined,
@@ -157,20 +170,35 @@ export function MessagesView({
       messageCache.set(channelId, { rows: next, lastSeq: lastSeqRef.current });
       return next;
     });
-  }
+
+});
+}
   async function loadAgents(memberId: string) {
+return runOperation("agents.list", async (operation) => {
+const messageRequest = operation.message;
+
     const rows = await messageRequest<Blueprint[]>(
       `/v1/channels/${channelId}/blueprints?ownerMemberId=${memberId}`,
     );
     setAgents((current) => ({ ...current, [memberId]: rows }));
     return rows;
-  }
+
+});
+}
   async function loadRuntimes() {
+return runOperation("agents.runtimes", async (operation) => {
+const messageRequest = operation.message;
+
     setRuntimes(
       await messageRequest(`/v1/channels/${channelId}/agent-runtimes`),
     );
-  }
+
+});
+}
   async function loadRequests() {
+return runOperation("agents.requests", async (operation) => {
+const messageRequest = operation.message;
+
     setRequests(
       await messageRequest<AgentRequestStatus[]>(
         `/v1/channels/${channelId}/agent-requests`,
@@ -178,7 +206,9 @@ export function MessagesView({
         true,
       ),
     );
-  }
+
+});
+}
   useEffect(() => {
     const label = agentActivityLabel(activeAgentNames(requests));
     onActivityChange(label || undefined);
@@ -273,6 +303,7 @@ export function MessagesView({
   }, [settingsOpenToken, me?.memberId]);
 
   async function send(composed: ComposedAgentMessage) {
+
     const operation = beginOperation(operations["messages.send"]);
     setSending(true);
     try {
@@ -311,11 +342,15 @@ export function MessagesView({
     } finally {
       setSending(false);
     }
-  }
+
+}
   async function createRequest(
     agent: Blueprint,
     source: { forwardedMessageIds: string[]; instruction: string },
   ) {
+return runOperation("agents.forward", async (operation) => {
+const messageRequest = operation.message;
+
     return messageRequest<AgentRequest>(
       `/v1/channels/${channelId}/agent-requests`,
       {
@@ -324,7 +359,9 @@ export function MessagesView({
         body: JSON.stringify({ targetBlueprintId: agent.id, ...source }),
       },
     );
-  }
+
+});
+}
   async function forward(agent: Blueprint, instruction: string) {
     try {
       const request = await createRequest(agent, {
@@ -344,6 +381,9 @@ export function MessagesView({
     }
   }
   async function addUser(event: FormEvent<HTMLFormElement>) {
+return runOperation("messages.member.add", async (operation) => {
+const messageRequest = operation.message;
+
     event.preventDefault();
     const data = new FormData(event.currentTarget);
     try {
@@ -355,11 +395,16 @@ export function MessagesView({
       await loadParticipants();
       setAddOpen(false);
       onNotice("User added or invitation queued.");
-    } catch (reason) {
+    } catch (reason) { operation.fail();
       onError(String(reason));
     }
-  }
+
+});
+}
   async function openManager(mode: "channel" | "settings", owner = me) {
+return runOperation("agents.manager", async (operation) => {
+
+
     if (!owner) return;
     managerMode.current = mode;
     const rows = await loadAgents(owner.memberId);
@@ -367,8 +412,13 @@ export function MessagesView({
     setFocused(rows[0]);
     setDraft(false);
     setAgentsOpen(true);
-  }
+
+});
+}
   async function saveBlueprint(event: FormEvent<HTMLFormElement>) {
+return runOperation("agents.save", async (operation) => {
+const messageRequest = operation.message;
+
     event.preventDefault();
     const data = new FormData(event.currentTarget),
       runtimeId = String(data.get("runtimeId") ?? ""),
@@ -417,11 +467,16 @@ export function MessagesView({
           ? "Agent configuration saved."
           : "Agent created and added to this Channel.",
       );
-    } catch (reason) {
+    } catch (reason) { operation.fail();
       onError(String(reason));
     }
-  }
+
+});
+}
   async function setInChannel(item: Blueprint, enabled: boolean) {
+return runOperation("agents.select", async (operation) => {
+const messageRequest = operation.message;
+
     try {
       await messageRequest(
         `/v1/channels/${channelId}/blueprints/${item.id}/selection`,
@@ -435,11 +490,16 @@ export function MessagesView({
       setFocused((current) =>
         current?.id === item.id ? { ...current, inChannel: enabled } : current,
       );
-    } catch (reason) {
+    } catch (reason) { operation.fail();
       onError(String(reason));
     }
-  }
+
+});
+}
   async function removeAgent() {
+return runOperation("agents.remove", async (operation) => {
+const messageRequest = operation.message;
+
     if (!focused) return;
     try {
       await messageRequest(
@@ -450,13 +510,15 @@ export function MessagesView({
       setFocused(rows[0]);
       await loadParticipants();
       onNotice("Agent removed.");
-    } catch (reason) {
+    } catch (reason) { operation.fail();
       onError(String(reason));
     }
-  }
+
+});
+}
   return (
     <div className="grid h-full min-h-0 grid-cols-[minmax(0,1fr)_20rem] overflow-hidden">
-      <section className="flex min-h-0 min-w-0 flex-col">
+      <section data-trace-target={traceTargets("messages.list", "messages.focus")} className="flex min-h-0 min-w-0 flex-col">
         <MessageTimeline
           focusId={focusId}
           channelId={channelId}
@@ -490,7 +552,7 @@ export function MessagesView({
           <div className="flex shrink-0 items-center justify-center gap-3 border-t bg-muted/40 p-2 text-sm">
             <strong>{selected.size} selected</strong>
             <Button size="sm" variant="outline" disabled={!selected.size} onClick={() => setCopyMessages(messages.filter(row => selected.has(row.id)))}>Copy to use in my agent</Button>
-            <Button
+            <Button data-trace-target={traceTargets("agents.forward")}
               size="sm"
               disabled={!selected.size}
               onClick={() => setForwardOpen(true)}
@@ -519,8 +581,8 @@ export function MessagesView({
           onSubmit={send}
         />
       </section>
-      <aside className="min-h-0 overflow-y-auto border-l bg-muted/20 px-3 py-3">
-        <Button
+      <aside data-trace-target={traceTargets("messages.participants", "agents.list", "agents.requests")} data-trace-region={"participants"} className="min-h-0 overflow-y-auto border-l bg-muted/20 px-3 py-3">
+        <Button data-trace-target={traceTargets("messages.member.add")}
           className="mb-3 w-full"
           variant="outline"
           onClick={() => setAddOpen(true)}
@@ -534,20 +596,17 @@ export function MessagesView({
               key={`member:${person.memberId}`}
               className="flex min-w-0 items-center gap-2 rounded-md px-2 py-1.5 hover:bg-muted"
             >
-              <UserIdentity id={person.memberId} name={person.displayName}>
+              <UserIdentity id={person.memberId} name={person.displayName} onGive={setGiveAgent} className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 text-left">
                 <MemberAvatar
                   src={person.avatarUrl}
                   name={person.displayName}
                 />
+                <span className="min-w-0 truncate text-sm font-medium">
+                  {person.displayName}{person.isCurrent && " (me)"}
+                </span>
               </UserIdentity>
-              <span className="min-w-0 flex-1 truncate text-sm font-medium">
-                <UserIdentity id={person.memberId} name={person.displayName}>
-                  {person.displayName}
-                  {person.isCurrent && " (me)"}
-                </UserIdentity>
-              </span>
               {person.isCurrent && (
-                <Button
+                <Button data-trace-nav={"agents.manager"} data-trace-target={traceTargets("agents.manager", "agents.runtimes")}
                   size="sm"
                   variant="ghost"
                   onClick={() => void openManager("channel", person)}
@@ -565,6 +624,7 @@ export function MessagesView({
                   owner={person}
                   requests={requests}
                   showWork={setWorkRequest}
+                  onGive={setGiveAgent}
                 />
               )),
           ])}
@@ -572,7 +632,7 @@ export function MessagesView({
       </aside>
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
         <DialogContent>
-          <form onSubmit={addUser}>
+          <form data-trace-target={traceTargets("messages.member.add")} onSubmit={addUser}>
             <DialogHeader>
               <DialogTitle>Add user</DialogTitle>
               <DialogDescription>
@@ -599,7 +659,7 @@ export function MessagesView({
         </DialogContent>
       </Dialog>
       <Dialog open={agentsOpen} onOpenChange={setAgentsOpen}>
-        <DialogContent className="sm:max-w-4xl">
+        <DialogContent data-trace-region={"agents-manager"} className="sm:max-w-4xl">
           <DialogHeader>
             <DialogTitle>Agents</DialogTitle>
             <DialogDescription>
@@ -638,7 +698,7 @@ export function MessagesView({
                   className="flex items-center gap-2 rounded-md p-1 hover:bg-muted"
                 >
                   {managerMode.current === "channel" && managingOwn && (
-                    <Checkbox
+                    <Checkbox data-trace-target={traceTargets("agents.select")}
                       checked={item.inChannel}
                       onCheckedChange={(value) =>
                         void setInChannel(item, value === true)
@@ -681,6 +741,24 @@ export function MessagesView({
         contextLabel={`${selected.size} selected messages`}
         onClose={() => setForwardOpen(false)}
         onSend={forward}
+      />
+      <AgentPromptDialog
+        open={Boolean(giveAgent)}
+        title={`Give Messages to ${giveAgent?.name ?? "Agent"}`}
+        description="Use recent Channel messages as context. Add your instruction below."
+        defaultAgent={defaultAgent}
+        installedAgents={installedAgents}
+        promptFor={(agent) => messagesPrompt(messages.slice(-10), context?.resources ?? [], agent)}
+        onSend={async (query) => {
+          if (!giveAgent) return;
+          const recent = messages.slice(-10);
+          if (!recent.length) throw new Error("There are no messages to send as context yet.");
+          const request = await createRequest(giveAgent, { forwardedMessageIds: recent.map(row => row.id), instruction: query });
+          onNotice(request.state === "queued" ? `Task sent to ${giveAgent.name}.` : `Request is ${request.state.replace("_", " ")}.`);
+          await loadRequests();
+        }}
+        onClose={() => setGiveAgent(undefined)}
+        onError={onError}
       />
       <AgentPromptDialog
         open={Boolean(copyMessages)}
@@ -750,7 +828,7 @@ function BlueprintForm({
       (runtime) => runtime.available && runtime.provider === "codex",
     );
   return (
-    <form onSubmit={onSubmit}>
+    <form data-trace-target={traceTargets("agents.save")} onSubmit={onSubmit}>
       <FieldGroup>
         <Field>
           <FieldLabel>Name</FieldLabel>
@@ -826,7 +904,7 @@ function BlueprintForm({
         {editable && (
           <div className="flex justify-between">
             {blueprint ? (
-              <Button type="button" variant="destructive" onClick={onRemove}>
+              <Button data-trace-target={traceTargets("agents.remove")} type="button" variant="destructive" onClick={onRemove}>
                 <Trash2Icon />
                 Remove Agent
               </Button>

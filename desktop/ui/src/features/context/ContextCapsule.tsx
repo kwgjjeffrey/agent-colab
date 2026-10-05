@@ -1,4 +1,7 @@
-import { FileTextIcon } from "lucide-react";
+import { traceTargets } from "@/api/trace-locators";
+import { beginOperation } from "@/api/telemetry";
+import { operations } from "@/api/trace-operations";
+import { ContextIcon } from "./ContextIcon";
 import { useEffect, useState } from "react";
 import { messageRequest } from "@/features/messages/api";
 import type { ChannelMessage } from "@/features/messages/types";
@@ -33,12 +36,14 @@ export function ContextCapsule({
     setLoading(true);
     setFailure(false);
     setResolved(undefined);
+    const operation=beginOperation(operations["context.preview"]);
     const load =
       kind === "message"
         ? messageRequest<ChannelMessage>(
             `/v1/channels/${context.channelId}/messages/${id}`,
             undefined,
             true,
+            operation,
           ).then((row) => {
             if (alive)
               setResolved({
@@ -51,31 +56,33 @@ export function ContextCapsule({
                 excerpt: row.body.slice(0, 240),
               });
           })
-        : context.lookup(kind, id).then((row) => {
+        : context.lookup(kind, id, operation).then((row) => {
             if (alive) setResolved(row);
           });
     void load
       .catch(() => {
+        operation.finish("error","preview.failed");
         if (alive) setFailure(true);
       })
       .finally(() => {
-        if (alive) setLoading(false);
+        if (alive) {setLoading(false);operation.finish("success","preview.state_committed");} else operation.finish("cancelled","view.closed");
       });
     return () => {
       alive = false;
+      operation.finish("cancelled","view.closed");
     };
   }, [open, context?.channelId, kind, id]);
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger
+      <PopoverTrigger data-trace-target={traceTargets("context.preview", "context.lookup")}
         render={
-          <button
+          <button data-trace-target={traceTargets("context.preview", "context.lookup")}
             type="button"
             className="inline-flex max-w-full items-center gap-1 rounded-full bg-muted px-2 py-0.5 align-baseline text-sm font-medium"
           />
         }
       >
-        <FileTextIcon className="size-3.5 shrink-0" />
+        <ContextIcon kind={kind} name={resource?.name ?? label} />
         {resource?.name ?? label}
       </PopoverTrigger>
       <PopoverContent className="w-72 p-4" align="start">

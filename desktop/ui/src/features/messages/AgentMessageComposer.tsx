@@ -3,7 +3,8 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import Mention from "@tiptap/extension-mention";
 import { EditorContent, useEditor, ReactNodeViewRenderer } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import { ArrowUpIcon, BotIcon, UserIcon, XIcon } from "lucide-react";
+import { ArrowUpIcon, XIcon } from "lucide-react";
+import { ContextIcon } from "@/features/context/ContextIcon";
 import { Button } from "@/components/ui/button";
 import type { Blueprint, ChannelMessage, Participant } from "./types";
 import { useChannelContext } from "@/features/context/ChannelContext";
@@ -27,6 +28,7 @@ type MentionCandidate = {
   label: string;
   kind: "agent" | "member" | ResourceKind;
   description: string;
+  avatarUrl?: string;
 };
 
 /** Plain text preserves the visible mention; routing identity lives only in atomic node attrs. */
@@ -180,24 +182,27 @@ export function AgentMessageComposer({
         label: agent.name,
         kind: "agent" as const,
         description: `${agent.ownerName}'s Agent`,
+        avatarUrl: agent.ownerAvatarUrl,
       })),
       ...participants.map((person) => ({
         id: person.memberId,
         label: person.displayName,
         kind: "member" as const,
-        description: person.isCurrent ? "You" : "Member",
+        description: "",
+        avatarUrl: person.avatarUrl,
       })),
       ...(context?.resources
         .filter((row) => row.kind !== "message")
+        .sort((a, b) => ({ session: 0, files: 1, canvas: 2, message: 3 }[a.kind] - { session: 0, files: 1, canvas: 2, message: 3 }[b.kind]))
         .map((row) => ({
           id: row.id,
           label: row.name,
           kind: row.kind,
-          description: row.kind,
+          description: "",
         })) ?? []),
     ]
       .filter((item) => item.label.toLocaleLowerCase().includes(query))
-      .slice(0, 8);
+      .slice(0, 20);
   }, [agents, participants, suggestion, context?.resources]);
 
   function choose(candidate: MentionCandidate) {
@@ -243,7 +248,7 @@ export function AgentMessageComposer({
       className="relative shrink-0 border-t bg-background px-4 py-2"
     >
       {suggestion && (
-        <div className="absolute bottom-full left-4 z-20 mb-2 w-80 overflow-hidden rounded-lg border bg-popover p-1 text-popover-foreground shadow-lg">
+        <div className="absolute bottom-full left-4 z-20 mb-2 max-h-80 w-80 overflow-y-auto rounded-lg border bg-popover p-1 text-popover-foreground shadow-lg">
           {candidates.length ? (
             candidates.map((candidate) => (
               <button
@@ -253,17 +258,13 @@ export function AgentMessageComposer({
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={() => choose(candidate)}
               >
-                {candidate.kind === "agent" ? (
-                  <BotIcon className="size-4" />
-                ) : (
-                  <UserIcon className="size-4" />
-                )}
+                <ContextIcon kind={candidate.kind} name={candidate.label} avatarUrl={candidate.avatarUrl} />
                 <span className="min-w-0 truncate font-medium">
                   {candidate.label}
                 </span>
-                <span className="ml-auto truncate text-xs text-muted-foreground">
-                  {candidate.description}
-                </span>
+                {candidate.kind === "agent" && candidate.description && (
+                  <span className="max-w-28 shrink-0 truncate text-xs text-muted-foreground">{candidate.description}</span>
+                )}
               </button>
             ))
           ) : (

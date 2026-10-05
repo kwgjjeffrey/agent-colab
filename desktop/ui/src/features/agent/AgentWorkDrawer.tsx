@@ -1,3 +1,5 @@
+import { traceTargets } from "@/api/trace-locators";
+import { runOperation } from "@/api/operation-runner";
 import { useEffect, useState } from "react";
 import { ChevronRightIcon, WrenchIcon, XIcon } from "lucide-react";
 import Markdown from "react-markdown";
@@ -93,17 +95,10 @@ export function AgentWorkDrawer({
     let cancelled = false;
     setDetails(undefined);
     setError(undefined);
-    void messageRequest<WorkDetails>(
-      `/v1/agent-requests/${request.id}/events`,
-      undefined,
-      true,
-    )
-      .then((value) => {
-        if (!cancelled) setDetails(value);
-      })
-      .catch((reason) => {
-        if (!cancelled) setError(String(reason));
-      });
+    void runOperation("agents.work.read", async (operation) => {
+      try { const value=await operation.message<WorkDetails>(`/v1/agent-requests/${request.id}/events`); if (cancelled) operation.cancel(); else setDetails(value); }
+      catch(reason) { operation.fail(); if (!cancelled) setError(String(reason)); }
+    });
     return () => {
       cancelled = true;
     };
@@ -111,7 +106,7 @@ export function AgentWorkDrawer({
   const entries = workTranscript(details?.events ?? []);
   return (
     <Drawer open={open} onOpenChange={onOpenChange} swipeDirection="right">
-      <DrawerContent className="data-[swipe-axis=x]:w-[min(42rem,95vw)] data-[swipe-axis=x]:sm:[--drawer-content-width:42rem]">
+      <DrawerContent data-trace-region={"agent-work"} data-trace-target={traceTargets("agents.work.read")} className="data-[swipe-axis=x]:w-[min(42rem,95vw)] data-[swipe-axis=x]:sm:[--drawer-content-width:42rem]">
         <DrawerHeader className="relative gap-2 pb-4 pr-12">
           <DrawerTitle className="text-lg">
             {request?.targetName ?? "Agent"} ·{" "}
