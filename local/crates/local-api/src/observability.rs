@@ -1,5 +1,5 @@
 //! Local-only OTLP intake with a bounded best-effort queue. A successful intake means
-//! accepted into this queue, not delivered to Honeycomb. Delivery counters expose the distinction.
+//! accepted into this queue, not delivered to the configured trace backend. Delivery counters expose the distinction.
 use super::*;
 use axum::body::Bytes;
 use std::sync::{OnceLock,atomic::{AtomicU64,Ordering}};
@@ -9,10 +9,17 @@ static DELIVERED:AtomicU64=AtomicU64::new(0);
 static DROPPED:AtomicU64=AtomicU64::new(0);
 fn queue(state:AppState)->&'static tokio::sync::mpsc::Sender<Vec<u8>>{
  QUEUE.get_or_init(||{
-   let (tx,mut rx)=tokio::sync::mpsc::channel::<Vec<u8>>(16);
+   let (tx,mut rx)=tokio::sync::mpsc::channel::<Vec<u8>>(64);
    tokio::spawn(async move{
      let client=reqwest::Client::new();
+     let slots=std::sync::Arc::new(tokio::sync::Semaphore::new(4));
      while let Some(body)=rx.recv().await{
+       let Ok(permit)=slots.clone().acquire_owned().await else {break};
+       let client=client.clone(); let state=state.clone();
+       // Independent OTLP batches need no delivery ordering. Bound both queued memory and
+       // concurrent requests, so GUI bursts cannot starve the coarse Core execution spans.
+       tokio::spawn(async move {
+       let _permit=permit;
        let mut delivered=false;
        for attempt in 0..3 {
          // Resolve credentials inside Core; a GUI/Skill producer never chooses the destination.
@@ -29,6 +36,7 @@ fn queue(state:AppState)->&'static tokio::sync::mpsc::Sender<Vec<u8>>{
          tokio::time::sleep(std::time::Duration::from_millis(200*(1<<attempt))).await;
        }
        if delivered{DELIVERED.fetch_add(1,Ordering::Relaxed);}else{DROPPED.fetch_add(1,Ordering::Relaxed);}
+       });
      }
    });
    tx
@@ -37,7 +45,7 @@ fn queue(state:AppState)->&'static tokio::sync::mpsc::Sender<Vec<u8>>{
 pub(super) async fn traces(State(state):State<AppState>,body:Bytes)->Result<impl IntoResponse,LocalError>{
  if !std::env::var("COLAB_TRACING_ENABLED").is_ok_and(|v|v=="1"){return Err(LocalError::bad_request("Tracing disabled"))}
  let body=colab_observability::ingest::sanitize(&body).map_err(LocalError::bad_request)?;
- queue(state).try_send(body).map_err(|_|LocalError::bad_request("Telemetry queue full"))?;
+ queue(state).try_send(body).map_err(|_|{DROPPED.fetch_add(1,Ordering::Relaxed);LocalError::bad_request("Telemetry queue full")})?;
  ACCEPTED.fetch_add(1,Ordering::Relaxed);
  Ok(([ ("content-type","application/x-protobuf") ],Vec::<u8>::new()))
 }

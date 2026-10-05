@@ -64,6 +64,8 @@ pub(super) async fn create_transfer(
     State(state): State<AppState>,
     Json(request): Json<CreateTransferRequest>,
 ) -> Result<(StatusCode, Json<CreatedTransfer>), LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.transfers.create-transfer", async {
+
     if request.items.len() != 1 {
         return Err(LocalError::bad_request(
             "Quick Share accepts exactly one item",
@@ -156,6 +158,8 @@ pub(super) async fn create_transfer(
             expires_at: created.expires_at,
         }),
     ))
+
+}).await
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -205,6 +209,8 @@ async fn fetch_managed(
     read_token: &str,
     revoke_token: &str,
 ) -> Result<ManagedTransfer, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.transfers.fetch-managed", async {
+
     let response = state
         .inner
         .http
@@ -230,11 +236,15 @@ async fn fetch_managed(
         item_name: remote.item.name,
         accesses: remote.accesses,
     })
+
+}).await
 }
 
 pub(super) async fn list_transfers(
     State(state): State<AppState>,
 ) -> Result<Json<Vec<ManagedTransfer>>, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.transfers.list-transfers", async {
+
     let rows = {
         let store = state.inner.store.lock().await;
         let mut statement=store.prepare("select transfer_id,read_token,revoke_token,expires_at,item_kind,item_name,case when revoked_at is not null then 'revoked' when datetime(expires_at)<=datetime('now') then 'expired' else 'ready' end local_state,created_at from local_quick_transfers order by created_at desc").map_err(LocalError::internal)?;
@@ -273,12 +283,16 @@ pub(super) async fn list_transfers(
         }
     }
     Ok(Json(result))
+
+}).await
 }
 
 pub(super) async fn get_transfer(
     State(state): State<AppState>,
     AxumPath(transfer_id): AxumPath<String>,
 ) -> Result<Json<ManagedTransfer>, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.transfers.get-transfer", async {
+
     let (read, revoke) = {
         let store = state.inner.store.lock().await;
         store
@@ -292,6 +306,8 @@ pub(super) async fn get_transfer(
     fetch_managed(&state, &transfer_id, &read, &revoke)
         .await
         .map(Json)
+
+}).await
 }
 
 #[derive(Deserialize)]
@@ -305,6 +321,8 @@ pub(super) async fn update_transfer(
     AxumPath(transfer_id): AxumPath<String>,
     Json(request): Json<UpdateTransferRequest>,
 ) -> Result<Json<ManagedTransfer>, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.transfers.update-transfer", async {
+
     if !(5 * 60..=7 * 24 * 60 * 60).contains(&request.expires_in_seconds) {
         return Err(LocalError::bad_request(
             "Expiry must be between 5 minutes and 7 days",
@@ -349,6 +367,8 @@ pub(super) async fn update_transfer(
     fetch_managed(&state, &transfer_id, &read, &revoke)
         .await
         .map(Json)
+
+}).await
 }
 
 struct PreparedSource {
@@ -363,6 +383,8 @@ async fn prepare_source(
     position: usize,
     source: &TransferSource,
 ) -> Result<PreparedSource, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.transfers.prepare-source", async {
+
     let path = fs::canonicalize(&source.source_path).map_err(LocalError::internal)?;
     let name = source
         .name
@@ -439,6 +461,8 @@ async fn prepare_source(
         }
         _ => Err(LocalError::bad_request("Unsupported transfer item kind")),
     }
+
+}).await
 }
 
 #[derive(Deserialize)]
@@ -496,6 +520,8 @@ pub(super) async fn receive_transfer(
     State(state): State<AppState>,
     Json(request): Json<ReceiveTransferRequest>,
 ) -> Result<Json<ReceivedTransfer>, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.transfers.receive-transfer", async {
+
     let (transfer_id, token) = parse_capability(&request.capability)?;
     let reader_id = {
         let store = state.inner.store.lock().await;
@@ -558,6 +584,8 @@ pub(super) async fn receive_transfer(
         expires_at: manifest.expires_at,
         items: received,
     }))
+
+}).await
 }
 
 async fn receive_item(
@@ -568,6 +596,8 @@ async fn receive_item(
     root: &Path,
     item: ManifestItem,
 ) -> Result<ReceivedItem, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.transfers.receive-item", async {
+
     let item_root = root.join(files::safe_path_component(&item.name));
     fs::create_dir_all(&item_root).map_err(LocalError::internal)?;
     let payload = item_root.join(".colab-payload");
@@ -647,6 +677,8 @@ async fn receive_item(
         local_path: local_path.to_string_lossy().into_owned(),
         tree,
     })
+
+}).await
 }
 
 fn materialize_git_item(root: &Path, pack: &Path, root_oid: &str) -> Result<PathBuf, LocalError> {
@@ -722,6 +754,8 @@ pub(super) async fn revoke_transfer(
     State(state): State<AppState>,
     Json(request): Json<RevokeTransferRequest>,
 ) -> Result<StatusCode, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.transfers.revoke-transfer", async {
+
     let token = if let Some(token) = request.revoke_token {
         token
     } else {
@@ -756,6 +790,8 @@ pub(super) async fn revoke_transfer(
         )
         .map_err(LocalError::internal)?;
     Ok(StatusCode::NO_CONTENT)
+
+}).await
 }
 
 fn parse_capability(value: &str) -> Result<(String, String), LocalError> {

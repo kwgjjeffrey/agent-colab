@@ -1,0 +1,12 @@
+<!doctype html><html lang="zh"><meta charset="utf-8"><title>Colab · Trace 定位</title>
+<style>*{box-sizing:border-box}body{margin:0;font:14px system-ui;height:100vh;display:flex;flex-direction:column;background:#101827;color:#e5edf8}header{padding:12px 20px;display:flex;gap:16px;align-items:center}a{color:#7dd3fc}iframe{width:100%;border:0;flex:1;min-height:0}#status{margin:0;flex:1}</style>
+<header><a href="http://127.0.0.1:53481/">返回 Trace 清单</a><p id="status" role="status">正在加载 Colab GUI</p></header><iframe id="gui" src="/" title="真实 Colab GUI"></iframe>
+<script>
+const gui=document.querySelector('#gui'),status=document.querySelector('#status'),id=new URL(location.href).searchParams.get('operation');
+if(!id)status.textContent='没有指定入口，请从 Trace 清单选择操作';
+else fetch('/locator/entries.json').then(r=>r.json()).then(entries=>{
+ const entry=entries.find(e=>e.id===id&&e.surface==='gui');if(!entry)throw Error('未注册的 GUI 入口');
+ let tries=0;const ready=setInterval(()=>{const doc=gui.contentDocument;if(doc?.querySelector(entry.tab?'[role=tab]':'[data-trace-region=application]')){clearInterval(ready);gui.contentWindow.postMessage({type:'trace.locate',id},location.origin);}else if(++tries>=100){clearInterval(ready);status.textContent='GUI 尚未就绪，请刷新后重试';}},100);
+}).catch(error=>status.textContent=error.message);
+window.addEventListener('message',event=>{if(event.origin===location.origin&&event.source===gui.contentWindow&&event.data?.type==='trace.result')status.textContent=event.data.message;});
+</script></html>

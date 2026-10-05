@@ -72,22 +72,35 @@ pub(super) fn start_session_sync(state: &AppState) {
             tick.tick().await;
             let rows = {
                 let store = state.inner.store.lock().await;
-                let Ok(mut stmt)=store.prepare("select share_id from local_session_sources where user_id=(select value from local_settings where key='current_user_id')") else {continue};
-                stmt.query_map([], |r| r.get::<_, String>(0))
+                let Ok(mut stmt)=store.prepare("select share_id,trace_context from local_session_sources where user_id=(select value from local_settings where key='current_user_id')") else {continue};
+                stmt.query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, Option<String>>(1)?)))
                     .map(|it| it.filter_map(Result::ok).collect::<Vec<_>>())
                     .unwrap_or_default()
             };
-            for id in rows {
-                let _ = sync_source(&state, &id).await;
+            for (id, envelope) in rows {
+                let _ = sync_initial_source(&state, &id, envelope).await;
             }
         }
     });
+}
+
+// The original share trace is retained only until first successful publication. Later transcript
+// updates are independent background work, not forever children of the original share action.
+async fn sync_initial_source(state: &AppState, id: &str, envelope: Option<String>) -> Result<(), LocalError> {
+    let context=envelope.as_deref().and_then(|raw|serde_json::from_str(raw).ok()).unwrap_or_default();
+    let result=colab_observability::resume(&context,sync_source(state,id)).await;
+    if result.is_ok() && envelope.is_some() {
+        state.inner.store.lock().await.execute("update local_session_sources set trace_context=null where share_id=?1 and trace_context=?2",rusqlite::params![id,envelope]).map_err(LocalError::internal)?;
+    }
+    result
 }
 
 pub(super) async fn list_session_sources(
     State(state): State<AppState>,
     Query(query): Query<SessionSourceQuery>,
 ) -> Result<Json<Vec<SessionSource>>, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.sessions.list-session-sources", async {
+
     let search = query.q.unwrap_or_default();
     let pattern = format!("%{}%", search.to_lowercase());
     let limit = query.limit.unwrap_or(200).clamp(1, 500) as i64;
@@ -112,6 +125,8 @@ pub(super) async fn list_session_sources(
         .collect::<Result<Vec<_>, _>>()
         .map_err(LocalError::internal)?;
     Ok(Json(rows))
+
+}).await
 }
 
 /// Maintain a disposable metadata index independently of listing requests. A refresh stats every
@@ -131,6 +146,8 @@ fn start_session_catalog(state: &AppState) {
 }
 
 async fn refresh_session_catalog(state: &AppState) -> Result<(), LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.sessions.refresh-session-catalog", async {
+
     let known = {
         let store = state.inner.store.lock().await;
         let mut statement = store.prepare("select catalog_id,provider,source_path,thread_id,name,source_adapter,size_bytes,mtime_ns,updated_at from local_session_catalog").map_err(LocalError::internal)?;
@@ -187,6 +204,8 @@ async fn refresh_session_catalog(state: &AppState) -> Result<(), LocalError> {
     }
     transaction.commit().map_err(LocalError::internal)?;
     Ok(())
+
+}).await
 }
 
 fn discover_session_catalog(
@@ -353,6 +372,8 @@ pub(super) async fn list_session_shares(
     State(state): State<AppState>,
     AxumPath(channel_id): AxumPath<String>,
 ) -> Result<Json<Vec<SessionShare>>, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.sessions.list-session-shares", async {
+
     let token = access_token(&state).await?;
     let response = state
         .inner
@@ -374,6 +395,8 @@ pub(super) async fn list_session_shares(
         store.execute("insert into session_share_cache(share_id,name,source_adapter,contributor_name,contributor_avatar_url,remote_updated_at) values(?1,?2,?3,?4,?5,?6) on conflict(share_id) do update set name=excluded.name,source_adapter=excluded.source_adapter,contributor_name=excluded.contributor_name,contributor_avatar_url=excluded.contributor_avatar_url,remote_updated_at=excluded.remote_updated_at,updated_at=current_timestamp",rusqlite::params![r.id,r.name,r.source_adapter,r.contributor_name,r.contributor_avatar_url,r.updated_at]).map_err(LocalError::internal)?;
     }
     Ok(Json(rows))
+
+}).await
 }
 
 pub(super) async fn share_session(
@@ -381,6 +404,8 @@ pub(super) async fn share_session(
     AxumPath(channel_id): AxumPath<String>,
     Json(body): Json<ShareSession>,
 ) -> Result<(StatusCode, Json<SessionShare>), LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.sessions.share-session", async {
+
     let path = fs::canonicalize(&body.source_path).map_err(LocalError::internal)?;
     if !path.is_file() {
         return Err(LocalError::bad_request("Session source must be a file"));
@@ -419,9 +444,10 @@ pub(super) async fn share_session(
     }
     let share: SessionShare = response.json().await.map_err(LocalError::internal)?;
     let user = current_user_id(&state).await?;
+    let trace_context = colab_observability::context_json();
     {
         let store = state.inner.store.lock().await;
-        store.execute("insert into local_session_sources(share_id,channel_id,user_id,source_path,source_adapter,source_thread_id) values(?1,?2,?3,?4,?5,?6)",rusqlite::params![share.id,channel_id,user,path.to_string_lossy(),body.source_adapter,path.file_stem().and_then(|x|x.to_str())]).map_err(LocalError::internal)?;
+        store.execute("insert into local_session_sources(share_id,channel_id,user_id,source_path,source_adapter,source_thread_id,trace_context) values(?1,?2,?3,?4,?5,?6,?7)",rusqlite::params![share.id,channel_id,user,path.to_string_lossy(),body.source_adapter,path.file_stem().and_then(|x|x.to_str()), if trace_context.is_null(){None}else{Some(trace_context.to_string())}]).map_err(LocalError::internal)?;
     }
     // Registration is accepted immediately. Initial publication uses the same background path as
     // later increments so a large existing transcript never makes the GUI guess whether a timed
@@ -429,23 +455,31 @@ pub(super) async fn share_session(
     let sync_state = state.clone();
     let sync_share_id = share.id.clone();
     tokio::spawn(async move {
-        if let Err(error) = sync_source(&sync_state, &sync_share_id).await {
+        if let Err(error) = sync_initial_source(&sync_state, &sync_share_id, if trace_context.is_null(){None}else{Some(trace_context.to_string())}).await {
             eprintln!("Initial Session synchronization failed: {}", error.message);
         }
     });
     Ok((StatusCode::CREATED, Json(share)))
+
+}).await
 }
 
 pub(super) async fn sync_session(
     State(state): State<AppState>,
     AxumPath(share_id): AxumPath<String>,
 ) -> Result<Json<Value>, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.sessions.sync-session", async {
+
     sync_source(&state, &share_id).await?;
     let path = materialize(&state, &share_id).await?;
     Ok(Json(json!({"shareId":share_id,"rawPath":path})))
+
+}).await
 }
 
 async fn sync_source(state: &AppState, share_id: &str) -> Result<(), LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.sessions.sync-source", async {
+
     let sync_lock = {
         let mut locks = state.inner.session_sync_locks.lock().await;
         Arc::clone(
@@ -545,6 +579,8 @@ async fn sync_source(state: &AppState, share_id: &str) -> Result<(), LocalError>
         first_segment = false;
     }
     Ok(())
+
+}).await
 }
 
 /// Build a bounded segment without ever splitting one provider JSONL record.
@@ -578,6 +614,8 @@ fn read_session_segment(reader: &mut impl BufRead) -> Result<Option<Vec<u8>>, Lo
 }
 
 async fn materialize(state: &AppState, share_id: &str) -> Result<String, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.sessions.materialize", async {
+
     let token = access_token(state).await?;
     let response = state
         .inner
@@ -672,6 +710,8 @@ async fn materialize(state: &AppState, share_id: &str) -> Result<String, LocalEr
     let store = state.inner.store.lock().await;
     store.execute("insert into session_materializations(share_id,user_id,snapshot_id,raw_path) values(?1,?2,?3,?4) on conflict(share_id,user_id) do update set snapshot_id=excluded.snapshot_id,raw_path=excluded.raw_path,updated_at=current_timestamp",rusqlite::params![share_id,user,snapshot,final_path.to_string_lossy()]).map_err(LocalError::internal)?;
     Ok(final_path.to_string_lossy().into())
+
+}).await
 }
 
 pub(super) async fn read_session(
@@ -679,6 +719,8 @@ pub(super) async fn read_session(
     AxumPath(share_id): AxumPath<String>,
     Json(body): Json<ReadSession>,
 ) -> Result<Json<Value>, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.sessions.read-session", async {
+
     // Contributors publish pending bytes before reading; consumers pull the current immutable
     // snapshot. Both then execute the same adapter projection over a local raw cache.
     // This is a no-op for consumers. For the contributor it must succeed; hiding the upload
@@ -719,6 +761,8 @@ pub(super) async fn read_session(
     Ok(Json(
         json!({"schemaVersion":1,"session":{"id":share_id,"title":name,"provider":adapter.trim_end_matches("-jsonl-v1")},"snapshot":{"id":snapshot},"turns":page,"page":{"hasMore":start>0,"nextCursor":next},"freshness":{"cache":"current"}}),
     ))
+
+}).await
 }
 
 fn project_jsonl(
@@ -1181,6 +1225,8 @@ pub(super) async fn withdraw_session(
     State(state): State<AppState>,
     AxumPath(share_id): AxumPath<String>,
 ) -> Result<StatusCode, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.sessions.withdraw-session", async {
+
     let token = access_token(&state).await?;
     let response = state
         .inner
@@ -1201,6 +1247,8 @@ pub(super) async fn withdraw_session(
         )
         .map_err(LocalError::internal)?;
     Ok(StatusCode::NO_CONTENT)
+
+}).await
 }
 
 #[cfg(test)]

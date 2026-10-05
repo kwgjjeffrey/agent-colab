@@ -39,3 +39,25 @@ Desktop.ini
 # Repository-local Agent tooling installed for development, not product source
 .agents/
 skills-lock.json
+
+# Reproducible trials stay in Git; their generated results do not.
+.trial/F-CANVAS-01-yjs-yrs-projection/fixture.json
+.trial/F-CANVAS-01-yjs-yrs-projection/fixture.xml
+.trial/F-CANVAS-01-yjs-yrs-projection/fixture.yjs
+.trial/F-CANVAS-01-yjs-yrs-projection/patched.update
+.trial/F-CANVAS-01-yjs-yrs-projection/patched.md
+.trial/F-CANVAS-01-yjs-yrs-projection/rendered.md
+.trial/F-CANVAS-01-yjs-yrs-projection/rejected.out
+.trial/F-CANVAS-01-yjs-yrs-projection/rejected.err
+.trial/F-CANVAS-03-markdown-roundtrip/results.json
+
+# Tracing scans, acceptance evidence, and machine-specific provider targets.
+observability/boundary-inventory.json
+observability/acceptance-*.json
+observability/locator-acceptance-*.json
+observability/gui-locator/*-acceptance.png
+.trial/V-TRACE-ENTRY-01/*.jpg
+.trial/V-TRACE-ENTRY-01/*.png
+observability/providers.json
+observability/credentials.json
+observability/*-ingest.json

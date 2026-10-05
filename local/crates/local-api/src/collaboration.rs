@@ -5,6 +5,8 @@ use super::*;
 pub(super) async fn list_channels(
     State(state): State<AppState>,
 ) -> Result<Json<Vec<Channel>>, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.collaboration.list-channels", async {
+
     let token = access_token(&state).await?;
     let organization_id = current_organization_id(&state).await?;
     let response = state
@@ -19,10 +21,14 @@ pub(super) async fn list_channels(
         .await
         .map_err(LocalError::internal)?;
     proxy_json(response).await
+
+}).await
 }
 pub(super) async fn list_organizations(
     State(state): State<AppState>,
 ) -> Result<Json<Vec<Organization>>, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.collaboration.list-organizations", async {
+
     let token = access_token(&state).await?;
     let response = state
         .inner
@@ -62,11 +68,15 @@ pub(super) async fn list_organizations(
         }
     }
     Ok(Json(organizations))
+
+}).await
 }
 pub(super) async fn create_organization(
     State(state): State<AppState>,
     Json(body): Json<CreateOrganization>,
 ) -> Result<(StatusCode, Json<Organization>), LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.collaboration.create-organization", async {
+
     let token = access_token(&state).await?;
     let response = state
         .inner
@@ -84,11 +94,15 @@ pub(super) async fn create_organization(
     set_current_organization(&state, &organization.id).await?;
     organization.active = true;
     Ok((StatusCode::CREATED, Json(organization)))
+
+}).await
 }
 pub(super) async fn activate_organization(
     State(state): State<AppState>,
     AxumPath(id): AxumPath<String>,
 ) -> Result<StatusCode, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.collaboration.activate-organization", async {
+
     let organizations = list_organizations(State(state.clone())).await?.0;
     if !organizations
         .iter()
@@ -98,12 +112,16 @@ pub(super) async fn activate_organization(
     }
     set_current_organization(&state, &id).await?;
     Ok(StatusCode::NO_CONTENT)
+
+}).await
 }
 
 pub(super) async fn accept_invitation(
     State(state): State<AppState>,
     AxumPath(token): AxumPath<String>,
 ) -> Result<StatusCode, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.collaboration.accept-invitation", async {
+
     let access = access_token(&state).await?;
     let response = state
         .inner
@@ -120,11 +138,15 @@ pub(super) async fn accept_invitation(
         return Err(remote_error(response).await);
     }
     Ok(StatusCode::NO_CONTENT)
+
+}).await
 }
 pub(super) async fn create_channel(
     State(state): State<AppState>,
     Json(request): Json<CreateChannel>,
 ) -> Result<(StatusCode, Json<Channel>), LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.collaboration.create-channel", async {
+
     let token = access_token(&state).await?;
     let organization_id = current_organization_id(&state).await?;
     let response = state
@@ -146,12 +168,16 @@ pub(super) async fn create_channel(
         StatusCode::CREATED,
         Json(response.json().await.map_err(LocalError::internal)?),
     ))
+
+}).await
 }
 pub(super) async fn update_channel(
     State(state): State<AppState>,
     AxumPath(id): AxumPath<String>,
     Json(body): Json<UpdateChannel>,
 ) -> Result<Json<Channel>, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.collaboration.update-channel", async {
+
     proxy_one(
         state
             .inner
@@ -161,11 +187,15 @@ pub(super) async fn update_channel(
         &body,
     )
     .await
+
+}).await
 }
 pub(super) async fn list_members(
     State(state): State<AppState>,
     AxumPath(id): AxumPath<String>,
 ) -> Result<Json<Vec<ChannelMember>>, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.collaboration.list-members", async {
+
     let token = access_token(&state).await?;
     let response = state
         .inner
@@ -182,12 +212,16 @@ pub(super) async fn list_members(
         return Err(remote_error(response).await);
     }
     Ok(Json(response.json().await.map_err(LocalError::internal)?))
+
+}).await
 }
 pub(super) async fn search_people(
     State(state): State<AppState>,
     AxumPath(id): AxumPath<String>,
     Query(query): Query<HashMap<String, String>>,
 ) -> Result<Json<Vec<OrganizationPerson>>, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.collaboration.search-people", async {
+
     let token = access_token(&state).await?;
     let response = state
         .inner
@@ -205,12 +239,16 @@ pub(super) async fn search_people(
         return Err(remote_error(response).await);
     }
     Ok(Json(response.json().await.map_err(LocalError::internal)?))
+
+}).await
 }
 pub(super) async fn add_member(
     State(state): State<AppState>,
     AxumPath(id): AxumPath<String>,
     Json(body): Json<MemberMutation>,
 ) -> Result<(StatusCode, Json<AddMemberResponse>), LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.collaboration.add-member", async {
+
     let token = access_token(&state).await?;
     let response = state
         .inner
@@ -230,12 +268,16 @@ pub(super) async fn add_member(
     let status = StatusCode::from_u16(response.status().as_u16()).map_err(LocalError::internal)?;
     let body = response.json().await.map_err(LocalError::internal)?;
     Ok((status, Json(body)))
+
+}).await
 }
 pub(super) async fn update_member(
     State(state): State<AppState>,
     AxumPath((id, member)): AxumPath<(String, String)>,
     Json(body): Json<MemberMutation>,
 ) -> Result<StatusCode, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.collaboration.update-member", async {
+
     proxy_empty(
         state.inner.http.patch(format!(
             "{}/v1/channels/{id}/members/{member}",
@@ -245,11 +287,15 @@ pub(super) async fn update_member(
         &body,
     )
     .await
+
+}).await
 }
 pub(super) async fn remove_member(
     State(state): State<AppState>,
     AxumPath((id, member)): AxumPath<(String, String)>,
 ) -> Result<StatusCode, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.collaboration.remove-member", async {
+
     proxy_delete(
         state.inner.http.delete(format!(
             "{}/v1/channels/{id}/members/{member}",
@@ -258,11 +304,15 @@ pub(super) async fn remove_member(
         &state,
     )
     .await
+
+}).await
 }
 pub(super) async fn remove_invitation(
     State(state): State<AppState>,
     AxumPath((id, email)): AxumPath<(String, String)>,
 ) -> Result<StatusCode, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.collaboration.remove-invitation", async {
+
     proxy_delete(
         state.inner.http.delete(format!(
             "{}/v1/channels/{id}/invitations/{email}",
@@ -271,4 +321,6 @@ pub(super) async fn remove_invitation(
         &state,
     )
     .await
+
+}).await
 }

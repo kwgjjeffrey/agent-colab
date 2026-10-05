@@ -61,6 +61,7 @@ def main():
         command.add_argument("--ref", required=True)
         command.add_argument("--target", required=True, choices=["codex", "claude", "myflicker"])
     args = parser.parse_args()
+    __import__("telemetry").select_operation(args)
     success = __import__("output_views").writer("skill-tool", args)
     try:
         if args.operation == "sources":

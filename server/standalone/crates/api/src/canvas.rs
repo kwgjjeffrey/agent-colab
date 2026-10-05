@@ -35,13 +35,20 @@ struct RenameResource {
 }
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
+struct MoveCanvas { folder_id: Option<uuid::Uuid>, index: usize }
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct SendMention {
     target_blueprint_id: uuid::Uuid,
     section_markdown: String,
     canvas_ref: String,
     #[serde(default)]
     context_refs: Vec<super::context_prompt::ContextRef>,
+    #[serde(default)]
+    user_query: String,
 }
+#[derive(Serialize)]
+struct CanvasAgentPrompt { prompt: String }
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct SubmitUpdate {
@@ -87,11 +94,13 @@ impl From<colab_server_persistence::CanvasUpdate> for UpdateView {
 pub(super) fn routes() -> Router<AppState> {
     Router::new()
         .route("/v1/channels/{channel_id}/canvases", get(list).post(create))
-        .route("/v1/canvases/{canvas_id}", patch(rename))
+        .route("/v1/canvases/{canvas_id}", patch(rename).delete(archive))
+        .route("/v1/canvases/{canvas_id}/position", patch(move_canvas))
         .route(
             "/v1/canvases/{canvas_id}/send-to-agent",
             post(send_to_agent),
         )
+        .route("/v1/canvases/{canvas_id}/agent-prompt", post(agent_prompt))
         .route(
             "/v1/canvases/{canvas_id}/updates",
             get(updates).post(submit),
@@ -102,13 +111,9 @@ pub(super) fn routes() -> Router<AppState> {
         )
         .route("/v1/canvas-folders/{folder_id}", patch(rename_folder))
 }
-async fn send_to_agent(
-    State(state): State<AppState>,
-    headers: HeaderMap,
-    Path(canvas): Path<uuid::Uuid>,
-    Json(body): Json<SendMention>,
-) -> Result<(StatusCode, Json<super::messaging::AgentRequestResponse>), ApiError> {
-    let user = authenticated_user(&state, &headers).await?;
+async fn build_agent_prompt(state: &AppState, user: uuid::Uuid, canvas: uuid::Uuid, body: &SendMention) -> Result<(uuid::Uuid, String), ApiError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.canvas.build-agent-prompt", async {
+
     let (channel, channel_name, canvas_title) = state
         .database
         .canvas_command_context(user, canvas)
@@ -122,18 +127,49 @@ async fn send_to_agent(
     {
         return Err(ApiError::bad_request("invalid_canvas_agent_context"));
     }
-    if body.context_refs.len() > 100 { return Err(ApiError::bad_request("invalid_canvas_agent_context")); }
+    if body.context_refs.len() > 100 || body.user_query.len() > 20_000 { return Err(ApiError::bad_request("invalid_canvas_agent_context")); }
     for reference in &body.context_refs {
         if !state.database.context_reference_visible(user, channel, &reference.kind, reference.id).await.map_err(|_| ApiError::internal("context_reference_check_failed"))? { return Err(ApiError::forbidden("context_reference_unavailable")); }
     }
+    let prompt = format_canvas_agent_prompt(&canvas_title, section, &body.canvas_ref, &channel_name, &super::context_prompt::instructions(channel, &body.context_refs), &body.user_query);
+    Ok((channel, prompt))
+
+}).await
+}
+fn format_canvas_agent_prompt(canvas_title: &str, section: &str, canvas_ref: &str, channel_name: &str, resource_tools: &str, user_query: &str) -> String {
     let command = "~/.agents/skills/agent-colab/bin/colab-canvas";
-    let canvas_ref = body.canvas_ref.replace('\'', "%27");
+    let canvas_ref = canvas_ref.replace('\'', "%27");
     let channel_name = channel_name.replace('\'', "'\"'\"'");
     let prompt = format!(
         "Work on the collaborative Canvas document “{}”.\n\nRelevant heading section containing the request:\n{}\n\nTools below are at your disposal if the user task requires them.\n\nRead this document first:\n{} read --ref '{}' --offset 1 --limit 1000\n\nIf the task requires changing this document, send a Codex patch on stdin:\n{} apply-patch --ref '{}' <<'PATCH'\n*** Begin Patch\n*** Update File: document.md\n@@\n-exact existing text\n+replacement text\n*** End Patch\nPATCH\n\nIf the patch reports a conflict, read the current document and retry.\n\nTo explore other Canvas documents in this Channel:\n{} list --channel '{}'",
         canvas_title, section, command, canvas_ref, command, canvas_ref, command, channel_name
     );
-    let prompt = format!("{prompt}\n\n{}", super::context_prompt::instructions(channel, &body.context_refs));
+    let mut prompt = format!("{prompt}\n\n{resource_tools}");
+    if !user_query.trim().is_empty() { prompt.push_str("\n\nUser query:\n"); prompt.push_str(user_query.trim()); }
+    prompt
+}
+async fn agent_prompt(
+    State(state): State<AppState>, headers: HeaderMap, Path(canvas): Path<uuid::Uuid>, Json(body): Json<SendMention>,
+) -> Result<Json<CanvasAgentPrompt>, ApiError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.canvas.agent-prompt", async {
+
+    let user = authenticated_user(&state, &headers).await?;
+    let (_, prompt) = build_agent_prompt(&state, user, canvas, &body).await?;
+    colab_observability::prompt("canvas.preview", None, &prompt, "server/standalone/crates/api/src/canvas.rs", "agent_prompt");
+    Ok(Json(CanvasAgentPrompt { prompt }))
+
+}).await
+}
+async fn send_to_agent(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(canvas): Path<uuid::Uuid>,
+    Json(body): Json<SendMention>,
+) -> Result<(StatusCode, Json<super::messaging::AgentRequestResponse>), ApiError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.canvas.send-to-agent", async {
+
+    let user = authenticated_user(&state, &headers).await?;
+    let (channel, prompt) = build_agent_prompt(&state, user, canvas, &body).await?;
     let bundle = state
         .database
         .create_agent_request(
@@ -143,6 +179,7 @@ async fn send_to_agent(
             None,
             &[],
             Some(&prompt),
+            Some(&colab_observability::context_json()),
         )
         .await
         .map_err(|error| {
@@ -169,6 +206,8 @@ async fn send_to_agent(
             runtime_id: (response.state == "queued").then_some(response.runtime_id),
         });
     Ok((StatusCode::CREATED, Json(response)))
+
+}).await
 }
 async fn rename(
     State(state): State<AppState>,
@@ -176,6 +215,8 @@ async fn rename(
     Path(canvas): Path<uuid::Uuid>,
     Json(body): Json<RenameResource>,
 ) -> Result<Json<colab_server_persistence::Canvas>, ApiError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.canvas.rename", async {
+
     let user = authenticated_user(&state, &headers).await?;
     let title = canvas_title(&body.name)?;
     state
@@ -191,6 +232,29 @@ async fn rename(
         })?
         .map(Json)
         .ok_or_else(|| ApiError::forbidden("canvas_access_forbidden"))
+
+}).await
+}
+async fn archive(State(state): State<AppState>, headers: HeaderMap, Path(canvas): Path<uuid::Uuid>) -> Result<StatusCode, ApiError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.canvas.archive", async {
+
+    let user = authenticated_user(&state, &headers).await?;
+    if state.database.archive_canvas(user, canvas).await.map_err(|_| ApiError::internal("canvas_archive_failed"))? { Ok(StatusCode::NO_CONTENT) }
+    else { Err(ApiError::forbidden("canvas_access_forbidden")) }
+
+}).await
+}
+async fn move_canvas(State(state): State<AppState>, headers: HeaderMap, Path(canvas): Path<uuid::Uuid>, Json(body): Json<MoveCanvas>) -> Result<StatusCode, ApiError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.canvas.move-canvas", async {
+
+    let user = authenticated_user(&state, &headers).await?;
+    if state.database.move_canvas(user, canvas, body.folder_id, body.index).await.map_err(|error| {
+        if error.to_string().contains("duplicate key") { ApiError::bad_request("canvas_title_exists_in_folder") }
+        else { ApiError::internal("canvas_move_failed") }
+    })? { Ok(StatusCode::NO_CONTENT) }
+    else { Err(ApiError::forbidden("canvas_access_forbidden")) }
+
+}).await
 }
 
 async fn list(
@@ -198,6 +262,8 @@ async fn list(
     headers: HeaderMap,
     Path(channel): Path<uuid::Uuid>,
 ) -> Result<Json<Vec<colab_server_persistence::Canvas>>, ApiError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.canvas.list", async {
+
     let user = authenticated_user(&state, &headers).await?;
     state
         .database
@@ -206,6 +272,8 @@ async fn list(
         .map_err(|_| ApiError::internal("canvas_list_failed"))?
         .map(Json)
         .ok_or_else(|| ApiError::forbidden("channel_access_forbidden"))
+
+}).await
 }
 async fn create(
     State(state): State<AppState>,
@@ -213,6 +281,8 @@ async fn create(
     Path(channel): Path<uuid::Uuid>,
     Json(body): Json<CreateCanvas>,
 ) -> Result<(StatusCode, Json<colab_server_persistence::Canvas>), ApiError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.canvas.create", async {
+
     let user = authenticated_user(&state, &headers).await?;
     let title = canvas_title(&body.title)?;
     let row = state
@@ -222,12 +292,16 @@ async fn create(
         .map_err(|_| ApiError::internal("canvas_create_failed"))?
         .ok_or_else(|| ApiError::forbidden("channel_access_forbidden"))?;
     Ok((StatusCode::CREATED, Json(row)))
+
+}).await
 }
 async fn list_folders(
     State(state): State<AppState>,
     headers: HeaderMap,
     Path(channel): Path<uuid::Uuid>,
 ) -> Result<Json<Vec<colab_server_persistence::CanvasFolder>>, ApiError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.canvas.list-folders", async {
+
     let user = authenticated_user(&state, &headers).await?;
     state
         .database
@@ -236,6 +310,8 @@ async fn list_folders(
         .map_err(|_| ApiError::internal("canvas_folder_list_failed"))?
         .map(Json)
         .ok_or_else(|| ApiError::forbidden("channel_access_forbidden"))
+
+}).await
 }
 async fn create_folder(
     State(state): State<AppState>,
@@ -243,6 +319,8 @@ async fn create_folder(
     Path(channel): Path<uuid::Uuid>,
     Json(body): Json<CreateFolder>,
 ) -> Result<(StatusCode, Json<colab_server_persistence::CanvasFolder>), ApiError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.canvas.create-folder", async {
+
     let user = authenticated_user(&state, &headers).await?;
     let name = canvas_title(&body.name)?;
     let row = state
@@ -258,6 +336,8 @@ async fn create_folder(
         })?
         .ok_or_else(|| ApiError::forbidden("canvas_folder_access_forbidden"))?;
     Ok((StatusCode::CREATED, Json(row)))
+
+}).await
 }
 async fn rename_folder(
     State(state): State<AppState>,
@@ -265,6 +345,8 @@ async fn rename_folder(
     Path(folder): Path<uuid::Uuid>,
     Json(body): Json<RenameResource>,
 ) -> Result<Json<colab_server_persistence::CanvasFolder>, ApiError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.canvas.rename-folder", async {
+
     let user = authenticated_user(&state, &headers).await?;
     let name = canvas_title(&body.name)?;
     state
@@ -280,6 +362,8 @@ async fn rename_folder(
         })?
         .map(Json)
         .ok_or_else(|| ApiError::forbidden("canvas_folder_access_forbidden"))
+
+}).await
 }
 async fn updates(
     State(state): State<AppState>,
@@ -287,6 +371,8 @@ async fn updates(
     Path(canvas): Path<uuid::Uuid>,
     Query(page): Query<Page>,
 ) -> Result<Json<Vec<UpdateView>>, ApiError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.canvas.updates", async {
+
     let user = authenticated_user(&state, &headers).await?;
     let rows = state
         .database
@@ -295,6 +381,8 @@ async fn updates(
         .map_err(|_| ApiError::internal("canvas_updates_failed"))?
         .ok_or_else(|| ApiError::forbidden("canvas_access_forbidden"))?;
     Ok(Json(rows.into_iter().map(Into::into).collect()))
+
+}).await
 }
 async fn submit(
     State(state): State<AppState>,
@@ -302,6 +390,8 @@ async fn submit(
     Path(canvas): Path<uuid::Uuid>,
     Json(body): Json<SubmitUpdate>,
 ) -> Result<(StatusCode, Json<UpdateView>), ApiError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.canvas.submit", async {
+
     let user = authenticated_user(&state, &headers).await?;
     let bytes = STANDARD
         .decode(body.update)
@@ -323,4 +413,20 @@ async fn submit(
         });
     }
     Ok((StatusCode::CREATED, Json(row.into())))
+
+}).await
+}
+
+#[cfg(test)]
+mod canvas_prompt_tests {
+    use super::format_canvas_agent_prompt;
+
+    #[test]
+    fn preview_and_dispatch_share_the_same_prompt_builder() {
+        let prompt = format_canvas_agent_prompt("Plan", "# Scope\nAsk @Agent", "colab://channel/team/canvas/Plan", "team", "How to read files:\ncolab-browser use --ref 'x'", "Append a conclusion");
+        assert!(prompt.contains("Relevant heading section containing the request:\n# Scope\nAsk @Agent"));
+        assert!(prompt.contains("colab-canvas read --ref 'colab://channel/team/canvas/Plan'"));
+        assert!(prompt.contains("How to read files:\ncolab-browser use --ref 'x'"));
+        assert!(prompt.ends_with("User query:\nAppend a conclusion"));
+    }
 }

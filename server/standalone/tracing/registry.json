@@ -1,5 +1,695 @@
 {
   "schemaVersion": 1,
   "unit": "server",
-  "operations": []
+  "operations": [],
+  "spans": [
+    {
+      "id": "server.blobs.write-bounded",
+      "description": "server 层 blobs 的 write_bounded 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/blobs.rs",
+        "function": "write_bounded"
+      }
+    },
+    {
+      "id": "server.blobs.write-bounded-with-limit",
+      "description": "server 层 blobs 的 write_bounded_with_limit 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/blobs.rs",
+        "function": "write_bounded_with_limit"
+      }
+    },
+    {
+      "id": "server.blobs.response",
+      "description": "server 层 blobs 的 response 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/blobs.rs",
+        "function": "response"
+      }
+    },
+    {
+      "id": "server.blobs.collect-orphans",
+      "description": "server 层 blobs 的 collect_orphans 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/blobs.rs",
+        "function": "collect_orphans"
+      }
+    },
+    {
+      "id": "server.canvas.build-agent-prompt",
+      "description": "server 层 canvas 的 build_agent_prompt 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/canvas.rs",
+        "function": "build_agent_prompt"
+      }
+    },
+    {
+      "id": "server.canvas.agent-prompt",
+      "description": "server 层 canvas 的 agent_prompt 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/canvas.rs",
+        "function": "agent_prompt"
+      }
+    },
+    {
+      "id": "server.canvas.send-to-agent",
+      "description": "server 层 canvas 的 send_to_agent 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/canvas.rs",
+        "function": "send_to_agent"
+      }
+    },
+    {
+      "id": "server.canvas.rename",
+      "description": "server 层 canvas 的 rename 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/canvas.rs",
+        "function": "rename"
+      }
+    },
+    {
+      "id": "server.canvas.archive",
+      "description": "server 层 canvas 的 archive 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/canvas.rs",
+        "function": "archive"
+      }
+    },
+    {
+      "id": "server.canvas.move-canvas",
+      "description": "server 层 canvas 的 move_canvas 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/canvas.rs",
+        "function": "move_canvas"
+      }
+    },
+    {
+      "id": "server.canvas.list",
+      "description": "server 层 canvas 的 list 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/canvas.rs",
+        "function": "list"
+      }
+    },
+    {
+      "id": "server.canvas.create",
+      "description": "server 层 canvas 的 create 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/canvas.rs",
+        "function": "create"
+      }
+    },
+    {
+      "id": "server.canvas.list-folders",
+      "description": "server 层 canvas 的 list_folders 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/canvas.rs",
+        "function": "list_folders"
+      }
+    },
+    {
+      "id": "server.canvas.create-folder",
+      "description": "server 层 canvas 的 create_folder 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/canvas.rs",
+        "function": "create_folder"
+      }
+    },
+    {
+      "id": "server.canvas.rename-folder",
+      "description": "server 层 canvas 的 rename_folder 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/canvas.rs",
+        "function": "rename_folder"
+      }
+    },
+    {
+      "id": "server.canvas.updates",
+      "description": "server 层 canvas 的 updates 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/canvas.rs",
+        "function": "updates"
+      }
+    },
+    {
+      "id": "server.canvas.submit",
+      "description": "server 层 canvas 的 submit 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/canvas.rs",
+        "function": "submit"
+      }
+    },
+    {
+      "id": "server.main.main",
+      "description": "server 层 main 的 main 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/main.rs",
+        "function": "main"
+      }
+    },
+    {
+      "id": "server.main.ready",
+      "description": "server 层 main 的 ready 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/main.rs",
+        "function": "ready"
+      }
+    },
+    {
+      "id": "server.main.create-google-session",
+      "description": "server 层 main 的 create_google_session 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/main.rs",
+        "function": "create_google_session"
+      }
+    },
+    {
+      "id": "server.main.refresh-session",
+      "description": "server 层 main 的 refresh_session 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/main.rs",
+        "function": "refresh_session"
+      }
+    },
+    {
+      "id": "server.main.logout",
+      "description": "server 层 main 的 logout 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/main.rs",
+        "function": "logout"
+      }
+    },
+    {
+      "id": "server.main.list-channels",
+      "description": "server 层 main 的 list_channels 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/main.rs",
+        "function": "list_channels"
+      }
+    },
+    {
+      "id": "server.main.list-organizations",
+      "description": "server 层 main 的 list_organizations 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/main.rs",
+        "function": "list_organizations"
+      }
+    },
+    {
+      "id": "server.main.create-organization",
+      "description": "server 层 main 的 create_organization 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/main.rs",
+        "function": "create_organization"
+      }
+    },
+    {
+      "id": "server.main.create-channel",
+      "description": "server 层 main 的 create_channel 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/main.rs",
+        "function": "create_channel"
+      }
+    },
+    {
+      "id": "server.main.update-channel",
+      "description": "server 层 main 的 update_channel 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/main.rs",
+        "function": "update_channel"
+      }
+    },
+    {
+      "id": "server.main.list-members",
+      "description": "server 层 main 的 list_members 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/main.rs",
+        "function": "list_members"
+      }
+    },
+    {
+      "id": "server.main.add-member",
+      "description": "server 层 main 的 add_member 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/main.rs",
+        "function": "add_member"
+      }
+    },
+    {
+      "id": "server.main.search-people",
+      "description": "server 层 main 的 search_people 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/main.rs",
+        "function": "search_people"
+      }
+    },
+    {
+      "id": "server.main.accept-invitation",
+      "description": "server 层 main 的 accept_invitation 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/main.rs",
+        "function": "accept_invitation"
+      }
+    },
+    {
+      "id": "server.main.invitation-landing",
+      "description": "server 层 main 的 invitation_landing 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/main.rs",
+        "function": "invitation_landing"
+      }
+    },
+    {
+      "id": "server.main.list-file-shares",
+      "description": "server 层 main 的 list_file_shares 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/main.rs",
+        "function": "list_file_shares"
+      }
+    },
+    {
+      "id": "server.main.create-file-share",
+      "description": "server 层 main 的 create_file_share 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/main.rs",
+        "function": "create_file_share"
+      }
+    },
+    {
+      "id": "server.main.upload-file-revision",
+      "description": "server 层 main 的 upload_file_revision 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/main.rs",
+        "function": "upload_file_revision"
+      }
+    },
+    {
+      "id": "server.main.list-file-revisions",
+      "description": "server 层 main 的 list_file_revisions 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/main.rs",
+        "function": "list_file_revisions"
+      }
+    },
+    {
+      "id": "server.main.download-file-revision",
+      "description": "server 层 main 的 download_file_revision 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/main.rs",
+        "function": "download_file_revision"
+      }
+    },
+    {
+      "id": "server.main.withdraw-file-share",
+      "description": "server 层 main 的 withdraw_file_share 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/main.rs",
+        "function": "withdraw_file_share"
+      }
+    },
+    {
+      "id": "server.main.list-skill-shares",
+      "description": "server 层 main 的 list_skill_shares 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/main.rs",
+        "function": "list_skill_shares"
+      }
+    },
+    {
+      "id": "server.main.create-skill-share",
+      "description": "server 层 main 的 create_skill_share 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/main.rs",
+        "function": "create_skill_share"
+      }
+    },
+    {
+      "id": "server.main.upload-skill-revision",
+      "description": "server 层 main 的 upload_skill_revision 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/main.rs",
+        "function": "upload_skill_revision"
+      }
+    },
+    {
+      "id": "server.main.list-skill-revisions",
+      "description": "server 层 main 的 list_skill_revisions 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/main.rs",
+        "function": "list_skill_revisions"
+      }
+    },
+    {
+      "id": "server.main.download-skill-revision",
+      "description": "server 层 main 的 download_skill_revision 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/main.rs",
+        "function": "download_skill_revision"
+      }
+    },
+    {
+      "id": "server.main.withdraw-skill-share",
+      "description": "server 层 main 的 withdraw_skill_share 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/main.rs",
+        "function": "withdraw_skill_share"
+      }
+    },
+    {
+      "id": "server.main.list-session-shares",
+      "description": "server 层 main 的 list_session_shares 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/main.rs",
+        "function": "list_session_shares"
+      }
+    },
+    {
+      "id": "server.main.create-session-share",
+      "description": "server 层 main 的 create_session_share 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/main.rs",
+        "function": "create_session_share"
+      }
+    },
+    {
+      "id": "server.main.upload-session-segment",
+      "description": "server 层 main 的 upload_session_segment 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/main.rs",
+        "function": "upload_session_segment"
+      }
+    },
+    {
+      "id": "server.main.list-session-segments",
+      "description": "server 层 main 的 list_session_segments 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/main.rs",
+        "function": "list_session_segments"
+      }
+    },
+    {
+      "id": "server.main.download-session-segment",
+      "description": "server 层 main 的 download_session_segment 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/main.rs",
+        "function": "download_session_segment"
+      }
+    },
+    {
+      "id": "server.main.withdraw-session-share",
+      "description": "server 层 main 的 withdraw_session_share 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/main.rs",
+        "function": "withdraw_session_share"
+      }
+    },
+    {
+      "id": "server.main.update-member",
+      "description": "server 层 main 的 update_member 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/main.rs",
+        "function": "update_member"
+      }
+    },
+    {
+      "id": "server.main.remove-member",
+      "description": "server 层 main 的 remove_member 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/main.rs",
+        "function": "remove_member"
+      }
+    },
+    {
+      "id": "server.main.remove-invitation",
+      "description": "server 层 main 的 remove_invitation 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/main.rs",
+        "function": "remove_invitation"
+      }
+    },
+    {
+      "id": "server.main.authenticated-user",
+      "description": "server 层 main 的 authenticated_user 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/main.rs",
+        "function": "authenticated_user"
+      }
+    },
+    {
+      "id": "server.messaging.participants",
+      "description": "server 层 messaging 的 participants 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/messaging.rs",
+        "function": "participants"
+      }
+    },
+    {
+      "id": "server.messaging.blueprints",
+      "description": "server 层 messaging 的 blueprints 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/messaging.rs",
+        "function": "blueprints"
+      }
+    },
+    {
+      "id": "server.messaging.create-blueprint",
+      "description": "server 层 messaging 的 create_blueprint 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/messaging.rs",
+        "function": "create_blueprint"
+      }
+    },
+    {
+      "id": "server.messaging.update-blueprint",
+      "description": "server 层 messaging 的 update_blueprint 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/messaging.rs",
+        "function": "update_blueprint"
+      }
+    },
+    {
+      "id": "server.messaging.runtimes",
+      "description": "server 层 messaging 的 runtimes 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/messaging.rs",
+        "function": "runtimes"
+      }
+    },
+    {
+      "id": "server.messaging.register-runtime",
+      "description": "server 层 messaging 的 register_runtime 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/messaging.rs",
+        "function": "register_runtime"
+      }
+    },
+    {
+      "id": "server.messaging.delete-blueprint",
+      "description": "server 层 messaging 的 delete_blueprint 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/messaging.rs",
+        "function": "delete_blueprint"
+      }
+    },
+    {
+      "id": "server.messaging.select-blueprint",
+      "description": "server 层 messaging 的 select_blueprint 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/messaging.rs",
+        "function": "select_blueprint"
+      }
+    },
+    {
+      "id": "server.messaging.messages",
+      "description": "server 层 messaging 的 messages 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/messaging.rs",
+        "function": "messages"
+      }
+    },
+    {
+      "id": "server.messaging.message-by-id",
+      "description": "server 层 messaging 的 message_by_id 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/messaging.rs",
+        "function": "message_by_id"
+      }
+    },
+    {
+      "id": "server.messaging.send-message",
+      "description": "server 层 messaging 的 send_message 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/messaging.rs",
+        "function": "send_message"
+      }
+    },
+    {
+      "id": "server.messaging.create-agent-request",
+      "description": "server 层 messaging 的 create_agent_request 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/messaging.rs",
+        "function": "create_agent_request"
+      }
+    },
+    {
+      "id": "server.messaging.agent-requests",
+      "description": "server 层 messaging 的 agent_requests 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/messaging.rs",
+        "function": "agent_requests"
+      }
+    },
+    {
+      "id": "server.messaging.save-agent-request-events",
+      "description": "server 层 messaging 的 save_agent_request_events 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/messaging.rs",
+        "function": "save_agent_request_events"
+      }
+    },
+    {
+      "id": "server.messaging.agent-request-events",
+      "description": "server 层 messaging 的 agent_request_events 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/messaging.rs",
+        "function": "agent_request_events"
+      }
+    },
+    {
+      "id": "server.messaging.agent-request-context",
+      "description": "server 层 messaging 的 agent_request_context 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/messaging.rs",
+        "function": "agent_request_context"
+      }
+    },
+    {
+      "id": "server.messaging.agent-request-reply",
+      "description": "server 层 messaging 的 agent_request_reply 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/messaging.rs",
+        "function": "agent_request_reply"
+      }
+    },
+    {
+      "id": "server.messaging.agent-request-fail",
+      "description": "server 层 messaging 的 agent_request_fail 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/messaging.rs",
+        "function": "agent_request_fail"
+      }
+    },
+    {
+      "id": "server.messaging.agent-request-complete",
+      "description": "server 层 messaging 的 agent_request_complete 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/messaging.rs",
+        "function": "agent_request_complete"
+      }
+    },
+    {
+      "id": "server.messaging.runtime-stream",
+      "description": "server 层 messaging 的 runtime_stream 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/messaging.rs",
+        "function": "runtime_stream"
+      }
+    },
+    {
+      "id": "server.messaging.stream",
+      "description": "server 层 messaging 的 stream 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/messaging.rs",
+        "function": "stream"
+      }
+    },
+    {
+      "id": "server.transfers.create-transfer",
+      "description": "server 层 transfers 的 create_transfer 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/transfers.rs",
+        "function": "create_transfer"
+      }
+    },
+    {
+      "id": "server.transfers.add-item",
+      "description": "server 层 transfers 的 add_item 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/transfers.rs",
+        "function": "add_item"
+      }
+    },
+    {
+      "id": "server.transfers.upload-item",
+      "description": "server 层 transfers 的 upload_item 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/transfers.rs",
+        "function": "upload_item"
+      }
+    },
+    {
+      "id": "server.transfers.finalize",
+      "description": "server 层 transfers 的 finalize 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/transfers.rs",
+        "function": "finalize"
+      }
+    },
+    {
+      "id": "server.transfers.get-manifest",
+      "description": "server 层 transfers 的 get_manifest 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/transfers.rs",
+        "function": "get_manifest"
+      }
+    },
+    {
+      "id": "server.transfers.manage",
+      "description": "server 层 transfers 的 manage 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/transfers.rs",
+        "function": "manage"
+      }
+    },
+    {
+      "id": "server.transfers.update-expiry",
+      "description": "server 层 transfers 的 update_expiry 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/transfers.rs",
+        "function": "update_expiry"
+      }
+    },
+    {
+      "id": "server.transfers.download-item",
+      "description": "server 层 transfers 的 download_item 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/transfers.rs",
+        "function": "download_item"
+      }
+    },
+    {
+      "id": "server.transfers.revoke",
+      "description": "server 层 transfers 的 revoke 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/transfers.rs",
+        "function": "revoke"
+      }
+    },
+    {
+      "id": "server.transfers.collect-expired",
+      "description": "server 层 transfers 的 collect_expired 承接点",
+      "source": {
+        "path": "server/standalone/crates/api/src/transfers.rs",
+        "function": "collect_expired"
+      }
+    },
+    {
+      "id": "server.agent.delivery",
+      "description": "服务端将已持久化的 Agent 指令经 WebSocket 下发，并确认终端已接受；不包含 Agent 执行时长",
+      "source": {
+        "path": "server/standalone/crates/api/src/messaging.rs",
+        "function": "deliver_command"
+      }
+    }
+  ]
 }

@@ -1,5 +1,7 @@
 # Colab 实现计划
 
+2026-10-05 信息关联/Canvas 交互收尾（源码阶段）：@ 候选项按 Agent、成员、文件类型、Session、Canvas 区分图标；Files 行首用文件类型图标，贡献者头像缩小并跟随姓名；Messages 头像与右侧成员列表改为点击打开同一身份卡。Canvas mention 的发送改为先调用 Server 的只读 prompt 预览，再通过共享 Give to Agent 弹层复制或下发，附加 User query 独立输入且实际发送复用同一 prompt builder。Canvas 引用当前用户蓝色高亮、quote/code 样式、文档拖拽排序/移入目录及软删除已实现。代码验证：GUI 23 文件/56 测试及生产构建、Local Core/Server cargo check、Server Canvas prompt 定向测试通过；数据库迁移、安装态和真实跨端下发尚未验收，不标记完成发布。
+
 2026-10-04 信息关联主线：独立契约见 `docs/information-association.md`。已实现 Channel 内 Agent/User 身份卡关联 tasks/共享资产；Files、Sessions、Canvas 与 Messages 均可复制上下文提示词或经带用户指令的 Forward to Agent 弹层派发；Messages/Canvas 资源胶囊保存稳定 kind/ID，详情卡可跳至目标；消息操作提供 Copy to use in my agent 与 Tooltip。Server 对跨 Channel/失权引用重新授权，Canvas projection codec 保护胶囊身份。代码级验证：GUI 20 文件/51 测试、Server 6 测试、Skill 30 测试、Canvas codec 11 测试、Local Core cargo check 已通过。安装态、线上派发与视觉验收仍在验证，不据此宣称用户已收到制品。
 
 2026-10-04 GUI 0.1.82-dev：修复新增头像触发按钮造成 inline 相框碎裂的回归，
@@ -596,5 +598,41 @@ F-CANVAS-03 disproves automatic losslessness of the default Markdown codec for t
 
 ### Information-association loading repair — 2026-10-04
 
+- [x] @ 候选列表限高并可滚动；Canvas 候选框以光标坐标在右下方展开，边缘空间不足时翻转；移除资源类型和用户邮箱的重复备注，保留 Agent owner 信息。GUI `0.1.87-dev` 已发布、安装并通过真实 Canvas 视觉验收。
+
 - [x] Channel entry loads member and Agent identity only. Files, Sessions and Canvas catalogs load when an @ chooser or User card opens; Canvas loads Message candidates only when its @ chooser opens. A resource capsule checks its own resource type, and Message capsules use the exact-message endpoint. Message invalidations no longer refetch all resource catalogs.
 - [x] Real Canvas → local Agent Runtime acceptance request `ea96b9f3-46d2-48bc-b81e-0e74444405c5` succeeded. The Agent appended `CANVAS_HANDOFF_OK_20261004`; readback confirmed the edit and both existing mention capsules remained intact.
+
+### Comprehensive operation tracing — 2026-10-05
+
+- Static inventory: 92 GUI entries and all 39 actual CLI parser leaves (131 user entries). Runtime bindings consume unit registries unchanged; 145 Core and 86 Server coarse internal definitions pass binding/source audits. This is static coverage, not 131 independently exercised production cases.
+- Explicit GUI closures and Rust task scopes preserve concurrent parents; every traced layer records original entry, owned operation and code source/revision. Files jobs, Canvas outbox and initial Session publication persist context atomically; Agent requests persist dispatch and result context (migrations 0030/0032). Historical context-less tasks remain uncorrelated.
+- Final prompt capture distinguishes handoff/preview/dispatch, includes kind/template/request/source/bytes and truncation/redaction markers. GUI capability credentials are redacted. Default analysis omits prompt bodies; selected-span retrieval returns one body. Concrete Agent CLI commands carry per-invocation W3C context, separate from command identity.
+- Verified: GUI build + 61 tests; Skill 33 tests (including enabled HTTP-span regression); Core 23 tests; Server 7 tests; observability 4 tests; generic trace 6 tests; CLI 39/39 and runtime 92/145/86 binding audits.
+- Production/client acceptance: Skill channel creation trace 7f9dfa804959ce458f51a6c4a6f00aae has Skill/Core/Server; GUI message trace 7a4f1ae59d49556c1d49f9303a417a32 includes presentation; GUI handoff fef639d501087360afbe4eb69b0fae88 records the tagged synthetic prompt. Agent dispatch 54561756b4bccd4bbd88c3a0c9354d51 contains preview/dispatch/Server delivery/Core execution. Independent runtime trace 52f4019ec95afaf17a49396700dee77f verifies restored Agent command and GUI terminal presentation; first reply uncovered an enabled HTTP-span NameError, corrected and regression-tested before final acceptance.
+- Client artifacts published with exact public size/SHA-256 verification: Core 0.1.82-trace.2, GUI 0.1.86-trace.2, Skill 0.1.50-trace.3; Electron unchanged. Server 0.1.135-trace.5 deployed. Final trace 5e53914557e086856e1c7200207f2d33 has 37 spans across GUI/Core/Server/Skill, successful reply/execution/presentation and zero missing parents. New Core independently exercised with bounded parallel delivery and zero reported drops. Main Core artifact installed; existing unrelated Agent work prevents interrupting its old live process.
+- Generic development remains /Users/yuzhiyuan/my_code/trace. Generic trace source pushed as a6ddd72b65933f06df5263bd33dfab52997118f0; GitHub v0.2.0 published and installed from verified release asset. Installed runtime check ready; CLI/HTTP catalog equality confirms 131 entries; App reports current/latest 0.2.0. MCP stdio/catalog protocol passes; host-specific embedded iframe rendering and every GUI locator remain outside verified scope. Performance uses bounded search samples, not population metrics.
+
+### 2026-10-05：GUI trace 定位补全
+
+GUI 注册表为 92 个入口补充控件/区域、只读导航、资源与权限前提；DOM `traceTargets()` 与 span 消费同一 ID。64 个操作控件、28 个结果区域，覆盖 16 个拥有者区域。`audit-locators.py` 独立于 span 绑定审计，92/92 通过。缺失具体控件只报告所属区域，绝不把业务按钮当作导航点击。
+
+预览修复全局定位强制依赖 Channel tab 的错误、旧 iframe HTML 缓存、滚动区域高亮被裁剪和窄窗口状态提示遮挡。后台读取标出结果区域；检查更新/更新/重启定位共享状态按钮并说明当前文字。预览注册表持续运行时加载，无清单编译副本。
+
+验证：GUI 26 个测试文件、65 个测试全部通过；类型检查/构建通过。真实安装预览验证 Channel 列表、检查更新、更新、Files 清单、Canvas 树和 Agent 管理弹层；没有点击任何保存/发送/分享/删除业务目标。静态绑定齐全不等于全部资源、权限和弹层组合已经实测。GUI `0.1.86-trace.5` 已通过 canonical R2 发布与完整大小/SHA-256 验证，并在本机安装；GUI ZIP SHA-256 为 `4821af65427cd799519d8e941c076c9a91663c5d56647f0ded65df3b29ec16fe`。
+
+最终安装资源 `index-CATh7rOj.js` 已在真实 iframe 验证；Quick Share 管理页 `transfers.list` 的安全导航及结果区域高亮通过。验收快照保留在本机、由 Git 忽略；可复现的定位适配器和验证步骤分别见 `observability/gui-locator/` 与 `.trial/V-TRACE-ENTRY-01/`。
+
+
+### 2026-10-05 正式 Trace App 定位页面修复
+
+先前仅有独立试验页、正式目录却无真实 GUI 预览的状态已被替代。正式浏览器入口 http://127.0.0.1:53481/ 现在拥有左侧统一入口清单、右侧真实 GUI；点击 GUI 入口通过项目适配器 /embed 在同页导航和呼吸高亮，重复定位保留 GUI 状态。Skill 入口显示实际脚手架命令。项目适配器迁至 observability/gui-locator，旧 /trial 返回 410，启动使用持久 LaunchAgent。
+
+实际浏览器点击验证 channels.list、messages.send、system.check-update、system.update 均在正式页面产生对应高亮，未执行目标业务操作；browser.open 显示 colab-browser open。证据：observability/gui-locator/formal-app-acceptance.png。GUI 定位回归 4/4、Trace 工具测试 7/7、注册绑定审计 92/92 通过。本机 Trace Skill 已从独立源码仓安装 0.2.1-dev；这不是新的公开发行。MCP 宿主内嵌渲染未在本次验收范围内。
+
+
+### 2026-10-05 Trace 目录精简验收
+
+正式 Trace 浏览器页面改为整项选择：左侧只有入口 ID、语义、源码路径、Grafana Tempo 返回的近一小时 root span P50/P90/P95；右侧顶部只有源码与携带入口筛选条件的 Grafana Drilldown 链接，下方为真实 GUI 预览或注册命令。移除 instrumented/owner 状态标记、重复查询按钮、Trace/Span 详情及版本操作。统计来自 /api/metrics/query 的 quantile_over_time，缺失分位数不补算。
+
+本机 Skill 已从独立开发仓更新，持久目录服务已重启。实际点击 channels.list 验证右侧同页高亮、顶部源码/Grafana URI 和左侧三个 provider 分位数；browser.open 验证脚本命令。Trace 源码测试 10/10 通过（含缺失 P90、秒转毫秒、通用属性默认值、Drilldown 精确筛选）。README 已同步新界面截图 docs/images/colab-catalog.png 与 colab-command.png。未声称本次验证了登录后的 Grafana 页面渲染。

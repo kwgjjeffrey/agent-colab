@@ -52,6 +52,9 @@ pub(super) struct CreateFolder {
 pub(super) struct RenameResource {
     name: String,
 }
+#[derive(Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(super) struct MoveCanvas { folder_id: Option<String>, index: usize }
 
 #[derive(Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -112,7 +115,11 @@ pub(super) struct SendMention {
     canvas_ref: String,
     #[serde(default)]
     context_refs: Vec<serde_json::Value>,
+    #[serde(default)]
+    user_query: String,
 }
+#[derive(Deserialize, Serialize)]
+pub(super) struct CanvasAgentPrompt { prompt: String }
 #[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub(super) struct AgentRequest {
@@ -135,6 +142,8 @@ pub(super) async fn list_canvases(
     State(state): State<AppState>,
     AxumPath(channel): AxumPath<String>,
 ) -> Result<Json<Vec<Canvas>>, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.canvas.list-canvases", async {
+
     let token = access_token(&state).await?;
     let response = state
         .inner
@@ -151,6 +160,8 @@ pub(super) async fn list_canvases(
         return Err(remote_error(response).await);
     }
     Ok(Json(response.json().await.map_err(LocalError::internal)?))
+
+}).await
 }
 
 pub(super) async fn create_canvas(
@@ -158,6 +169,8 @@ pub(super) async fn create_canvas(
     AxumPath(channel): AxumPath<String>,
     Json(body): Json<CreateCanvas>,
 ) -> Result<(StatusCode, Json<Canvas>), LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.canvas.create-canvas", async {
+
     let Json(canvas) = proxy_one(
         state.inner.http.post(format!(
             "{}/v1/channels/{channel}/canvases",
@@ -168,6 +181,8 @@ pub(super) async fn create_canvas(
     )
     .await?;
     Ok((StatusCode::CREATED, Json(canvas)))
+
+}).await
 }
 
 pub(super) async fn rename_canvas(
@@ -175,6 +190,8 @@ pub(super) async fn rename_canvas(
     AxumPath(canvas): AxumPath<String>,
     Json(body): Json<RenameResource>,
 ) -> Result<Json<Canvas>, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.canvas.rename-canvas", async {
+
     proxy_one(
         state
             .inner
@@ -184,12 +201,36 @@ pub(super) async fn rename_canvas(
         &body,
     )
     .await
+
+}).await
+}
+pub(super) async fn archive_canvas(State(state): State<AppState>, AxumPath(canvas): AxumPath<String>) -> Result<StatusCode, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.canvas.archive-canvas", async {
+
+    let token = access_token(&state).await?;
+    let response = state.inner.http.delete(format!("{}/v1/canvases/{canvas}", state.inner.server_url)).bearer_auth(token).send().await.map_err(LocalError::internal)?;
+    if !response.status().is_success() { return Err(remote_error(response).await); }
+    Ok(StatusCode::NO_CONTENT)
+
+}).await
+}
+pub(super) async fn move_canvas(State(state): State<AppState>, AxumPath(canvas): AxumPath<String>, Json(body): Json<MoveCanvas>) -> Result<StatusCode, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.canvas.move-canvas", async {
+
+    let token = access_token(&state).await?;
+    let response = state.inner.http.patch(format!("{}/v1/canvases/{canvas}/position", state.inner.server_url)).bearer_auth(token).json(&body).send().await.map_err(LocalError::internal)?;
+    if !response.status().is_success() { return Err(remote_error(response).await); }
+    Ok(StatusCode::NO_CONTENT)
+
+}).await
 }
 pub(super) async fn send_to_agent(
     State(state): State<AppState>,
     AxumPath(canvas): AxumPath<String>,
     Json(body): Json<SendMention>,
 ) -> Result<(StatusCode, Json<AgentRequest>), LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.canvas.send-to-agent", async {
+
     let Json(row) = proxy_one(
         state.inner.http.post(format!(
             "{}/v1/canvases/{canvas}/send-to-agent",
@@ -200,12 +241,31 @@ pub(super) async fn send_to_agent(
     )
     .await?;
     Ok((StatusCode::CREATED, Json(row)))
+
+}).await
+}
+pub(super) async fn agent_prompt(
+    State(state): State<AppState>,
+    AxumPath(canvas): AxumPath<String>,
+    Json(body): Json<SendMention>,
+) -> Result<Json<CanvasAgentPrompt>, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.canvas.agent-prompt", async {
+
+    proxy_one(
+        state.inner.http.post(format!("{}/v1/canvases/{canvas}/agent-prompt", state.inner.server_url)),
+        &state,
+        &body,
+    ).await
+
+}).await
 }
 
 pub(super) async fn list_folders(
     State(state): State<AppState>,
     AxumPath(channel): AxumPath<String>,
 ) -> Result<Json<Vec<CanvasFolder>>, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.canvas.list-folders", async {
+
     let token = access_token(&state).await?;
     let response = state
         .inner
@@ -222,6 +282,8 @@ pub(super) async fn list_folders(
         return Err(remote_error(response).await);
     }
     Ok(Json(response.json().await.map_err(LocalError::internal)?))
+
+}).await
 }
 
 pub(super) async fn create_folder(
@@ -229,6 +291,8 @@ pub(super) async fn create_folder(
     AxumPath(channel): AxumPath<String>,
     Json(body): Json<CreateFolder>,
 ) -> Result<(StatusCode, Json<CanvasFolder>), LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.canvas.create-folder", async {
+
     let Json(folder) = proxy_one(
         state.inner.http.post(format!(
             "{}/v1/channels/{channel}/canvas-folders",
@@ -239,6 +303,8 @@ pub(super) async fn create_folder(
     )
     .await?;
     Ok((StatusCode::CREATED, Json(folder)))
+
+}).await
 }
 
 pub(super) async fn rename_folder(
@@ -246,6 +312,8 @@ pub(super) async fn rename_folder(
     AxumPath(folder): AxumPath<String>,
     Json(body): Json<RenameResource>,
 ) -> Result<Json<CanvasFolder>, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.canvas.rename-folder", async {
+
     proxy_one(
         state.inner.http.patch(format!(
             "{}/v1/canvas-folders/{folder}",
@@ -255,6 +323,8 @@ pub(super) async fn rename_folder(
         &body,
     )
     .await
+
+}).await
 }
 
 pub(super) async fn updates(
@@ -262,6 +332,8 @@ pub(super) async fn updates(
     AxumPath(canvas): AxumPath<String>,
     Query(page): Query<UpdatePage>,
 ) -> Result<Json<Vec<CanvasUpdate>>, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.canvas.updates", async {
+
     let account = current_user_id(&state).await?;
     // A reconnecting GUI first causes Local Core to replay its durable outbox. Failure is kept in
     // SQLite and surfaced, never converted into a false `Synced` response.
@@ -283,6 +355,8 @@ pub(super) async fn updates(
         return Err(remote_error(response).await);
     }
     Ok(Json(response.json().await.map_err(LocalError::internal)?))
+
+}).await
 }
 
 pub(super) async fn submit_update(
@@ -290,6 +364,8 @@ pub(super) async fn submit_update(
     AxumPath(canvas): AxumPath<String>,
     Json(body): Json<SubmitUpdate>,
 ) -> Result<(StatusCode, Json<CanvasUpdate>), LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.canvas.submit-update", async {
+
     let account = current_user_id(&state).await?;
     let client_update_id = body
         .client_update_id
@@ -312,12 +388,16 @@ pub(super) async fn submit_update(
     .await?;
     merge_remote_update(&state, &account, &canvas, &row).await?;
     Ok((StatusCode::CREATED, Json(row)))
+
+}).await
 }
 
 pub(super) async fn read_document(
     State(state): State<AppState>,
     AxumPath(canvas): AxumPath<String>,
 ) -> Result<Json<DocumentView>, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.canvas.read-document", async {
+
     let account = current_user_id(&state).await?;
     sync_replica(&state, &account, &canvas).await?;
     flush_outbox(&state, &account, &canvas).await?;
@@ -336,6 +416,8 @@ pub(super) async fn read_document(
             "saved_locally"
         },
     }))
+
+}).await
 }
 
 pub(super) async fn apply_patch(
@@ -343,6 +425,8 @@ pub(super) async fn apply_patch(
     AxumPath(canvas): AxumPath<String>,
     Json(body): Json<PatchRequest>,
 ) -> Result<Json<PatchResult>, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.canvas.apply-patch", async {
+
     let account = current_user_id(&state).await?;
     sync_replica(&state, &account, &canvas).await?;
     let (doc, _) = load_replica(&state, &account, &canvas).await?;
@@ -360,6 +444,8 @@ pub(super) async fn apply_patch(
         revision: projection_revision(&content),
         last_server_seq: row.server_seq,
     }))
+
+}).await
 }
 
 async fn remote_updates(
@@ -367,6 +453,8 @@ async fn remote_updates(
     canvas: &str,
     after: i64,
 ) -> Result<Vec<CanvasUpdate>, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.canvas.remote-updates", async {
+
     let token = access_token(state).await?;
     let response = state
         .inner
@@ -384,9 +472,13 @@ async fn remote_updates(
         return Err(remote_error(response).await);
     }
     response.json().await.map_err(LocalError::internal)
+
+}).await
 }
 
 async fn sync_replica(state: &AppState, account: &str, canvas: &str) -> Result<(), LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.canvas.sync-replica", async {
+
     let (doc, mut seq) = load_replica(state, account, canvas).await?;
     loop {
         let rows = remote_updates(state, canvas, seq).await?;
@@ -406,6 +498,8 @@ async fn sync_replica(state: &AppState, account: &str, canvas: &str) -> Result<(
         }
     }
     Ok(())
+
+}).await
 }
 
 async fn merge_remote_update(
@@ -414,12 +508,16 @@ async fn merge_remote_update(
     canvas: &str,
     row: &CanvasUpdate,
 ) -> Result<(), LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.canvas.merge-remote-update", async {
+
     let (doc, seq) = load_replica(state, account, canvas).await?;
     let bytes = STANDARD.decode(&row.update).map_err(LocalError::internal)?;
     doc.transact_mut()
         .apply_update(Update::decode_v1(&bytes).map_err(LocalError::internal)?)
         .map_err(LocalError::internal)?;
     save_replica_doc(state, account, canvas, &doc, Some(seq.max(row.server_seq))).await
+
+}).await
 }
 
 async fn apply_local_update(
@@ -428,11 +526,15 @@ async fn apply_local_update(
     canvas: &str,
     bytes: &[u8],
 ) -> Result<(), LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.canvas.apply-local-update", async {
+
     let (doc, _) = load_replica(state, account, canvas).await?;
     doc.transact_mut()
         .apply_update(Update::decode_v1(bytes).map_err(LocalError::internal)?)
         .map_err(LocalError::internal)?;
     save_replica_doc(state, account, canvas, &doc, None).await
+
+}).await
 }
 
 fn new_doc() -> Doc {
@@ -447,6 +549,8 @@ async fn load_replica(
     account: &str,
     canvas: &str,
 ) -> Result<(Doc, i64), LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.canvas.load-replica", async {
+
     let stored = {
         let store = state.inner.store.lock().await;
         store.query_row("select snapshot_bytes,last_server_seq from canvas_replicas where account_id=?1 and canvas_id=?2", rusqlite::params![account, canvas], |row| Ok((row.get::<_, Vec<u8>>(0)?, row.get::<_, i64>(1)?))).ok()
@@ -462,6 +566,8 @@ async fn load_replica(
     } else {
         Ok((doc, 0))
     }
+
+}).await
 }
 
 async fn save_replica_doc(
@@ -471,12 +577,16 @@ async fn save_replica_doc(
     doc: &Doc,
     seq: Option<i64>,
 ) -> Result<(), LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.canvas.save-replica-doc", async {
+
     let snapshot = doc
         .transact()
         .encode_state_as_update_v1(&StateVector::default());
     let store = state.inner.store.lock().await;
     store.execute("insert into canvas_replicas(account_id,canvas_id,snapshot_bytes,last_server_seq) values(?1,?2,?3,coalesce(?4,0)) on conflict(account_id,canvas_id) do update set snapshot_bytes=excluded.snapshot_bytes,last_server_seq=coalesce(?4,canvas_replicas.last_server_seq),updated_at=current_timestamp", rusqlite::params![account, canvas, snapshot, seq]).map_err(LocalError::internal)?;
     Ok(())
+
+}).await
 }
 
 async fn persist_outbox(
@@ -486,9 +596,13 @@ async fn persist_outbox(
     id: &str,
     bytes: &[u8],
 ) -> Result<(), LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.canvas.persist-outbox", async {
+
     let store = state.inner.store.lock().await;
-    store.execute("insert into canvas_outbox(account_id,canvas_id,client_update_id,update_bytes,state,next_attempt_at) values(?1,?2,?3,?4,'pending',unixepoch()) on conflict do nothing", rusqlite::params![account, canvas, id, bytes]).map_err(LocalError::internal)?;
+    store.execute("insert into canvas_outbox(account_id,canvas_id,client_update_id,update_bytes,state,next_attempt_at,trace_context) values(?1,?2,?3,?4,'pending',unixepoch(),?5) on conflict do nothing", rusqlite::params![account, canvas, id, bytes, colab_observability::context_json().to_string()]).map_err(LocalError::internal)?;
     Ok(())
+
+}).await
 }
 
 async fn send_outbox_item(
@@ -498,10 +612,14 @@ async fn send_outbox_item(
     id: &str,
     device: Option<&str>,
 ) -> Result<CanvasUpdate, LocalError> {
-    let bytes = {
+
+    let (bytes, envelope) = {
         let store = state.inner.store.lock().await;
-        store.query_row("select update_bytes from canvas_outbox where account_id=?1 and canvas_id=?2 and client_update_id=?3", rusqlite::params![account, canvas, id], |row| row.get::<_, Vec<u8>>(0)).map_err(LocalError::internal)?
+        store.query_row("select update_bytes,trace_context from canvas_outbox where account_id=?1 and canvas_id=?2 and client_update_id=?3", rusqlite::params![account, canvas, id], |row| Ok((row.get::<_, Vec<u8>>(0)?, row.get::<_, Option<String>>(1)?))).map_err(LocalError::internal)?
     };
+    let context = envelope.and_then(|raw|serde_json::from_str(&raw).ok()).unwrap_or_default();
+    colab_observability::resume(&context, colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.canvas.send-outbox-item", async {
+
     let encoded = STANDARD.encode(bytes);
     let token = access_token(state).await?;
     let response = state
@@ -527,9 +645,12 @@ async fn send_outbox_item(
     let store = state.inner.store.lock().await;
     store.execute("update canvas_outbox set state='acked',server_seq=?4,attempt_count=attempt_count+1,last_error=null,updated_at=current_timestamp where account_id=?1 and canvas_id=?2 and client_update_id=?3", rusqlite::params![account, canvas, id, row.server_seq]).map_err(LocalError::internal)?;
     Ok(row)
+    })).await
 }
 
 async fn flush_outbox(state: &AppState, account: &str, canvas: &str) -> Result<(), LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.canvas.flush-outbox", async {
+
     let ids = {
         let store = state.inner.store.lock().await;
         let mut stmt = store.prepare("select client_update_id from canvas_outbox where account_id=?1 and canvas_id=?2 and state='pending' order by created_at").map_err(LocalError::internal)?;
@@ -544,11 +665,17 @@ async fn flush_outbox(state: &AppState, account: &str, canvas: &str) -> Result<(
         let _ = send_outbox_item(state, account, canvas, &id, None).await?;
     }
     Ok(())
+
+}).await
 }
 
 async fn pending_count(state: &AppState, account: &str, canvas: &str) -> Result<i64, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.canvas.pending-count", async {
+
     let store = state.inner.store.lock().await;
     store.query_row("select count(*) from canvas_outbox where account_id=?1 and canvas_id=?2 and state='pending'", rusqlite::params![account, canvas], |row| row.get(0)).map_err(LocalError::internal)
+
+}).await
 }
 
 pub(super) fn start_sync(state: &AppState) {

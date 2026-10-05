@@ -51,6 +51,8 @@ fn setup_path() -> Result<PathBuf, LocalError> {
 }
 
 async fn setup(arguments: Vec<String>) -> Result<serde_json::Value, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.system.setup", async {
+
     tokio::task::spawn_blocking(move || {
         let setup = setup_path()?;
         #[cfg(target_os = "windows")]
@@ -83,12 +85,16 @@ async fn setup(arguments: Vec<String>) -> Result<serde_json::Value, LocalError> 
     })
     .await
     .map_err(LocalError::internal)?
+
+}).await
 }
 
 pub(super) async fn installation_status(
     State(state): State<AppState>,
     Query(query): Query<HashMap<String, String>>,
 ) -> Result<Json<serde_json::Value>, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.system.installation-status", async {
+
     let operation = if query.get("refresh").is_some_and(|value| value == "true") {
         "check"
     } else {
@@ -124,9 +130,13 @@ pub(super) async fn installation_status(
         let _ = register_runtime(&state, agent, true, &skill_version).await;
     }
     Ok(Json(value))
+
+}).await
 }
 
 pub(super) async fn update_installation() -> Result<Json<serde_json::Value>, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.system.update-installation", async {
+
     let Json(mut current) = update_progress().await;
     if current["running"] == true {
         current["alreadyRunning"] = serde_json::json!(true);
@@ -151,9 +161,13 @@ pub(super) async fn update_installation() -> Result<Json<serde_json::Value>, Loc
     value["restartRequired"] = serde_json::Value::Bool(managed);
     value["previousPid"] = serde_json::Value::from(std::process::id());
     Ok(Json(value))
+
+}).await
 }
 
 pub(super) async fn restart_managed() -> Result<StatusCode, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.system.restart-managed", async {
+
     let manager = std::env::var("COLAB_MANAGED_SERVICE").unwrap_or_default();
     if !matches!(manager.as_str(), "launchd" | "windows-task") {
         return Err(LocalError::bad_request(
@@ -181,13 +195,21 @@ pub(super) async fn restart_managed() -> Result<StatusCode, LocalError> {
         std::process::exit(0);
     });
     Ok(StatusCode::ACCEPTED)
+
+}).await
 }
 
 pub(super) async fn update_shell() -> Result<Json<serde_json::Value>, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.system.update-shell", async {
+
     setup(vec!["update-shell".into()]).await.map(Json)
+
+}).await
 }
 
 async fn runtime_identity(state: &AppState) -> Result<(String, String), LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.system.runtime-identity", async {
+
     let store = state.inner.store.lock().await;
     let id: String = match store.query_row(
         "select value from local_settings where key='device_id'",
@@ -230,6 +252,8 @@ async fn runtime_identity(state: &AppState) -> Result<(String, String), LocalErr
         )
         .unwrap_or(fallback);
     Ok((id, name))
+
+}).await
 }
 
 async fn register_runtime(
@@ -238,6 +262,8 @@ async fn register_runtime(
     available: bool,
     skill_version: &str,
 ) -> Result<serde_json::Value, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.system.register-runtime", async {
+
     let organization = current_organization_id(state).await?;
     let (device_id, device_name) = runtime_identity(state).await?;
     let token = access_token(state).await?;
@@ -254,6 +280,8 @@ async fn register_runtime(
         store.execute("insert into local_settings(key,value) values(?1,?2) on conflict(key) do update set value=excluded.value",rusqlite::params![format!("runtime_id:{user_id}:{agent}"),id]).map_err(LocalError::internal)?;
     }
     Ok(value)
+
+}).await
 }
 
 async fn mutate_agent(
@@ -261,6 +289,8 @@ async fn mutate_agent(
     agent: String,
     operation: &str,
 ) -> Result<Json<serde_json::Value>, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.system.mutate-agent", async {
+
     if !SUPPORTED_AGENTS.contains(&agent.as_str()) {
         return Err(LocalError::bad_request("Unsupported Agent target"));
     }
@@ -274,23 +304,31 @@ async fn mutate_agent(
     Ok(Json(
         serde_json::json!({"installation":value,"runtime":runtime}),
     ))
+
+}).await
 }
 
 pub(super) async fn set_default_agent(
     State(state): State<AppState>,
     AxumPath(agent): AxumPath<String>,
 ) -> Result<Json<serde_json::Value>, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.system.set-default-agent", async {
+
     if !SUPPORTED_AGENTS.contains(&agent.as_str()) {
         return Err(LocalError::bad_request("Unsupported Agent target"));
     }
     let store = state.inner.store.lock().await;
     store.execute("insert into local_settings(key,value) values('default_agent',?1) on conflict(key) do update set value=excluded.value",[&agent]).map_err(LocalError::internal)?;
     Ok(Json(serde_json::json!({"defaultAgent":agent})))
+
+}).await
 }
 
 pub(super) async fn open_agent(
     AxumPath(agent): AxumPath<String>,
 ) -> Result<StatusCode, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.system.open-agent", async {
+
     #[cfg(target_os = "macos")]
     let app = match agent.as_str() {
         "codex" => "ChatGPT",
@@ -325,18 +363,28 @@ pub(super) async fn open_agent(
         "Opening Agent applications is not supported on this platform yet",
     ));
     Ok(StatusCode::NO_CONTENT)
+
+}).await
 }
 
 pub(super) async fn install_agent(
     State(state): State<AppState>,
     AxumPath(agent): AxumPath<String>,
 ) -> Result<Json<serde_json::Value>, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.system.install-agent", async {
+
     mutate_agent(&state, agent, "install-agent").await
+
+}).await
 }
 
 pub(super) async fn uninstall_agent(
     State(state): State<AppState>,
     AxumPath(agent): AxumPath<String>,
 ) -> Result<Json<serde_json::Value>, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.system.uninstall-agent", async {
+
     mutate_agent(&state, agent, "uninstall-agent").await
+
+}).await
 }

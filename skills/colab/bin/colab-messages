@@ -45,6 +45,7 @@ def main():
     context=rops.add_parser("context");context.add_argument("--request",required=True);context.add_argument("--before",type=int,required=True);context.add_argument("--limit",type=int,default=20)
     reply=rops.add_parser("reply");reply.add_argument("--request",required=True);reply.add_argument("--message",required=True)
     args=parser.parse_args()
+    __import__("telemetry").select_operation(args)
     success = __import__("output_views").writer("messages", args)
     try:
         if args.group=="request":

@@ -61,6 +61,8 @@ async fn create_transfer(
     ConnectInfo(peer): ConnectInfo<SocketAddr>,
     Json(request): Json<CreateTransferRequest>,
 ) -> Result<(StatusCode, Json<CreatedTransfer>), ApiError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.transfers.create-transfer", async {
+
     let ttl = request.expires_in_seconds.unwrap_or(24 * 60 * 60);
     if !(MIN_TTL_SECONDS..=MAX_TTL_SECONDS).contains(&ttl) {
         return Err(ApiError::bad_request("invalid_transfer_expiry"));
@@ -92,6 +94,8 @@ async fn create_transfer(
             expires_at,
         }),
     ))
+
+}).await
 }
 
 #[derive(Deserialize)]
@@ -110,6 +114,8 @@ async fn add_item(
     Path(transfer_id): Path<Uuid>,
     Json(request): Json<AddItemRequest>,
 ) -> Result<(StatusCode, Json<colab_server_persistence::TransferItem>), ApiError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.transfers.add-item", async {
+
     let token = capability(&headers)?;
     let name = request.name.trim();
     if name.is_empty()
@@ -143,6 +149,8 @@ async fn add_item(
         })?
         .ok_or_else(|| ApiError::forbidden("transfer_upload_forbidden"))?;
     Ok((StatusCode::CREATED, Json(item)))
+
+}).await
 }
 
 async fn upload_item(
@@ -151,6 +159,8 @@ async fn upload_item(
     Path((transfer_id, item_id)): Path<(Uuid, Uuid)>,
     body: Body,
 ) -> Result<StatusCode, ApiError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.transfers.upload-item", async {
+
     let token = capability(&headers)?;
     if !state
         .database
@@ -224,6 +234,8 @@ async fn upload_item(
         return Err(ApiError::forbidden("transfer_upload_forbidden"));
     }
     Ok(StatusCode::NO_CONTENT)
+
+}).await
 }
 
 async fn finalize(
@@ -231,6 +243,8 @@ async fn finalize(
     headers: HeaderMap,
     Path(transfer_id): Path<Uuid>,
 ) -> Result<StatusCode, ApiError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.transfers.finalize", async {
+
     let token = capability(&headers)?;
     if state
         .database
@@ -242,6 +256,8 @@ async fn finalize(
     } else {
         Err(ApiError::conflict("transfer_not_ready"))
     }
+
+}).await
 }
 
 async fn get_manifest(
@@ -249,6 +265,8 @@ async fn get_manifest(
     headers: HeaderMap,
     Path(transfer_id): Path<Uuid>,
 ) -> Result<Json<colab_server_persistence::TransferManifest>, ApiError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.transfers.get-manifest", async {
+
     let token = capability(&headers)?;
     let manifest = state
         .database
@@ -281,6 +299,8 @@ async fn get_manifest(
         .await
         .map_err(|_| ApiError::internal("transfer_access_record_failed"))?;
     Ok(Json(manifest))
+
+}).await
 }
 
 async fn manage(
@@ -288,6 +308,8 @@ async fn manage(
     headers: HeaderMap,
     Path(transfer_id): Path<Uuid>,
 ) -> Result<Json<colab_server_persistence::ManagedTransfer>, ApiError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.transfers.manage", async {
+
     let token = capability(&headers)?;
     state
         .database
@@ -296,6 +318,8 @@ async fn manage(
         .map_err(|_| ApiError::internal("transfer_management_lookup_failed"))?
         .map(Json)
         .ok_or_else(|| ApiError::forbidden("transfer_management_forbidden"))
+
+}).await
 }
 
 #[derive(Deserialize)]
@@ -310,6 +334,8 @@ async fn update_expiry(
     Path(transfer_id): Path<Uuid>,
     Json(request): Json<UpdateExpiryRequest>,
 ) -> Result<Json<serde_json::Value>, ApiError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.transfers.update-expiry", async {
+
     if !(MIN_TTL_SECONDS..=MAX_TTL_SECONDS).contains(&request.expires_in_seconds) {
         return Err(ApiError::bad_request("invalid_transfer_expiry"));
     }
@@ -321,6 +347,8 @@ async fn update_expiry(
         .map_err(|_| ApiError::internal("transfer_expiry_update_failed"))?
         .ok_or_else(|| ApiError::forbidden("transfer_management_forbidden"))?;
     Ok(Json(serde_json::json!({"expiresAt":expires_at})))
+
+}).await
 }
 
 async fn download_item(
@@ -328,6 +356,8 @@ async fn download_item(
     headers: HeaderMap,
     Path((transfer_id, item_id)): Path<(Uuid, Uuid)>,
 ) -> Result<Response, ApiError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.transfers.download-item", async {
+
     let token = capability(&headers)?;
     let key = state
         .database
@@ -346,6 +376,8 @@ async fn download_item(
         Body::from_stream(ReaderStream::new(file)),
     )
         .into_response())
+
+}).await
 }
 
 async fn revoke(
@@ -353,6 +385,8 @@ async fn revoke(
     headers: HeaderMap,
     Path(transfer_id): Path<Uuid>,
 ) -> Result<StatusCode, ApiError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.transfers.revoke", async {
+
     let token = capability(&headers)?;
     if state
         .database
@@ -364,6 +398,8 @@ async fn revoke(
     } else {
         Err(ApiError::forbidden("transfer_revoke_forbidden"))
     }
+
+}).await
 }
 
 pub(super) fn spawn_expired_transfer_gc(
@@ -384,6 +420,8 @@ async fn collect_expired(
     database: &colab_server_persistence::Database,
     blob_root: &std::path::Path,
 ) -> anyhow::Result<()> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.transfers.collect-expired", async {
+
     // Delete immutable blobs before metadata. A failed file deletion keeps the row for the next
     // pass; a missing file is already collected and is safe to forget.
     for transfer in database.expired_transfers(100).await? {
@@ -403,6 +441,8 @@ async fn collect_expired(
         }
     }
     Ok(())
+
+}).await
 }
 
 fn capability(headers: &HeaderMap) -> Result<&str, ApiError> {

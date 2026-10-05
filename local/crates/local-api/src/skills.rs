@@ -95,6 +95,8 @@ pub(super) fn start_skill_sync(state: &AppState) {
 /// Native events are hints. A complete catalog fingerprint and shadow-Git scan remain the
 /// correctness boundary, so missed/coalesced events are recovered by periodic discovery.
 async fn run_skill_sync(state: AppState) -> anyhow::Result<()> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.skills.run-skill-sync", async {
+
     let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<PathBuf>();
     let mut watcher: RecommendedWatcher =
         notify::recommended_watcher(move |event: notify::Result<notify::Event>| {
@@ -123,9 +125,13 @@ async fn run_skill_sync(state: AppState) -> anyhow::Result<()> {
             }
         }
     }
+
+}).await
 }
 
 async fn enqueue_changed_sources(state: &AppState, changed: Option<&Path>) -> anyhow::Result<()> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.skills.enqueue-changed-sources", async {
+
     let Ok(user_id) = current_user_id(state).await else {
         return Ok(());
     };
@@ -153,6 +159,8 @@ async fn enqueue_changed_sources(state: &AppState, changed: Option<&Path>) -> an
         }
     }
     Ok(())
+
+}).await
 }
 
 fn target_roots() -> Vec<(String, PathBuf)> {
@@ -168,6 +176,8 @@ fn target_roots() -> Vec<(String, PathBuf)> {
 }
 
 async fn refresh_catalog(state: &AppState) -> anyhow::Result<()> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.skills.refresh-catalog", async {
+
     let mut discovered = BTreeMap::<PathBuf, Vec<String>>::new();
     for (target, root) in target_roots() {
         let Ok(children) = fs::read_dir(&root) else {
@@ -223,12 +233,16 @@ async fn refresh_catalog(state: &AppState) -> anyhow::Result<()> {
         store.execute("insert into local_skill_catalog(source_id,source_path,name,description,discovered_targets,last_changed_at,content_fingerprint) values(?1,?2,?3,?4,?5,?6,?7) on conflict(source_path) do update set name=excluded.name,description=excluded.description,discovered_targets=excluded.discovered_targets,last_changed_at=excluded.last_changed_at,content_fingerprint=excluded.content_fingerprint,updated_at=current_timestamp",rusqlite::params![source_id,path.to_string_lossy(),metadata.0,metadata.1,serde_json::to_string(&targets)?,last_changed_at,fingerprint])?;
     }
     Ok(())
+
+}).await
 }
 
 pub(super) async fn list_skill_sources(
     State(state): State<AppState>,
     Query(query): Query<SourceQuery>,
 ) -> Result<Json<Vec<SkillSource>>, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.skills.list-skill-sources", async {
+
     let needle = query.query.unwrap_or_default().to_lowercase();
     // The 48-hour window is a recommendation heuristic, not a search boundary. Once a user
     // searches explicitly, all discovered sources are eligible.
@@ -272,12 +286,16 @@ pub(super) async fn list_skill_sources(
         })
         .collect();
     Ok(Json(items))
+
+}).await
 }
 
 pub(super) async fn list_skill_shares(
     State(state): State<AppState>,
     AxumPath(channel_id): AxumPath<String>,
 ) -> Result<Json<Vec<SkillShare>>, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.skills.list-skill-shares", async {
+
     let token = access_token(&state).await?;
     let response = state
         .inner
@@ -301,6 +319,8 @@ pub(super) async fn list_skill_shares(
         share.local_path=store.query_row("select source_path from local_skill_sources where share_id=?1 and user_id=?2",[&share.id,&user_id],|row|row.get(0)).or_else(|_|store.query_row("select local_path from skill_materializations where share_id=?1 and user_id=?2",[&share.id,&user_id],|row|row.get(0))).ok();
     }
     Ok(Json(shares))
+
+}).await
 }
 
 pub(super) async fn share_skill(
@@ -308,6 +328,8 @@ pub(super) async fn share_skill(
     AxumPath(channel_id): AxumPath<String>,
     Json(body): Json<ShareSkill>,
 ) -> Result<(StatusCode, Json<SkillShare>), LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.skills.share-skill", async {
+
     let source = if let Some(source_id) = body.source_id {
         let store = state.inner.store.lock().await;
         PathBuf::from(
@@ -379,9 +401,13 @@ pub(super) async fn share_skill(
     files::wait_for_job(&state, JOB_PUBLISH, &share.id, &user_id).await?;
     share.local_path = Some(source.to_string_lossy().into_owned());
     Ok((StatusCode::CREATED, Json(share)))
+
+}).await
 }
 
 pub(super) async fn publish_source(state: &AppState, share_id: &str) -> Result<(), LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.skills.publish-source", async {
+
     let user_id = current_user_id(state).await?;
     let (source, shadow, parent): (String, String, Option<String>) = {
         let store = state.inner.store.lock().await;
@@ -474,24 +500,32 @@ pub(super) async fn publish_source(state: &AppState, share_id: &str) -> Result<(
     let store = state.inner.store.lock().await;
     store.execute("update local_skill_sources set last_root_oid=?3,updated_at=current_timestamp where share_id=?1 and user_id=?2",[share_id,&user_id,&root]).map_err(LocalError::internal)?;
     Ok(())
+
+}).await
 }
 
 pub(super) async fn materialize_skill(
     State(state): State<AppState>,
     AxumPath(share_id): AxumPath<String>,
 ) -> Result<Json<SkillShare>, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.skills.materialize-skill", async {
+
     let user_id = current_user_id(&state).await?;
     files::enqueue_job(&state, JOB_MATERIALIZE, &share_id, &user_id, 0).await?;
     files::wait_for_job(&state, JOB_MATERIALIZE, &share_id, &user_id).await?;
     materialized_share(&state, &share_id, &user_id)
         .await
         .map(Json)
+
+}).await
 }
 
 pub(super) async fn sync_materialization(
     state: &AppState,
     share_id: &str,
 ) -> Result<SkillShare, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.skills.sync-materialization", async {
+
     let token = access_token(state).await?;
     let response = state
         .inner
@@ -592,6 +626,8 @@ pub(super) async fn sync_materialization(
         store.execute("insert into skill_materializations(share_id,user_id,local_path,last_root_oid) values(?1,?2,?3,?4) on conflict(share_id,user_id) do update set local_path=excluded.local_path,last_root_oid=excluded.last_root_oid,updated_at=current_timestamp",rusqlite::params![share_id,user_id,target.to_string_lossy(),latest.root_oid]).map_err(LocalError::internal)?;
     }
     materialized_share(state, share_id, &user_id).await
+
+}).await
 }
 
 async fn materialized_share(
@@ -599,6 +635,8 @@ async fn materialized_share(
     share_id: &str,
     user_id: &str,
 ) -> Result<SkillShare, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.skills.materialized-share", async {
+
     let store = state.inner.store.lock().await;
     let (local_path,root):(String,String)=store.query_row("select local_path,last_root_oid from skill_materializations where share_id=?1 and user_id=?2",[share_id,user_id],|row|Ok((row.get(0)?,row.get(1)?))).map_err(LocalError::internal)?;
     let (name,description,contributor,avatar,updated):(String,Option<String>,String,Option<String>,String)=store.query_row("select name,description,contributor_name,contributor_avatar_url,remote_updated_at from skill_share_cache where share_id=?1",[share_id],|row|Ok((row.get(0)?,row.get(1)?,row.get(2)?,row.get(3)?,row.get(4)?))).map_err(LocalError::internal)?;
@@ -615,12 +653,16 @@ async fn materialized_share(
         updated_at: updated,
         local_path: Some(local_path),
     })
+
+}).await
 }
 
 pub(super) async fn list_installations(
     State(state): State<AppState>,
     AxumPath(share_id): AxumPath<String>,
 ) -> Result<Json<Vec<Installation>>, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.skills.list-installations", async {
+
     let user_id = current_user_id(&state).await?;
     let current_root = current_skill_root(&state, &share_id).await?;
     let store = state.inner.store.lock().await;
@@ -658,12 +700,16 @@ pub(super) async fn list_installations(
         result.push(item)
     }
     Ok(Json(result))
+
+}).await
 }
 
 pub(super) async fn ensure_installed(
     State(state): State<AppState>,
     AxumPath((share_id, target)): AxumPath<(String, String)>,
 ) -> Result<Json<Installation>, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.skills.ensure-installed", async {
+
     let root = target_root(&target)?;
     let user_id = current_user_id(&state).await?;
     files::enqueue_job(&state, JOB_MATERIALIZE, &share_id, &user_id, 0).await?;
@@ -707,12 +753,16 @@ pub(super) async fn ensure_installed(
         current_root_oid: Some(current_root),
         activation: Some("new_session_required".into()),
     }))
+
+}).await
 }
 
 pub(super) async fn uninstall(
     State(state): State<AppState>,
     AxumPath((share_id, target)): AxumPath<(String, String)>,
 ) -> Result<StatusCode, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.skills.uninstall", async {
+
     let user_id = current_user_id(&state).await?;
     let (path, expected): (String, String) = {
         let store = state.inner.store.lock().await;
@@ -732,12 +782,16 @@ pub(super) async fn uninstall(
         store.execute("delete from skill_installations where share_id=?1 and user_id=?2 and target_agent=?3",[&share_id,&user_id,&target]).map_err(LocalError::internal)?;
     }
     Ok(StatusCode::NO_CONTENT)
+
+}).await
 }
 
 pub(super) async fn withdraw_skill(
     State(state): State<AppState>,
     AxumPath(share_id): AxumPath<String>,
 ) -> Result<StatusCode, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.skills.withdraw-skill", async {
+
     let token = access_token(&state).await?;
     let response = state
         .inner
@@ -759,12 +813,16 @@ pub(super) async fn withdraw_skill(
         )
         .map_err(LocalError::internal)?;
     Ok(StatusCode::NO_CONTENT)
+
+}).await
 }
 
 async fn current_skill_root(
     state: &AppState,
     share_id: &str,
 ) -> Result<Option<String>, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.skills.current-skill-root", async {
+
     let user_id = current_user_id(state).await?;
     let local = {
         let store = state.inner.store.lock().await;
@@ -796,6 +854,8 @@ async fn current_skill_root(
     }
     let revisions: Vec<Revision> = response.json().await.map_err(LocalError::internal)?;
     Ok(revisions.last().map(|item| item.root_oid.clone()))
+
+}).await
 }
 
 fn target_root(target: &str) -> Result<PathBuf, LocalError> {

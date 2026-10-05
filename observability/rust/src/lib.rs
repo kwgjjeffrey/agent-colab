@@ -2,6 +2,8 @@
 //! No credentials, application state or business use cases live here.
 pub mod clock;
 pub mod ingest;
+mod operation;
+pub use operation::{business, prompt, prompt_at, context_json, resume, registered_business};
 use axum::{
     extract::MatchedPath,
     http::{HeaderMap, Request},
@@ -122,6 +124,13 @@ fn parent() -> Context {
         .try_with(Clone::clone)
         .unwrap_or_else(|_| Context::current())
 }
+fn clock_attributes() -> Vec<KeyValue> {
+    let calibration = clock::calibration();
+    let quality = if SERVER_CLOCK.load(std::sync::atomic::Ordering::Relaxed) {"reference"} else if calibration.is_some() {"estimated"} else {"uncalibrated"};
+    let mut attributes=vec![KeyValue::new("colab.clock.quality",quality)];
+    if let Some(c)=calibration {attributes.extend([KeyValue::new("colab.clock.offset_ms",c.offset_ms),KeyValue::new("colab.clock.uncertainty_ms",c.uncertainty_ms)]);}
+    attributes
+}
 /// Deliberately omit raw URLs, query strings, headers, request/response bodies and error messages.
 pub fn route(path: &str) -> String {
     path.split('/')
@@ -135,7 +144,7 @@ pub fn route(path: &str) -> String {
         .collect::<Vec<_>>()
         .join("/")
 }
-pub async fn http_span(request: Request<axum::body::Body>, next: Next) -> Response {
+pub async fn http_span(mut request: Request<axum::body::Body>, next: Next) -> Response {
     let received = clock::millis(clock::now());
     let path = request
         .extensions()
@@ -144,6 +153,15 @@ pub async fn http_span(request: Request<axum::body::Body>, next: Next) -> Respon
         .unwrap_or_else(|| "unmatched".to_owned());
     if path.contains("/observability/") || path.starts_with("/health/") || path == "/v1/status" {
         return next.run(request).await;
+    }
+    // Native img/iframe loads cannot set headers. The authenticated same-origin GUI supplies
+    // only fixed-format correlation IDs; never put credentials or arbitrary baggage in this URL.
+    if path.ends_with("/raw") && request.headers().get("traceparent").is_none() {
+        let query = request.uri().query().unwrap_or("").to_owned();
+        for item in query.split('&') {
+            if let Some(value) = item.strip_prefix("__traceparent=").filter(|v|v.len()==55 && v.bytes().all(|b|b.is_ascii_hexdigit() || b==b'-')).and_then(|v|v.parse().ok()) {request.headers_mut().insert("traceparent",value);}
+            if let Some(id) = item.strip_prefix("__trace_entry=").filter(|v|v.len()<=128 && v.bytes().all(|b|b.is_ascii_alphanumeric() || b"._-".contains(&b))) {if let Ok(value)=format!("trace.entry.id={id}").parse(){request.headers_mut().insert("baggage",value);}}
+        }
     }
     let mut parent = global::get_text_map_propagator(|p| p.extract(&Headers(request.headers())));
     // Only the registered entry vocabulary may cross this boundary; arbitrary baggage is not forwarded.
@@ -162,13 +180,7 @@ pub async fn http_span(request: Request<axum::body::Body>, next: Next) -> Respon
             KeyValue::new("http.route", path),
         ])
         .start_with_context(&tracer, &parent);
-    if let Some(c) = clock::calibration() {
-        span.set_attribute(KeyValue::new("colab.clock.offset_ms", c.offset_ms));
-        span.set_attribute(KeyValue::new(
-            "colab.clock.uncertainty_ms",
-            c.uncertainty_ms,
-        ));
-    }
+    for attribute in clock_attributes() {span.set_attribute(attribute);}
     if let Some(id)=parent.baggage().get("trace.entry.id") {span.set_attribute(KeyValue::new("trace.entry.id",id.to_string()));}
     span.set_attribute(KeyValue::new("code.revision",option_env!("COLAB_CODE_REVISION").unwrap_or("unknown")));
     span.set_attribute(KeyValue::new("code.file.path","observability/rust/src/lib.rs"));
@@ -229,6 +241,7 @@ impl reqwest_middleware::Middleware for Propagate {
         span.set_attribute(KeyValue::new("code.revision",option_env!("COLAB_CODE_REVISION").unwrap_or("unknown")));
     span.set_attribute(KeyValue::new("code.file.path","observability/rust/src/lib.rs"));
         span.set_attribute(KeyValue::new("code.function.name","Propagate::handle"));
+        for attribute in clock_attributes() {span.set_attribute(attribute);}
         let cx = parent.with_span(span);
         global::get_text_map_propagator(|p| p.inject_context(&cx, &mut Inject(req.headers_mut())));
         let result = CURRENT.scope(cx.clone(), next.run(req, ext)).await;

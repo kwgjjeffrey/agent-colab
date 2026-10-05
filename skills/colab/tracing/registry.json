@@ -4,24 +4,867 @@
   "operations": [
     {
       "id": "browser.open",
-      "description": "脚本命令—列出 Colab 中当前可访问的 Channel，或阅读指定共享资源的元信息",
+      "description": "脚本命令—发现可访问的 Channel 与其中共享资源",
       "owner": "colab-skill",
       "status": "instrumented",
       "entry": {
         "kind": "command",
         "executable": "colab-browser",
         "args": [
-          "open",
-          "--ref",
-          "colab://"
-        ]
+          "open"
+        ],
+        "parameters": "运行该命令 --help 获取实际参数；注册表不复制 parser 参数定义"
       },
       "completion": {
-        "success": "stdout.json.exit_zero",
+        "success": "stdout.result.exit_zero",
         "failure": "stdout.error.exit_nonzero"
       },
       "source": {
         "path": "skills/colab/bin/colab-browser",
+        "function": "main"
+      }
+    },
+    {
+      "id": "skill.browser.use",
+      "description": "脚本命令—刷新并物化共享 Files，返回可用路径与目录树",
+      "owner": "colab-skill",
+      "status": "instrumented",
+      "entry": {
+        "kind": "command",
+        "executable": "colab-browser",
+        "args": [
+          "use"
+        ],
+        "parameters": "运行该命令 --help 获取实际参数；注册表不复制 parser 参数定义"
+      },
+      "completion": {
+        "success": "stdout.result.exit_zero",
+        "failure": "stdout.error.exit_nonzero"
+      },
+      "source": {
+        "path": "skills/colab/bin/colab-browser",
+        "function": "main"
+      }
+    },
+    {
+      "id": "skill.browser.sync",
+      "description": "脚本命令—兼容命令：刷新共享 Files",
+      "owner": "colab-skill",
+      "status": "instrumented",
+      "entry": {
+        "kind": "command",
+        "executable": "colab-browser",
+        "args": [
+          "sync"
+        ],
+        "parameters": "运行该命令 --help 获取实际参数；注册表不复制 parser 参数定义"
+      },
+      "completion": {
+        "success": "stdout.result.exit_zero",
+        "failure": "stdout.error.exit_nonzero"
+      },
+      "source": {
+        "path": "skills/colab/bin/colab-browser",
+        "function": "main"
+      }
+    },
+    {
+      "id": "skill.browser.create-channel",
+      "description": "脚本命令—创建协作 Channel",
+      "owner": "colab-skill",
+      "status": "instrumented",
+      "entry": {
+        "kind": "command",
+        "executable": "colab-browser",
+        "args": [
+          "create-channel"
+        ],
+        "parameters": "运行该命令 --help 获取实际参数；注册表不复制 parser 参数定义"
+      },
+      "completion": {
+        "success": "stdout.result.exit_zero",
+        "failure": "stdout.error.exit_nonzero"
+      },
+      "source": {
+        "path": "skills/colab/bin/colab-browser",
+        "function": "main"
+      }
+    },
+    {
+      "id": "skill.browser.update-channel",
+      "description": "脚本命令—修改 Channel 名称与图标",
+      "owner": "colab-skill",
+      "status": "instrumented",
+      "entry": {
+        "kind": "command",
+        "executable": "colab-browser",
+        "args": [
+          "update-channel"
+        ],
+        "parameters": "运行该命令 --help 获取实际参数；注册表不复制 parser 参数定义"
+      },
+      "completion": {
+        "success": "stdout.result.exit_zero",
+        "failure": "stdout.error.exit_nonzero"
+      },
+      "source": {
+        "path": "skills/colab/bin/colab-browser",
+        "function": "main"
+      }
+    },
+    {
+      "id": "skill.browser.members",
+      "description": "脚本命令—列出 Channel 成员",
+      "owner": "colab-skill",
+      "status": "instrumented",
+      "entry": {
+        "kind": "command",
+        "executable": "colab-browser",
+        "args": [
+          "members"
+        ],
+        "parameters": "运行该命令 --help 获取实际参数；注册表不复制 parser 参数定义"
+      },
+      "completion": {
+        "success": "stdout.result.exit_zero",
+        "failure": "stdout.error.exit_nonzero"
+      },
+      "source": {
+        "path": "skills/colab/bin/colab-browser",
+        "function": "main"
+      }
+    },
+    {
+      "id": "skill.browser.add-member",
+      "description": "脚本命令—添加或邀请 Channel 成员",
+      "owner": "colab-skill",
+      "status": "instrumented",
+      "entry": {
+        "kind": "command",
+        "executable": "colab-browser",
+        "args": [
+          "add-member"
+        ],
+        "parameters": "运行该命令 --help 获取实际参数；注册表不复制 parser 参数定义"
+      },
+      "completion": {
+        "success": "stdout.result.exit_zero",
+        "failure": "stdout.error.exit_nonzero"
+      },
+      "source": {
+        "path": "skills/colab/bin/colab-browser",
+        "function": "main"
+      }
+    },
+    {
+      "id": "skill.browser.update-member",
+      "description": "脚本命令—修改 Channel 成员角色",
+      "owner": "colab-skill",
+      "status": "instrumented",
+      "entry": {
+        "kind": "command",
+        "executable": "colab-browser",
+        "args": [
+          "update-member"
+        ],
+        "parameters": "运行该命令 --help 获取实际参数；注册表不复制 parser 参数定义"
+      },
+      "completion": {
+        "success": "stdout.result.exit_zero",
+        "failure": "stdout.error.exit_nonzero"
+      },
+      "source": {
+        "path": "skills/colab/bin/colab-browser",
+        "function": "main"
+      }
+    },
+    {
+      "id": "skill.browser.remove-member",
+      "description": "脚本命令—移除 Channel 成员",
+      "owner": "colab-skill",
+      "status": "instrumented",
+      "entry": {
+        "kind": "command",
+        "executable": "colab-browser",
+        "args": [
+          "remove-member"
+        ],
+        "parameters": "运行该命令 --help 获取实际参数；注册表不复制 parser 参数定义"
+      },
+      "completion": {
+        "success": "stdout.result.exit_zero",
+        "failure": "stdout.error.exit_nonzero"
+      },
+      "source": {
+        "path": "skills/colab/bin/colab-browser",
+        "function": "main"
+      }
+    },
+    {
+      "id": "skill.browser.share",
+      "description": "脚本命令—登记 Files、Session 或 Skill 为持续共享来源",
+      "owner": "colab-skill",
+      "status": "instrumented",
+      "entry": {
+        "kind": "command",
+        "executable": "colab-browser",
+        "args": [
+          "share"
+        ],
+        "parameters": "运行该命令 --help 获取实际参数；注册表不复制 parser 参数定义"
+      },
+      "completion": {
+        "success": "stdout.result.exit_zero",
+        "failure": "stdout.error.exit_nonzero"
+      },
+      "source": {
+        "path": "skills/colab/bin/colab-browser",
+        "function": "main"
+      }
+    },
+    {
+      "id": "skill.browser.withdraw",
+      "description": "脚本命令—撤回自己登记的共享资源",
+      "owner": "colab-skill",
+      "status": "instrumented",
+      "entry": {
+        "kind": "command",
+        "executable": "colab-browser",
+        "args": [
+          "withdraw"
+        ],
+        "parameters": "运行该命令 --help 获取实际参数；注册表不复制 parser 参数定义"
+      },
+      "completion": {
+        "success": "stdout.result.exit_zero",
+        "failure": "stdout.error.exit_nonzero"
+      },
+      "source": {
+        "path": "skills/colab/bin/colab-browser",
+        "function": "main"
+      }
+    },
+    {
+      "id": "skill.browser.session-sources",
+      "description": "脚本命令—搜索本机索引中的 Agent Session",
+      "owner": "colab-skill",
+      "status": "instrumented",
+      "entry": {
+        "kind": "command",
+        "executable": "colab-browser",
+        "args": [
+          "session-sources"
+        ],
+        "parameters": "运行该命令 --help 获取实际参数；注册表不复制 parser 参数定义"
+      },
+      "completion": {
+        "success": "stdout.result.exit_zero",
+        "failure": "stdout.error.exit_nonzero"
+      },
+      "source": {
+        "path": "skills/colab/bin/colab-browser",
+        "function": "main"
+      }
+    },
+    {
+      "id": "skill.canvas.list",
+      "description": "脚本命令—列出 Channel 的 Canvas 文件夹与文档",
+      "owner": "colab-skill",
+      "status": "instrumented",
+      "entry": {
+        "kind": "command",
+        "executable": "colab-canvas",
+        "args": [
+          "list"
+        ],
+        "parameters": "运行该命令 --help 获取实际参数；注册表不复制 parser 参数定义"
+      },
+      "completion": {
+        "success": "stdout.result.exit_zero",
+        "failure": "stdout.error.exit_nonzero"
+      },
+      "source": {
+        "path": "skills/colab/bin/colab-canvas",
+        "function": "main"
+      }
+    },
+    {
+      "id": "skill.canvas.create",
+      "description": "脚本命令—创建 Canvas 文档",
+      "owner": "colab-skill",
+      "status": "instrumented",
+      "entry": {
+        "kind": "command",
+        "executable": "colab-canvas",
+        "args": [
+          "create"
+        ],
+        "parameters": "运行该命令 --help 获取实际参数；注册表不复制 parser 参数定义"
+      },
+      "completion": {
+        "success": "stdout.result.exit_zero",
+        "failure": "stdout.error.exit_nonzero"
+      },
+      "source": {
+        "path": "skills/colab/bin/colab-canvas",
+        "function": "main"
+      }
+    },
+    {
+      "id": "skill.canvas.read",
+      "description": "脚本命令—读取 Canvas Markdown 投影",
+      "owner": "colab-skill",
+      "status": "instrumented",
+      "entry": {
+        "kind": "command",
+        "executable": "colab-canvas",
+        "args": [
+          "read"
+        ],
+        "parameters": "运行该命令 --help 获取实际参数；注册表不复制 parser 参数定义"
+      },
+      "completion": {
+        "success": "stdout.result.exit_zero",
+        "failure": "stdout.error.exit_nonzero"
+      },
+      "source": {
+        "path": "skills/colab/bin/colab-canvas",
+        "function": "main"
+      }
+    },
+    {
+      "id": "skill.canvas.search",
+      "description": "脚本命令—搜索 Canvas Markdown 内容",
+      "owner": "colab-skill",
+      "status": "instrumented",
+      "entry": {
+        "kind": "command",
+        "executable": "colab-canvas",
+        "args": [
+          "search"
+        ],
+        "parameters": "运行该命令 --help 获取实际参数；注册表不复制 parser 参数定义"
+      },
+      "completion": {
+        "success": "stdout.result.exit_zero",
+        "failure": "stdout.error.exit_nonzero"
+      },
+      "source": {
+        "path": "skills/colab/bin/colab-canvas",
+        "function": "main"
+      }
+    },
+    {
+      "id": "skill.canvas.apply-patch",
+      "description": "脚本命令—将标准 patch 应用到 Canvas，返回本地持久化状态",
+      "owner": "colab-skill",
+      "status": "instrumented",
+      "entry": {
+        "kind": "command",
+        "executable": "colab-canvas",
+        "args": [
+          "apply-patch"
+        ],
+        "parameters": "运行该命令 --help 获取实际参数；注册表不复制 parser 参数定义"
+      },
+      "completion": {
+        "success": "stdout.result.exit_zero",
+        "failure": "stdout.error.exit_nonzero"
+      },
+      "source": {
+        "path": "skills/colab/bin/colab-canvas",
+        "function": "main"
+      }
+    },
+    {
+      "id": "skill.session-reader.read",
+      "description": "脚本命令—分页读取共享 Session 的规范化内容",
+      "owner": "colab-skill",
+      "status": "instrumented",
+      "entry": {
+        "kind": "command",
+        "executable": "colab-session-reader",
+        "args": [
+          "read"
+        ],
+        "parameters": "运行该命令 --help 获取实际参数；注册表不复制 parser 参数定义"
+      },
+      "completion": {
+        "success": "stdout.result.exit_zero",
+        "failure": "stdout.error.exit_nonzero"
+      },
+      "source": {
+        "path": "skills/colab/bin/colab-session-reader",
+        "function": "main"
+      }
+    },
+    {
+      "id": "skill.skill-tool.sources",
+      "description": "脚本命令—发现本机可共享的 Skill",
+      "owner": "colab-skill",
+      "status": "instrumented",
+      "entry": {
+        "kind": "command",
+        "executable": "colab-skill-tool",
+        "args": [
+          "sources"
+        ],
+        "parameters": "运行该命令 --help 获取实际参数；注册表不复制 parser 参数定义"
+      },
+      "completion": {
+        "success": "stdout.result.exit_zero",
+        "failure": "stdout.error.exit_nonzero"
+      },
+      "source": {
+        "path": "skills/colab/bin/colab-skill-tool",
+        "function": "main"
+      }
+    },
+    {
+      "id": "skill.skill-tool.status",
+      "description": "脚本命令—查询共享 Skill 的安装状态",
+      "owner": "colab-skill",
+      "status": "instrumented",
+      "entry": {
+        "kind": "command",
+        "executable": "colab-skill-tool",
+        "args": [
+          "status"
+        ],
+        "parameters": "运行该命令 --help 获取实际参数；注册表不复制 parser 参数定义"
+      },
+      "completion": {
+        "success": "stdout.result.exit_zero",
+        "failure": "stdout.error.exit_nonzero"
+      },
+      "source": {
+        "path": "skills/colab/bin/colab-skill-tool",
+        "function": "main"
+      }
+    },
+    {
+      "id": "skill.skill-tool.install",
+      "description": "脚本命令—安装共享 Skill 到目标 Agent",
+      "owner": "colab-skill",
+      "status": "instrumented",
+      "entry": {
+        "kind": "command",
+        "executable": "colab-skill-tool",
+        "args": [
+          "install"
+        ],
+        "parameters": "运行该命令 --help 获取实际参数；注册表不复制 parser 参数定义"
+      },
+      "completion": {
+        "success": "stdout.result.exit_zero",
+        "failure": "stdout.error.exit_nonzero"
+      },
+      "source": {
+        "path": "skills/colab/bin/colab-skill-tool",
+        "function": "main"
+      }
+    },
+    {
+      "id": "skill.skill-tool.ensure",
+      "description": "脚本命令—确保共享 Skill 已同步并安装",
+      "owner": "colab-skill",
+      "status": "instrumented",
+      "entry": {
+        "kind": "command",
+        "executable": "colab-skill-tool",
+        "args": [
+          "ensure"
+        ],
+        "parameters": "运行该命令 --help 获取实际参数；注册表不复制 parser 参数定义"
+      },
+      "completion": {
+        "success": "stdout.result.exit_zero",
+        "failure": "stdout.error.exit_nonzero"
+      },
+      "source": {
+        "path": "skills/colab/bin/colab-skill-tool",
+        "function": "main"
+      }
+    },
+    {
+      "id": "skill.skill-tool.check-update",
+      "description": "脚本命令—检查共享 Skill 的来源是否更新",
+      "owner": "colab-skill",
+      "status": "instrumented",
+      "entry": {
+        "kind": "command",
+        "executable": "colab-skill-tool",
+        "args": [
+          "check-update"
+        ],
+        "parameters": "运行该命令 --help 获取实际参数；注册表不复制 parser 参数定义"
+      },
+      "completion": {
+        "success": "stdout.result.exit_zero",
+        "failure": "stdout.error.exit_nonzero"
+      },
+      "source": {
+        "path": "skills/colab/bin/colab-skill-tool",
+        "function": "main"
+      }
+    },
+    {
+      "id": "skill.skill-tool.update",
+      "description": "脚本命令—更新已安装的共享 Skill",
+      "owner": "colab-skill",
+      "status": "instrumented",
+      "entry": {
+        "kind": "command",
+        "executable": "colab-skill-tool",
+        "args": [
+          "update"
+        ],
+        "parameters": "运行该命令 --help 获取实际参数；注册表不复制 parser 参数定义"
+      },
+      "completion": {
+        "success": "stdout.result.exit_zero",
+        "failure": "stdout.error.exit_nonzero"
+      },
+      "source": {
+        "path": "skills/colab/bin/colab-skill-tool",
+        "function": "main"
+      }
+    },
+    {
+      "id": "skill.skill-tool.uninstall",
+      "description": "脚本命令—卸载本机共享 Skill",
+      "owner": "colab-skill",
+      "status": "instrumented",
+      "entry": {
+        "kind": "command",
+        "executable": "colab-skill-tool",
+        "args": [
+          "uninstall"
+        ],
+        "parameters": "运行该命令 --help 获取实际参数；注册表不复制 parser 参数定义"
+      },
+      "completion": {
+        "success": "stdout.result.exit_zero",
+        "failure": "stdout.error.exit_nonzero"
+      },
+      "source": {
+        "path": "skills/colab/bin/colab-skill-tool",
+        "function": "main"
+      }
+    },
+    {
+      "id": "skill.transfer.create",
+      "description": "脚本命令—创建有期限的固定上下文快照",
+      "owner": "colab-skill",
+      "status": "instrumented",
+      "entry": {
+        "kind": "command",
+        "executable": "colab-transfer",
+        "args": [
+          "create"
+        ],
+        "parameters": "运行该命令 --help 获取实际参数；注册表不复制 parser 参数定义"
+      },
+      "completion": {
+        "success": "stdout.result.exit_zero",
+        "failure": "stdout.error.exit_nonzero"
+      },
+      "source": {
+        "path": "skills/colab/bin/colab-transfer",
+        "function": "main"
+      }
+    },
+    {
+      "id": "skill.transfer.receive",
+      "description": "脚本命令—取得授权的 Quick Share 并物化为可用内容",
+      "owner": "colab-skill",
+      "status": "instrumented",
+      "entry": {
+        "kind": "command",
+        "executable": "colab-transfer",
+        "args": [
+          "receive"
+        ],
+        "parameters": "运行该命令 --help 获取实际参数；注册表不复制 parser 参数定义"
+      },
+      "completion": {
+        "success": "stdout.result.exit_zero",
+        "failure": "stdout.error.exit_nonzero"
+      },
+      "source": {
+        "path": "skills/colab/bin/colab-transfer",
+        "function": "main"
+      }
+    },
+    {
+      "id": "skill.transfer.revoke",
+      "description": "脚本命令—撤销自己的 Quick Share",
+      "owner": "colab-skill",
+      "status": "instrumented",
+      "entry": {
+        "kind": "command",
+        "executable": "colab-transfer",
+        "args": [
+          "revoke"
+        ],
+        "parameters": "运行该命令 --help 获取实际参数；注册表不复制 parser 参数定义"
+      },
+      "completion": {
+        "success": "stdout.result.exit_zero",
+        "failure": "stdout.error.exit_nonzero"
+      },
+      "source": {
+        "path": "skills/colab/bin/colab-transfer",
+        "function": "main"
+      }
+    },
+    {
+      "id": "skill.messages.messages.list",
+      "description": "脚本命令—按游标读取 Channel 消息",
+      "owner": "colab-skill",
+      "status": "instrumented",
+      "entry": {
+        "kind": "command",
+        "executable": "colab-messages",
+        "args": [
+          "messages",
+          "list"
+        ],
+        "parameters": "运行该命令 --help 获取实际参数；注册表不复制 parser 参数定义"
+      },
+      "completion": {
+        "success": "stdout.result.exit_zero",
+        "failure": "stdout.error.exit_nonzero"
+      },
+      "source": {
+        "path": "skills/colab/bin/colab-messages",
+        "function": "main"
+      }
+    },
+    {
+      "id": "skill.messages.messages.read",
+      "description": "脚本命令—读取指定 Channel 消息",
+      "owner": "colab-skill",
+      "status": "instrumented",
+      "entry": {
+        "kind": "command",
+        "executable": "colab-messages",
+        "args": [
+          "messages",
+          "read"
+        ],
+        "parameters": "运行该命令 --help 获取实际参数；注册表不复制 parser 参数定义"
+      },
+      "completion": {
+        "success": "stdout.result.exit_zero",
+        "failure": "stdout.error.exit_nonzero"
+      },
+      "source": {
+        "path": "skills/colab/bin/colab-messages",
+        "function": "main"
+      }
+    },
+    {
+      "id": "skill.messages.messages.send",
+      "description": "脚本命令—发送普通 Channel 消息",
+      "owner": "colab-skill",
+      "status": "instrumented",
+      "entry": {
+        "kind": "command",
+        "executable": "colab-messages",
+        "args": [
+          "messages",
+          "send"
+        ],
+        "parameters": "运行该命令 --help 获取实际参数；注册表不复制 parser 参数定义"
+      },
+      "completion": {
+        "success": "stdout.result.exit_zero",
+        "failure": "stdout.error.exit_nonzero"
+      },
+      "source": {
+        "path": "skills/colab/bin/colab-messages",
+        "function": "main"
+      }
+    },
+    {
+      "id": "skill.messages.blueprint.list",
+      "description": "脚本命令—列出个人 Agent blueprint",
+      "owner": "colab-skill",
+      "status": "instrumented",
+      "entry": {
+        "kind": "command",
+        "executable": "colab-messages",
+        "args": [
+          "blueprint",
+          "list"
+        ],
+        "parameters": "运行该命令 --help 获取实际参数；注册表不复制 parser 参数定义"
+      },
+      "completion": {
+        "success": "stdout.result.exit_zero",
+        "failure": "stdout.error.exit_nonzero"
+      },
+      "source": {
+        "path": "skills/colab/bin/colab-messages",
+        "function": "main"
+      }
+    },
+    {
+      "id": "skill.messages.blueprint.runtimes",
+      "description": "脚本命令—列出已登记可用 Agent runtime",
+      "owner": "colab-skill",
+      "status": "instrumented",
+      "entry": {
+        "kind": "command",
+        "executable": "colab-messages",
+        "args": [
+          "blueprint",
+          "runtimes"
+        ],
+        "parameters": "运行该命令 --help 获取实际参数；注册表不复制 parser 参数定义"
+      },
+      "completion": {
+        "success": "stdout.result.exit_zero",
+        "failure": "stdout.error.exit_nonzero"
+      },
+      "source": {
+        "path": "skills/colab/bin/colab-messages",
+        "function": "main"
+      }
+    },
+    {
+      "id": "skill.messages.blueprint.upsert",
+      "description": "脚本命令—创建或更新个人 Agent blueprint",
+      "owner": "colab-skill",
+      "status": "instrumented",
+      "entry": {
+        "kind": "command",
+        "executable": "colab-messages",
+        "args": [
+          "blueprint",
+          "upsert"
+        ],
+        "parameters": "运行该命令 --help 获取实际参数；注册表不复制 parser 参数定义"
+      },
+      "completion": {
+        "success": "stdout.result.exit_zero",
+        "failure": "stdout.error.exit_nonzero"
+      },
+      "source": {
+        "path": "skills/colab/bin/colab-messages",
+        "function": "main"
+      }
+    },
+    {
+      "id": "skill.messages.blueprint.select",
+      "description": "脚本命令—将个人 Agent 引入或移出 Channel",
+      "owner": "colab-skill",
+      "status": "instrumented",
+      "entry": {
+        "kind": "command",
+        "executable": "colab-messages",
+        "args": [
+          "blueprint",
+          "select"
+        ],
+        "parameters": "运行该命令 --help 获取实际参数；注册表不复制 parser 参数定义"
+      },
+      "completion": {
+        "success": "stdout.result.exit_zero",
+        "failure": "stdout.error.exit_nonzero"
+      },
+      "source": {
+        "path": "skills/colab/bin/colab-messages",
+        "function": "main"
+      }
+    },
+    {
+      "id": "skill.messages.blueprint.remove",
+      "description": "脚本命令—删除个人 Agent blueprint",
+      "owner": "colab-skill",
+      "status": "instrumented",
+      "entry": {
+        "kind": "command",
+        "executable": "colab-messages",
+        "args": [
+          "blueprint",
+          "remove"
+        ],
+        "parameters": "运行该命令 --help 获取实际参数；注册表不复制 parser 参数定义"
+      },
+      "completion": {
+        "success": "stdout.result.exit_zero",
+        "failure": "stdout.error.exit_nonzero"
+      },
+      "source": {
+        "path": "skills/colab/bin/colab-messages",
+        "function": "main"
+      }
+    },
+    {
+      "id": "skill.messages.request.context",
+      "description": "脚本命令—读取指定 Agent 任务的历史上下文",
+      "owner": "colab-skill",
+      "status": "instrumented",
+      "entry": {
+        "kind": "command",
+        "executable": "colab-messages",
+        "args": [
+          "request",
+          "context"
+        ],
+        "parameters": "运行该命令 --help 获取实际参数；注册表不复制 parser 参数定义"
+      },
+      "completion": {
+        "success": "stdout.result.exit_zero",
+        "failure": "stdout.error.exit_nonzero"
+      },
+      "source": {
+        "path": "skills/colab/bin/colab-messages",
+        "function": "main"
+      }
+    },
+    {
+      "id": "skill.messages.request.reply",
+      "description": "脚本命令—以任务绑定的 Agent 身份发送进度或结果",
+      "owner": "colab-skill",
+      "status": "instrumented",
+      "entry": {
+        "kind": "command",
+        "executable": "colab-messages",
+        "args": [
+          "request",
+          "reply"
+        ],
+        "parameters": "运行该命令 --help 获取实际参数；注册表不复制 parser 参数定义"
+      },
+      "completion": {
+        "success": "stdout.result.exit_zero",
+        "failure": "stdout.error.exit_nonzero"
+      },
+      "source": {
+        "path": "skills/colab/bin/colab-messages",
+        "function": "main"
+      }
+    },
+    {
+      "id": "skill.open.gui",
+      "description": "脚本命令—启动 Local Core 并请求系统浏览器打开 Colab GUI；完成边界是打开请求被提交",
+      "owner": "colab-skill",
+      "status": "instrumented",
+      "entry": {
+        "kind": "command",
+        "executable": "colab-open",
+        "args": [],
+        "parameters": "运行该命令 --help 获取实际参数；注册表不复制 parser 参数定义"
+      },
+      "completion": {
+        "success": "open.requested.exit_zero",
+        "failure": "stdout.error.exit_nonzero"
+      },
+      "source": {
+        "path": "skills/colab/bin/colab-open",
         "function": "main"
       }
     }

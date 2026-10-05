@@ -44,6 +44,7 @@ def main():
     read.add_argument("--include-outputs", action="store_true")
     read.add_argument("--max-output-chars-per-item", type=int, default=4000)
     args = parser.parse_args()
+    __import__("telemetry").select_operation(args)
     success = __import__("output_views").writer("session-reader", args)
     try:
         session = resolve(args.core, args.ref)

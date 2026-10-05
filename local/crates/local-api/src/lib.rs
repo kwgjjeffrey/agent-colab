@@ -380,6 +380,10 @@ impl AppState {
                 [],
             )?;
         }
+        for table in ["local_jobs", "canvas_outbox", "local_session_sources"] {
+            let exists = store.prepare(&format!("pragma table_info({table})"))?.query_map([], |row| row.get::<_, String>(1))?.filter_map(Result::ok).any(|name|name=="trace_context");
+            if !exists { store.execute(&format!("alter table {table} add column trace_context text"), [])?; }
+        }
         // A process may die after claiming a job. Running is only a lease, never a terminal fact;
         // resetting it at startup makes every accepted job recoverable after a crash or upgrade.
         store.execute("update local_jobs set state='pending',next_attempt_at=unixepoch(),updated_at=current_timestamp where state='running'", [])?;
@@ -635,7 +639,9 @@ pub fn router(state: AppState, security: LocalSecurity) -> Router {
             "/v1/channels/{channel_id}/canvases",
             get(canvas::list_canvases).post(canvas::create_canvas),
         )
-        .route("/v1/canvases/{canvas_id}", patch(canvas::rename_canvas))
+        .route("/v1/canvases/{canvas_id}", patch(canvas::rename_canvas).delete(canvas::archive_canvas))
+        .route("/v1/canvases/{canvas_id}/position", patch(canvas::move_canvas))
+        .route("/v1/canvases/{canvas_id}/agent-prompt", axum::routing::post(canvas::agent_prompt))
         .route(
             "/v1/canvases/{canvas_id}/send-to-agent",
             axum::routing::post(canvas::send_to_agent),
@@ -916,6 +922,8 @@ struct ChoosePathQuery {
 async fn choose_path(
     Query(query): Query<ChoosePathQuery>,
 ) -> Result<Json<serde_json::Value>, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.lib.choose-path", async {
+
     let selected: Option<PathBuf> = match query.directory {
         Some(true) => rfd::AsyncFileDialog::new()
             .pick_folder()
@@ -930,6 +938,8 @@ async fn choose_path(
     Ok(Json(serde_json::json!({
         "path": selected.map(|path| path.to_string_lossy().into_owned())
     })))
+
+}).await
 }
 
 /// Files has one product operation, regardless of whether the selected source is a file or a
@@ -938,6 +948,8 @@ async fn choose_path(
 /// unified picker adapter is completed; Electron supplies the combined native intent today.
 #[cfg(target_os = "macos")]
 async fn pick_file_or_directory() -> Result<Option<PathBuf>, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.lib.pick-file-or-directory", async {
+
     let path = tokio::task::spawn_blocking(|| {
         let script = r#"ObjC.import('AppKit');
 const panel = $.NSOpenPanel.openPanel;
@@ -967,18 +979,26 @@ if (panel.runModal === $.NSModalResponseOK) {
     } else {
         Ok(Some(PathBuf::from(path)))
     }
+
+}).await
 }
 
 #[cfg(not(target_os = "macos"))]
 async fn pick_file_or_directory() -> Result<Option<PathBuf>, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.lib.pick-file-or-directory", async {
+
     // Browser-hosted GUI on non-macOS will move to the same combined platform adapter. Keep a
     // single endpoint and never re-expose the source kind as a second product decision.
     Ok(rfd::AsyncFileDialog::new()
         .pick_file()
         .await
         .map(|handle| handle.path().to_owned()))
+
+}).await
 }
 async fn current_user_id(state: &AppState) -> Result<String, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.lib.current-user-id", async {
+
     state
         .inner
         .session
@@ -987,14 +1007,22 @@ async fn current_user_id(state: &AppState) -> Result<String, LocalError> {
         .as_ref()
         .map(|session| session.user.id.clone())
         .ok_or_else(|| LocalError::unauthorized("Sign in first"))
+
+}).await
 }
 async fn set_current_organization(state: &AppState, id: &str) -> Result<(), LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.lib.set-current-organization", async {
+
     let key = format!("current_organization:{}", current_user_id(state).await?);
     let store = state.inner.store.lock().await;
     store.execute("insert into local_settings(key,value) values($1,$2) on conflict(key) do update set value=excluded.value",[&key,id]).map_err(LocalError::internal)?;
     Ok(())
+
+}).await
 }
 async fn current_organization_id(state: &AppState) -> Result<String, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.lib.current-organization-id", async {
+
     let organizations = collaboration::list_organizations(State(state.clone()))
         .await?
         .0;
@@ -1003,6 +1031,8 @@ async fn current_organization_id(state: &AppState) -> Result<String, LocalError>
         .find(|organization| organization.active)
         .map(|organization| organization.id)
         .ok_or_else(|| LocalError::bad_request("Create an Organization first"))
+
+}).await
 }
 
 async fn proxy_one<T: Serialize, R: for<'de> Deserialize<'de>>(
@@ -1010,6 +1040,8 @@ async fn proxy_one<T: Serialize, R: for<'de> Deserialize<'de>>(
     state: &AppState,
     body: &T,
 ) -> Result<Json<R>, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.lib.proxy-one", async {
+
     let token = access_token(state).await?;
     let response = request
         .bearer_auth(token)
@@ -1021,12 +1053,16 @@ async fn proxy_one<T: Serialize, R: for<'de> Deserialize<'de>>(
         return Err(remote_error(response).await);
     }
     Ok(Json(response.json().await.map_err(LocalError::internal)?))
+
+}).await
 }
 async fn proxy_empty<T: Serialize>(
     request: colab_observability::RequestBuilder,
     state: &AppState,
     body: &T,
 ) -> Result<StatusCode, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.lib.proxy-empty", async {
+
     let token = access_token(state).await?;
     let response = request
         .bearer_auth(token)
@@ -1038,11 +1074,15 @@ async fn proxy_empty<T: Serialize>(
         return Err(remote_error(response).await);
     }
     Ok(StatusCode::NO_CONTENT)
+
+}).await
 }
 async fn proxy_delete(
     request: colab_observability::RequestBuilder,
     state: &AppState,
 ) -> Result<StatusCode, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.lib.proxy-delete", async {
+
     let token = access_token(state).await?;
     let response = request
         .bearer_auth(token)
@@ -1053,8 +1093,12 @@ async fn proxy_delete(
         return Err(remote_error(response).await);
     }
     Ok(StatusCode::NO_CONTENT)
+
+}).await
 }
 async fn access_token(state: &AppState) -> Result<String, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.lib.access-token", async {
+
     let _refresh_guard = state.inner.auth_refresh_lock.lock().await;
     let current = state
         .inner
@@ -1097,12 +1141,16 @@ async fn access_token(state: &AppState) -> Result<String, LocalError> {
     let token = rotated.access_token.clone();
     *state.inner.session.lock().await = Some(rotated);
     Ok(token)
+
+}).await
 }
 
 /// Resolve credentials for a registered runtime owner, independently of the account currently
 /// shown by the GUI. Switching the foreground account must not stop another saved account's
 /// device runtime from servicing durable Agent requests.
 async fn access_token_for_user(state: &AppState, user_id: &str) -> Result<String, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.lib.access-token-for-user", async {
+
     let _refresh_guard = state.inner.auth_refresh_lock.lock().await;
     let current: ColabSession = {
         let store = state.inner.store.lock().await;
@@ -1158,12 +1206,18 @@ async fn access_token_for_user(state: &AppState, user_id: &str) -> Result<String
         *state.inner.session.lock().await = Some(rotated.clone());
     }
     Ok(rotated.access_token)
+
+}).await
 }
 async fn proxy_json(response: reqwest::Response) -> Result<Json<Vec<Channel>>, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.lib.proxy-json", async {
+
     if !response.status().is_success() {
         return Err(remote_error(response).await);
     }
     Ok(Json(response.json().await.map_err(LocalError::internal)?))
+
+}).await
 }
 async fn remote_error(response: reqwest::Response) -> LocalError {
     let status =

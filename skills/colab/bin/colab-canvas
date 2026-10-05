@@ -85,6 +85,7 @@ def main() -> int:
     patching.add_argument("--ref", required=True)
 
     args = parser.parse_args()
+    __import__("telemetry").select_operation(args)
     success = __import__("output_views").writer("canvas", args)
     try:
         if args.operation in {"list", "create"}:

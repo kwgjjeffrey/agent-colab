@@ -6,6 +6,8 @@ pub(super) async fn start_google(
     State(state): State<AppState>,
     Query(query): Query<StartQuery>,
 ) -> Result<Json<StartResponse>, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.auth.start-google", async {
+
     let flow_state = Uuid::new_v4().simple().to_string();
     let nonce = Uuid::new_v4().simple().to_string();
     let verifier = format!(
@@ -41,11 +43,15 @@ pub(super) async fn start_google(
     Ok(Json(StartResponse {
         authorization_url: url.into(),
     }))
+
+}).await
 }
 pub(super) async fn google_callback(
     State(state): State<AppState>,
     Query(query): Query<CallbackQuery>,
 ) -> Result<Html<&'static str>, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.auth.google-callback", async {
+
     if let Some(error) = query.error {
         return fail(&state, format!("Google authorization failed: {error}")).await;
     }
@@ -104,17 +110,25 @@ pub(super) async fn google_callback(
     Ok(Html(
         "<!doctype html><html><head><meta name='viewport' content='width=device-width'><style>body{font-family:system-ui;margin:0;padding:64px;color:#17211e}a{display:inline-block;margin-top:12px;padding:12px 18px;border-radius:10px;background:#17211e;color:white;text-decoration:none;font-weight:650}p{color:#66716d}</style></head><body><h2>Signed in to Colab</h2><p>Your account is ready.</p><a href='agent-colab://auth-complete'>Open Colab</a></body></html>",
     ))
+
+}).await
 }
 async fn fail(state: &AppState, message: String) -> Result<Html<&'static str>, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.auth.fail", async {
+
     *state.inner.last_error.lock().await = Some(message.clone());
     Err(LocalError {
         status: StatusCode::BAD_REQUEST,
         message,
     })
+
+}).await
 }
 pub(super) async fn auth_status(
     State(state): State<AppState>,
 ) -> Result<Json<AuthStatus>, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.auth.auth-status", async {
+
     if state.inner.session.lock().await.is_some() {
         access_token(&state).await?;
     }
@@ -125,10 +139,14 @@ pub(super) async fn auth_status(
         user: session.map(|value| value.user),
         error,
     }))
+
+}).await
 }
 pub(super) async fn list_accounts(
     State(state): State<AppState>,
 ) -> Result<Json<Vec<StoredAccount>>, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.auth.list-accounts", async {
+
     let active = state
         .inner
         .session
@@ -160,11 +178,15 @@ pub(super) async fn list_accounts(
         accounts.push(account);
     }
     Ok(Json(accounts))
+
+}).await
 }
 pub(super) async fn switch_account(
     State(state): State<AppState>,
     Json(body): Json<SwitchAccount>,
 ) -> Result<StatusCode, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.auth.switch-account", async {
+
     let session: ColabSession = {
         let store = state.inner.store.lock().await;
         let value: String = store
@@ -213,8 +235,12 @@ pub(super) async fn switch_account(
             .map_err(LocalError::internal)?;
     }
     Ok(StatusCode::NO_CONTENT)
+
+}).await
 }
 pub(super) async fn logout(State(state): State<AppState>) -> Result<StatusCode, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.auth.logout", async {
+
     let session = state
         .inner
         .session
@@ -237,14 +263,20 @@ pub(super) async fn logout(State(state): State<AppState>) -> Result<StatusCode, 
         .execute("delete from local_settings where key='current_user_id'", [])
         .map_err(LocalError::internal)?;
     Ok(StatusCode::NO_CONTENT)
+
+}).await
 }
 pub(super) async fn save_account(
     state: &AppState,
     session: &ColabSession,
 ) -> Result<(), LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.auth.save-account", async {
+
     let encoded = serde_json::to_string(session).map_err(LocalError::internal)?;
     let store = state.inner.store.lock().await;
     store.execute("insert into accounts(user_id,email,display_name,avatar_url,session_json,last_used_at) values($1,$2,$3,$4,$5,current_timestamp) on conflict(user_id) do update set email=excluded.email,display_name=excluded.display_name,avatar_url=excluded.avatar_url,session_json=excluded.session_json,last_used_at=current_timestamp",rusqlite::params![session.user.id,session.user.email,session.user.display_name,session.user.avatar_url,encoded]).map_err(LocalError::internal)?;
     store.execute("insert into local_settings(key,value) values('current_user_id',$1) on conflict(key) do update set value=excluded.value",[&session.user.id]).map_err(LocalError::internal)?;
     Ok(())
+
+}).await
 }

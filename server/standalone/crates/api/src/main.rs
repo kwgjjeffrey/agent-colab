@@ -98,6 +98,8 @@ impl Config {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.main.main", async {
+
     let _ = dotenvy::from_filename(".env.local");
     let _telemetry = colab_observability::init("colab-server", option_env!("COLAB_SERVER_VERSION").unwrap_or("development"));
     let config = Config::from_env()?;
@@ -160,6 +162,8 @@ async fn main() -> anyhow::Result<()> {
     .with_graceful_shutdown(shutdown_signal())
     .await
     .context("serve Colab API")
+
+}).await
 }
 
 fn router(state: AppState) -> Router {
@@ -264,11 +268,15 @@ async fn live() -> &'static str {
 }
 
 async fn ready(State(state): State<AppState>) -> Result<&'static str, ApiError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.main.ready", async {
+
     if state.database.is_ready().await {
         Ok("ok")
     } else {
         Err(ApiError::unavailable("database_unavailable"))
     }
+
+}).await
 }
 
 async fn status() -> Json<colab_server_domain::ServiceStatus> {
@@ -286,6 +294,8 @@ async fn create_google_session(
     State(state): State<AppState>,
     Json(request): Json<GoogleSessionRequest>,
 ) -> Result<Json<colab_server_persistence::CreatedSession>, ApiError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.main.create-google-session", async {
+
     let identity = colab_server_auth::verify_google_id_token(
         &state.http,
         &request.id_token,
@@ -311,6 +321,8 @@ async fn create_google_session(
             ApiError::internal("session_creation_failed")
         })?;
     Ok(Json(session))
+
+}).await
 }
 
 #[derive(Deserialize)]
@@ -323,6 +335,8 @@ async fn refresh_session(
     State(state): State<AppState>,
     Json(request): Json<RefreshSessionRequest>,
 ) -> Result<Json<colab_server_persistence::CreatedSession>, ApiError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.main.refresh-session", async {
+
     use colab_server_persistence::RefreshSessionError;
     match state.database.refresh_session(&request.refresh_token).await {
         Ok(session) => Ok(Json(session)),
@@ -333,8 +347,12 @@ async fn refresh_session(
             Err(ApiError::internal("session_refresh_failed"))
         }
     }
+
+}).await
 }
 async fn logout(State(state): State<AppState>, headers: HeaderMap) -> Result<StatusCode, ApiError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.main.logout", async {
+
     let token = bearer_token(&headers)?;
     state
         .database
@@ -342,6 +360,8 @@ async fn logout(State(state): State<AppState>, headers: HeaderMap) -> Result<Sta
         .await
         .map_err(|_| ApiError::internal("logout_failed"))?;
     Ok(StatusCode::NO_CONTENT)
+
+}).await
 }
 
 #[derive(Deserialize)]
@@ -413,6 +433,8 @@ async fn list_channels(
     headers: HeaderMap,
     Path(organization_id): Path<uuid::Uuid>,
 ) -> Result<Json<Vec<colab_server_persistence::Channel>>, ApiError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.main.list-channels", async {
+
     let user_id = authenticated_user(&state, &headers).await?;
     let channels = state
         .database
@@ -425,12 +447,16 @@ async fn list_channels(
     channels
         .map(Json)
         .ok_or_else(|| ApiError::forbidden("organization_access_forbidden"))
+
+}).await
 }
 
 async fn list_organizations(
     State(state): State<AppState>,
     headers: HeaderMap,
 ) -> Result<Json<Vec<colab_server_persistence::Organization>>, ApiError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.main.list-organizations", async {
+
     let user = authenticated_user(&state, &headers).await?;
     Ok(Json(
         state
@@ -439,6 +465,8 @@ async fn list_organizations(
             .await
             .map_err(|_| ApiError::internal("organization_list_failed"))?,
     ))
+
+}).await
 }
 
 async fn create_organization(
@@ -446,6 +474,8 @@ async fn create_organization(
     headers: HeaderMap,
     Json(request): Json<CreateOrganizationRequest>,
 ) -> Result<(StatusCode, Json<colab_server_persistence::Organization>), ApiError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.main.create-organization", async {
+
     let user = authenticated_user(&state, &headers).await?;
     let name = request.name.trim();
     if name.is_empty() || name.chars().count() > 80 {
@@ -457,6 +487,8 @@ async fn create_organization(
         .await
         .map_err(|_| ApiError::internal("organization_creation_failed"))?;
     Ok((StatusCode::CREATED, Json(organization)))
+
+}).await
 }
 
 async fn create_channel(
@@ -465,6 +497,8 @@ async fn create_channel(
     Path(organization_id): Path<uuid::Uuid>,
     Json(request): Json<CreateChannelRequest>,
 ) -> Result<(StatusCode, Json<colab_server_persistence::Channel>), ApiError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.main.create-channel", async {
+
     let user_id = authenticated_user(&state, &headers).await?;
     let name = request.name.trim();
     if name.is_empty() || name.chars().count() > 80 {
@@ -479,6 +513,8 @@ async fn create_channel(
             ApiError::internal("channel_creation_failed")
         })?;
     Ok((StatusCode::CREATED, Json(channel)))
+
+}).await
 }
 
 async fn update_channel(
@@ -487,6 +523,8 @@ async fn update_channel(
     Path(channel_id): Path<uuid::Uuid>,
     Json(request): Json<UpdateChannelRequest>,
 ) -> Result<Json<colab_server_persistence::Channel>, ApiError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.main.update-channel", async {
+
     let user_id = authenticated_user(&state, &headers).await?;
     let name = request.name.trim();
     if name.is_empty() || name.chars().count() > 80 {
@@ -499,12 +537,16 @@ async fn update_channel(
         .map_err(|_| ApiError::internal("channel_update_failed"))?
         .map(Json)
         .ok_or_else(|| ApiError::forbidden("channel_update_forbidden"))
+
+}).await
 }
 async fn list_members(
     State(state): State<AppState>,
     headers: HeaderMap,
     Path(channel_id): Path<uuid::Uuid>,
 ) -> Result<Json<Vec<colab_server_persistence::ChannelMember>>, ApiError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.main.list-members", async {
+
     let user = authenticated_user(&state, &headers).await?;
     state
         .database
@@ -513,6 +555,8 @@ async fn list_members(
         .map_err(|_| ApiError::internal("member_list_failed"))?
         .map(Json)
         .ok_or_else(|| ApiError::forbidden("channel_access_forbidden"))
+
+}).await
 }
 async fn add_member(
     State(state): State<AppState>,
@@ -520,6 +564,8 @@ async fn add_member(
     Path(channel_id): Path<uuid::Uuid>,
     Json(request): Json<AddMemberRequest>,
 ) -> Result<(StatusCode, Json<AddMemberResponse>), ApiError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.main.add-member", async {
+
     let user = authenticated_user(&state, &headers).await?;
     if !matches!(request.role.as_str(), "admin" | "member") || !request.email.contains('@') {
         return Err(ApiError::bad_request("invalid_member"));
@@ -550,6 +596,8 @@ async fn add_member(
             }),
         )),
     }
+
+}).await
 }
 async fn search_people(
     State(state): State<AppState>,
@@ -557,6 +605,8 @@ async fn search_people(
     Path(channel_id): Path<uuid::Uuid>,
     axum::extract::Query(query): axum::extract::Query<SearchPeopleQuery>,
 ) -> Result<Json<Vec<colab_server_persistence::OrganizationPerson>>, ApiError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.main.search-people", async {
+
     let user = authenticated_user(&state, &headers).await?;
     state
         .database
@@ -565,12 +615,16 @@ async fn search_people(
         .map_err(|_| ApiError::internal("people_search_failed"))?
         .map(Json)
         .ok_or_else(|| ApiError::forbidden("channel_access_forbidden"))
+
+}).await
 }
 async fn accept_invitation(
     State(state): State<AppState>,
     headers: HeaderMap,
     Path(token): Path<String>,
 ) -> Result<StatusCode, ApiError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.main.accept-invitation", async {
+
     let user = authenticated_user(&state, &headers).await?;
     if state
         .database
@@ -582,8 +636,12 @@ async fn accept_invitation(
     } else {
         Err(ApiError::bad_request("invalid_invitation"))
     }
+
+}).await
 }
 async fn invitation_landing(Path(token): Path<String>) -> Result<Html<String>, ApiError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.main.invitation-landing", async {
+
     if token.len() < 32
         || !token
             .chars()
@@ -595,12 +653,16 @@ async fn invitation_landing(Path(token): Path<String>) -> Result<Html<String>, A
     Ok(Html(format!(
         r#"<!doctype html><html><head><meta name="viewport" content="width=device-width"><title>Join on Colab</title><style>body{{font-family:system-ui;margin:0;background:#f4f3ed;color:#17211e}}main{{max-width:560px;margin:12vh auto;padding:40px}}a{{display:inline-block;margin-top:16px;padding:12px 18px;border-radius:10px;background:#17211e;color:white;text-decoration:none;font-weight:650}}p{{color:#66716d}}</style></head><body><main><h1>You have been invited to collaborate</h1><p>Open Colab to review and accept this Organization and Channel invitation. If needed, Colab will ask you to sign in with the invited Google account first.</p><a href="{deep_link}">Open Colab</a></main></body></html>"#
     )))
+
+}).await
 }
 async fn list_file_shares(
     State(state): State<AppState>,
     headers: HeaderMap,
     Path(channel_id): Path<uuid::Uuid>,
 ) -> Result<Json<Vec<colab_server_persistence::FileShare>>, ApiError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.main.list-file-shares", async {
+
     let user = authenticated_user(&state, &headers).await?;
     state
         .database
@@ -609,6 +671,8 @@ async fn list_file_shares(
         .map_err(|_| ApiError::internal("file_share_list_failed"))?
         .map(Json)
         .ok_or_else(|| ApiError::forbidden("channel_access_forbidden"))
+
+}).await
 }
 async fn create_file_share(
     State(state): State<AppState>,
@@ -616,6 +680,8 @@ async fn create_file_share(
     Path(channel_id): Path<uuid::Uuid>,
     Json(request): Json<CreateFileShareRequest>,
 ) -> Result<(StatusCode, Json<colab_server_persistence::FileShare>), ApiError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.main.create-file-share", async {
+
     let user = authenticated_user(&state, &headers).await?;
     let name = request.name.trim();
     if name.is_empty() || name.chars().count() > 120 {
@@ -634,6 +700,8 @@ async fn create_file_share(
         })?
         .ok_or_else(|| ApiError::forbidden("channel_access_forbidden"))?;
     Ok((StatusCode::CREATED, Json(share)))
+
+}).await
 }
 async fn upload_file_revision(
     State(state): State<AppState>,
@@ -642,6 +710,8 @@ async fn upload_file_revision(
     Query(query): Query<UploadRevisionQuery>,
     body: Body,
 ) -> Result<(StatusCode, Json<colab_server_persistence::FileRevision>), ApiError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.main.upload-file-revision", async {
+
     // The HTTP body is an opaque Git pack. The server does not interpret the file tree: it owns
     // authorization, durable blob storage and the atomic revision pointer only. This keeps the
     // service independent from local filesystem semantics and lets consumers use standard Git
@@ -690,12 +760,16 @@ async fn upload_file_revision(
             Err(ApiError::conflict("file_revision_conflict"))
         }
     }
+
+}).await
 }
 async fn list_file_revisions(
     State(state): State<AppState>,
     headers: HeaderMap,
     Path(share_id): Path<uuid::Uuid>,
 ) -> Result<Json<Vec<colab_server_persistence::FileRevision>>, ApiError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.main.list-file-revisions", async {
+
     let user = authenticated_user(&state, &headers).await?;
     state
         .database
@@ -704,12 +778,16 @@ async fn list_file_revisions(
         .map_err(|_| ApiError::internal("file_revision_list_failed"))?
         .map(Json)
         .ok_or_else(|| ApiError::forbidden("file_share_access_forbidden"))
+
+}).await
 }
 async fn download_file_revision(
     State(state): State<AppState>,
     headers: HeaderMap,
     Path(revision_id): Path<uuid::Uuid>,
 ) -> Result<Response, ApiError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.main.download-file-revision", async {
+
     let user = authenticated_user(&state, &headers).await?;
     let key = state
         .database
@@ -718,12 +796,16 @@ async fn download_file_revision(
         .map_err(|_| ApiError::internal("file_revision_lookup_failed"))?
         .ok_or_else(|| ApiError::forbidden("file_share_access_forbidden"))?;
     blobs::response(&state.blob_root, &key, "application/x-git-packed-objects").await
+
+}).await
 }
 async fn withdraw_file_share(
     State(state): State<AppState>,
     headers: HeaderMap,
     Path(share_id): Path<uuid::Uuid>,
 ) -> Result<StatusCode, ApiError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.main.withdraw-file-share", async {
+
     let user = authenticated_user(&state, &headers).await?;
     if state
         .database
@@ -735,6 +817,8 @@ async fn withdraw_file_share(
     } else {
         Err(ApiError::forbidden("file_share_withdraw_forbidden"))
     }
+
+}).await
 }
 
 async fn list_skill_shares(
@@ -742,6 +826,8 @@ async fn list_skill_shares(
     headers: HeaderMap,
     Path(channel_id): Path<uuid::Uuid>,
 ) -> Result<Json<Vec<colab_server_persistence::SkillShare>>, ApiError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.main.list-skill-shares", async {
+
     let user = authenticated_user(&state, &headers).await?;
     state
         .database
@@ -750,6 +836,8 @@ async fn list_skill_shares(
         .map_err(|_| ApiError::internal("skill_share_list_failed"))?
         .map(Json)
         .ok_or_else(|| ApiError::forbidden("channel_access_forbidden"))
+
+}).await
 }
 
 async fn create_skill_share(
@@ -758,6 +846,8 @@ async fn create_skill_share(
     Path(channel_id): Path<uuid::Uuid>,
     Json(request): Json<CreateSkillShareRequest>,
 ) -> Result<(StatusCode, Json<colab_server_persistence::SkillShare>), ApiError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.main.create-skill-share", async {
+
     let user = authenticated_user(&state, &headers).await?;
     let name = request.name.trim();
     if name.is_empty() || name.chars().count() > 120 {
@@ -784,6 +874,8 @@ async fn create_skill_share(
         })?
         .ok_or_else(|| ApiError::forbidden("channel_access_forbidden"))?;
     Ok((StatusCode::CREATED, Json(share)))
+
+}).await
 }
 
 async fn upload_skill_revision(
@@ -793,6 +885,8 @@ async fn upload_skill_revision(
     Query(query): Query<UploadRevisionQuery>,
     body: Body,
 ) -> Result<(StatusCode, Json<colab_server_persistence::FileRevision>), ApiError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.main.upload-skill-revision", async {
+
     let user = authenticated_user(&state, &headers).await?;
     if !valid_oid(&query.root_oid)
         || query
@@ -836,6 +930,8 @@ async fn upload_skill_revision(
             Err(ApiError::conflict("skill_revision_conflict"))
         }
     }
+
+}).await
 }
 
 async fn list_skill_revisions(
@@ -843,6 +939,8 @@ async fn list_skill_revisions(
     headers: HeaderMap,
     Path(share_id): Path<uuid::Uuid>,
 ) -> Result<Json<Vec<colab_server_persistence::FileRevision>>, ApiError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.main.list-skill-revisions", async {
+
     let user = authenticated_user(&state, &headers).await?;
     state
         .database
@@ -851,6 +949,8 @@ async fn list_skill_revisions(
         .map_err(|_| ApiError::internal("skill_revision_list_failed"))?
         .map(Json)
         .ok_or_else(|| ApiError::forbidden("skill_share_access_forbidden"))
+
+}).await
 }
 
 async fn download_skill_revision(
@@ -858,6 +958,8 @@ async fn download_skill_revision(
     headers: HeaderMap,
     Path(revision_id): Path<uuid::Uuid>,
 ) -> Result<Response, ApiError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.main.download-skill-revision", async {
+
     let user = authenticated_user(&state, &headers).await?;
     let key = state
         .database
@@ -866,6 +968,8 @@ async fn download_skill_revision(
         .map_err(|_| ApiError::internal("skill_revision_lookup_failed"))?
         .ok_or_else(|| ApiError::forbidden("skill_share_access_forbidden"))?;
     blobs::response(&state.blob_root, &key, "application/x-git-packed-objects").await
+
+}).await
 }
 
 async fn withdraw_skill_share(
@@ -873,6 +977,8 @@ async fn withdraw_skill_share(
     headers: HeaderMap,
     Path(share_id): Path<uuid::Uuid>,
 ) -> Result<StatusCode, ApiError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.main.withdraw-skill-share", async {
+
     let user = authenticated_user(&state, &headers).await?;
     if state
         .database
@@ -884,6 +990,8 @@ async fn withdraw_skill_share(
     } else {
         Err(ApiError::forbidden("skill_share_withdraw_forbidden"))
     }
+
+}).await
 }
 
 async fn list_session_shares(
@@ -891,6 +999,8 @@ async fn list_session_shares(
     headers: HeaderMap,
     Path(channel_id): Path<uuid::Uuid>,
 ) -> Result<Json<Vec<colab_server_persistence::SessionShare>>, ApiError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.main.list-session-shares", async {
+
     let user = authenticated_user(&state, &headers).await?;
     state
         .database
@@ -899,6 +1009,8 @@ async fn list_session_shares(
         .map_err(|_| ApiError::internal("session_share_list_failed"))?
         .map(Json)
         .ok_or_else(|| ApiError::forbidden("channel_access_forbidden"))
+
+}).await
 }
 async fn create_session_share(
     State(state): State<AppState>,
@@ -906,6 +1018,8 @@ async fn create_session_share(
     Path(channel_id): Path<uuid::Uuid>,
     Json(request): Json<CreateSessionShareRequest>,
 ) -> Result<(StatusCode, Json<colab_server_persistence::SessionShare>), ApiError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.main.create-session-share", async {
+
     let user = authenticated_user(&state, &headers).await?;
     let name = request.name.trim();
     if name.is_empty()
@@ -930,6 +1044,8 @@ async fn create_session_share(
         })?
         .ok_or_else(|| ApiError::forbidden("channel_access_forbidden"))?;
     Ok((StatusCode::CREATED, Json(value)))
+
+}).await
 }
 async fn upload_session_segment(
     State(state): State<AppState>,
@@ -938,6 +1054,8 @@ async fn upload_session_segment(
     Query(query): Query<UploadSessionSegmentQuery>,
     body: Bytes,
 ) -> Result<(StatusCode, Json<serde_json::Value>), ApiError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.main.upload-session-segment", async {
+
     let user = authenticated_user(&state, &headers).await?;
     if body.is_empty()
         || query.source_cursor.len() > 4096
@@ -984,12 +1102,16 @@ async fn upload_session_segment(
             Err(ApiError::conflict("session_snapshot_conflict"))
         }
     }
+
+}).await
 }
 async fn list_session_segments(
     State(state): State<AppState>,
     headers: HeaderMap,
     Path(share_id): Path<uuid::Uuid>,
 ) -> Result<Json<serde_json::Value>, ApiError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.main.list-session-segments", async {
+
     let user = authenticated_user(&state, &headers).await?;
     let chain = state
         .database
@@ -1001,12 +1123,16 @@ async fn list_session_segments(
     Ok(Json(
         serde_json::json!({"snapshot":current,"segments":chain.into_iter().map(|(_,s)|s).collect::<Vec<_>>() }),
     ))
+
+}).await
 }
 async fn download_session_segment(
     State(state): State<AppState>,
     headers: HeaderMap,
     Path(segment_id): Path<uuid::Uuid>,
 ) -> Result<Response, ApiError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.main.download-session-segment", async {
+
     let user = authenticated_user(&state, &headers).await?;
     let key = state
         .database
@@ -1022,12 +1148,16 @@ async fn download_session_segment(
         Body::from_stream(ReaderStream::new(file)),
     )
         .into_response())
+
+}).await
 }
 async fn withdraw_session_share(
     State(state): State<AppState>,
     headers: HeaderMap,
     Path(share_id): Path<uuid::Uuid>,
 ) -> Result<StatusCode, ApiError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.main.withdraw-session-share", async {
+
     let user = authenticated_user(&state, &headers).await?;
     if state
         .database
@@ -1039,6 +1169,8 @@ async fn withdraw_session_share(
     } else {
         Err(ApiError::forbidden("session_share_withdraw_forbidden"))
     }
+
+}).await
 }
 fn valid_oid(value: &str) -> bool {
     matches!(value.len(), 40 | 64) && value.chars().all(|c| c.is_ascii_hexdigit())
@@ -1052,6 +1184,8 @@ async fn update_member(
     Path((channel_id, member_id)): Path<(uuid::Uuid, uuid::Uuid)>,
     Json(request): Json<UpdateRoleRequest>,
 ) -> Result<StatusCode, ApiError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.main.update-member", async {
+
     let user = authenticated_user(&state, &headers).await?;
     if !matches!(request.role.as_str(), "admin" | "member") {
         return Err(ApiError::bad_request("invalid_role"));
@@ -1066,12 +1200,16 @@ async fn update_member(
     } else {
         Err(ApiError::forbidden("member_update_forbidden"))
     }
+
+}).await
 }
 async fn remove_member(
     State(state): State<AppState>,
     headers: HeaderMap,
     Path((channel_id, member_id)): Path<(uuid::Uuid, uuid::Uuid)>,
 ) -> Result<StatusCode, ApiError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.main.remove-member", async {
+
     let user = authenticated_user(&state, &headers).await?;
     if state
         .database
@@ -1083,12 +1221,16 @@ async fn remove_member(
     } else {
         Err(ApiError::forbidden("member_remove_forbidden"))
     }
+
+}).await
 }
 async fn remove_invitation(
     State(state): State<AppState>,
     headers: HeaderMap,
     Path((channel_id, email)): Path<(uuid::Uuid, String)>,
 ) -> Result<StatusCode, ApiError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.main.remove-invitation", async {
+
     let user = authenticated_user(&state, &headers).await?;
     if state
         .database
@@ -1100,9 +1242,13 @@ async fn remove_invitation(
     } else {
         Err(ApiError::forbidden("invitation_remove_forbidden"))
     }
+
+}).await
 }
 
 async fn authenticated_user(state: &AppState, headers: &HeaderMap) -> Result<uuid::Uuid, ApiError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.main.authenticated-user", async {
+
     let token = bearer_token(headers)?;
     state
         .database
@@ -1113,6 +1259,8 @@ async fn authenticated_user(state: &AppState, headers: &HeaderMap) -> Result<uui
             ApiError::internal("session_lookup_failed")
         })?
         .ok_or_else(|| ApiError::unauthorized("invalid_session"))
+
+}).await
 }
 fn bearer_token(headers: &HeaderMap) -> Result<&str, ApiError> {
     headers

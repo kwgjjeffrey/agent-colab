@@ -10,6 +10,9 @@ if [[ -f "$config_file" ]]; then
   source "$config_file"
   set +a
 fi
+source_revision=$(python3 "$repo_root/packaging/source-revision.py")
+export COLAB_CODE_REVISION="$source_revision"
+export VITE_COLAB_CODE_REVISION="$source_revision"
 core_version=$(tr -d '[:space:]' < "$repo_root/local/VERSION")
 ui_version=$(tr -d '[:space:]' < "$repo_root/desktop/ui/VERSION")
 skill_version=$(tr -d '[:space:]' < "$repo_root/skills/colab/VERSION")
@@ -89,7 +92,12 @@ if $build_skill; then
   cp -R "$repo_root/skills/colab/agents" "$repo_root/skills/colab/bin" "$repo_root/skills/colab/lib" "$repo_root/skills/colab/setup" "$repo_root/skills/colab/references" "$repo_root/skills/colab/tracing" "$dist/colab-skill/$skill_version/"
   rm -f "$dist/colab-skill/$skill_version/lib/trace-registry.generated.json"
   python3 "$repo_root/packaging/bundle-skill-telemetry.py" "$dist/colab-skill/$skill_version"
-  cp "$repo_root/skills/colab/packaging/artifact.json" "$dist/colab-skill/$skill_version/installed.json"
+  python3 - "$repo_root/skills/colab/packaging/artifact.json" "$dist/colab-skill/$skill_version/installed.json" "$source_revision" <<'PYMETA'
+import json, sys
+from pathlib import Path
+value=json.loads(Path(sys.argv[1]).read_text()); value["codeRevision"]=sys.argv[3]
+Path(sys.argv[2]).write_text(json.dumps(value, indent=2)+"\n")
+PYMETA
   rm -f "$dist/colab-skill/$skill_version.zip"
   (cd "$dist/colab-skill" && /usr/bin/zip -qr "$dist/colab-skill/$skill_version.zip" "$skill_version")
 fi

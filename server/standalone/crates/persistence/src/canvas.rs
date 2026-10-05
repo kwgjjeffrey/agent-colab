@@ -71,7 +71,7 @@ impl Database {
             return Ok(None);
         };
         let rows = sqlx::query_as(
-"select c.id,c.channel_id,c.title,c.created_by_member_id,(select coalesce(u.display_name,u.email) from organization_members om join users u on u.id=om.user_id where om.id=c.created_by_member_id) creator_name,c.folder_id,c.schema_version,coalesce((select max(u.server_seq) from canvas_updates u where u.canvas_id=c.id),0) last_server_seq,true can_edit,c.created_at::text created_at,c.updated_at::text updated_at from canvases c where c.channel_id=$1 and c.archived_at is null order by lower(c.title),c.id",
+"select c.id,c.channel_id,c.title,c.created_by_member_id,(select coalesce(u.display_name,u.email) from organization_members om join users u on u.id=om.user_id where om.id=c.created_by_member_id) creator_name,c.folder_id,c.schema_version,coalesce((select max(u.server_seq) from canvas_updates u where u.canvas_id=c.id),0) last_server_seq,true can_edit,c.created_at::text created_at,c.updated_at::text updated_at from canvases c where c.channel_id=$1 and c.archived_at is null order by c.sort_order,lower(c.title),c.id",
         )
         .bind(channel_id)
         .fetch_all(&self.pool)
@@ -104,7 +104,7 @@ impl Database {
         }
         let id = Uuid::new_v4();
         let row = sqlx::query_as(
-            "insert into canvases(id,channel_id,title,folder_id,created_by_member_id) values($1,$2,$3,$4,$5) returning id,channel_id,title,created_by_member_id,(select coalesce(u.display_name,u.email) from organization_members om join users u on u.id=om.user_id where om.id=$5) creator_name,folder_id,schema_version,0::bigint last_server_seq,true can_edit,created_at::text created_at,updated_at::text updated_at",
+            "insert into canvases(id,channel_id,title,folder_id,created_by_member_id,sort_order) values($1,$2,$3,$4,$5,(select coalesce(max(sort_order),0)+1 from canvases where channel_id=$2 and folder_id is not distinct from $4 and archived_at is null)) returning id,channel_id,title,created_by_member_id,(select coalesce(u.display_name,u.email) from organization_members om join users u on u.id=om.user_id where om.id=$5) creator_name,folder_id,schema_version,0::bigint last_server_seq,true can_edit,created_at::text created_at,updated_at::text updated_at",
         )
         .bind(id)
         .bind(channel_id)
@@ -131,6 +131,34 @@ impl Database {
         .fetch_optional(&self.pool)
         .await?;
         Ok(row)
+    }
+
+    pub async fn archive_canvas(&self, user_id: Uuid, canvas_id: Uuid) -> anyhow::Result<bool> {
+        let result = sqlx::query("update canvases c set archived_at=now(),updated_at=now() from channel_members cm join organization_members om on om.id=cm.organization_member_id where c.id=$1 and c.archived_at is null and cm.channel_id=c.channel_id and om.user_id=$2")
+            .bind(canvas_id).bind(user_id).execute(&self.pool).await?;
+        Ok(result.rows_affected() == 1)
+    }
+
+    pub async fn move_canvas(&self, user_id: Uuid, canvas_id: Uuid, folder_id: Option<Uuid>, index: usize) -> anyhow::Result<bool> {
+        let mut tx = self.pool.begin().await?;
+        let channel: Option<Uuid> = sqlx::query_scalar("select c.channel_id from canvases c join channel_members cm on cm.channel_id=c.channel_id join organization_members om on om.id=cm.organization_member_id where c.id=$1 and c.archived_at is null and om.user_id=$2 for update of c")
+            .bind(canvas_id).bind(user_id).fetch_optional(&mut *tx).await?;
+        let Some(channel) = channel else { return Ok(false); };
+        if let Some(folder) = folder_id {
+            let valid: bool = sqlx::query_scalar("select exists(select 1 from canvas_folders where id=$1 and channel_id=$2)")
+                .bind(folder).bind(channel).fetch_one(&mut *tx).await?;
+            if !valid { return Ok(false); }
+        }
+        // Lock sibling order before renumbering. Drag/drop is a metadata mutation, never a Yjs update.
+        let mut siblings: Vec<Uuid> = sqlx::query_scalar("select id from canvases where channel_id=$1 and folder_id is not distinct from $2 and archived_at is null and id<>$3 order by sort_order,lower(title),id for update")
+            .bind(channel).bind(folder_id).bind(canvas_id).fetch_all(&mut *tx).await?;
+        siblings.insert(index.min(siblings.len()), canvas_id);
+        for (position, id) in siblings.into_iter().enumerate() {
+            sqlx::query("update canvases set folder_id=$2,sort_order=$3,updated_at=now() where id=$1")
+                .bind(id).bind(folder_id).bind(position as i64).execute(&mut *tx).await?;
+        }
+        tx.commit().await?;
+        Ok(true)
     }
 
     pub async fn list_canvas_folders(

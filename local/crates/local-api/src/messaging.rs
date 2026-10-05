@@ -72,30 +72,44 @@ pub(super) async fn participants(
     State(state): State<AppState>,
     AxumPath(channel): AxumPath<String>,
 ) -> Result<Json<Vec<ChannelParticipant>>, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.messaging.participants", async {
+
     proxy_get(&state, format!("/v1/channels/{channel}/participants")).await
+
+}).await
 }
 pub(super) async fn runtimes(
     State(state): State<AppState>,
     AxumPath(channel): AxumPath<String>,
 ) -> Result<Json<Vec<AgentRuntime>>, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.messaging.runtimes", async {
+
     proxy_get(&state, format!("/v1/channels/{channel}/agent-runtimes")).await
+
+}).await
 }
 pub(super) async fn blueprints(
     State(state): State<AppState>,
     AxumPath(channel): AxumPath<String>,
     Query(query): Query<HashMap<String, String>>,
 ) -> Result<Json<Vec<AgentBlueprint>>, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.messaging.blueprints", async {
+
     let suffix = query
         .get("ownerMemberId")
         .map(|value| format!("?owner_member_id={value}"))
         .unwrap_or_default();
     proxy_get(&state, format!("/v1/channels/{channel}/blueprints{suffix}")).await
+
+}).await
 }
 pub(super) async fn create_blueprint(
     State(state): State<AppState>,
     AxumPath(channel): AxumPath<String>,
     body: Json<serde_json::Value>,
 ) -> Result<(StatusCode, Json<AgentBlueprint>), LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.messaging.create-blueprint", async {
+
     proxy_created(
         state.inner.http.post(format!(
             "{}/v1/channels/{channel}/blueprints",
@@ -105,12 +119,16 @@ pub(super) async fn create_blueprint(
         &body.0,
     )
     .await
+
+}).await
 }
 pub(super) async fn update_blueprint(
     State(state): State<AppState>,
     AxumPath((channel, id)): AxumPath<(String, String)>,
     body: Json<serde_json::Value>,
 ) -> Result<Json<AgentBlueprint>, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.messaging.update-blueprint", async {
+
     proxy_one(
         state.inner.http.patch(format!(
             "{}/v1/channels/{channel}/blueprints/{id}",
@@ -120,11 +138,15 @@ pub(super) async fn update_blueprint(
         &body.0,
     )
     .await
+
+}).await
 }
 pub(super) async fn delete_blueprint(
     State(state): State<AppState>,
     AxumPath((channel, id)): AxumPath<(String, String)>,
 ) -> Result<StatusCode, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.messaging.delete-blueprint", async {
+
     let token = access_token(&state).await?;
     let response = state
         .inner
@@ -141,12 +163,16 @@ pub(super) async fn delete_blueprint(
         return Err(remote_error(response).await);
     }
     StatusCode::from_u16(response.status().as_u16()).map_err(LocalError::internal)
+
+}).await
 }
 pub(super) async fn select_blueprint(
     State(state): State<AppState>,
     AxumPath((channel, id)): AxumPath<(String, String)>,
     body: Json<serde_json::Value>,
 ) -> Result<StatusCode, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.messaging.select-blueprint", async {
+
     proxy_empty(
         state.inner.http.patch(format!(
             "{}/v1/channels/{channel}/blueprints/{id}/selection",
@@ -156,27 +182,39 @@ pub(super) async fn select_blueprint(
         &body.0,
     )
     .await
+
+}).await
 }
 pub(super) async fn messages(
     State(state): State<AppState>,
     AxumPath(channel): AxumPath<String>,
     Query(query): Query<HashMap<String, String>>,
 ) -> Result<Json<Vec<ChannelMessage>>, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.messaging.messages", async {
+
     let mut url = format!("/v1/channels/{channel}/messages");
     if !query.is_empty() {
         url.push('?');
         url.push_str(&serde_urlencoded::to_string(query).map_err(LocalError::internal)?);
     }
     proxy_get(&state, url).await
+
+}).await
 }
 pub(super) async fn message_by_id(State(state): State<AppState>, AxumPath((channel, id)): AxumPath<(String, String)>) -> Result<Json<ChannelMessage>, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.messaging.message-by-id", async {
+
     proxy_get(&state, format!("/v1/channels/{channel}/messages/{id}")).await
+
+}).await
 }
 pub(super) async fn send_message(
     State(state): State<AppState>,
     AxumPath(channel): AxumPath<String>,
     body: Json<serde_json::Value>,
 ) -> Result<(StatusCode, Json<ChannelMessage>), LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.messaging.send-message", async {
+
     proxy_created(
         state.inner.http.post(format!(
             "{}/v1/channels/{channel}/messages",
@@ -186,12 +224,16 @@ pub(super) async fn send_message(
         &body.0,
     )
     .await
+
+}).await
 }
 pub(super) async fn create_agent_request(
     State(state): State<AppState>,
     AxumPath(channel): AxumPath<String>,
     body: Json<serde_json::Value>,
 ) -> Result<(StatusCode, Json<serde_json::Value>), LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.messaging.create-agent-request", async {
+
     let (status, Json(value)) = proxy_created::<serde_json::Value, _>(
         state.inner.http.post(format!(
             "{}/v1/channels/{channel}/agent-requests",
@@ -202,18 +244,26 @@ pub(super) async fn create_agent_request(
     )
     .await?;
     Ok((status, Json(value)))
+
+}).await
 }
 pub(super) async fn agent_requests(
     State(state): State<AppState>,
     AxumPath(channel): AxumPath<String>,
 ) -> Result<Json<Vec<serde_json::Value>>, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.messaging.agent-requests", async {
+
     proxy_get(&state, format!("/v1/channels/{channel}/agent-requests")).await
+
+}).await
 }
 pub(super) async fn agent_request_context(
     State(state): State<AppState>,
     AxumPath(request): AxumPath<String>,
     Query(query): Query<HashMap<String, String>>,
 ) -> Result<Json<Vec<ChannelMessage>>, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.messaging.agent-request-context", async {
+
     let suffix = serde_urlencoded::to_string(query).map_err(LocalError::internal)?;
     let response = request_owner_call(
         &state,
@@ -223,18 +273,26 @@ pub(super) async fn agent_request_context(
     )
     .await?;
     Ok(Json(response.json().await.map_err(LocalError::internal)?))
+
+}).await
 }
 pub(super) async fn agent_request_events(
     State(state): State<AppState>,
     AxumPath(request): AxumPath<String>,
 ) -> Result<Json<serde_json::Value>, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.messaging.agent-request-events", async {
+
     proxy_get(&state, format!("/v1/agent-requests/{request}/events")).await
+
+}).await
 }
 pub(super) async fn agent_request_reply(
     State(state): State<AppState>,
     AxumPath(request): AxumPath<String>,
     body: Json<serde_json::Value>,
 ) -> Result<(StatusCode, Json<ChannelMessage>), LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.messaging.agent-request-reply", async {
+
     let response = request_owner_call(
         &state,
         reqwest::Method::POST,
@@ -246,6 +304,8 @@ pub(super) async fn agent_request_reply(
         StatusCode::CREATED,
         Json(response.json().await.map_err(LocalError::internal)?),
     ))
+
+}).await
 }
 
 async fn request_owner_call(
@@ -254,6 +314,8 @@ async fn request_owner_call(
     path: String,
     body: Option<serde_json::Value>,
 ) -> Result<reqwest::Response, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.messaging.request-owner-call", async {
+
     let user_ids: Vec<String> = {
         let store = state.inner.store.lock().await;
         let mut statement = store
@@ -295,6 +357,8 @@ async fn request_owner_call(
         Some(response) => remote_error(response).await,
         None => LocalError::unauthorized("The Agent request owner must sign in again"),
     })
+
+}).await
 }
 
 pub(super) fn start_agent_runtime(state: &AppState) {
@@ -330,6 +394,8 @@ async fn run_runtime_stream(
     user_id: &str,
     runtime_id: &str,
 ) -> Result<(), LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.messaging.run-runtime-stream", async {
+
     let token = access_token_for_user(state, user_id).await?;
     let url = format!(
         "{}/v1/agent-runtimes/{runtime_id}/stream",
@@ -384,6 +450,7 @@ async fn run_runtime_stream(
                     .and_then(|v| v.as_str())
                     .ok_or_else(|| LocalError::internal("missing Agent request id"))?
                     .to_string();
+                colab_observability::resume(&command["traceContext"], colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.agent.execution", async {
                 // Acknowledge only after the complete command has been parsed. Until this frame
                 // reaches Server, disconnect recovery may safely put the claim back in the queue.
                 socket
@@ -427,6 +494,8 @@ async fn run_runtime_stream(
                     .await
                     .map_err(LocalError::internal)?;
                 result?;
+                Ok::<(), LocalError>(())
+                })).await?;
             }
             tokio_tungstenite::tungstenite::Message::Ping(data) => {
                 socket
@@ -439,6 +508,8 @@ async fn run_runtime_stream(
         }
     }
     Err(LocalError::internal("Agent runtime WebSocket disconnected"))
+
+}).await
 }
 
 async fn runtime_registrations(state: &AppState) -> Vec<(String, String)> {
@@ -472,6 +543,8 @@ async fn report_agent_completion(
     user_id: &str,
     request: &str,
 ) -> Result<(), LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.messaging.report-agent-completion", async {
+
     let token = access_token_for_user(state, user_id).await?;
     let response = state
         .inner
@@ -489,6 +562,8 @@ async fn report_agent_completion(
     } else {
         Err(remote_error(response).await)
     }
+
+}).await
 }
 
 async fn report_agent_failure(state: &AppState, user_id: &str, request: &str, error: &str) {
@@ -512,6 +587,8 @@ async fn report_agent_failure(state: &AppState, user_id: &str, request: &str, er
 }
 
 async fn run_codex_request(state: AppState, user_id: &str, value: &serde_json::Value) -> Result<(), LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.messaging.run-codex-request", async {
+
     let request_id = value
         .get("id")
         .and_then(|v| v.as_str())
@@ -582,6 +659,8 @@ async fn run_codex_request(state: AppState, user_id: &str, value: &serde_json::V
         let _ = state.inner.http.post(format!("{}/v1/agent-requests/{}/events",state.inner.server_url,value.get("id").and_then(|v|v.as_str()).unwrap_or_default())).bearer_auth(token).json(&serde_json::json!({"events":events.into_iter().take(2000).collect::<Vec<_>>() })).send().await;
     }
     Ok(())
+
+}).await
 }
 
 /// Managed GUI services intentionally have a minimal PATH. Resolve the provider from explicit
@@ -625,6 +704,8 @@ async fn proxy_get<T: serde::de::DeserializeOwned>(
     state: &AppState,
     path: String,
 ) -> Result<Json<T>, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.messaging.proxy-get", async {
+
     let token = access_token(state).await?;
     let response = state
         .inner
@@ -638,12 +719,16 @@ async fn proxy_get<T: serde::de::DeserializeOwned>(
         return Err(remote_error(response).await);
     }
     Ok(Json(response.json().await.map_err(LocalError::internal)?))
+
+}).await
 }
 async fn proxy_created<T: serde::de::DeserializeOwned, B: Serialize>(
     builder: colab_observability::RequestBuilder,
     state: &AppState,
     body: &B,
 ) -> Result<(StatusCode, Json<T>), LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.messaging.proxy-created", async {
+
     let token = access_token(state).await?;
     let response = builder
         .bearer_auth(token)
@@ -659,14 +744,20 @@ async fn proxy_created<T: serde::de::DeserializeOwned, B: Serialize>(
         status,
         Json(response.json().await.map_err(LocalError::internal)?),
     ))
+
+}).await
 }
 
 pub(super) async fn stream(
     State(state): State<AppState>,
     upgrade: WebSocketUpgrade,
 ) -> Result<impl IntoResponse, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.messaging.stream", async {
+
     let token = access_token(&state).await?;
     Ok(upgrade.on_upgrade(move |socket| bridge(socket, state, token)))
+
+}).await
 }
 
 async fn bridge(browser: WebSocket, state: AppState, token: String) {

@@ -110,6 +110,7 @@ pub(super) struct AgentRequestResponse {
     pub(super) channel_id: uuid::Uuid,
     pub(super) state: String,
     pub(super) prompt: String,
+    pub(super) trace_context: Option<serde_json::Value>,
     pub(super) runtime_id: uuid::Uuid,
     pub(super) target_blueprint_id: uuid::Uuid,
     pub(super) thread_title: String,
@@ -176,6 +177,8 @@ async fn participants(
     headers: HeaderMap,
     Path(channel): Path<uuid::Uuid>,
 ) -> Result<Json<Vec<colab_server_persistence::ChannelParticipant>>, ApiError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.messaging.participants", async {
+
     let user = authenticated_user(&state, &headers).await?;
     state
         .database
@@ -184,6 +187,8 @@ async fn participants(
         .map_err(|_| ApiError::internal("participant_list_failed"))?
         .map(Json)
         .ok_or_else(|| ApiError::forbidden("channel_access_forbidden"))
+
+}).await
 }
 
 async fn blueprints(
@@ -192,6 +197,8 @@ async fn blueprints(
     Path(channel): Path<uuid::Uuid>,
     Query(query): Query<BlueprintQuery>,
 ) -> Result<Json<Vec<colab_server_persistence::AgentBlueprint>>, ApiError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.messaging.blueprints", async {
+
     let user = authenticated_user(&state, &headers).await?;
     state
         .database
@@ -200,6 +207,8 @@ async fn blueprints(
         .map_err(|_| ApiError::internal("blueprint_list_failed"))?
         .map(Json)
         .ok_or_else(|| ApiError::forbidden("channel_access_forbidden"))
+
+}).await
 }
 
 async fn create_blueprint(
@@ -208,6 +217,8 @@ async fn create_blueprint(
     Path(channel): Path<uuid::Uuid>,
     Json(body): Json<BlueprintBody>,
 ) -> Result<(StatusCode, Json<colab_server_persistence::AgentBlueprint>), ApiError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.messaging.create-blueprint", async {
+
     let user = authenticated_user(&state, &headers).await?;
     let name = valid_name(&body.name)?;
     let policy = body
@@ -241,6 +252,8 @@ async fn create_blueprint(
         })?
         .ok_or_else(|| ApiError::forbidden("channel_access_forbidden"))?;
     Ok((StatusCode::CREATED, Json(created)))
+
+}).await
 }
 
 async fn update_blueprint(
@@ -249,6 +262,8 @@ async fn update_blueprint(
     Path((channel, id)): Path<(uuid::Uuid, uuid::Uuid)>,
     Json(body): Json<BlueprintBody>,
 ) -> Result<Json<colab_server_persistence::AgentBlueprint>, ApiError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.messaging.update-blueprint", async {
+
     let user = authenticated_user(&state, &headers).await?;
     let name = valid_name(&body.name)?;
     if body.loading_instruction.chars().count() > 20000
@@ -284,6 +299,8 @@ async fn update_blueprint(
         .map_err(|_| ApiError::internal("blueprint_update_failed"))?
         .map(Json)
         .ok_or_else(|| ApiError::forbidden("blueprint_update_forbidden"))
+
+}).await
 }
 
 async fn runtimes(
@@ -291,6 +308,8 @@ async fn runtimes(
     headers: HeaderMap,
     Path(channel): Path<uuid::Uuid>,
 ) -> Result<Json<Vec<colab_server_persistence::AgentRuntime>>, ApiError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.messaging.runtimes", async {
+
     let user = authenticated_user(&state, &headers).await?;
     state
         .database
@@ -299,6 +318,8 @@ async fn runtimes(
         .map_err(|_| ApiError::internal("runtime_list_failed"))?
         .map(Json)
         .ok_or_else(|| ApiError::forbidden("channel_access_forbidden"))
+
+}).await
 }
 
 async fn register_runtime(
@@ -307,6 +328,8 @@ async fn register_runtime(
     Path(organization): Path<uuid::Uuid>,
     Json(body): Json<RuntimeRegistration>,
 ) -> Result<Json<colab_server_persistence::AgentRuntime>, ApiError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.messaging.register-runtime", async {
+
     let user = authenticated_user(&state, &headers).await?;
     if body.device_name.trim().is_empty()
         || body.device_name.chars().count() > 120
@@ -329,6 +352,8 @@ async fn register_runtime(
         .map_err(|_| ApiError::internal("runtime_register_failed"))?
         .map(Json)
         .ok_or_else(|| ApiError::forbidden("organization_access_forbidden"))
+
+}).await
 }
 
 async fn delete_blueprint(
@@ -336,6 +361,8 @@ async fn delete_blueprint(
     headers: HeaderMap,
     Path((channel, id)): Path<(uuid::Uuid, uuid::Uuid)>,
 ) -> Result<StatusCode, ApiError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.messaging.delete-blueprint", async {
+
     let user = authenticated_user(&state, &headers).await?;
     if state
         .database
@@ -347,6 +374,8 @@ async fn delete_blueprint(
     } else {
         Err(ApiError::forbidden("blueprint_delete_forbidden"))
     }
+
+}).await
 }
 
 async fn select_blueprint(
@@ -355,6 +384,8 @@ async fn select_blueprint(
     Path((channel, id)): Path<(uuid::Uuid, uuid::Uuid)>,
     Json(body): Json<ChannelSelection>,
 ) -> Result<StatusCode, ApiError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.messaging.select-blueprint", async {
+
     let user = authenticated_user(&state, &headers).await?;
     if state
         .database
@@ -366,6 +397,8 @@ async fn select_blueprint(
     } else {
         Err(ApiError::forbidden("blueprint_selection_forbidden"))
     }
+
+}).await
 }
 
 async fn messages(
@@ -374,6 +407,8 @@ async fn messages(
     Path(channel): Path<uuid::Uuid>,
     Query(page): Query<MessagePage>,
 ) -> Result<Json<Vec<colab_server_persistence::ChannelMessage>>, ApiError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.messaging.messages", async {
+
     let user = authenticated_user(&state, &headers).await?;
     let limit = page.limit.unwrap_or(100).clamp(1, 200);
     state
@@ -383,11 +418,17 @@ async fn messages(
         .map_err(|_| ApiError::internal("message_list_failed"))?
         .map(Json)
         .ok_or_else(|| ApiError::forbidden("channel_access_forbidden"))
+
+}).await
 }
 
 async fn message_by_id(State(state): State<AppState>, headers: HeaderMap, Path((channel, id)): Path<(uuid::Uuid, uuid::Uuid)>) -> Result<Json<colab_server_persistence::ChannelMessage>, ApiError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.messaging.message-by-id", async {
+
     let user = authenticated_user(&state, &headers).await?;
     state.database.message_by_id(user, channel, id).await.map_err(|_| ApiError::internal("message_read_failed"))?.map(Json).ok_or_else(|| ApiError::forbidden("message_unavailable"))
+
+}).await
 }
 async fn send_message(
     State(state): State<AppState>,
@@ -395,6 +436,8 @@ async fn send_message(
     Path(channel): Path<uuid::Uuid>,
     Json(body): Json<CreateMessage>,
 ) -> Result<(StatusCode, Json<colab_server_persistence::ChannelMessage>), ApiError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.messaging.send-message", async {
+
     let user = authenticated_user(&state, &headers).await?;
     let text = body.plain_text.trim();
     if text.is_empty() || text.chars().count() > 20000 || content_plain_text(&body.content) != text
@@ -426,7 +469,7 @@ async fn send_message(
     for target in agent_mentions(&body.content) {
         let Some(bundle) = state
             .database
-            .create_agent_request(user, channel, target, Some(message.id), &[], Some(text))
+            .create_agent_request(user, channel, target, Some(message.id), &[], Some(text), Some(&colab_observability::context_json()))
             .await
             .map_err(|_| ApiError::internal("agent_request_route_failed"))?
         else {
@@ -491,6 +534,8 @@ async fn send_message(
         }
     }
     Ok((StatusCode::CREATED, Json(message)))
+
+}).await
 }
 
 async fn create_agent_request(
@@ -499,6 +544,8 @@ async fn create_agent_request(
     Path(channel): Path<uuid::Uuid>,
     Json(body): Json<CreateAgentRequest>,
 ) -> Result<(StatusCode, Json<AgentRequestResponse>), ApiError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.messaging.create-agent-request", async {
+
     let user = authenticated_user(&state, &headers).await?;
     if body.forwarded_message_ids.is_empty() && body.context_refs.is_empty() {
         return Err(ApiError::bad_request("invalid_agent_request_source"));
@@ -533,6 +580,7 @@ async fn create_agent_request(
             None,
             &forwarded,
             Some(query),
+            Some(&colab_observability::context_json()),
         )
         .await
         .map_err(|_| ApiError::internal("agent_request_create_failed"))?
@@ -546,6 +594,8 @@ async fn create_agent_request(
         runtime_id: (response.state == "queued").then_some(response.runtime_id),
     });
     Ok((StatusCode::CREATED, Json(response)))
+
+}).await
 }
 
 async fn agent_requests(
@@ -553,6 +603,8 @@ async fn agent_requests(
     headers: HeaderMap,
     Path(channel): Path<uuid::Uuid>,
 ) -> Result<Json<Vec<colab_server_persistence::AgentRequestStatus>>, ApiError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.messaging.agent-requests", async {
+
     let user = authenticated_user(&state, &headers).await?;
     state
         .database
@@ -561,21 +613,30 @@ async fn agent_requests(
         .map_err(|error| { eprintln!("agent request list failed for {channel}: {error:#}"); ApiError::internal("agent_request_list_failed") })?
         .map(Json)
         .ok_or_else(|| ApiError::forbidden("channel_access_forbidden"))
+
+}).await
 }
 
 async fn save_agent_request_events(State(state):State<AppState>,headers:HeaderMap,Path(request):Path<uuid::Uuid>,Json(body):Json<AgentRequestEventsBody>)->Result<StatusCode,ApiError>{
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.messaging.save-agent-request-events", async {
+
     let user=authenticated_user(&state,&headers).await?;
     state.database.save_agent_request_events(user,request,&body.events).await.map_err(|error|{eprintln!("save Agent work details failed for {request}: {error:#}");ApiError::internal("agent_request_events_save_failed")})?.then_some(StatusCode::NO_CONTENT).ok_or_else(||ApiError::forbidden("agent_request_forbidden"))
+
+}).await
 }
 
 async fn agent_request_events(State(state):State<AppState>,headers:HeaderMap,Path(request):Path<uuid::Uuid>)->Result<Json<colab_server_persistence::AgentRequestWorkDetails>,ApiError>{
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.messaging.agent-request-events", async {
+
     let user=authenticated_user(&state,&headers).await?;
     state.database.agent_request_work_details(user,request).await.map_err(|error|{eprintln!("read Agent work details failed for {request}: {error:#}");ApiError::internal("agent_request_events_read_failed")})?.map(Json).ok_or_else(||ApiError::forbidden("agent_request_forbidden"))
+
+}).await
 }
 
-pub(super) fn agent_request_response(
-    bundle: colab_server_persistence::AgentRequestBundle,
-) -> AgentRequestResponse {
+pub(super) fn agent_request_response(bundle: colab_server_persistence::AgentRequestBundle) -> AgentRequestResponse { assemble_agent_request(bundle, "preview") }
+fn assemble_agent_request(bundle: colab_server_persistence::AgentRequestBundle, stage: &str) -> AgentRequestResponse {
     let current = bundle.messages.last();
     let quoted_ids = bundle
         .quote_messages
@@ -633,11 +694,20 @@ pub(super) fn agent_request_response(
             bundle.requester_name, query, recent, instruction, format!("{history}\n\n{resource_tools}"), bundle.id
         )
     };
+    // W3C correlation is non-secret. Prefix the concrete tools so Agent-invoked CLI requests
+    // continue this workflow rather than creating unrelated traces after the process boundary.
+    let envelope=colab_observability::context_json();
+    let prompt=if let (Some(parent),Some(entry))=(envelope["traceparent"].as_str(),envelope["entryId"].as_str()) {
+        let prefix=format!("COLAB_TRACEPARENT='{parent}' COLAB_TRACE_ENTRY_ID='{entry}' ");
+        prompt.lines().map(|line|if line.trim_start().starts_with("~/.agents/skills/agent-colab/bin/") {format!("{prefix}{line}")} else {line.to_owned()}).collect::<Vec<_>>().join("\n")
+    }else{prompt};
+    colab_observability::prompt_at(&bundle.kind, stage, Some(bundle.id.to_string()), &prompt, "server/standalone/crates/api/src/messaging.rs", "assemble_agent_request");
     AgentRequestResponse {
         id: bundle.id,
         channel_id: bundle.channel_id,
         state: bundle.state,
         prompt,
+        trace_context: Some(colab_observability::context_json()),
         runtime_id: bundle.runtime_id,
         target_blueprint_id: bundle.target_blueprint_id,
         thread_title: format!("{} · Agent Colab", bundle.target_name),
@@ -729,6 +799,8 @@ async fn agent_request_context(
     Path(request): Path<uuid::Uuid>,
     Query(page): Query<ContextPage>,
 ) -> Result<Json<Vec<colab_server_persistence::ChannelMessage>>, ApiError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.messaging.agent-request-context", async {
+
     let user = authenticated_user(&state, &headers).await?;
     state
         .database
@@ -742,6 +814,8 @@ async fn agent_request_context(
         .map_err(|_| ApiError::internal("agent_request_context_failed"))?
         .map(Json)
         .ok_or_else(|| ApiError::forbidden("agent_request_forbidden"))
+
+}).await
 }
 
 async fn agent_request_reply(
@@ -750,6 +824,8 @@ async fn agent_request_reply(
     Path(request): Path<uuid::Uuid>,
     Json(body): Json<AgentReport>,
 ) -> Result<(StatusCode, Json<colab_server_persistence::ChannelMessage>), ApiError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.messaging.agent-request-reply", async {
+
     let user = authenticated_user(&state, &headers).await?;
     let message = body.message.trim();
     if message.is_empty() || message.chars().count() > 20000 {
@@ -770,6 +846,8 @@ async fn agent_request_reply(
         runtime_id: None,
     });
     Ok((StatusCode::CREATED, Json(row)))
+
+}).await
 }
 
 async fn agent_request_fail(
@@ -778,6 +856,8 @@ async fn agent_request_fail(
     Path(request): Path<uuid::Uuid>,
     Json(body): Json<AgentFailure>,
 ) -> Result<StatusCode, ApiError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.messaging.agent-request-fail", async {
+
     let user = authenticated_user(&state, &headers).await?;
     // A claimed request must never remain invisibly `running` after provider launch/resume fails.
     let error = body.error.trim();
@@ -786,7 +866,7 @@ async fn agent_request_fail(
     }
     let channel = state
         .database
-        .fail_agent_request(user, request, error)
+        .fail_agent_request(user, request, error, Some(&colab_observability::context_json()))
         .await
         .map_err(|_| ApiError::internal("agent_request_fail_failed"))?
         .ok_or_else(|| ApiError::forbidden("agent_request_forbidden"))?;
@@ -795,6 +875,8 @@ async fn agent_request_fail(
         runtime_id: None,
     });
     Ok(StatusCode::NO_CONTENT)
+
+}).await
 }
 
 async fn agent_request_complete(
@@ -802,10 +884,12 @@ async fn agent_request_complete(
     headers: HeaderMap,
     Path(request): Path<uuid::Uuid>,
 ) -> Result<StatusCode, ApiError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.messaging.agent-request-complete", async {
+
     let user = authenticated_user(&state, &headers).await?;
     if let Some(channel) = state
         .database
-        .complete_agent_request(user, request)
+        .complete_agent_request(user, request, Some(&colab_observability::context_json()))
         .await
         .map_err(|_| ApiError::internal("agent_request_complete_failed"))?
     {
@@ -817,6 +901,8 @@ async fn agent_request_complete(
     } else {
         Err(ApiError::forbidden("agent_request_forbidden"))
     }
+
+}).await
 }
 
 async fn runtime_stream(
@@ -825,6 +911,8 @@ async fn runtime_stream(
     Path(runtime): Path<uuid::Uuid>,
     upgrade: WebSocketUpgrade,
 ) -> Result<impl IntoResponse, ApiError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.messaging.runtime-stream", async {
+
     let user = authenticated_user(&state, &headers).await?;
     if !state
         .database
@@ -842,6 +930,31 @@ async fn runtime_stream(
     Ok(upgrade.on_upgrade(move |socket| {
         runtime_socket(socket, state, user, runtime, receiver, requires_ack)
     }))
+
+}).await
+}
+
+/// The span ends at durable receipt, not after the device's unrelated next-command wait.
+async fn deliver_command(socket: &mut WebSocket, state: &AppState, user: uuid::Uuid,
+    bundle: colab_server_persistence::AgentRequestBundle, requires_ack: bool) -> Result<(), ()> {
+    let request_id = bundle.id;
+    let runtime_id = bundle.runtime_id;
+    let payload = serde_json::to_string(&serde_json::json!({
+        "type":"agent.command", "command":assemble_agent_request(bundle, "dispatch")
+    })).map_err(|_| ())?;
+    if socket.send(Message::Text(payload.into())).await.is_err() {
+        let _=state.database.release_agent_request(user,request_id).await; return Err(());
+    }
+    if requires_ack {
+        if !wait_until_command_accepted(socket, &request_id.to_string()).await {
+            let _=state.database.release_agent_request(user,request_id).await; return Err(());
+        }
+        match state.database.accept_agent_request(user,request_id).await {
+            Ok(Some(channel_id)) => {let _=state.agent_status_events.send(AgentRequestInvalidation {channel_id,runtime_id:Some(runtime_id)});}
+            _ => {let _=state.database.release_agent_request(user,request_id).await;return Err(());}
+        }
+    }
+    Ok(())
 }
 
 /// Runtime delivery has its own protocol. A command remains releasable until Local Core confirms
@@ -864,39 +977,12 @@ async fn runtime_socket(
         match state.database.claim_agent_request(user, runtime).await {
             Ok(Some(bundle)) => {
                 let request_id = bundle.id;
-                let Ok(payload) = serde_json::to_string(&serde_json::json!({
-                    "type":"agent.command",
-                    "command":agent_request_response(bundle)
-                })) else {
-                    return;
-                };
-                if socket.send(Message::Text(payload.into())).await.is_err() {
-                    let _ = state.database.release_agent_request(user, request_id).await;
-                    break;
-                }
-                if requires_ack {
-                    let expected_request = request_id.to_string();
-                    let acknowledged =
-                        wait_until_command_accepted(&mut socket, &expected_request).await;
-                    if !acknowledged {
-                        let _ = state.database.release_agent_request(user, request_id).await;
-                        break;
-                    }
-                    // Persist acceptance before announcing it. WS is only a wake-up hint; clients
-                    // reconcile the authoritative request state after reconnect or a lost frame.
-                    match state.database.accept_agent_request(user, request_id).await {
-                        Ok(Some(accepted_channel)) => {
-                            let _ = state.agent_status_events.send(AgentRequestInvalidation {
-                                channel_id: accepted_channel,
-                                runtime_id: Some(runtime),
-                            });
-                        }
-                        _ => {
-                            let _ = state.database.release_agent_request(user, request_id).await;
-                            break;
-                        }
-                    }
-                }
+                let envelope = bundle.trace_context.clone().unwrap_or(serde_json::Value::Null);
+                let delivered = colab_observability::resume(&envelope,
+                    colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.agent.delivery", async {
+                        deliver_command(&mut socket, &state, user, bundle, requires_ack).await
+                    })).await;
+                if delivered.is_err() { break; }
                 // The socket represents the device runtime, not one command delivery. Keep it
                 // present while Codex works, and claim the next durable command only after Local
                 // Core explicitly reports that this runtime is ready again.
@@ -991,6 +1077,8 @@ async fn stream(
     headers: HeaderMap,
     upgrade: WebSocketUpgrade,
 ) -> Result<impl IntoResponse, ApiError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.messaging.stream", async {
+
     let user = authenticated_user(&state, &headers).await?;
     let receiver = state.message_events.subscribe();
     let status_receiver = state.agent_status_events.subscribe();
@@ -1005,6 +1093,8 @@ async fn stream(
             canvas_receiver,
         )
     }))
+
+}).await
 }
 
 async fn stream_socket(
@@ -1134,6 +1224,7 @@ mod tests {
             created_at: "now".into(),
         };
         let response = agent_request_response(colab_server_persistence::AgentRequestBundle {
+            trace_context: None,
             id,
             channel_id: id,
             target_blueprint_id: id,

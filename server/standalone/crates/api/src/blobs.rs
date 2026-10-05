@@ -25,7 +25,11 @@ pub(crate) fn path(root: &Path, key: &str) -> PathBuf {
 /// Streams an untrusted request into a temporary file and publishes it atomically only after the
 /// entire bounded body arrives. This avoids both request-sized heap allocations and partial blobs.
 pub(crate) async fn write_bounded(root: &Path, key: &str, body: Body) -> Result<u64, ApiError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.blobs.write-bounded", async {
+
     write_bounded_with_limit(root, key, body, REVISION_MAX_BYTES).await
+
+}).await
 }
 
 async fn write_bounded_with_limit(
@@ -34,6 +38,8 @@ async fn write_bounded_with_limit(
     body: Body,
     limit: u64,
 ) -> Result<u64, ApiError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.blobs.write-bounded-with-limit", async {
+
     let destination = path(root, key);
     if let Some(parent) = destination.parent() {
         tokio::fs::create_dir_all(parent)
@@ -67,6 +73,8 @@ async fn write_bounded_with_limit(
         .await
         .map_err(|_| ApiError::internal("blob_write_failed"))?;
     Ok(total)
+
+}).await
 }
 
 #[cfg(test)]
@@ -92,6 +100,8 @@ pub(crate) async fn response(
     key: &str,
     content_type: &'static str,
 ) -> Result<Response, ApiError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.blobs.response", async {
+
     let file = tokio::fs::File::open(path(root, key))
         .await
         .map_err(|_| ApiError::internal("blob_read_failed"))?;
@@ -100,6 +110,8 @@ pub(crate) async fn response(
         Body::from_stream(ReaderStream::new(file)),
     )
         .into_response())
+
+}).await
 }
 
 pub(crate) fn spawn_orphan_gc(database: colab_server_persistence::Database, root: PathBuf) {
@@ -118,6 +130,8 @@ async fn collect_orphans(
     database: &colab_server_persistence::Database,
     root: &Path,
 ) -> anyhow::Result<()> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.blobs.collect-orphans", async {
+
     let referenced: HashSet<String> = database.referenced_blob_keys().await?.into_iter().collect();
     let cutoff = std::time::SystemTime::now() - Duration::from_secs(60 * 60);
     let mut prefixes = match tokio::fs::read_dir(root).await {
@@ -151,4 +165,6 @@ async fn collect_orphans(
         }
     }
     Ok(())
+
+}).await
 }

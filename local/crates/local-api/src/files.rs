@@ -57,6 +57,7 @@ struct ScannedFile {
 }
 
 struct LocalJob {
+    trace_context: serde_json::Value,
     id: String,
     kind: String,
     share_id: String,
@@ -84,24 +85,30 @@ pub(super) async fn enqueue_job(
     user_id: &str,
     delay_seconds: i64,
 ) -> Result<(), LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.files.enqueue-job", async {
+
     let dedupe_key = format!("{kind}:{user_id}:{share_id}");
     let store = state.inner.store.lock().await;
     store.execute(
-        "insert into local_jobs(id,dedupe_key,kind,share_id,user_id,state,next_attempt_at) values(?1,?2,?3,?4,?5,'pending',unixepoch()+?6) on conflict(dedupe_key) do update set generation=generation+case when excluded.kind like 'publish_%' or state not in ('pending','running') then 1 else 0 end,state=case when state='running' then 'running' else 'pending' end,next_attempt_at=case when excluded.kind like 'materialize_%' and state in ('pending','running') then next_attempt_at else unixepoch()+?6 end,last_error=null,updated_at=current_timestamp,completed_at=null",
-        rusqlite::params![Uuid::new_v4().to_string(), dedupe_key, kind, share_id, user_id, delay_seconds],
+        "insert into local_jobs(id,dedupe_key,kind,share_id,user_id,state,next_attempt_at,trace_context) values(?1,?2,?3,?4,?5,'pending',unixepoch()+?6,?7) on conflict(dedupe_key) do update set trace_context=coalesce(excluded.trace_context,local_jobs.trace_context),generation=generation+case when excluded.kind like 'publish_%' or state not in ('pending','running') then 1 else 0 end,state=case when state='running' then 'running' else 'pending' end,next_attempt_at=case when excluded.kind like 'materialize_%' and state in ('pending','running') then next_attempt_at else unixepoch()+?6 end,last_error=null,updated_at=current_timestamp,completed_at=null",
+        rusqlite::params![Uuid::new_v4().to_string(), dedupe_key, kind, share_id, user_id, delay_seconds, colab_observability::context_json().as_object().map(|_|colab_observability::context_json().to_string())],
     ).map_err(LocalError::internal)?;
     Ok(())
+
+}).await
 }
 
 /// Atomically leases one due job. SQLite permits one writer, so the conditional UPDATE is enough
 /// to prevent the watcher, GUI and worker from executing the same job concurrently.
 async fn claim_job(state: &AppState) -> Result<Option<LocalJob>, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.files.claim-job", async {
+
     let mut store = state.inner.store.lock().await;
     let tx = store.transaction().map_err(LocalError::internal)?;
     let candidate = tx.query_row(
-        "select id,kind,share_id,attempts,generation from local_jobs where state in ('pending','failed') and next_attempt_at<=unixepoch() order by next_attempt_at,created_at limit 1",
+        "select id,kind,share_id,attempts,generation,trace_context from local_jobs where state in ('pending','failed') and next_attempt_at<=unixepoch() order by next_attempt_at,created_at limit 1",
         [],
-        |row| Ok(LocalJob { id: row.get(0)?, kind: row.get(1)?, share_id: row.get(2)?, attempts: row.get(3)?, generation: row.get(4)? }),
+        |row| Ok(LocalJob { id: row.get(0)?, kind: row.get(1)?, share_id: row.get(2)?, attempts: row.get(3)?, generation: row.get(4)?, trace_context: row.get::<_, Option<String>>(5)?.and_then(|raw|serde_json::from_str(&raw).ok()).unwrap_or_default() }),
     ).ok();
     let Some(job) = candidate else {
         tx.commit().map_err(LocalError::internal)?;
@@ -113,6 +120,8 @@ async fn claim_job(state: &AppState) -> Result<Option<LocalJob>, LocalError> {
     ).map_err(LocalError::internal)?;
     tx.commit().map_err(LocalError::internal)?;
     Ok((changed == 1).then_some(job))
+
+}).await
 }
 
 async fn finish_job(state: &AppState, job: &LocalJob, result: &Result<(), LocalError>) {
@@ -138,6 +147,8 @@ pub(super) async fn wait_for_job(
     share_id: &str,
     user_id: &str,
 ) -> Result<(), LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.files.wait-for-job", async {
+
     let dedupe_key = format!("{kind}:{user_id}:{share_id}");
     for _ in 0..120 {
         let result: Option<(String, Option<String>)> = {
@@ -164,6 +175,8 @@ pub(super) async fn wait_for_job(
     Err(LocalError::internal(
         "File synchronization is still running",
     ))
+
+}).await
 }
 
 async fn run_job_worker(state: AppState) {
@@ -178,7 +191,7 @@ async fn run_job_worker(state: AppState) {
                 continue;
             }
         };
-        let result = match job.kind.as_str() {
+        let result = colab_observability::resume(&job.trace_context, async { match job.kind.as_str() {
             JOB_PUBLISH => publish_source(&state, &job.share_id).await,
             JOB_MATERIALIZE => sync_materialization(&state, &job.share_id)
                 .await
@@ -188,12 +201,14 @@ async fn run_job_worker(state: AppState) {
                 .await
                 .map(|_| ()),
             _ => Err(LocalError::internal("unknown local sync job kind")),
-        };
+        } }).await;
         finish_job(&state, &job, &result).await;
     }
 }
 
 async fn run_file_sync(state: AppState) -> anyhow::Result<()> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.files.run-file-sync", async {
+
     let (event_tx, mut event_rx) = tokio::sync::mpsc::unbounded_channel::<PathBuf>();
     let mut watcher: RecommendedWatcher =
         notify::recommended_watcher(move |result: notify::Result<notify::Event>| {
@@ -252,12 +267,16 @@ async fn run_file_sync(state: AppState) -> anyhow::Result<()> {
             }
         }
     }
+
+}).await
 }
 
 pub(super) async fn list_file_shares(
     State(state): State<AppState>,
     AxumPath(channel_id): AxumPath<String>,
 ) -> Result<Json<Vec<FileShare>>, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.files.list-file-shares", async {
+
     let token = access_token(&state).await?;
     let response = state
         .inner
@@ -322,6 +341,8 @@ pub(super) async fn list_file_shares(
         }
     }
     Ok(Json(shares))
+
+}).await
 }
 
 /// Previews the exact local scope before sharing. Colab-specific excludes are supplied by the
@@ -329,8 +350,12 @@ pub(super) async fn list_file_shares(
 pub(super) async fn inspect_file_source(
     Json(body): Json<InspectSourceRequest>,
 ) -> Result<Json<SourceInspection>, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.files.inspect-file-source", async {
+
     let source = fs::canonicalize(&body.local_path).map_err(LocalError::internal)?;
     inspect_source(&source, &body.sync_excludes).map(Json)
+
+}).await
 }
 
 fn inspect_source(source: &Path, sync_excludes: &[String]) -> Result<SourceInspection, LocalError> {
@@ -388,6 +413,8 @@ pub(super) async fn get_sync_scope(
     State(state): State<AppState>,
     AxumPath(share_id): AxumPath<String>,
 ) -> Result<Json<SourceInspection>, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.files.get-sync-scope", async {
+
     let user_id = current_user_id(&state).await?;
     let (source, shadow): (String, String) = {
         let store = state.inner.store.lock().await;
@@ -395,6 +422,8 @@ pub(super) async fn get_sync_scope(
     };
     let excludes = read_shadow_excludes(Path::new(&shadow))?;
     inspect_source(Path::new(&source), &excludes).map(Json)
+
+}).await
 }
 
 pub(super) async fn update_sync_scope(
@@ -402,6 +431,8 @@ pub(super) async fn update_sync_scope(
     AxumPath(share_id): AxumPath<String>,
     Json(body): Json<UpdateScopeRequest>,
 ) -> Result<Json<SourceInspection>, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.files.update-sync-scope", async {
+
     validate_sync_excludes(&body.sync_excludes)?;
     let user_id = current_user_id(&state).await?;
     let (source, shadow): (String, String) = {
@@ -418,12 +449,16 @@ pub(super) async fn update_sync_scope(
     write_shadow_excludes(Path::new(&shadow), &body.sync_excludes)?;
     enqueue_job(&state, JOB_PUBLISH, &share_id, &user_id, 0).await?;
     Ok(Json(inspection))
+
+}).await
 }
 pub(super) async fn share_local_files(
     State(state): State<AppState>,
     AxumPath(channel_id): AxumPath<String>,
     Json(body): Json<ShareLocalFiles>,
 ) -> Result<(StatusCode, Json<FileShare>), LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.files.share-local-files", async {
+
     // The source directory always remains the user's working copy. Colab never creates a
     // `.git` directory inside it: all Git metadata lives in the app-owned shadow repository.
     // Keeping that boundary is what prevents Colab snapshots from interfering with a project's
@@ -490,11 +525,15 @@ pub(super) async fn share_local_files(
         .find(|item| item.id == share.id)
         .unwrap_or(share);
     Ok((StatusCode::CREATED, Json(published)))
+
+}).await
 }
 pub(super) async fn publish_local_files(
     State(state): State<AppState>,
     AxumPath(share_id): AxumPath<String>,
 ) -> Result<Json<FileShare>, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.files.publish-local-files", async {
+
     // The watcher and this explicit endpoint converge on `publish_source`. That function remains
     // the correctness boundary and performs a complete Git index scan, so coalescing or watcher
     // overflow cannot silently omit changes.
@@ -519,12 +558,16 @@ pub(super) async fn publish_local_files(
         .find(|item| item.id == share_id)
         .map(Json)
         .ok_or_else(|| LocalError::bad_request("Shared files not found"))
+
+}).await
 }
 
 pub(super) async fn retry_file_sync(
     State(state): State<AppState>,
     AxumPath(share_id): AxumPath<String>,
 ) -> Result<StatusCode, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.files.retry-file-sync", async {
+
     let user_id = current_user_id(&state).await?;
     let kind: String = {
         let store = state.inner.store.lock().await;
@@ -536,8 +579,12 @@ pub(super) async fn retry_file_sync(
     };
     enqueue_job(&state, &kind, &share_id, &user_id, 0).await?;
     Ok(StatusCode::ACCEPTED)
+
+}).await
 }
 async fn publish_source(state: &AppState, share_id: &str) -> Result<(), LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.files.publish-source", async {
+
     // Publication protocol:
     // 1. rescan the complete source into the external shadow Git index;
     // 2. compare the resulting tree with the last successfully published commit;
@@ -670,6 +717,8 @@ async fn publish_source(state: &AppState, share_id: &str) -> Result<(), LocalErr
         &["update-ref", "refs/colab/published", &root],
     )?;
     Ok(())
+
+}).await
 }
 
 async fn ensure_published_commit(
@@ -679,6 +728,8 @@ async fn ensure_published_commit(
     work_tree: &Path,
     parent: &str,
 ) -> Result<(), LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.files.ensure-published-commit", async {
+
     if git(
         shadow,
         work_tree,
@@ -757,12 +808,16 @@ async fn ensure_published_commit(
         work_tree,
         &["update-ref", "refs/colab/published", parent],
     )
+
+}).await
 }
 pub(super) async fn materialize_file_share(
     State(state): State<AppState>,
     AxumPath(share_id): AxumPath<String>,
     Query(query): Query<HashMap<String, String>>,
 ) -> Result<Json<FileShare>, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.files.materialize-file-share", async {
+
     let user_id = current_user_id(&state).await?;
     let cached = cached_materialization(&state, &share_id, &user_id).await;
     enqueue_job(&state, JOB_MATERIALIZE, &share_id, &user_id, 0).await?;
@@ -778,6 +833,8 @@ pub(super) async fn materialize_file_share(
         .await
         .map(Json)
         .ok_or_else(|| LocalError::internal("Materialization completed without a local snapshot"))
+
+}).await
 }
 
 async fn cached_materialization(
@@ -819,6 +876,8 @@ async fn cached_materialization(
 }
 
 async fn sync_materialization(state: &AppState, share_id: &str) -> Result<FileShare, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.files.sync-materialization", async {
+
     // Consumer-side synchronization replays the revision chain into an app-owned bare Git
     // repository, then checks out the latest root into a separate materialized directory. It
     // never writes into another member's source directory. The first implementation downloads
@@ -964,11 +1023,15 @@ async fn sync_materialization(state: &AppState, share_id: &str) -> Result<FileSh
     share.sync_state = Some("ready".into());
     share.sync_error = None;
     Ok(share)
+
+}).await
 }
 pub(super) async fn withdraw_file_share(
     State(state): State<AppState>,
     AxumPath(share_id): AxumPath<String>,
 ) -> Result<StatusCode, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.files.withdraw-file-share", async {
+
     withdraw_remote(&state, &share_id).await?;
     let user_id = current_user_id(&state).await?;
     let store = state.inner.store.lock().await;
@@ -979,11 +1042,15 @@ pub(super) async fn withdraw_file_share(
         )
         .map_err(LocalError::internal)?;
     Ok(StatusCode::NO_CONTENT)
+
+}).await
 }
 pub(super) async fn list_local_file_tree(
     State(state): State<AppState>,
     AxumPath(share_id): AxumPath<String>,
 ) -> Result<Json<Vec<LocalFileEntry>>, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.files.list-local-file-tree", async {
+
     let root = local_file_root(&state, &share_id).await?;
     let mut entries = Vec::new();
     if root.is_file() {
@@ -1006,12 +1073,16 @@ pub(super) async fn list_local_file_tree(
         collect_entries(&root, &root, &mut entries)?;
     }
     Ok(Json(entries))
+
+}).await
 }
 pub(super) async fn read_local_file_content(
     State(state): State<AppState>,
     AxumPath(share_id): AxumPath<String>,
     Query(query): Query<HashMap<String, String>>,
 ) -> Result<Json<LocalFileContent>, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.files.read-local-file-content", async {
+
     let root = local_file_root(&state, &share_id).await?;
     let relative = query
         .get("path")
@@ -1027,6 +1098,8 @@ pub(super) async fn read_local_file_content(
         path: relative.clone(),
         content,
     }))
+
+}).await
 }
 
 /// Stream a local materialization to the authenticated loopback client. Browser-native previews
@@ -1037,6 +1110,8 @@ pub(super) async fn stream_local_file_content(
     AxumPath(share_id): AxumPath<String>,
     Query(query): Query<HashMap<String, String>>,
 ) -> Result<Response, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.files.stream-local-file-content", async {
+
     let root = local_file_root(&state, &share_id).await?;
     let relative = query
         .get("path")
@@ -1056,6 +1131,8 @@ pub(super) async fn stream_local_file_content(
         Body::from_stream(ReaderStream::new(file)),
     )
         .into_response())
+
+}).await
 }
 
 /// Resolve a requested relative path without allowing a materialized-tree escape. Single-file
@@ -1075,6 +1152,8 @@ fn resolve_local_file(root: &Path, relative: &str) -> Result<PathBuf, LocalError
     Ok(candidate)
 }
 async fn local_file_root(state: &AppState, share_id: &str) -> Result<PathBuf, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.files.local-file-root", async {
+
     let user_id = current_user_id(state).await?;
     let store = state.inner.store.lock().await;
     let value: String = store
@@ -1092,6 +1171,8 @@ async fn local_file_root(state: &AppState, share_id: &str) -> Result<PathBuf, Lo
         })
         .map_err(|_| LocalError::bad_request("Sync these shared files to this device first"))?;
     fs::canonicalize(value).map_err(LocalError::internal)
+
+}).await
 }
 fn collect_entries(
     root: &Path,
@@ -1137,6 +1218,8 @@ fn collect_entries(
     Ok(())
 }
 async fn withdraw_remote(state: &AppState, share_id: &str) -> Result<(), LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.files.withdraw-remote", async {
+
     let token = access_token(state).await?;
     let response = state
         .inner
@@ -1150,6 +1233,8 @@ async fn withdraw_remote(state: &AppState, share_id: &str) -> Result<(), LocalEr
         return Err(remote_error(response).await);
     }
     Ok(())
+
+}).await
 }
 fn source_work_tree(source: &Path) -> &Path {
     if source.is_dir() {
@@ -1470,6 +1555,24 @@ mod job_tests {
         assert!(claim_job(&recovered).await.unwrap().is_some());
         drop(recovered);
         fs::remove_dir_all(root).unwrap();
+    }
+
+    #[tokio::test]
+    async fn durable_job_context_survives_restart_and_untraced_coalescing() {
+        let (state, root) = test_state();
+        enqueue_job(&state, JOB_PUBLISH, "share", "user", 0).await.unwrap();
+        let envelope=serde_json::json!({"version":1,"traceparent":"00-11111111111111111111111111111111-2222222222222222-01","entryId":"files.share"});
+        state.inner.store.lock().await.execute("update local_jobs set trace_context=?1",[envelope.to_string()]).unwrap();
+        // A watcher bump has no user context and must retain the durable initiating envelope.
+        enqueue_job(&state, JOB_PUBLISH, "share", "user", 0).await.unwrap();
+        let leased=claim_job(&state).await.unwrap().unwrap();
+        assert_eq!(leased.trace_context,envelope);
+        drop(state);
+        let recovered=AppState::load(root.join("google.json"),root.join("colab.sqlite"),"http://localhost/callback".into(),"http://127.0.0.1:1".into()).unwrap();
+        let retried=claim_job(&recovered).await.unwrap().unwrap();
+        assert_eq!(retried.trace_context,envelope);
+        assert_eq!(retried.id,leased.id);
+        drop(recovered);fs::remove_dir_all(root).unwrap();
     }
 
     #[tokio::test]

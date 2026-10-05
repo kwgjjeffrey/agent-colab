@@ -99,6 +99,7 @@ pub struct ChannelMessage {
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AgentRequestBundle {
+    pub trace_context: Option<serde_json::Value>,
     pub id: Uuid,
     pub channel_id: Uuid,
     pub target_blueprint_id: Uuid,
@@ -119,6 +120,7 @@ pub struct AgentRequestBundle {
 #[derive(Debug, Serialize, sqlx::FromRow)]
 #[serde(rename_all = "camelCase")]
 pub struct AgentRequestStatus {
+    pub trace_context: Option<serde_json::Value>,
     pub id: Uuid,
     pub state: String,
     pub trigger_message_id: Option<Uuid>,
@@ -412,6 +414,7 @@ Ok(sqlx::query_as::<_,ChannelMessage>("with recursive chain(id,reply_to_message_
         trigger: Option<Uuid>,
         forwarded: &[Uuid],
         explicit_query: Option<&str>,
+        trace_context: Option<&serde_json::Value>,
     ) -> anyhow::Result<Option<AgentRequestBundle>> {
         let Some((requester, _)) = self.channel_actor(user_id, channel_id).await? else {
             return Ok(None);
@@ -478,7 +481,7 @@ Ok(sqlx::query_as::<_,ChannelMessage>("with recursive chain(id,reply_to_message_
         };
         let proposed_id = Uuid::new_v4();
         let mut tx = self.pool.begin().await?;
-        let inserted:Option<Uuid>=sqlx::query_scalar("insert into agent_requests(id,channel_id,target_blueprint_id,runtime_id,requester_member_id,kind,query,trigger_seq,trigger_message_id,state) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) on conflict(trigger_message_id,target_blueprint_id) where trigger_message_id is not null do nothing returning id").bind(proposed_id).bind(channel_id).bind(target).bind(runtime_id).bind(requester).bind(kind).bind(&query).bind(rows.last().map(|row|row.seq)).bind(trigger).bind(desired_state).fetch_optional(&mut *tx).await?;
+        let inserted:Option<Uuid>=sqlx::query_scalar("insert into agent_requests(id,channel_id,target_blueprint_id,runtime_id,requester_member_id,kind,query,trigger_seq,trigger_message_id,state,trace_context) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) on conflict(trigger_message_id,target_blueprint_id) where trigger_message_id is not null do nothing returning id").bind(proposed_id).bind(channel_id).bind(target).bind(runtime_id).bind(requester).bind(kind).bind(&query).bind(rows.last().map(|row|row.seq)).bind(trigger).bind(desired_state).bind(trace_context).fetch_optional(&mut *tx).await?;
         let (id, state) = if let Some(id) = inserted {
             (id, desired_state.to_string())
         } else {
@@ -491,7 +494,9 @@ Ok(sqlx::query_as::<_,ChannelMessage>("with recursive chain(id,reply_to_message_
         }
         tx.commit().await?;
         let requester_name: String = sqlx::query_scalar("select coalesce(u.display_name,u.email) from organization_members om join users u on u.id=om.user_id where om.id=$1").bind(requester).fetch_one(&self.pool).await?;
+        let trace_context: Option<serde_json::Value> = sqlx::query_scalar("select trace_context from agent_requests where id=$1").bind(id).fetch_one(&self.pool).await?;
         Ok(Some(AgentRequestBundle {
+            trace_context,
             id,
             channel_id,
             target_blueprint_id: target,
@@ -536,7 +541,7 @@ Ok(sqlx::query_as::<_,ChannelMessage>("with recursive chain(id,reply_to_message_
         if self.channel_actor(user_id, channel_id).await?.is_none() {
             return Ok(None);
         }
-        let rows=sqlx::query_as::<_,AgentRequestStatus>(r#"select ar.id,case when ar.state='running' and ar.accepted_at is null then 'delivering' else ar.state end state,cm.id trigger_message_id,ar.target_blueprint_id,ab.name target_name,ar.source_canvas_id,
+        let rows=sqlx::query_as::<_,AgentRequestStatus>(r#"select coalesce(ar.result_trace_context,ar.trace_context) trace_context,ar.id,case when ar.state='running' and ar.accepted_at is null then 'delivering' else ar.state end state,cm.id trigger_message_id,ar.target_blueprint_id,ab.name target_name,ar.source_canvas_id,
           to_char(ar.created_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') created_at,
           to_char(ar.accepted_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') started_at,
           to_char(ar.finished_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') finished_at,
@@ -619,7 +624,9 @@ Ok(sqlx::query_as::<_,ChannelMessage>("with recursive chain(id,reply_to_message_
             Some(message) => self.reply_chain(channel_id, message.id).await?,
             None => Vec::new(),
         };
+        let trace_context: Option<serde_json::Value> = sqlx::query_scalar("select trace_context from agent_requests where id=$1").bind(id).fetch_one(&self.pool).await?;
         Ok(Some(AgentRequestBundle {
+            trace_context,
             id,
             channel_id,
             target_blueprint_id,
@@ -668,9 +675,10 @@ Ok(sqlx::query_as::<_,ChannelMessage>("with recursive chain(id,reply_to_message_
         &self,
         user_id: Uuid,
         request_id: Uuid,
+        trace_context: Option<&serde_json::Value>,
     ) -> anyhow::Result<Option<Uuid>> {
-        sqlx::query_scalar("update agent_requests ar set state='succeeded' from agent_runtimes r join organization_members om on om.id=r.owner_member_id where ar.id=$1 and ar.runtime_id=r.id and om.user_id=$2 and ar.state in ('running','succeeded') returning ar.channel_id")
-            .bind(request_id).bind(user_id).fetch_optional(&self.pool).await.map_err(Into::into)
+        sqlx::query_scalar("update agent_requests ar set state='succeeded',result_trace_context=coalesce($3,result_trace_context) from agent_runtimes r join organization_members om on om.id=r.owner_member_id where ar.id=$1 and ar.runtime_id=r.id and om.user_id=$2 and ar.state in ('running','succeeded') returning ar.channel_id")
+            .bind(request_id).bind(user_id).bind(trace_context).fetch_optional(&self.pool).await.map_err(Into::into)
     }
 
     pub async fn report_agent_request(
@@ -769,9 +777,10 @@ Ok(sqlx::query_as::<_,ChannelMessage>("with recursive chain(id,reply_to_message_
         user_id: Uuid,
         request_id: Uuid,
         error: &str,
+        trace_context: Option<&serde_json::Value>,
     ) -> anyhow::Result<Option<Uuid>> {
-        let channel: Option<Uuid> = sqlx::query_scalar("update agent_requests ar set state='failed' from agent_blueprints ab join organization_members om on om.id=ab.owner_member_id where ar.id=$1 and ar.target_blueprint_id=ab.id and om.user_id=$2 and ar.state='running' returning ar.channel_id")
-            .bind(request_id).bind(user_id).fetch_optional(&self.pool).await?;
+        let channel: Option<Uuid> = sqlx::query_scalar("update agent_requests ar set state='failed',result_trace_context=coalesce($3,result_trace_context) from agent_blueprints ab join organization_members om on om.id=ab.owner_member_id where ar.id=$1 and ar.target_blueprint_id=ab.id and om.user_id=$2 and ar.state='running' returning ar.channel_id")
+            .bind(request_id).bind(user_id).bind(trace_context).fetch_optional(&self.pool).await?;
         if channel.is_some() {
             // Provider diagnostics can contain local paths; keep them out of Channel messages.
             eprintln!("Agent request {request_id} failed: {error}");

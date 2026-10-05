@@ -1,0 +1,9 @@
+[package]
+name = "f-canvas-01"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1"
+base64 = "0.22"
+yrs = "0.28"

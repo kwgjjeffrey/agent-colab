@@ -49,6 +49,7 @@ def main() -> int:
     revoke.add_argument("--revoke-token", help="Only needed if the local creator receipt is unavailable")
 
     args = parser.parse_args()
+    __import__("telemetry").select_operation(args)
     success = __import__("output_views").writer("transfer", args)
     try:
         if args.operation == "create":

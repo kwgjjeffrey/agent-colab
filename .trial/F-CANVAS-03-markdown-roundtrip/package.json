@@ -1,0 +1,1 @@
+{"private":true,"type":"module","scripts":{"test":"node verify.mjs"},"dependencies":{"@tiptap/core":"3.31.4","@tiptap/starter-kit":"3.31.4","@tiptap/extension-mention":"3.31.4","prosemirror-markdown":"1.13.2","markdown-it":"14.1.0","yjs":"13.6.27","@tiptap/y-tiptap":"3.0.9"}}

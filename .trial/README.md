@@ -14,9 +14,17 @@
 
 ## 当前验证
 
+- [`F-CANVAS-03-markdown-roundtrip/`](F-CANVAS-03-markdown-roundtrip/)：真实 GUI schema 的 Markdown 往返损失审计、mention 身份扩展及现有 collaboration binding 增量更新验证；不宣称完整无损或正式 patch 已实现
+
 - [`interaction-wireframe/`](interaction-wireframe/)：Channel、Sessions、Files、Skills、Settings 的低保真功能布局
 - [`V-INFRA-01-baas/`](V-INFRA-01-baas/)：单一 BaaS 能否承载首版 Colab
 - [`V-GIT-01-shadow-git/`](V-GIT-01-shadow-git/)：独立 shadow Git 的隔离、语义与性能
 - [`V-INFRA-02-cloudflare/`](V-INFRA-02-cloudflare/)：Cloudflare 能否完整承载首版服务端
 - [`V-SYNC-01-supabase/`](V-SYNC-01-supabase/)：Supabase 双客户端 Git object 增量同步、Realtime、断点续传与 10 万 OID 求缺
 - [`V-LOCAL-01-application-core/`](V-LOCAL-01-application-core/)：一个 Application Core 同时服务 GUI 与多个 Agent runtime
+- [`V-AGENT-WRITER-01-codex-writer/`](V-AGENT-WRITER-01-codex-writer/)：Codex app-server writer 所有权、steer 与 per-thread queue 黑盒验证
+- [`V-MESSAGES-RECOVERY-01-half-open-websocket/`](V-MESSAGES-RECOVERY-01-half-open-websocket/)：Conversation WebSocket 半开检测、重连与真实消息 cursor 补齐
+- [`F-CANVAS-01-yjs-yrs-projection/`](F-CANVAS-01-yjs-yrs-projection/)：Tiptap/Yjs 与 Rust/Yrs wire compatibility、投影 patch 和并发收敛的实现前体外验证
+- [`V-CANVAS-02-core-skill-recovery/`](V-CANVAS-02-core-skill-recovery/)：正式 Server、Local Core、打包 Skill 的 Canvas 纵向链路与 durable outbox 故障恢复
+
+- [`V-TRACE-ENTRY-01/`](V-TRACE-ENTRY-01/)：统一 Trace 入口清单、真实 GUI 定位/呼吸高亮与 Skill 命令样例
