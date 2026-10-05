@@ -26,9 +26,10 @@ def send(agent, query, reply=None):
     })
 
 try:
-    live.switch(live.CONSUMER_EMAIL)
+    live.switch(live.OWNER_EMAIL)
     agent = next(a for a in request("GET", base + "/blueprints") if a["id"] == agent_id)
     assert agent["invocationPolicy"] == "awaiting_owner"
+    live.switch(live.CONSUMER_EMAIL)
     marker = "ASK_OWNER_NEW_" + uuid.uuid4().hex[:8]
     old = send(agent, "Acceptance test: do not modify files. Owner will send a separate instruction.")
     commands = request("GET", base + "/agent-requests")

@@ -664,4 +664,4 @@ Verified: Trace 12/12 tests and Colab locator 6/6 tests pass, including an unrel
 
 - Non-owner Ask me first requests use terminal `rejected`, exactly like Refuse; only the automatic reply differs. Owner replies remain new commands with the full query and reply chain.
 - Migration 0033 closes historical `awaiting_owner` records as rejected; it does not replay them or retarget runtimes.
-- Policy unit test passed; production deployment and live cross-account acceptance pending.
+- Deployed Server `0.1.140-dev-ask-owner-1` from commit `45b380c`; policy and prompt tests passed. Live cross-account acceptance passed: refused request `345b1d43-7e4f-4aa2-95c0-b221b08bf86e` remained rejected while the owner's independent request `64a9ffdd-8793-44a0-97ae-4b3c54c93e70` succeeded with the additional requested reply. Original foreground account restored.

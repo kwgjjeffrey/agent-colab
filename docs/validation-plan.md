@@ -303,4 +303,5 @@ Verified: Trace 12/12 tests and Colab locator 6/6 tests pass, including an unrel
 # 2026-10-05 Ask me first policy correction
 
 - Passed: `cargo test -p colab-server-persistence invocation_policy_tests --lib` (1 test). Both refusal policies reject non-owner requests; owner and Process requests remain executable.
-- Pending: live non-owner rejection, owner reply as independent command with additional instructions, and production migration verification.
+- Passed: prompt assembly test preserves full query and reply chain. Installed-Core cross-account E2E `.trial/E2E-ACCOUNT-RUNTIME-01/ask_owner.py` rejected the non-owner request, generated the owner instruction invitation, and completed a distinct owner request with reply `ASK_OWNER_NEW_67e3af60`; the refused request stayed rejected. Original foreground account restored.
+- Production migration verified: historical request `8532ae8b-0ac2-4558-9770-c456a613539c` is now rejected. No old request was replayed or retargeted.
