@@ -286,6 +286,8 @@ GUI 注册表为 92 个入口补充控件/区域、只读导航、资源与权�
 
 ### 2026-10-05 安装入口与上下文胶囊
 
+最终补充验收：在已安装 Shell `0.1.22-dev` 的 GUI 中点击切到 Jeffrey，Local Core `/v1/auth/status` 同步为 Jeffrey，再通过 GUI 切回 Zhiyuan。两个实发验收请求均为 succeeded。GitHub DMG 完整公开字节范围下载共 110,808,449 bytes，SHA-256 为 `7518210857382f8318e0dfbc507e60ad71958e52b8ee660a7987b166458f9681`，与发布制品一致；GitHub 初始重定向元数据经代理获取，实际制品分段读回使用仓库 curl verifier、绕过代理。公开 bootstrap 完整读回 SHA-256 为 `70353a70ae873185fc2fcdc2ad3c2ddb969196e6279c1f5b23b115016b39335c`。
+
 已通过 `pnpm --dir desktop/ui check`、`pnpm --dir desktop/shell check`、`pnpm --dir desktop/shell test`（模拟干净安装后的首启检查和二次启动复用）及 `bash -n packaging/colab-install`。Electron DMG 构建与 App 签名核验通过，已确认 bootstrap 位于 App Resources。官方 bootstrap 已实际安装本机 Core/UI/Skill；Shell 更新后 `/Applications/Colab.app` 为 `0.1.22-dev`。真实 GUI 验证长 Session 胶囊单行截断、点击卡片保留完整名称和详情入口。未声称在另一台干净 macOS 设备完成拖入 DMG 后的全流程安装。
 
 服务端依据 Runtime WebSocket presence 决定 offline 提示；发现切号缺少主动注册/连接确认，以及 token 刷新可以覆盖前台账号的竞态，已修复并通过针对性竞态测试。额外确认助手错误绑定到测试设备 Runtime `5a7970e5-3f17-478d-ab53-1f747d1458da`，恢复本机 `aaa434e0-d264-48b0-a132-83d21664f54e`，保留原调用权限。安装后依次切换 Zhiyuan、Jeffrey，分别从 demo、1st channel @ 各自 Agent，成功收到 `ACCOUNT_RUNTIME_OK_0d37efdc`、`ACCOUNT_RUNTIME_OK_0dc19b83`；Jeffrey 请求 `7407bf82-cf73-4445-aefd-76195d80a074` 状态为 succeeded，结束后恢复原前台账号。R2 所有推广制品完整大小/SHA-256 读回通过；GitHub bootstrap 读回哈希通过，GitHub Release 制品 digest 与本机构建一致。
