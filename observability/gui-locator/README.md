@@ -16,3 +16,10 @@
 先前仅有独立试验页、正式目录却无真实 GUI 预览的状态已被替代。正式浏览器入口 http://127.0.0.1:53481/ 现在拥有左侧统一入口清单、右侧真实 GUI；点击 GUI 入口通过项目适配器 /embed 在同页导航和呼吸高亮，重复定位保留 GUI 状态。Skill 入口显示实际脚手架命令。项目适配器迁至 observability/gui-locator，旧 /trial 返回 410，启动使用持久 LaunchAgent。
 
 实际浏览器点击验证 channels.list、messages.send、system.check-update、system.update 均在正式页面产生对应高亮，未执行目标业务操作；browser.open 显示 colab-browser open。截图为本机验收快照，不纳入 Git。GUI 定位回归 4/4、Trace 工具测试 7/7、注册绑定审计 92/92 通过。本机 Trace Skill 已从独立源码仓安装 0.2.1-dev；这不是新的公开发行。MCP 宿主内嵌渲染未在本次验收范围内。
+
+
+## Standard page locator module
+
+The diagnostic proxy loads `bootstrap.mjs`, which imports `../page-locator/browser.mjs` installed by `trace.mjs locator-install --directory observability/page-locator`. The former `browser.js` highlighter is removed. The proxy retains only Colab authentication/discovery, HTTP/WebSocket transport, module serving and a live endpoint returning the original registered operations. It does not maintain a separate locator registry.
+
+`tracing/registry.yaml` declares `project.previewUrl`. Reinstall/upgrade the module through Trace's command; its hash receipt rejects local edits. Production GUI resources do not import the diagnostic runtime; only the explicit developer proxy injects the bootstrap.

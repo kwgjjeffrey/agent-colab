@@ -651,3 +651,12 @@ README 收敛为 macOS DMG 首启安装、Agent 执行 `colab-install` 安装 Sk
 账号切换在注册新账号的已安装 Runtime 并确认 WebSocket 建立后才成功；失败恢复原账号，账号选择持久化使用事务。Token 刷新只写对应账号凭据，原账号的刷新不得覆盖后来切换的前台账号；后台 Runtime 对当前会话的检查和更新使用同一次锁。
 
 `0.1.140-dev` 已提交后构建、发布到 R2 和 GitHub，并在本机安装 Core `0.1.86-dev`、GUI `0.1.88-dev`、Shell `0.1.22-dev`。实际故障还包含助手绑定了 `Trace acceptance isolated Core` 测试设备：仅恢复现有助手到本机已注册 Runtime，未改变调用权限或其他测试 Agent。双账号切换、各自真实 Agent 回复验收已通过；验收脚本见 `.trial/E2E-ACCOUNT-RUNTIME-01/verify.py`。
+
+
+### 2026-10-05 Standard Trace page locator migration
+
+Trace now owns a framework-independent page locator module and `locator-install` command. Agent Colab installed it into observability/page-locator with a version/hash receipt; the former gui-locator/browser.js highlighter was deleted. The project bootstrap imports the standard module, while the proxy retains authentication, HTTP/WebSocket transport and original live registry access. Repository project.previewUrl declares the diagnostic GUI. Normal GUI resources do not load this diagnostic module.
+
+Verified: Trace 12/12 tests and Colab locator 6/6 tests pass, including an unrelated checkout entry using only the standard marker, untrusted origin/non-parent rejection, missing-resource fallback and navigation without executing business actions. Actual formal catalog clicks locate channels.list, messages.send and system.update; messages.send has computed animation trace-breathe. files.withdraw with no shared file reports the owning region and ok:false instead of claiming the control was located. Served runtime SHA-256 matches the command-installed module. This does not claim every project-specific route or MCP host renderer has been validated.
+
+发行版复验：Trace v0.3.0 从 GitHub Release 校验并升级后，用已安装 Skill 的 locator-install 再安装 Colab 模块，receipt.version=0.3.0。移除目录 LaunchAgent 的 TRACE_LOCATOR_URL/TRACE_LOCATOR_EMBED_URL，正式目录从项目注册表 project.previewUrl 获得嵌入地址；再次点击 messages.send 产生 trace-breathe 动画。

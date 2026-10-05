@@ -5,8 +5,8 @@
 const gui=document.querySelector('#gui'),status=document.querySelector('#status'),id=new URL(location.href).searchParams.get('operation');
 if(!id)status.textContent='没有指定入口，请从 Trace 清单选择操作';
 else fetch('/locator/entries.json').then(r=>r.json()).then(entries=>{
- const entry=entries.find(e=>e.id===id&&e.surface==='gui');if(!entry)throw Error('未注册的 GUI 入口');
- let tries=0;const ready=setInterval(()=>{const doc=gui.contentDocument;if(doc?.querySelector(entry.tab?'[role=tab]':'[data-trace-region=application]')){clearInterval(ready);gui.contentWindow.postMessage({type:'trace.locate',id},location.origin);}else if(++tries>=100){clearInterval(ready);status.textContent='GUI 尚未就绪，请刷新后重试';}},100);
+ const entry=entries.find(e=>e.id===id&&e.entry?.kind==='gui');if(!entry)throw Error('未注册的 GUI 入口');
+ let tries=0;const ready=setInterval(()=>{const doc=gui.contentDocument;if(doc?.querySelector(entry.entry.tab?'[role=tab]':'[data-trace-region=application]')){clearInterval(ready);gui.contentWindow.postMessage({type:'trace.locate',id},location.origin);}else if(++tries>=100){clearInterval(ready);status.textContent='GUI 尚未就绪，请刷新后重试';}},100);
 }).catch(error=>status.textContent=error.message);
 window.addEventListener('message',event=>{if(event.origin===location.origin&&event.source===gui.contentWindow&&event.data?.type==='trace.result')status.textContent=event.data.message;});
 </script></html>

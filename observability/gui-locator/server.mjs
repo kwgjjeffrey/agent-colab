@@ -13,18 +13,18 @@ const headers=(req,d)=>({...req.headers,host:new URL(d.endpoint).host,...(req.he
 // Credentials remain in the loopback proxy. No credential enters the registry or HTML.
 const server=http.createServer((req,res)=>{
  if(req.headers.host!==`127.0.0.1:${server.address().port}` || (req.headers.origin && req.headers.origin!==`http://127.0.0.1:${server.address().port}`)){res.writeHead(403);return res.end('Use the loopback URL');}
- if(req.url==='/locator/entries.json'){res.setHeader('Content-Type','application/json');return res.end(JSON.stringify(load(path.resolve(root,'../..')).operations.map(o=>({id:o.id,surface:o.entry.kind==='command'?'skill':'gui',label:o.description,description:o.description,tab:o.entry.tab,selector:o.entry.selector,locator:o.entry.locator,buttonText:o.entry.buttonText,command:o.entry.kind==='command'?[o.entry.executable,...o.entry.args].join(' '):undefined,coverage:o.status,result:o.completion.success,source:o.source.path}))));}
+ if(req.url==='/locator/entries.json'){res.setHeader('Content-Type','application/json');return res.end(JSON.stringify(load(path.resolve(root,'../..')).operations));}
  const pathname=new URL(req.url,'http://localhost').pathname;
  if(pathname.startsWith('/trial')){res.writeHead(410,{'Content-Type':'text/plain; charset=utf-8'});return res.end('旧验证页面已退出使用，请打开正式 Trace 清单：http://127.0.0.1:53481/');}
- const files={'/locate':'index.html','/locator/browser.js':'browser.js'};
- if(files[pathname]){res.setHeader('Cache-Control','no-store');res.setHeader('Content-Type',req.url.endsWith('.json')?'application/json':req.url.endsWith('.js')?'text/javascript':'text/html');return res.end(fs.readFileSync(path.join(root,files[pathname]),'utf8').replace('id="gui" src="/"',`id="gui" src="/?trace-locator=${Date.now()}"`));}
+ const files={'/locate':'index.html','/locator/bootstrap.mjs':'bootstrap.mjs','/locator/runtime.mjs':'../page-locator/browser.mjs'};
+ if(files[pathname]){res.setHeader('Cache-Control','no-store');res.setHeader('Content-Type',req.url.endsWith('.json')?'application/json':/\.m?js$/.test(pathname)?'text/javascript':'text/html');return res.end(fs.readFileSync(path.join(root,files[pathname]),'utf8').replace('id="gui" src="/"',`id="gui" src="/?trace-locator=${Date.now()}"`));}
  const d=discovery(),u=new URL(pathname==='/embed'?'/':req.url,d.endpoint);
  const proxyHeaders=headers(req,d);if(pathname==='/'){delete proxyHeaders['if-none-match'];delete proxyHeaders['if-modified-since'];}
  const upstream=http.request(u,{method:req.method,headers:proxyHeaders},r=>{
   const h={...r.headers};if((r.headers['content-type']||'').includes('text/html')){h['cache-control']='no-store';delete h.etag;delete h['last-modified'];}delete h['content-length'];delete h['transfer-encoding'];
   res.writeHead(r.statusCode,h);
   if((r.headers['content-type']||'').includes('text/html')){
-   let body='';r.setEncoding('utf8');r.on('data',c=>body+=c);r.on('end',()=>res.end(body.replace('</head>','<script type="application/json" id="trace-locator-config">'+JSON.stringify({catalogOrigin:process.env.TRACE_CATALOG_ORIGIN||'http://127.0.0.1:53481'}).replaceAll('<','\\u003c')+'</script><script defer src="/locator/browser.js"></script></head>')));
+   let body='';r.setEncoding('utf8');r.on('data',c=>body+=c);r.on('end',()=>res.end(body.replace('</head>','<script type="application/json" id="trace-locator-config">'+JSON.stringify({catalogOrigin:process.env.TRACE_CATALOG_ORIGIN||'http://127.0.0.1:53481'}).replaceAll('<','\\u003c')+'</script><script type="module" src="/locator/bootstrap.mjs"></script></head>')));
   }else r.pipe(res);
  });upstream.on('error',()=>{if(!res.headersSent)res.writeHead(502);res.end('Local Core unavailable');});req.pipe(upstream);
 });
