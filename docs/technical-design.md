@@ -739,7 +739,7 @@ Agent 真正执行与独立 DM/group 后续才增加：
 - `agent_requests`：由 `@agent` 产生的显式状态机，含 requester、target、approval policy、TTL、active lease、result；
 - Conversation realtime 不新增 outbox：消息提交后 best-effort 发 WebSocket invalidation；若提交与通知之间崩溃，连接断开后的 cursor catch-up 会读取已提交消息。慢消费者同样断流重连，避免无界缓存。
 
-执行投递在 Server 中可保留内部恢复状态，但 `queued/running/completed` 不是 Conversation 内容。需要 owner 确认时，Server 以 Agent 身份发送 mention owner 的普通消息，不创建可执行命令；owner 的回复若再次 mention Agent，它就是新命令，完整回复是 query，reply chain 是上下文。runtime 离线时，Server 保留待投递命令并以 Agent 身份写普通离线消息。
+执行投递在 Server 中可保留内部恢复状态，但 `queued/running/completed` 不是 Conversation 内容。Ask me first 与 Refuse 对非 owner 请求都持久化终态 `rejected`；兼容配置值 `awaiting_owner` 只决定自动回复是否引导 owner，不产生审批状态。owner 的回复若再次 mention Agent，它就是新命令，完整回复是 query，reply chain 是上下文。runtime 离线时，Server 保留已授权的待投递命令并以 Agent 身份写普通离线消息。
 
 Agent activity 不以聊天消息或时间线状态卡表达。Server claim 时先把 request 置为内部 `running`，但只有 protocol 2 Local Core 在同一 runtime WebSocket 上确认完整 command 后，才持久化 `accepted_at`。Channel request 查询把未确认的 claim 映射为 `delivering`，GUI 只把已确认的 `running` 解释为顶部“<Agent> is working…”；因此发不出去的命令不会伪装成工作中。ACK、完成、失败或 Agent reply 都发送 request-state invalidation，GUI 在 invalidation、heartbeat、socket open、focus 和 visibility 恢复时重新读取权威状态。WS 仍只是唤醒信号，丢帧不会留下永久或错误的 typing 状态。
 

@@ -224,6 +224,6 @@ Agent 的能力与偏好配置，包括 system instruction、skills，以及通�
 
 被加入 Conversation 的不是一个裸 runtime，而是“某位 owner 的 Agent blueprint + 其指定 runtime 实例”形成的 Agent participant。同一个 blueprint 加入不同 Conversation 时，每个 Conversation 建立独立的 provider thread，使它只记得该对话中的历史。首版 Codex adapter 首次执行创建 thread 并保存 binding，后续请求必须 resume 同一 thread；runtime 可以暂时离线，但不存在或从未登记的 runtime 不能被 blueprint 引用。
 
-`@agent` 首先创建一条可审计的 Agent Request，不等于无条件远程执行。owner 可以选择仅接受自己的命令、每次征求同意或允许指定成员直接请求。runtime 离线时立即在对话中说明请求已排队；需要批准时向 owner 发出显式批准/拒绝操作；只有授权完成且 runtime 取得 lease 后才开始执行。Agent 通过受约束的进度/结果上报工具写回摘要，不把完整推理、终端日志或所有工具调用广播给群成员。
+`@agent` 首先创建一条可审计的 Agent Request，不等于无条件远程执行。Ask me first 与 Refuse 对非 owner 请求都记录终态 `rejected`，区别仅是前者自动回复并引导 owner 发出自己的指令，不存在待批准任务。Owner 回复并再次 mention Agent 时产生全新命令，完整回复是 query，原请求沿引用链提供上下文；owner 可以增补或改写要求。已授权命令遇到 runtime 离线时仍保留待投递，并在对话中说明。Agent 通过受约束的进度/结果上报工具写回摘要，不把完整推理、终端日志或所有工具调用广播给群成员。
 
-首版若进入实现，只包含文本消息、成员、引用现有 Shared Item、`@agent` 请求、审批、离线排队和摘要反馈。表情、已读、正在输入、音视频、协同编辑、通用 bot 市场和项目任务管理均不作为首版范围。
+首版若进入实现，只包含文本消息、成员、引用现有 Shared Item、`@agent` 请求、调用策略、离线排队和摘要反馈。表情、已读、正在输入、音视频、协同编辑、通用 bot 市场和项目任务管理均不作为首版范围。

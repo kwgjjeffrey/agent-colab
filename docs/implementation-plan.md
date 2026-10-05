@@ -660,3 +660,8 @@ Trace now owns a framework-independent page locator module and `locator-install`
 Verified: Trace 12/12 tests and Colab locator 6/6 tests pass, including an unrelated checkout entry using only the standard marker, untrusted origin/non-parent rejection, missing-resource fallback and navigation without executing business actions. Actual formal catalog clicks locate channels.list, messages.send and system.update; messages.send has computed animation trace-breathe. files.withdraw with no shared file reports the owning region and ok:false instead of claiming the control was located. Served runtime SHA-256 matches the command-installed module. This does not claim every project-specific route or MCP host renderer has been validated.
 
 发行版复验：Trace v0.3.0 从 GitHub Release 校验并升级后，用已安装 Skill 的 locator-install 再安装 Colab 模块，receipt.version=0.3.0。移除目录 LaunchAgent 的 TRACE_LOCATOR_URL/TRACE_LOCATOR_EMBED_URL，正式目录从项目注册表 project.previewUrl 获得嵌入地址；再次点击 messages.send 产生 trace-breathe 动画。
+# 2026-10-05 Ask me first policy correction
+
+- Non-owner Ask me first requests use terminal `rejected`, exactly like Refuse; only the automatic reply differs. Owner replies remain new commands with the full query and reply chain.
+- Migration 0033 closes historical `awaiting_owner` records as rejected; it does not replay them or retarget runtimes.
+- Policy unit test passed; production deployment and live cross-account acceptance pending.

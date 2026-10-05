@@ -476,13 +476,9 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
             return Err(ApiError::bad_request("invalid_agent_mention"));
         };
         let generated = match bundle.state.as_str() {
-            "rejected" => Some((
-                "I can't accept requests from other people.".to_string(),
-                text_content("I can't accept requests from other people."),
-            )),
-            "awaiting_owner" => {
+            "rejected" if bundle.request_owner_instruction => {
                 let response = format!(
-                    "@{}, I need your approval before I can work on this request.",
+                    "@{}, please reply and @mention me with your instructions if you'd like me to work on this.",
                     bundle.target_owner_name
                 );
                 Some((
@@ -495,6 +491,10 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
                     ),
                 ))
             }
+            "rejected" => Some((
+                "I can't accept requests from other people.".to_string(),
+                text_content("I can't accept requests from other people."),
+            )),
             "queued"
                 if !state
                     .runtime_presence
@@ -1224,6 +1224,7 @@ mod tests {
             created_at: "now".into(),
         };
         let response = agent_request_response(colab_server_persistence::AgentRequestBundle {
+            request_owner_instruction: false,
             trace_context: None,
             id,
             channel_id: id,

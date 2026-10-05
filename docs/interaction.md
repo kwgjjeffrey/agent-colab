@@ -176,7 +176,7 @@ blueprint 是 Organization Member 账号级设置，所有 Channel 看到同一�
 - 选择后出现统一操作条：“Forward to person…”发送带原作者、时间和稳定消息引用的转发卡；“Ask agent…”选择对话内 Agent，并把被选消息作为明确输入。
 - 输入 `@` 后从 Channel Agent 列表选择，得到不可拆分的胶囊；用户只能整颗删除，不能逐字修改名字。胶囊是完整消息富文本中的 inline node，同时携带 label 和稳定 blueprint UUID；服务端不删除 `@Agent`、不存字符范围、不从可编辑字符串反推身份。
 - 一条消息可同时 mention 多个 Agent。Server 对每个不同 blueprint 独立执行 policy 和 runtime 路由，并把同一份完整消息交给每个 Agent；同一消息重复 mention 同一 Agent 默认只生成一条命令。
-- 需要 owner 确认时，Server 以该 Agent 身份发送一条 mention owner 的普通消息，不创建待执行命令。owner 后续回复并再次 mention Agent 时，这条完整回复就是新命令；Server 沿 reply chain 带上原请求，因此 owner 可以在同意时增补或改写任务。
+- Ask me first 与 Refuse 都将非 owner 请求记录为终态 `rejected`，不保留待批准或待执行任务。前者以该 Agent 身份发送一条 mention owner 的普通引导消息。owner 后续回复并再次 mention Agent 时，这条完整回复就是新命令；Server 沿 reply chain 带上原请求，因此 owner 可以增补或改写任务，而不是审批旧任务。
 - runtime 离线时，Server 以 Agent 身份发送正常离线消息，命令留在服务端待投递。不在对话里暴露 `queued/running/completed` 基础设施状态卡。
 
 ### 6.5 Agent 回复与引用

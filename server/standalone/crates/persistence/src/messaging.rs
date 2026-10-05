@@ -99,6 +99,8 @@ pub struct ChannelMessage {
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AgentRequestBundle {
+    #[serde(skip)]
+    pub request_owner_instruction: bool,
     pub trace_context: Option<serde_json::Value>,
     pub id: Uuid,
     pub channel_id: Uuid,
@@ -115,6 +117,26 @@ pub struct AgentRequestBundle {
     pub state: String,
     pub messages: Vec<ChannelMessage>,
     pub quote_messages: Vec<ChannelMessage>,
+}
+
+// Ask me first differs from Refuse only in its automatic reply. It is not an
+// approval lease: an owner's later mention creates an independent instruction.
+fn invocation_state(is_owner: bool, policy: &str) -> &'static str {
+    if is_owner || policy == "process" { "queued" } else { "rejected" }
+}
+
+#[cfg(test)]
+mod invocation_policy_tests {
+    use super::invocation_state;
+
+    #[test]
+    fn ask_and_refuse_are_terminal_for_non_owners() {
+        for policy in ["awaiting_owner", "refuse"] {
+            assert_eq!(invocation_state(false, policy), "rejected");
+            assert_eq!(invocation_state(true, policy), "queued");
+        }
+        assert_eq!(invocation_state(false, "process"), "queued");
+    }
 }
 
 #[derive(Debug, Serialize, sqlx::FromRow)]
@@ -472,13 +494,7 @@ Ok(sqlx::query_as::<_,ChannelMessage>("with recursive chain(id,reply_to_message_
             "Review the forwarded messages and complete the requested work.".into()
         };
         let before_seq = rows.first().map(|row| row.seq);
-        let desired_state = if requester == target_owner || policy == "process" {
-            "queued"
-        } else if policy == "refuse" {
-            "rejected"
-        } else {
-            "awaiting_owner"
-        };
+        let desired_state = invocation_state(requester == target_owner, &policy);
         let proposed_id = Uuid::new_v4();
         let mut tx = self.pool.begin().await?;
         let inserted:Option<Uuid>=sqlx::query_scalar("insert into agent_requests(id,channel_id,target_blueprint_id,runtime_id,requester_member_id,kind,query,trigger_seq,trigger_message_id,state,trace_context) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) on conflict(trigger_message_id,target_blueprint_id) where trigger_message_id is not null do nothing returning id").bind(proposed_id).bind(channel_id).bind(target).bind(runtime_id).bind(requester).bind(kind).bind(&query).bind(rows.last().map(|row|row.seq)).bind(trigger).bind(desired_state).bind(trace_context).fetch_optional(&mut *tx).await?;
@@ -496,6 +512,7 @@ Ok(sqlx::query_as::<_,ChannelMessage>("with recursive chain(id,reply_to_message_
         let requester_name: String = sqlx::query_scalar("select coalesce(u.display_name,u.email) from organization_members om join users u on u.id=om.user_id where om.id=$1").bind(requester).fetch_one(&self.pool).await?;
         let trace_context: Option<serde_json::Value> = sqlx::query_scalar("select trace_context from agent_requests where id=$1").bind(id).fetch_one(&self.pool).await?;
         Ok(Some(AgentRequestBundle {
+            request_owner_instruction: requester != target_owner && policy == "awaiting_owner",
             trace_context,
             id,
             channel_id,
@@ -626,6 +643,7 @@ Ok(sqlx::query_as::<_,ChannelMessage>("with recursive chain(id,reply_to_message_
         };
         let trace_context: Option<serde_json::Value> = sqlx::query_scalar("select trace_context from agent_requests where id=$1").bind(id).fetch_one(&self.pool).await?;
         Ok(Some(AgentRequestBundle {
+            request_owner_instruction: false,
             trace_context,
             id,
             channel_id,
