@@ -46,8 +46,12 @@ try:
             replies = [m for m in rows if m.get("replyToMessageId") == sent["id"]]
             assert not any("offline at the moment" in m.get("body", "") for m in replies), replies
             if any(marker in m.get("body", "") for m in replies):
-                print(f"PASS {email}: runtime replied {marker}", flush=True)
-                break
+                commands = request("GET", base + "/agent-requests")
+                command = next(c for c in commands if c.get("triggerMessageId") == sent["id"])
+                assert command["state"] != "failed", command["id"]
+                if command["state"] == "succeeded":
+                    print(f"PASS {email}: runtime replied {marker}, command succeeded", flush=True)
+                    break
             time.sleep(3)
         else:
             raise AssertionError(f"No runtime reply within 240 seconds: {email}")
