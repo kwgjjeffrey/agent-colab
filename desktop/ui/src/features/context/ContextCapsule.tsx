@@ -11,6 +11,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { useChannelContext } from "./ChannelContext";
 import type { ContextResource, ResourceKind } from "./context-model";
 export function ContextCapsule({
@@ -74,16 +75,12 @@ export function ContextCapsule({
   }, [open, context?.channelId, kind, id]);
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger data-trace-target={traceTargets("context.preview", "context.lookup")}
-        render={
-          <button data-trace-target={traceTargets("context.preview", "context.lookup")}
-            type="button"
-            className="inline-flex max-w-full items-center gap-1 rounded-full bg-muted px-2 py-0.5 align-baseline text-sm font-medium"
-          />
-        }
+      <PopoverTrigger
+        data-trace-target={traceTargets("context.preview", "context.lookup")}
+        render={<Badge variant="secondary" className="max-w-60 align-middle" render={<button type="button" title={resource?.name ?? label} aria-label={resource?.name ?? label} />} />}
       >
         <ContextIcon kind={kind} name={resource?.name ?? label} />
-        {resource?.name ?? label}
+        <span className="min-w-0 truncate">{resource?.name ?? label}</span>
       </PopoverTrigger>
       <PopoverContent className="w-72 p-4" align="start">
         <div className="flex flex-col gap-2">

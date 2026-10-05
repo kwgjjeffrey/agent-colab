@@ -10,51 +10,38 @@ Agent Colab is a context-sharing layer for collaboration between people and thei
 - File and folder sharing with background synchronization and local materialization
 - Codex, Claude Code, and MyFlicker session discovery, sharing, incremental synchronization, and paginated reading
 - Agent Skill discovery, sharing, installation, update, and removal
+- Messages and collaborative Canvas documents with people, agents, and shared-context references
+- Forward context to a collaborator's Agent Runtime or copy a prompt into your own coding agent
 - A Python Agent Colab Skill that exposes the same workflows as the GUI
 - Independently updated Desktop UI, Rust Local Core, Agent Skill, and optional Electron shell
 
-## Try the published alpha
+## Install
 
-> **This is the evaluation path, not a development prerequisite.** The downloads below let you experience the already-built Agent Colab product against its hosted alpha service. Contributors and self-hosters can skip this section and go directly to [Development](#development).
+These are the two macOS (Apple silicon) installation paths. Both install the same independently updated Local Core, desktop UI, and Agent Colab Skill. Sign in after setup; no OAuth configuration file is needed for the official build.
 
-The Electron shell is a convenient desktop entry point. On Windows it also bootstraps the first local installation; afterward Local Core, browser UI, Agent Skill, and Electron remain independently versioned and updated. The Local Core and browser UI still work without Electron, and the Agent Colab Skill can start them directly.
+### 1. Install the macOS app
 
-Download the public alpha artifacts here:
+Download [Colab for macOS](https://github.com/kwgjjeffrey/agent-colab/releases/download/v0.1.140-dev/Colab-0.1.22-dev-arm64.dmg), drag Colab into Applications, and open it. On first launch the app downloads and verifies the other three components, registers Local Core, then opens the interface. The first launch needs an internet connection. If setup fails, the app shows an error and writes diagnostics to `~/.local/share/agent-colab/logs/electron-shell.log`.
 
-| Path | Download |
-| --- | --- |
-| Windows desktop (one-file first-run bootstrap) | [`Colab-0.1.18-dev-x64.exe`](https://github.com/kwgjjeffrey/agent-colab/releases/download/v0.1.59-dev/Colab-0.1.18-dev-x64.exe) |
-| macOS desktop launcher (Apple silicon DMG) | [`Colab-0.1.18-dev-arm64.dmg`](https://github.com/kwgjjeffrey/agent-colab/releases/download/v0.1.59-dev/Colab-0.1.18-dev-arm64.dmg) |
-| macOS installer | [`colab-install`](https://github.com/kwgjjeffrey/agent-colab/releases/download/v0.1.59-dev/colab-install) |
-| Windows headless / Skill-first installer | [`colab-install.ps1`](https://github.com/kwgjjeffrey/agent-colab/releases/download/v0.1.59-dev/colab-install.ps1) |
-| All platform and component artifacts | [GitHub Releases](https://github.com/kwgjjeffrey/agent-colab/releases) |
+The alpha app is ad-hoc signed and not yet notarized; macOS may require you to approve opening it in Privacy & Security.
 
-The versioned links above identify the currently documented alpha. Use the Releases page to inspect newer prereleases and their checksums.
+### 2. Ask your coding agent to install the Skill
 
-### macOS
+Give your coding agent this instruction:
 
-Download and open the DMG for the ordinary App launcher. The launcher expects Local Core, GUI resources, and the Agent Colab Skill to be installed; install those once with `colab-install`:
+> Install Agent Colab using the official [`colab-install` bootstrap](https://github.com/kwgjjeffrey/agent-colab/releases/download/v0.1.140-dev/colab-install). Download that script into a temporary directory, inspect it, then run `bash ./colab-install`. It verifies the signed release manifest and Skill archive, runs the Skill's `setup/colab-setup install` to install Local Core and UI resources, and registers the Skill in your agent's skill directory. When it finishes, open Agent Colab with `~/.agents/skills/agent-colab/bin/colab-open`.
 
-```bash
-chmod +x ./colab-install
-./colab-install --with-app
-```
+The bootstrap installs the Skill for Codex by default. For Claude Code or MyFlicker, pass `--agent claude` or `--agent myflicker` to the same script. You can later add or remove an agent target in Settings.
 
-macOS builds are currently ad-hoc signed and not notarized. The installer applies the required local Gatekeeper exception only to the downloaded Colab application.
+## In use
 
-### Windows
+Share a conversation with an agent to continue work with its original context:
 
-For the desktop path, download and run `Colab-*-x64.exe`. On first launch it installs the bundled Local Core, browser UI, and Agent Colab Skill for the current Windows account, registers Local Core to start at sign-in, and then opens Colab. Sign-in configuration is part of the official build; end users do not provide OAuth configuration files. The Windows executable is currently unsigned, so Windows may show a SmartScreen warning during this alpha phase.
+![An Agent Colab conversation handed to a coding agent](docs/showcase/agent-collaboration-prompt.png)
 
-For a headless or Skill-first installation, download `colab-install.ps1`, then run PowerShell:
+Ask the agent to analyze a teammate's shared session without interrupting them:
 
-```powershell
-powershell -ExecutionPolicy Bypass -File .\colab-install.ps1
-```
-
-If desktop setup cannot install or start Local Core, it shows a native error and writes diagnostics to `%LOCALAPPDATA%\AgentColab\logs\electron-shell.log`.
-
-After installation, ask a supported coding agent to “open Agent Colab,” or run the installed `colab-open` command from the Agent Colab Skill.
+![An agent reviewing a shared conversation](docs/showcase/agent-collaboration-review.png)
 
 ## Architecture
 
@@ -94,7 +81,7 @@ The independently released units are:
 
 - `desktop/` — browser UI resources and the optional Electron shell
 - `local/` — the Rust Local Core, which owns local state and background work
-- `skills/agent-colab/` — the Python Agent Colab Skill and deterministic command wrappers
+- `skills/colab/` — the Python Agent Colab Skill and deterministic command wrappers
 - `server/` — the independently deployed Rust/PostgreSQL coordination server
 - `docs/` — product, interaction, technical, and agent-interface design
 - `.trial/` — reproducible technical validation work
@@ -113,7 +100,7 @@ pnpm --dir desktop install
 pnpm --dir desktop check
 cargo test --manifest-path local/Cargo.toml
 cargo test --manifest-path server/Cargo.toml
-python3 -m unittest discover -s skills/agent-colab/tests
+python3 -m unittest discover -s skills/colab/tests
 ```
 
 Read `AGENTS.md` and the design documents before changing behavior or module boundaries. Provider credentials and deployment endpoints belong in ignored local configuration; never commit them.

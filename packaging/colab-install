@@ -36,9 +36,15 @@ manifest="$temporary/stable.json"
 signature="$temporary/stable.json.sig"
 allowed="$temporary/release-allowed-signers"
 user_agent="agent-colab-bootstrap/1"
+download() {
+  curl --noproxy '*' --fail --location --silent --show-error \
+    --retry 5 --retry-all-errors --connect-timeout 10 \
+    --speed-limit 1024 --speed-time 60 \
+    -A "$user_agent" "$1" -o "$2"
+}
 
-curl -fL --retry 3 -A "$user_agent" "$manifest_url" -o "$manifest"
-curl -fL --retry 3 -A "$user_agent" "$manifest_url.sig" -o "$signature"
+download "$manifest_url" "$manifest"
+download "$manifest_url.sig" "$signature"
 printf '%s\n' 'agent-colab ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDCxpnhppbE+x96B8Y0Y/kqaIOXm5hweIrP4zpOAQeHz' > "$allowed"
 ssh-keygen -Y verify -f "$allowed" -I agent-colab -n agent-colab-release -s "$signature" < "$manifest" >/dev/null
 
@@ -64,7 +70,7 @@ verify_file() {
 
 IFS=$'\t' read -r skill_url skill_hash skill_size <<< "$(artifact_fields colab-skill)"
 skill_archive="$temporary/colab-skill.zip"
-curl -fL --retry 3 -A "$user_agent" "$skill_url" -o "$skill_archive"
+download "$skill_url" "$skill_archive"
 verify_file "$skill_archive" "$skill_hash" "$skill_size"
 unzip -q "$skill_archive" -d "$temporary/skill"
 setup="$(find "$temporary/skill" -type f -path '*/setup/colab-setup' -print -quit)"
@@ -79,7 +85,7 @@ for agent in "${agents[@]}"; do setup_args+=(--agent "$agent"); done
 if [[ "$with_app" == true ]]; then
   IFS=$'\t' read -r app_url app_hash app_size <<< "$(artifact_fields electron-shell)"
   app_archive="$temporary/Colab.zip"
-  curl -fL --retry 3 -A "$user_agent" "$app_url" -o "$app_archive"
+  download "$app_url" "$app_archive"
   verify_file "$app_archive" "$app_hash" "$app_size"
   [[ ! -e /Applications/Colab.app ]] || {
     echo "/Applications/Colab.app already exists; update it from Colab Settings or remove it explicitly" >&2

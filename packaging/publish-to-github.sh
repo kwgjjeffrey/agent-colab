@@ -1,5 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
+macos_only=false
+if [[ "${1:-}" == "--macos-only" ]]; then
+  macos_only=true
+  shift
+fi
+[[ $# -eq 0 ]] || { echo "Usage: publish-to-github.sh [--macos-only]" >&2; exit 2; }
 
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
 release_version="$(tr -d '[:space:]' < "$repo_root/VERSION")"
@@ -14,17 +20,17 @@ gh auth status >/dev/null
 
 sources=(
   "$repo_root/packaging/colab-install"
-  "$repo_root/packaging/colab-install.ps1"
   "$repo_root/dist/release-$release_version.json"
   "$repo_root/dist/release-$release_version.json.sig"
   "$repo_root/dist/local-core/$core_version/darwin-arm64.tar.gz"
-  "$repo_root/dist/local-core/$core_version/windows-x86_64.zip"
   "$repo_root/dist/desktop-ui/$ui_version.zip"
   "$repo_root/dist/colab-skill/$skill_version.zip"
   "$repo_root/dist/electron-shell/$shell_version/Colab-$shell_version-arm64.dmg"
   "$repo_root/dist/electron-shell/$shell_version/Colab-$shell_version-arm64.zip"
-  "$repo_root/dist/electron-shell/$shell_version/Colab-$shell_version-x64.exe"
 )
+if ! $macos_only; then
+  sources+=("$repo_root/packaging/colab-install.ps1" "$repo_root/dist/local-core/$core_version/windows-x86_64.zip" "$repo_root/dist/electron-shell/$shell_version/Colab-$shell_version-x64.exe")
+fi
 
 for asset in "${sources[@]}"; do
   [[ -f "$asset" ]] || { echo "Missing release asset: $asset" >&2; exit 2; }
@@ -35,16 +41,18 @@ stage="$(mktemp -d -t agent-colab-github-release)"
 trap 'rm -f "$notes"; rm -rf "$stage"' EXIT
 # Descriptive names keep independent artifacts unambiguous in GitHub's flat asset list.
 cp "$repo_root/packaging/colab-install" "$stage/colab-install"
-cp "$repo_root/packaging/colab-install.ps1" "$stage/colab-install.ps1"
 cp "$repo_root/dist/release-$release_version.json" "$stage/release-$release_version.json"
 cp "$repo_root/dist/release-$release_version.json.sig" "$stage/release-$release_version.json.sig"
 cp "$repo_root/dist/local-core/$core_version/darwin-arm64.tar.gz" "$stage/agent-colab-local-core-$core_version-darwin-arm64.tar.gz"
-cp "$repo_root/dist/local-core/$core_version/windows-x86_64.zip" "$stage/agent-colab-local-core-$core_version-windows-x86_64.zip"
 cp "$repo_root/dist/desktop-ui/$ui_version.zip" "$stage/agent-colab-desktop-ui-$ui_version.zip"
 cp "$repo_root/dist/colab-skill/$skill_version.zip" "$stage/agent-colab-skill-$skill_version.zip"
 cp "$repo_root/dist/electron-shell/$shell_version/Colab-$shell_version-arm64.dmg" "$stage/Colab-$shell_version-arm64.dmg"
 cp "$repo_root/dist/electron-shell/$shell_version/Colab-$shell_version-arm64.zip" "$stage/Colab-$shell_version-arm64.zip"
-cp "$repo_root/dist/electron-shell/$shell_version/Colab-$shell_version-x64.exe" "$stage/Colab-$shell_version-x64.exe"
+if ! $macos_only; then
+  cp "$repo_root/packaging/colab-install.ps1" "$stage/colab-install.ps1"
+  cp "$repo_root/dist/local-core/$core_version/windows-x86_64.zip" "$stage/agent-colab-local-core-$core_version-windows-x86_64.zip"
+  cp "$repo_root/dist/electron-shell/$shell_version/Colab-$shell_version-x64.exe" "$stage/Colab-$shell_version-x64.exe"
+fi
 assets=("$stage"/*)
 printf '%s\n' \
   'Public alpha release for evaluation.' \
@@ -55,7 +63,7 @@ printf '%s\n' \
   "- Agent Colab Skill: $skill_version" \
   "- Electron Shell: $shell_version" \
   '' \
-  'On Windows, `Colab-*-x64.exe` bootstraps the bundled Core, GUI, and Agent Skill on first launch; `colab-install.ps1` remains available for headless or Skill-first setup. On macOS, use the DMG for the launcher and `colab-install` for Core, GUI, and Skill setup. The desktop builds are not yet notarized or publicly signed.' \
+  'On macOS, open the DMG and drag Colab into Applications. First launch installs and verifies Core, GUI, and Agent Skill automatically. Alternatively, ask your coding agent to run `colab-install`; the Skill setup installs the remaining components. The macOS application is ad-hoc signed and not yet notarized.' \
   > "$notes"
 
 # GitHub Releases are a public mirror. R2 remains the signed update origin used by installed clients.

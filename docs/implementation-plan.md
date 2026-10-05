@@ -636,3 +636,16 @@ GUI 注册表为 92 个入口补充控件/区域、只读导航、资源与权�
 正式 Trace 浏览器页面改为整项选择：左侧只有入口 ID、语义、源码路径、Grafana Tempo 返回的近一小时 root span P50/P90/P95；右侧顶部只有源码与携带入口筛选条件的 Grafana Drilldown 链接，下方为真实 GUI 预览或注册命令。移除 instrumented/owner 状态标记、重复查询按钮、Trace/Span 详情及版本操作。统计来自 /api/metrics/query 的 quantile_over_time，缺失分位数不补算。
 
 本机 Skill 已从独立开发仓更新，持久目录服务已重启。实际点击 channels.list 验证右侧同页高亮、顶部源码/Grafana URI 和左侧三个 provider 分位数；browser.open 验证脚本命令。Trace 源码测试 10/10 通过（含缺失 P90、秒转毫秒、通用属性默认值、Drilldown 精确筛选）。README 已同步新界面截图 docs/images/colab-catalog.png 与 colab-command.png。未声称本次验证了登录后的 Grafana 页面渲染。
+
+
+### 2026-10-05 Trace 源码定位精度修复
+
+按 TypeScript AST 核对 92 个 GUI 入口的真实 runOperation/beginOperation 调用归属，注册表明确 source.path、source.object（组件）、source.function（函数或所属事件回调）。main.tsx 内 App 的不同闭包保留实际文件归属，修正 QuickShareControl、CanvasEditor/LoadedCanvasEditor 等此前笼统或不准确的归属。目录左侧及详情顶部显示文件 → 组件 → 函数，agent source 接口返回相同元数据。
+
+验证：92 个入口均找到真实调用；Trace 工具测试 10/10 通过，本机 Skill 更新并重启目录服务。实际浏览器点击 files.withdraw 显示 desktop/ui/src/main.tsx → App → withdrawFiles，source 命令返回相同 object/function。修改未重新发布 Desktop GUI 制品，历史 span 不会被回写。
+
+### 2026-10-05 安装入口与上下文胶囊
+
+README 收敛为 macOS DMG 首启安装、Agent 执行 `colab-install` 安装 Skill 并由其 setup 安装 Core/UI 两条路线，加入两个实际协作案例截图。Electron Shell 首启调用随 App 打包的官方 bootstrap，检查 Core/UI/Skill 安装结果后才打开窗口；已安装时复用，启动时尝试唤起 Core 服务。Messages 上下文对象胶囊改用项目现有 shadcn Badge 渲染并截断长名称。
+
+账号切换在注册新账号的已安装 Runtime 并确认 WebSocket 建立后才成功；失败恢复原账号，账号选择持久化使用事务。Token 刷新只写对应账号凭据，原账号的刷新不得覆盖后来切换的前台账号；后台 Runtime 对当前会话的检查和更新使用同一次锁。

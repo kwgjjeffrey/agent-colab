@@ -371,9 +371,10 @@ pub(super) fn start_agent_runtime(state: &AppState) {
                     let worker_state = state.clone();
                     tokio::spawn(async move {
                         loop {
-                            if let Err(error) =
-                                run_runtime_stream(&worker_state, &user_id, &runtime_id).await
-                            {
+                            let result = run_runtime_stream(&worker_state, &user_id, &runtime_id).await;
+                            worker_state.inner.runtime_connections.lock().await.remove(&runtime_id);
+                            worker_state.inner.runtime_connection_changed.notify_waiters();
+                            if let Err(error) = result {
                                 eprintln!(
                                     "Agent runtime stream {runtime_id} for {user_id} failed: {}",
                                     error.message
@@ -384,9 +385,33 @@ pub(super) fn start_agent_runtime(state: &AppState) {
                     });
                 }
             }
-            tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+            tokio::select! {
+                _ = state.inner.runtime_registration_changed.notified() => {},
+                _ = tokio::time::sleep(std::time::Duration::from_secs(5)) => {},
+            }
         }
     });
+}
+
+pub(super) async fn wait_for_runtime_connections(
+    state: &AppState,
+    runtime_ids: &[String],
+) -> Result<(), LocalError> {
+    let ready = async {
+        loop {
+            let changed = state.inner.runtime_connection_changed.notified();
+            let is_ready = {
+                let connected = state.inner.runtime_connections.lock().await;
+                runtime_ids.iter().all(|id| connected.contains(id))
+            };
+            if is_ready {
+                return;
+            }
+            changed.await;
+        }
+    };
+    tokio::time::timeout(std::time::Duration::from_secs(10), ready).await
+        .map_err(|_| LocalError::internal("Agent Runtime could not connect for this account; account switch was not completed"))
 }
 
 async fn run_runtime_stream(
@@ -415,6 +440,8 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
         "2".parse().map_err(LocalError::internal)?,
     );
     let (mut socket, _) = connect_async(request).await.map_err(LocalError::internal)?;
+    state.inner.runtime_connections.lock().await.insert(runtime_id.to_string());
+    state.inner.runtime_connection_changed.notify_waiters();
     let mut heartbeat = tokio::time::interval_at(
         tokio::time::Instant::now() + std::time::Duration::from_secs(20),
         std::time::Duration::from_secs(20),

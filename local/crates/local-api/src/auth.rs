@@ -187,6 +187,8 @@ pub(super) async fn switch_account(
 ) -> Result<StatusCode, LocalError> {
 colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.auth.switch-account", async {
 
+    let _switch_guard = state.inner.account_switch_lock.lock().await;
+    let refresh_guard = state.inner.auth_refresh_lock.lock().await;
     let session: ColabSession = {
         let store = state.inner.store.lock().await;
         let value: String = store
@@ -200,14 +202,10 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
             })?;
         serde_json::from_str(&value).map_err(LocalError::internal)?
     };
-    *state.inner.session.lock().await = Some(session);
-    let token = match access_token(&state).await {
-        Ok(token) => token,
-        Err(error) => {
-            *state.inner.session.lock().await = None;
-            return Err(error);
-        }
-    };
+    let previous = state.inner.session.lock().await.replace(session);
+    drop(refresh_guard);
+    let result = async {
+    let token = access_token(&state).await?;
     let validation = state
         .inner
         .http
@@ -224,17 +222,33 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
     if !validation.status().is_success() {
         return Err(remote_error(validation).await);
     }
+    // An account switch is not complete until this account owns a registered device runtime.
+    // The background stream manager discovers the account-scoped registration and connects it.
+    system::register_current_account_runtimes(&state).await?;
     {
-        let store = state.inner.store.lock().await;
-        store.execute("insert into local_settings(key,value) values('current_user_id',$1) on conflict(key) do update set value=excluded.value",[&body.user_id]).map_err(LocalError::internal)?;
-        store
+        let mut store = state.inner.store.lock().await;
+        let transaction = store.transaction().map_err(LocalError::internal)?;
+        transaction.execute("insert into local_settings(key,value) values('current_user_id',$1) on conflict(key) do update set value=excluded.value",[&body.user_id]).map_err(LocalError::internal)?;
+        transaction
             .execute(
                 "update accounts set last_used_at=current_timestamp where user_id=$1",
                 [&body.user_id],
             )
             .map_err(LocalError::internal)?;
+        transaction.commit().map_err(LocalError::internal)?;
     }
     Ok(StatusCode::NO_CONTENT)
+    }.await;
+    if result.is_err() {
+        let _refresh_guard = state.inner.auth_refresh_lock.lock().await;
+        let previous = if let Some(previous) = previous {
+            let store = state.inner.store.lock().await;
+            let stored: Option<String> = store.query_row("select session_json from accounts where user_id=?1", [&previous.user.id], |row| row.get(0)).ok();
+            Some(stored.and_then(|value| serde_json::from_str(&value).ok()).unwrap_or(previous))
+        } else { None };
+        *state.inner.session.lock().await = previous;
+    }
+    result
 
 }).await
 }

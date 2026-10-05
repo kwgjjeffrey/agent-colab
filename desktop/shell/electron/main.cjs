@@ -5,6 +5,7 @@ const os = require('node:os')
 const { spawn } = require('node:child_process')
 const { app, BrowserWindow, dialog, ipcMain, shell } = require('electron')
 const { ensureWindowsInstallation } = require('./windows-bootstrap.cjs')
+const { ensureMacInstallation } = require('./mac-bootstrap.cjs')
 
 let window
 let pendingDeepLinks = []
@@ -26,6 +27,18 @@ async function logFailure(error) {
 }
 
 function requestCoreStart() {
+  if (process.platform === 'darwin') {
+    try {
+      const child = spawn('launchctl', ['kickstart', `gui/${process.getuid()}/online.agent-colab.core`], {
+        detached: true,
+        stdio: 'ignore',
+      })
+      child.unref()
+    } catch {
+      // Discovery reports a missing or failed service below.
+    }
+    return
+  }
   if (process.platform !== 'win32') return
   // Setup owns service registration. The shell only asks Windows to start that registered task;
   // it does not duplicate Core configuration or become responsible for its lifecycle.
@@ -100,6 +113,12 @@ app.whenReady()
   .then(async () => {
     app.setAsDefaultProtocolClient('colab')
     await ensureWindowsInstallation({ dialog, applicationRoot, resourcesPath: process.resourcesPath })
+    await ensureMacInstallation({ applicationRoot, resourcesPath: process.resourcesPath, showProgress: () => {
+      const progress = new BrowserWindow({ width: 460, height: 180, resizable: false, minimizable: false, title: 'Setting up Agent Colab', webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false } })
+      void progress.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent('<html><body style="font:16px system-ui;padding:24px"><h2>Setting up Agent Colab</h2><p>Downloading and verifying Core, interface, and Agent Skill…</p></body></html>'))
+      app.setProgressBar(2)
+      return () => { app.setProgressBar(-1); if (!progress.isDestroyed()) progress.close() }
+    } })
     await createWindow()
   })
   .catch(reportStartupFailure)

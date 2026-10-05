@@ -20,7 +20,7 @@ use std::{
     process::{Command, Stdio},
     sync::Arc,
 };
-use tokio::sync::Mutex;
+use tokio::sync::{Mutex, Notify};
 use tower_http::cors::CorsLayer;
 use url::Url;
 use uuid::Uuid;
@@ -38,6 +38,8 @@ mod sessions;
 mod skills;
 mod system;
 mod transfers;
+#[cfg(test)]
+mod auth_session_tests;
 
 #[derive(Clone)]
 pub struct LocalSecurity {
@@ -68,12 +70,16 @@ struct Inner {
     /// Prevent two callers from presenting the same one-time refresh token concurrently. The
     /// server treats the second presentation as replay and revokes the session family.
     auth_refresh_lock: Mutex<()>,
+    account_switch_lock: Mutex<()>,
     last_error: Mutex<Option<String>>,
     store: Mutex<rusqlite::Connection>,
     /// Serialize publication per Session share. The periodic publisher, an explicit sync, and a
     /// reader-triggered refresh may otherwise race with the same parent snapshot and cause a
     /// recoverable server CAS conflict to leak into the product UI.
     session_sync_locks: Mutex<HashMap<String, Arc<Mutex<()>>>>,
+    runtime_registration_changed: Notify,
+    runtime_connections: Mutex<std::collections::HashSet<String>>,
+    runtime_connection_changed: Notify,
     data_root: PathBuf,
     /// One provider process owns every Colab-managed Codex thread for this Local Core process.
     /// Keeping this handle in application state is the ownership boundary: request handlers may
@@ -485,9 +491,13 @@ impl AppState {
                 pending: Mutex::new(HashMap::new()),
                 session: Mutex::new(session),
                 auth_refresh_lock: Mutex::new(()),
+                account_switch_lock: Mutex::new(()),
                 last_error: Mutex::new(None),
                 store: Mutex::new(store),
                 session_sync_locks: Mutex::new(HashMap::new()),
+                runtime_registration_changed: Notify::new(),
+                runtime_connections: Mutex::new(std::collections::HashSet::new()),
+                runtime_connection_changed: Notify::new(),
                 data_root,
                 codex,
             }),
@@ -1130,16 +1140,18 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
         .map_err(LocalError::internal)?;
     if !response.status().is_success() {
         if response.status() == reqwest::StatusCode::UNAUTHORIZED {
-            *state.inner.session.lock().await = None;
+            let mut session = state.inner.session.lock().await;
+            if session.as_ref().is_some_and(|active| active.user.id == current.user.id) {
+                *session = None;
+            }
         }
         return Err(remote_error(response).await);
     }
     let rotated: ColabSession = response.json().await.map_err(LocalError::internal)?;
     // Persist before publishing in memory: after a crash the old token is already consumed, while
     // the newly stored pair remains recoverable when Local Core restarts.
-    auth::save_account(state, &rotated).await?;
+    persist_refreshed_session(state, &rotated).await?;
     let token = rotated.access_token.clone();
-    *state.inner.session.lock().await = Some(rotated);
     Ok(token)
 
 }).await
@@ -1185,29 +1197,30 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
         return Err(remote_error(response).await);
     }
     let rotated: ColabSession = response.json().await.map_err(LocalError::internal)?;
-    let encoded = serde_json::to_string(&rotated).map_err(LocalError::internal)?;
+    persist_refreshed_session(state, &rotated).await?;
+    Ok(rotated.access_token)
+
+}).await
+}
+
+async fn persist_refreshed_session(state: &AppState, rotated: &ColabSession) -> Result<(), LocalError> {
+    let encoded = serde_json::to_string(rotated).map_err(LocalError::internal)?;
     {
         let store = state.inner.store.lock().await;
         store
             .execute(
                 "update accounts set session_json=?1,last_used_at=current_timestamp where user_id=?2",
-                rusqlite::params![encoded, user_id],
+                rusqlite::params![encoded, &rotated.user.id],
             )
             .map_err(LocalError::internal)?;
     }
-    if state
-        .inner
-        .session
-        .lock()
-        .await
-        .as_ref()
-        .is_some_and(|session| session.user.id == user_id)
-    {
-        *state.inner.session.lock().await = Some(rotated.clone());
+    // Token rotation updates credentials, never foreground-account selection. Check and replace
+    // under one lock so a concurrent switch cannot be overwritten by an older account's refresh.
+    let mut session = state.inner.session.lock().await;
+    if session.as_ref().is_some_and(|active| active.user.id == rotated.user.id) {
+        *session = Some(rotated.clone());
     }
-    Ok(rotated.access_token)
-
-}).await
+    Ok(())
 }
 async fn proxy_json(response: reqwest::Response) -> Result<Json<Vec<Channel>>, LocalError> {
 colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.lib.proxy-json", async {

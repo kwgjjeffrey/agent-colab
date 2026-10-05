@@ -111,6 +111,22 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
     value["defaultAgent"] = serde_json::Value::String(default_agent(&state).await);
     // Existing installations predate runtime registration. Refresh them whenever Settings reads
     // status so every logged-in device converges without forcing users to reinstall the Skill.
+    let _ = register_installed_runtimes(&state, &value).await;
+    Ok(Json(value))
+
+}).await
+}
+
+pub(super) async fn register_current_account_runtimes(state: &AppState) -> Result<(), LocalError> {
+    let status = setup(vec!["status".into()]).await?;
+    let runtimes = register_installed_runtimes(state, &status).await?;
+    messaging::wait_for_runtime_connections(state, &runtimes).await
+}
+
+async fn register_installed_runtimes(
+    state: &AppState,
+    value: &serde_json::Value,
+) -> Result<Vec<String>, LocalError> {
     let skill_version = value
         .pointer("/componentVersions/colab-skill")
         .and_then(|v| v.as_str())
@@ -126,12 +142,17 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
         })
         .copied()
         .collect::<Vec<_>>();
+    let mut runtimes = Vec::new();
     for agent in installed {
-        let _ = register_runtime(&state, agent, true, &skill_version).await;
+        let runtime = register_runtime(state, agent, true, &skill_version).await?;
+        if agent == "codex" {
+            if let Some(id) = runtime.get("id").and_then(|id| id.as_str()) {
+                runtimes.push(id.to_string());
+            }
+        }
     }
-    Ok(Json(value))
-
-}).await
+    state.inner.runtime_registration_changed.notify_one();
+    Ok(runtimes)
 }
 
 pub(super) async fn update_installation() -> Result<Json<serde_json::Value>, LocalError> {

@@ -276,3 +276,14 @@ GUI 注册表为 92 个入口补充控件/区域、只读导航、资源与权�
 源码、独立制品版本、数据库迁移、tracing 注册/适配器、可复现 `.trial` 脚本和锁文件纳入 Git；扫描清单、运行结果、验收 JSON/截图保留本机并忽略。`observability/boundary-inventory.json` 从 Git 索引移除，磁盘文件保留。私有 `observability/providers.json` 及凭据文件忽略，仓库只含占位 provider 示例；未配置 OTLP 目的地时不得默认发往维护者平台。`AGENTS.md` 记录独立 `trace` Skill 的公开制品入口。
 
 本次验证：`trace check` 通过，四个单元注册表共 131 个操作；`skills/colab/tests/test_tracing_registry.py` 3/3 通过；`git diff --cached --check` 通过；已确认验收快照与 `.trial` 生成输出命中 Git ignore。此处不声称重新执行所有已提交业务功能的端到端验收。
+
+
+### 2026-10-05 Trace 源码定位精度修复
+
+按 TypeScript AST 核对 92 个 GUI 入口的真实 runOperation/beginOperation 调用归属，注册表明确 source.path、source.object（组件）、source.function（函数或所属事件回调）。main.tsx 内 App 的不同闭包保留实际文件归属，修正 QuickShareControl、CanvasEditor/LoadedCanvasEditor 等此前笼统或不准确的归属。目录左侧及详情顶部显示文件 → 组件 → 函数，agent source 接口返回相同元数据。
+
+验证：92 个入口均找到真实调用；Trace 工具测试 10/10 通过，本机 Skill 更新并重启目录服务。实际浏览器点击 files.withdraw 显示 desktop/ui/src/main.tsx → App → withdrawFiles，source 命令返回相同 object/function。修改未重新发布 Desktop GUI 制品，历史 span 不会被回写。
+
+### 2026-10-05 安装入口与上下文胶囊
+
+已通过 `pnpm --dir desktop/ui check`、`pnpm --dir desktop/shell check`、`pnpm --dir desktop/shell test`（首启安装和二次启动复用）及 `bash -n packaging/colab-install`。Electron DMG 构建与 App 签名核验通过，已确认 bootstrap 位于 App Resources；安装链路读回验收进行中，未在这些完成前声称发布成功。对 offline 提示进行只读核查：服务端依据 Runtime WebSocket presence 决定提示；发现切号缺少主动注册/连接确认，以及 token 刷新可以覆盖前台账号的竞态。两者已修复，实际双账号切换和请求执行待发布后验收。
