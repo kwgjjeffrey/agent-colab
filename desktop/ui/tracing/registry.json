@@ -27,7 +27,8 @@
       },
       "source": {
         "path": "desktop/ui/src/features/messages/MessagesView.tsx",
-        "function": "send"
+        "function": "send",
+        "object": "MessagesView"
       }
     },
     {
@@ -53,7 +54,8 @@
       },
       "source": {
         "path": "desktop/ui/src/main.tsx",
-        "function": "refreshChannels"
+        "function": "refreshChannels",
+        "object": "App"
       }
     },
     {
@@ -91,7 +93,8 @@
       },
       "source": {
         "path": "desktop/ui/src/main.tsx",
-        "function": "refreshAccounts"
+        "function": "refreshAccounts",
+        "object": "App"
       }
     },
     {
@@ -126,7 +129,8 @@
       },
       "source": {
         "path": "desktop/ui/src/main.tsx",
-        "function": "loadInstallation"
+        "function": "loadInstallation",
+        "object": "App"
       }
     },
     {
@@ -162,7 +166,8 @@
       },
       "source": {
         "path": "desktop/ui/src/main.tsx",
-        "function": "checkInstallation"
+        "function": "checkInstallation",
+        "object": "App"
       }
     },
     {
@@ -199,7 +204,8 @@
       },
       "source": {
         "path": "desktop/ui/src/main.tsx",
-        "function": "updateInstallation"
+        "function": "updateInstallation",
+        "object": "App"
       }
     },
     {
@@ -236,7 +242,8 @@
       },
       "source": {
         "path": "desktop/ui/src/main.tsx",
-        "function": "restartInstalledCore"
+        "function": "restartInstalledCore",
+        "object": "App"
       }
     },
     {
@@ -272,7 +279,8 @@
       },
       "source": {
         "path": "desktop/ui/src/main.tsx",
-        "function": "setAgentSkill"
+        "function": "setAgentSkill",
+        "object": "App"
       }
     },
     {
@@ -308,7 +316,8 @@
       },
       "source": {
         "path": "desktop/ui/src/main.tsx",
-        "function": "setDefaultAgent"
+        "function": "setDefaultAgent",
+        "object": "App"
       }
     },
     {
@@ -346,7 +355,8 @@
       },
       "source": {
         "path": "desktop/ui/src/main.tsx",
-        "function": "refreshOrganizations"
+        "function": "refreshOrganizations",
+        "object": "App"
       }
     },
     {
@@ -385,7 +395,8 @@
       },
       "source": {
         "path": "desktop/ui/src/main.tsx",
-        "function": "signIn"
+        "function": "signIn",
+        "object": "App"
       }
     },
     {
@@ -424,7 +435,8 @@
       },
       "source": {
         "path": "desktop/ui/src/main.tsx",
-        "function": "switchAccount"
+        "function": "switchAccount",
+        "object": "App"
       }
     },
     {
@@ -463,7 +475,8 @@
       },
       "source": {
         "path": "desktop/ui/src/main.tsx",
-        "function": "logout"
+        "function": "logout",
+        "object": "App"
       }
     },
     {
@@ -490,7 +503,8 @@
       },
       "source": {
         "path": "desktop/ui/src/main.tsx",
-        "function": "createChannel"
+        "function": "createChannel",
+        "object": "App"
       }
     },
     {
@@ -529,7 +543,8 @@
       },
       "source": {
         "path": "desktop/ui/src/main.tsx",
-        "function": "switchOrganization"
+        "function": "switchOrganization",
+        "object": "App"
       }
     },
     {
@@ -568,7 +583,8 @@
       },
       "source": {
         "path": "desktop/ui/src/main.tsx",
-        "function": "createOrganization"
+        "function": "createOrganization",
+        "object": "App"
       }
     },
     {
@@ -596,7 +612,8 @@
       },
       "source": {
         "path": "desktop/ui/src/main.tsx",
-        "function": "finishPendingInvitation"
+        "function": "finishPendingInvitation",
+        "object": "App"
       }
     },
     {
@@ -623,7 +640,8 @@
       },
       "source": {
         "path": "desktop/ui/src/main.tsx",
-        "function": "loadMembers"
+        "function": "loadMembers",
+        "object": "App"
       }
     },
     {
@@ -650,7 +668,8 @@
       },
       "source": {
         "path": "desktop/ui/src/main.tsx",
-        "function": "loadFileShares"
+        "function": "loadFileShares",
+        "object": "App"
       }
     },
     {
@@ -677,7 +696,8 @@
       },
       "source": {
         "path": "desktop/ui/src/main.tsx",
-        "function": "loadSessionShares"
+        "function": "loadSessionShares",
+        "object": "App"
       }
     },
     {
@@ -705,7 +725,8 @@
       },
       "source": {
         "path": "desktop/ui/src/main.tsx",
-        "function": "withdrawSession"
+        "function": "withdrawSession",
+        "object": "App"
       }
     },
     {
@@ -733,7 +754,8 @@
       },
       "source": {
         "path": "desktop/ui/src/main.tsx",
-        "function": "shareFiles"
+        "function": "shareFiles",
+        "object": "App"
       }
     },
     {
@@ -761,7 +783,8 @@
       },
       "source": {
         "path": "desktop/ui/src/main.tsx",
-        "function": "ensureLocalFiles"
+        "function": "ensureLocalFiles",
+        "object": "App"
       }
     },
     {
@@ -789,7 +812,8 @@
       },
       "source": {
         "path": "desktop/ui/src/main.tsx",
-        "function": "withdrawFiles"
+        "function": "withdrawFiles",
+        "object": "App"
       }
     },
     {
@@ -817,7 +841,8 @@
       },
       "source": {
         "path": "desktop/ui/src/main.tsx",
-        "function": "retryFiles"
+        "function": "retryFiles",
+        "object": "App"
       }
     },
     {
@@ -845,7 +870,8 @@
       },
       "source": {
         "path": "desktop/ui/src/main.tsx",
-        "function": "saveChannel"
+        "function": "saveChannel",
+        "object": "App"
       }
     },
     {
@@ -873,7 +899,8 @@
       },
       "source": {
         "path": "desktop/ui/src/main.tsx",
-        "function": "addMember"
+        "function": "addMember",
+        "object": "App"
       }
     },
     {
@@ -901,7 +928,8 @@
       },
       "source": {
         "path": "desktop/ui/src/main.tsx",
-        "function": "changeRole"
+        "function": "changeRole",
+        "object": "App"
       }
     },
     {
@@ -929,7 +957,8 @@
       },
       "source": {
         "path": "desktop/ui/src/main.tsx",
-        "function": "removeMember"
+        "function": "removeMember",
+        "object": "App"
       }
     },
     {
@@ -957,7 +986,8 @@
       },
       "source": {
         "path": "desktop/ui/src/main.tsx",
-        "function": "searchPeople"
+        "function": "searchPeople",
+        "object": "ChannelSettings"
       }
     },
     {
@@ -985,7 +1015,8 @@
       },
       "source": {
         "path": "desktop/ui/src/features/files/FilesView.tsx",
-        "function": "browse"
+        "function": "browse",
+        "object": "FilesView"
       }
     },
     {
@@ -1013,7 +1044,8 @@
       },
       "source": {
         "path": "desktop/ui/src/features/files/FilesView.tsx",
-        "function": "giveToAgent"
+        "function": "giveToAgent",
+        "object": "FilesView"
       }
     },
     {
@@ -1041,7 +1073,8 @@
       },
       "source": {
         "path": "desktop/ui/src/features/files/FilesView.tsx",
-        "function": "inspect"
+        "function": "inspect",
+        "object": "FilesView"
       }
     },
     {
@@ -1069,7 +1102,8 @@
       },
       "source": {
         "path": "desktop/ui/src/features/files/FilesView.tsx",
-        "function": "editScope"
+        "function": "editScope",
+        "object": "FilesView"
       }
     },
     {
@@ -1097,7 +1131,8 @@
       },
       "source": {
         "path": "desktop/ui/src/features/files/FilesView.tsx",
-        "function": "confirmShare"
+        "function": "confirmShare",
+        "object": "FilesView"
       }
     },
     {
@@ -1125,7 +1160,8 @@
       },
       "source": {
         "path": "desktop/ui/src/features/sessions/SessionsView.tsx",
-        "function": "loadSources"
+        "function": "loadSources",
+        "object": "SessionsView"
       }
     },
     {
@@ -1153,7 +1189,8 @@
       },
       "source": {
         "path": "desktop/ui/src/features/sessions/SessionsView.tsx",
-        "function": "share"
+        "function": "share",
+        "object": "SessionsView"
       }
     },
     {
@@ -1180,7 +1217,8 @@
       },
       "source": {
         "path": "desktop/ui/src/features/skills/SkillsView.tsx",
-        "function": "loadShares"
+        "function": "loadShares",
+        "object": "SkillsView"
       }
     },
     {
@@ -1208,7 +1246,8 @@
       },
       "source": {
         "path": "desktop/ui/src/features/skills/SkillsView.tsx",
-        "function": "loadSources"
+        "function": "loadSources",
+        "object": "SkillsView"
       }
     },
     {
@@ -1236,7 +1275,8 @@
       },
       "source": {
         "path": "desktop/ui/src/features/skills/SkillsView.tsx",
-        "function": "share"
+        "function": "share",
+        "object": "SkillsView"
       }
     },
     {
@@ -1264,7 +1304,8 @@
       },
       "source": {
         "path": "desktop/ui/src/features/skills/SkillsView.tsx",
-        "function": "mutateInstallation"
+        "function": "mutateInstallation",
+        "object": "SkillsView"
       }
     },
     {
@@ -1292,7 +1333,8 @@
       },
       "source": {
         "path": "desktop/ui/src/features/skills/SkillsView.tsx",
-        "function": "withdraw"
+        "function": "withdraw",
+        "object": "SkillsView"
       }
     },
     {
@@ -1320,7 +1362,8 @@
       },
       "source": {
         "path": "desktop/ui/src/features/canvas/CanvasResourceTree.tsx",
-        "function": "create"
+        "function": "create",
+        "object": "CanvasResourceTree"
       }
     },
     {
@@ -1348,7 +1391,8 @@
       },
       "source": {
         "path": "desktop/ui/src/features/canvas/CanvasResourceTree.tsx",
-        "function": "commit"
+        "function": "commit",
+        "object": "CanvasResourceTree"
       }
     },
     {
@@ -1375,7 +1419,8 @@
       },
       "source": {
         "path": "desktop/ui/src/features/canvas/CanvasView.tsx",
-        "function": "load"
+        "function": "load",
+        "object": "CanvasView"
       }
     },
     {
@@ -1403,7 +1448,8 @@
       },
       "source": {
         "path": "desktop/ui/src/features/canvas/CanvasView.tsx",
-        "function": "commitTitle"
+        "function": "commitTitle",
+        "object": "CanvasEditor"
       }
     },
     {
@@ -1431,7 +1477,8 @@
       },
       "source": {
         "path": "desktop/ui/src/features/canvas/CanvasView.tsx",
-        "function": "prepareSend"
+        "function": "prepareSend",
+        "object": "LoadedCanvasEditor"
       }
     },
     {
@@ -1458,7 +1505,8 @@
       },
       "source": {
         "path": "desktop/ui/src/features/messages/MessagesView.tsx",
-        "function": "loadParticipants"
+        "function": "loadParticipants",
+        "object": "MessagesView"
       }
     },
     {
@@ -1485,7 +1533,8 @@
       },
       "source": {
         "path": "desktop/ui/src/features/messages/MessagesView.tsx",
-        "function": "loadMessages"
+        "function": "loadMessages",
+        "object": "MessagesView"
       }
     },
     {
@@ -1512,7 +1561,8 @@
       },
       "source": {
         "path": "desktop/ui/src/features/messages/MessagesView.tsx",
-        "function": "loadAgents"
+        "function": "loadAgents",
+        "object": "MessagesView"
       }
     },
     {
@@ -1545,7 +1595,8 @@
       },
       "source": {
         "path": "desktop/ui/src/features/messages/MessagesView.tsx",
-        "function": "loadRuntimes"
+        "function": "loadRuntimes",
+        "object": "MessagesView"
       }
     },
     {
@@ -1572,7 +1623,8 @@
       },
       "source": {
         "path": "desktop/ui/src/features/messages/MessagesView.tsx",
-        "function": "loadRequests"
+        "function": "loadRequests",
+        "object": "MessagesView"
       }
     },
     {
@@ -1600,7 +1652,8 @@
       },
       "source": {
         "path": "desktop/ui/src/features/messages/MessagesView.tsx",
-        "function": "createRequest"
+        "function": "createRequest",
+        "object": "MessagesView"
       }
     },
     {
@@ -1628,7 +1681,8 @@
       },
       "source": {
         "path": "desktop/ui/src/features/messages/MessagesView.tsx",
-        "function": "addUser"
+        "function": "addUser",
+        "object": "MessagesView"
       }
     },
     {
@@ -1656,7 +1710,8 @@
       },
       "source": {
         "path": "desktop/ui/src/features/messages/MessagesView.tsx",
-        "function": "openManager"
+        "function": "openManager",
+        "object": "MessagesView"
       }
     },
     {
@@ -1689,7 +1744,8 @@
       },
       "source": {
         "path": "desktop/ui/src/features/messages/MessagesView.tsx",
-        "function": "saveBlueprint"
+        "function": "saveBlueprint",
+        "object": "MessagesView"
       }
     },
     {
@@ -1722,7 +1778,8 @@
       },
       "source": {
         "path": "desktop/ui/src/features/messages/MessagesView.tsx",
-        "function": "setInChannel"
+        "function": "setInChannel",
+        "object": "MessagesView"
       }
     },
     {
@@ -1755,7 +1812,8 @@
       },
       "source": {
         "path": "desktop/ui/src/features/messages/MessagesView.tsx",
-        "function": "removeAgent"
+        "function": "removeAgent",
+        "object": "MessagesView"
       }
     },
     {
@@ -1791,7 +1849,8 @@
       },
       "source": {
         "path": "desktop/ui/src/features/transfers/QuickShareDialog.tsx",
-        "function": "loadManaged"
+        "function": "loadManaged",
+        "object": "QuickShareControl"
       }
     },
     {
@@ -1818,7 +1877,8 @@
       },
       "source": {
         "path": "desktop/ui/src/features/transfers/QuickShareDialog.tsx",
-        "function": "create"
+        "function": "create",
+        "object": "QuickShareControl"
       }
     },
     {
@@ -1854,7 +1914,8 @@
       },
       "source": {
         "path": "desktop/ui/src/features/transfers/QuickShareDialog.tsx",
-        "function": "updateExpiry"
+        "function": "updateExpiry",
+        "object": "QuickShareControl"
       }
     },
     {
@@ -1890,7 +1951,8 @@
       },
       "source": {
         "path": "desktop/ui/src/features/transfers/QuickShareDialog.tsx",
-        "function": "revoke"
+        "function": "revoke",
+        "object": "QuickShareControl"
       }
     },
     {
@@ -1917,7 +1979,8 @@
       },
       "source": {
         "path": "desktop/ui/src/features/agent/AgentPromptDialog.tsx",
-        "function": "copyAndOpen"
+        "function": "copyAndOpen",
+        "object": "AgentPromptDialog"
       }
     },
     {
@@ -1943,7 +2006,8 @@
       },
       "source": {
         "path": "desktop/ui/src/features/agent/AgentPromptDialog.tsx",
-        "function": "copyPrompt"
+        "function": "copyPrompt",
+        "object": "AgentPromptDialog"
       }
     },
     {
@@ -1978,7 +2042,8 @@
       },
       "source": {
         "path": "desktop/ui/src/features/transfers/QuickShareDialog.tsx",
-        "function": "copyPrompt"
+        "function": "copyPrompt",
+        "object": "QuickShareControl"
       }
     },
     {
@@ -2005,7 +2070,8 @@
       },
       "source": {
         "path": "desktop/ui/src/features/canvas/CanvasView.tsx",
-        "function": "CanvasView.effect"
+        "function": "useEffect callback",
+        "object": "CanvasView"
       }
     },
     {
@@ -2033,7 +2099,8 @@
       },
       "source": {
         "path": "desktop/ui/src/features/canvas/CanvasView.tsx",
-        "function": "CanvasView.effect"
+        "function": "onRename callback",
+        "object": "CanvasView"
       }
     },
     {
@@ -2060,7 +2127,8 @@
       },
       "source": {
         "path": "desktop/ui/src/features/canvas/CanvasView.tsx",
-        "function": "refreshRequests"
+        "function": "refreshRequests",
+        "object": "CanvasEditor"
       }
     },
     {
@@ -2087,7 +2155,8 @@
       },
       "source": {
         "path": "desktop/ui/src/features/canvas/CanvasView.tsx",
-        "function": "CanvasView.effect"
+        "function": "pull",
+        "object": "CanvasEditor"
       }
     },
     {
@@ -2115,7 +2184,8 @@
       },
       "source": {
         "path": "desktop/ui/src/features/canvas/CanvasView.tsx",
-        "function": "CanvasView.effect"
+        "function": "useEffect callback → onUpdate → queue.current.then callback",
+        "object": "LoadedCanvasEditor"
       }
     },
     {
@@ -2143,7 +2213,8 @@
       },
       "source": {
         "path": "desktop/ui/src/features/canvas/CanvasView.tsx",
-        "function": "CanvasView.effect"
+        "function": "onSend callback",
+        "object": "LoadedCanvasEditor"
       }
     },
     {
@@ -2170,7 +2241,8 @@
       },
       "source": {
         "path": "desktop/ui/src/features/context/ChannelContext.tsx",
-        "function": "fetchPeople"
+        "function": "fetchPeople",
+        "object": "ChannelContextProvider"
       }
     },
     {
@@ -2197,7 +2269,8 @@
       },
       "source": {
         "path": "desktop/ui/src/features/context/ChannelContext.tsx",
-        "function": "fetchResources"
+        "function": "fetchResources",
+        "object": "ChannelContextProvider"
       }
     },
     {
@@ -2225,7 +2298,8 @@
       },
       "source": {
         "path": "desktop/ui/src/features/context/ChannelContext.tsx",
-        "function": "lookup"
+        "function": "lookup",
+        "object": "ChannelContextProvider"
       }
     },
     {
@@ -2253,7 +2327,8 @@
       },
       "source": {
         "path": "desktop/ui/src/features/context/ChannelContext.tsx",
-        "function": "ChannelContext.effect"
+        "function": "onSend callback",
+        "object": "ChannelContextProvider"
       }
     },
     {
@@ -2281,7 +2356,8 @@
       },
       "source": {
         "path": "desktop/ui/src/features/files/FilePreview.tsx",
-        "function": "FilePreview.effect"
+        "function": "useEffect callback",
+        "object": "FilePreview"
       }
     },
     {
@@ -2308,7 +2384,8 @@
       },
       "source": {
         "path": "desktop/ui/src/features/transfers/QuickShareDialog.tsx",
-        "function": "QuickShareDialog.effect"
+        "function": "useEffect callback → window.setTimeout callback",
+        "object": "QuickShareControl"
       }
     },
     {
@@ -2336,7 +2413,8 @@
       },
       "source": {
         "path": "desktop/ui/src/main.tsx",
-        "function": "main.effect"
+        "function": "choosePath",
+        "object": ""
       }
     },
     {
@@ -2362,7 +2440,8 @@
       },
       "source": {
         "path": "desktop/ui/src/main.tsx",
-        "function": "refreshAuth"
+        "function": "refreshAuth",
+        "object": "App"
       }
     },
     {
@@ -2397,7 +2476,8 @@
       },
       "source": {
         "path": "desktop/ui/src/main.tsx",
-        "function": "reloadIfGuiChanged"
+        "function": "useEffect callback → reloadIfGuiChanged",
+        "object": "App"
       }
     },
     {
@@ -2425,7 +2505,8 @@
       },
       "source": {
         "path": "desktop/ui/src/main.tsx",
-        "function": "chooseFiles"
+        "function": "chooseFiles",
+        "object": "App"
       }
     },
     {
@@ -2453,7 +2534,8 @@
       },
       "source": {
         "path": "desktop/ui/src/features/files/FilePreview.tsx",
-        "function": "FilePreview.native"
+        "function": "useEffect callback",
+        "object": "FilePreview"
       }
     },
     {
@@ -2481,7 +2563,8 @@
       },
       "source": {
         "path": "desktop/ui/src/features/agent/AgentWorkDrawer.tsx",
-        "function": "AgentWorkDrawer.effect"
+        "function": "useEffect callback",
+        "object": "AgentWorkDrawer"
       }
     },
     {
@@ -2509,7 +2592,8 @@
       },
       "source": {
         "path": "desktop/ui/src/features/context/UserIdentity.tsx",
-        "function": "UserIdentityCard.load"
+        "function": "useEffect callback → load",
+        "object": "UserIdentityCard"
       }
     },
     {
@@ -2537,7 +2621,8 @@
       },
       "source": {
         "path": "desktop/ui/src/features/context/ContextCapsule.tsx",
-        "function": "ContextCapsule.effect"
+        "function": "useEffect callback",
+        "object": "ContextCapsule"
       }
     },
     {
@@ -2565,7 +2650,8 @@
       },
       "source": {
         "path": "desktop/ui/src/features/canvas/CanvasResourceTree.tsx",
-        "function": "move"
+        "function": "move",
+        "object": "CanvasResourceTree"
       }
     },
     {
@@ -2593,7 +2679,8 @@
       },
       "source": {
         "path": "desktop/ui/src/features/canvas/CanvasResourceTree.tsx",
-        "function": "remove"
+        "function": "remove",
+        "object": "CanvasResourceTree"
       }
     },
     {
@@ -2630,7 +2717,8 @@
       },
       "source": {
         "path": "desktop/ui/src/main.tsx",
-        "function": "finishShellUpdate"
+        "function": "finishShellUpdate",
+        "object": "App"
       }
     },
     {
@@ -2666,7 +2754,8 @@
       },
       "source": {
         "path": "desktop/ui/src/main.tsx",
-        "function": "messageSettingsAgentCount"
+        "function": "messageSettingsAgentCount",
+        "object": "App"
       }
     },
     {
@@ -2694,7 +2783,8 @@
       },
       "source": {
         "path": "desktop/ui/src/features/canvas/CanvasView.tsx",
-        "function": "CanvasView"
+        "function": "onGive callback",
+        "object": "CanvasView"
       }
     },
     {
@@ -2722,7 +2812,8 @@
       },
       "source": {
         "path": "desktop/ui/src/features/messages/MessagesView.tsx",
-        "function": "MessagesView"
+        "function": "useEffect callback",
+        "object": "MessagesView"
       }
     },
     {
@@ -2750,7 +2841,8 @@
       },
       "source": {
         "path": "desktop/ui/src/features/context/AgentIdentityLink.tsx",
-        "function": "AgentIdentityLink"
+        "function": "useEffect callback → load",
+        "object": "AgentIdentityLink"
       }
     }
   ]
