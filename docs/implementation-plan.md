@@ -649,3 +649,5 @@ GUI 注册表为 92 个入口补充控件/区域、只读导航、资源与权�
 README 收敛为 macOS DMG 首启安装、Agent 执行 `colab-install` 安装 Skill 并由其 setup 安装 Core/UI 两条路线，加入两个实际协作案例截图。Electron Shell 首启调用随 App 打包的官方 bootstrap，检查 Core/UI/Skill 安装结果后才打开窗口；已安装时复用，启动时尝试唤起 Core 服务。Messages 上下文对象胶囊改用项目现有 shadcn Badge 渲染并截断长名称。
 
 账号切换在注册新账号的已安装 Runtime 并确认 WebSocket 建立后才成功；失败恢复原账号，账号选择持久化使用事务。Token 刷新只写对应账号凭据，原账号的刷新不得覆盖后来切换的前台账号；后台 Runtime 对当前会话的检查和更新使用同一次锁。
+
+`0.1.140-dev` 已提交后构建、发布到 R2 和 GitHub，并在本机安装 Core `0.1.86-dev`、GUI `0.1.88-dev`、Shell `0.1.22-dev`。实际故障还包含助手绑定了 `Trace acceptance isolated Core` 测试设备：仅恢复现有助手到本机已注册 Runtime，未改变调用权限或其他测试 Agent。双账号切换、各自真实 Agent 回复验收已通过；验收脚本见 `.trial/E2E-ACCOUNT-RUNTIME-01/verify.py`。
