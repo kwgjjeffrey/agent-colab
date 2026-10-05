@@ -307,4 +307,4 @@ Verified: Trace 12/12 tests and Colab locator 6/6 tests pass, including an unrel
 - Production migration verified: historical request `8532ae8b-0ac2-4558-9770-c456a613539c` is now rejected. No old request was replayed or retargeted.
 # 2026-10-05 macOS title-bar regression
 
-- Passed GUI `npm run check`. Pending installed macOS Electron screenshot and native window drag acceptance.
+- Passed GUI `npm run check`; R2 full readback verified GUI SHA-256 `87c879cf04ea306d9778a9c21429ada12b0e012effbe359f189cde661761451f` (868886 bytes). Installed GUI 0.1.89-dev on Electron 0.1.22-dev, refreshed the native app and inspected screenshot: dedicated title row is above the rail, first Channel avatar no longer occupies the native-control region. Exercised native title-bar drag gesture. Browser/Windows exclusion remains explicit in the host/platform render guard.

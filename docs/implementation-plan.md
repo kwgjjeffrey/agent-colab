@@ -668,4 +668,4 @@ Verified: Trace 12/12 tests and Colab locator 6/6 tests pass, including an unrel
 # 2026-10-05 macOS title-bar regression
 
 - Restored a fixed 38px native-control/drag row only in macOS Electron; channel rail and workspace begin below it. Browser and Windows layouts stay unchanged.
-- GUI type check and production build passed; installed window verification pending.
+- GUI type check and production build passed. GUI 0.1.89-dev published through the signed stable channel and installed on the unchanged Electron 0.1.22-dev. Refreshed native window shows the dedicated title bar above the channel rail; native drag gesture exercised on that region.
