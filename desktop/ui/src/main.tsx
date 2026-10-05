@@ -936,6 +936,9 @@ const api = operation.response;
   return (
     <TooltipProvider>
       <main data-trace-target={traceTargets("auth.status", "invitations.accept")} data-trace-region="application" className="flex h-screen flex-col overflow-hidden bg-background text-foreground">
+        {host.isElectron && /Macintosh|Mac OS X/.test(navigator.userAgent) && (
+          <div className="macos-titlebar" aria-label="Window title bar"><span>Colab</span></div>
+        )}
         <div className="grid min-h-0 flex-1 grid-cols-[72px_1fr] overflow-hidden">
         <aside data-trace-target={traceTargets("channels.list")} data-trace-region={"channels"}
           className="flex h-full flex-col items-center justify-between bg-sidebar-foreground px-2 py-3"

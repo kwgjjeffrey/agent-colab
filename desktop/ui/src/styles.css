@@ -5,6 +5,22 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* hiddenInset native controls overlay web content: reserve their own fixed row.
+   Only Electron/macOS renders this region; browsers keep their native chrome. */
+.macos-titlebar {
+  height: 38px;
+  flex: 0 0 38px;
+  padding: 0 16px 0 88px;
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+  color: var(--muted-foreground);
+  font-size: 12px;
+  font-weight: 500;
+  user-select: none;
+  -webkit-app-region: drag;
+}
+
 :root {
   font-family: Inter, ui-sans-serif, system-ui, sans-serif;
   color: #18201d;
