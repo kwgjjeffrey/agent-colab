@@ -1,5 +1,7 @@
 # Colab 交互设计
 
+Tips 角色场景（2026-10-06）：每条显示角色 Badge，顶部可按 Individual / Collaborator / Team lead / Reviewer / Skill sharing 筛选；这是使用视角，不是账号权限。新增求助、接手、团队总结、决策评审、远端检查、Skill 复用六条。共享类 Try 复用 Quick Share；Session 消费类只在 Try 时读取当前 Channel 的 Session 元数据，用户选择来源后得到任务预填的标准提示词，可追加 User query、复制或转发。未同步的 Session 不可选择；缺少同事 Session 进入已有邀请分享流程。远端检查复用选择 Agent + 可编辑指令，必须显式发送；缺少 Agent 有明确提示。Skill 复用进入已有安装界面。保留折叠、dismiss 和恢复，不新建工作流、调度或权限系统。
+
 Home（2026-10-06）：紧凑横向协作网络并列 before agent / with agent / with Agent Colab；正向三角形，协作主体位于内环，人与 Agent 的独立频率为 1:30。价值陈述为 “Your team is about to work at agentic speed”，位于右侧紧邻 Agent Colab 图，无强调底色。Tips 条目只由分隔线区分，整体可折叠且按账号记忆；不重复提供已有 Tab 的功能按钮。下方 Recent activity 用分页真实元数据展示共享、最近消费、Canvas 创建和 Messages/Canvas Agent 指令，资源可跳至既有详情。它不是完整安全审计，也不展示资源正文或工具日志。
 
 状态：首版结构稿  

@@ -2,7 +2,7 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { ChannelHome, completeHomeTip } from "./ChannelHome";
+import { ChannelHome, completeHomeTip, homeTips } from "./ChannelHome";
 afterEach(() => {
   cleanup();
   localStorage.clear();
@@ -25,14 +25,14 @@ it("Try is not completion; explicit dismiss and real completion are account-scop
   await user.click(
     screen.getByRole("button", { name: /Dismiss: Agent quota/ }),
   );
-  expect(screen.getAllByRole("button", { name: "Try" })).toHaveLength(2);
+  expect(screen.getAllByRole("button", { name: "Try" })).toHaveLength(homeTips.length - 1);
   completeHomeTip("a", "handoff-design");
   view.unmount();
   render(<ChannelHome {...props} />);
-  expect(screen.getAllByRole("button", { name: "Try" })).toHaveLength(1);
+  expect(screen.getAllByRole("button", { name: "Try" })).toHaveLength(homeTips.length - 2);
   cleanup();
   render(<ChannelHome {...props} accountId="b" />);
-  expect(screen.getAllByRole("button", { name: "Try" })).toHaveLength(3);
+  expect(screen.getAllByRole("button", { name: "Try" })).toHaveLength(homeTips.length);
 });
 it("the whole Tips section can be collapsed and stays collapsed after reopening", async () => {
   const props = { accountId: "collapse", onTry: vi.fn() };
@@ -43,7 +43,7 @@ it("the whole Tips section can be collapsed and stays collapsed after reopening"
   render(<ChannelHome {...props} />);
   expect(screen.queryByRole("button", { name: "Try" })).toBeNull();
   await userEvent.click(screen.getByRole("button", { name: "Tips" }));
-  expect(screen.getAllByRole("button", { name: "Try" })).toHaveLength(3);
+  expect(screen.getAllByRole("button", { name: "Try" })).toHaveLength(homeTips.length);
   expect(screen.queryByText("Your collaboration workspace")).toBeNull();
   expect(screen.getByRole("region", { name: "Recent activity" })).toBeTruthy();
 });
@@ -59,5 +59,14 @@ it("long-ignored tips collapse but remain accessible", async () => {
   await userEvent.click(
     screen.getByRole("button", { name: "View all use cases" }),
   );
-  expect(screen.getAllByRole("button", { name: "Try" })).toHaveLength(3);
+  expect(screen.getAllByRole("button", { name: "Try" })).toHaveLength(homeTips.length);
+});
+it("role filters make the relevant use cases identifiable without changing account identity", async () => {
+  render(<ChannelHome accountId="roles" onTry={vi.fn()} />);
+    await userEvent.click(screen.getByRole("button", { name: "Reviewer" }));
+  expect(screen.getAllByRole("button", { name: "Try" })).toHaveLength(1);
+  expect(screen.getByText(/Review the reasoning behind/)).toBeTruthy();
+  expect(screen.queryByText(/Agent quota exhausted/)).toBeNull();
+  await userEvent.click(screen.getByRole("button", { name: "All roles" }));
+  expect(screen.getAllByRole("button", { name: "Try" })).toHaveLength(homeTips.length);
 });

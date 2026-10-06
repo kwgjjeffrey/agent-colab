@@ -1,5 +1,15 @@
 # 技术验证计划
 
+### 2026-10-06 role-oriented Tips acceptance
+
+- 83 GUI tests passed, including role filtering, dismiss/recovery, missing-data vs failed-request
+  handling, source-bound prompts, additional-query forwarding and explicit-only remote dispatch.
+- Production GUI build passed. Existing large-bundle advisory remains; no new backend deployed.
+- Isolated actual GUI on port 55505: Reviewer selects only the review case; Try reports no
+  teammate Session and offers the existing invitation path. No runtime task sent in this check.
+- Publication and installed-GUI acceptance are recorded after the release completes; mocked
+  dispatch tests alone do not claim a new end-to-end runtime execution.
+
 2026-10-06 Home 布局/频率跟进：GUI 74 测试及生产构建通过，定向断言验证标题紧跟三图、Agent/人频率 30 倍。GUI 0.1.93-dev 经公网 size/SHA-256 校验并提升至稳定清单 0.1.145-dev；标准安装器更新后版本匹配，真实桌面应用刷新及隔离浏览器均验证标题位于主角图右侧，其他制品不变。
 
 2026-10-06 Home 主线验收完成：GUI 全量 74 测试及构建、Core/Server cargo check、Skill 34 测试通过。隔离 PostgreSQL 的有界分页、跨用户拒绝、重复消费聚合、撤回隐藏、Canvas创建与两类指令记录验证通过。真实 Core 托管 GUI 验证正向三角形/新文案/无框 Tips/真实共享动态、点击共享对象进入 Files 详情、Tips 收起刷新持久化。发布前源码提交 3cb4cc3、版本提交 9914fdf；稳定清单 0.1.144-dev 全部改变制品通过公网 size/SHA-256，Server 0.1.144-dev 远端 symlink/readiness 验证。本机标准安装器核验缓存中的同一已公开验证制品，安装 Core 0.1.88-dev、GUI 0.1.92-dev、Skill 0.1.52-dev；实际桌面应用刷新显示新 Home 和真实历史动态。未切换真实用户账号或组织。读取动态是成功消费的尽力上报，不回填此前未记录的读取历史；手工直接读取已下载文件不会产生新上报。

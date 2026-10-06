@@ -19,15 +19,17 @@ export function ForwardToAgentDialog({
   contextLabel,
   onClose,
   onSend,
+  initialInstruction = "",
 }: {
   open: boolean;
   agents: Blueprint[];
   contextLabel: string;
   onClose: () => void;
   onSend: (agent: Blueprint, instruction: string) => Promise<void>;
+  initialInstruction?: string;
 }) {
   const [target, setTarget] = useState<string>(),
-    [instruction, setInstruction] = useState(""),
+    [instruction, setInstruction] = useState(initialInstruction),
     [sending, setSending] = useState(false),
     [error, setError] = useState<string>();
   const chosen = agents.find((agent) => agent.id === target);

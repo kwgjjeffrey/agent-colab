@@ -25,7 +25,7 @@ type Context = {
   agents: Blueprint[];
   error?: string;
   navigate: (resource: ContextResource) => void;
-  forward: (resources: ContextResource[], messageIds?: string[]) => void;
+  forward: (resources: ContextResource[], messageIds?: string[], instruction?: string) => void;
   refresh: (includeMessages?: boolean) => Promise<void>;
   lookup: (kind: ContextResource["kind"], id: string, parent?: Operation) => Promise<ContextResource | undefined>;
 };
@@ -50,6 +50,7 @@ export function ChannelContextProvider({
     [handoff, setHandoff] = useState<{
       resources: ContextResource[];
       messageIds: string[];
+      instruction?: string;
     }>();
   const active = useRef(false),
     inFlight = useRef<Map<string, Promise<void>>>(new Map());
@@ -212,8 +213,8 @@ const messageRequest=operation.message;
         agents,
         error,
         navigate,
-        forward: (rows, ids = []) =>
-          setHandoff({ resources: rows, messageIds: ids }),
+        forward: (rows, ids = [], instruction) =>
+          setHandoff({ resources: rows, messageIds: ids, instruction }),
         refresh,
         lookup,
       }}
@@ -228,6 +229,7 @@ const messageRequest=operation.message;
         }
         open={Boolean(handoff)}
         agents={agents}
+        initialInstruction={handoff?.instruction}
         contextLabel={
           handoff?.resources.map((row) => row.name).join(", ") ||
           `${handoff?.messageIds.length ?? 0} selected messages`

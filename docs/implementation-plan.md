@@ -710,6 +710,16 @@ acceptance. Production deployment, artifact publication and real Google browser 
 claimed by these isolated results.
 # 2026-10-06 release completion
 
+### 2026-10-06 role-oriented Tips
+
+Nine Home scenarios now have role badges and a role filter. Added six approved cases without
+new backend workflows: help, takeover, team summary, decision review, remote checks and Skill
+reuse. Try reuses Quick Share, selected-Session prompt preparation, collaborator forwarding and
+the existing Skill installation view. Session bodies are not prefetched; source metadata is
+requested only on Try. Prompt forwarding retains both the prepared task and extra User query.
+GUI tests (83) and production build passed. Isolated real GUI verified Reviewer filtering and
+the missing-Session invitation prerequisite. GUI publication/installed acceptance follows below.
+
 Device-account and Home sample published through stable promotion `0.1.143-dev`.
 Server `0.1.142-dev`, macOS Core `0.1.87-dev`, GUI `0.1.91-dev`, Skill `0.1.51-dev`.
 Installed updater and native Home/Try/invitation Session picker accepted; deployed-Server two-Core

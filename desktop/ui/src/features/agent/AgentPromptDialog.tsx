@@ -51,7 +51,7 @@ type Props = {
   promptFor: (agent: AgentTarget) => string;
   onClose: () => void;
   onError: (message: string) => void;
-  onForward?: () => void;
+  onForward?: (query: string) => void;
   sendTraceTarget?: string;
   onSend?: (query: string) => Promise<void>;
 };
@@ -75,6 +75,11 @@ export function AgentPromptDialog({
 }: Props) {
   const [query, setQuery] = useState("");
   const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string>();
+  function reportError(message: string) {
+    setError(message);
+    onError(message);
+  }
   const completePrompt = (agent: AgentTarget) => `${promptFor(agent)}${query.trim() ? `\n\nUser query:\n${query.trim()}` : ""}`;
   async function copyAndOpen(agent: AgentTarget) {
 return runOperation("prompt.open-agent", async (operation) => {
@@ -88,7 +93,7 @@ const trackedFetch = operation.fetch;
       if (!response.ok) throw new Error(await response.text());
       onClose();
     } catch (reason) { operation.fail();
-      onError(String(reason));
+      reportError(String(reason));
     }
 
 });
@@ -97,7 +102,7 @@ const trackedFetch = operation.fetch;
   async function copyPrompt() {
     return runOperation("prompt.copy", async (operation) => {
       try { const content = completePrompt(defaultAgent); operation.prompt(content, "context.handoff", defaultAgent); await navigator.clipboard.writeText(content); onClose(); }
-      catch (reason) { operation.fail(); onError(String(reason)); }
+      catch (reason) { operation.fail(); reportError(String(reason)); }
     });
   }
 
@@ -116,8 +121,8 @@ const trackedFetch = operation.fetch;
           <Textarea id="agent-prompt-query" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Add an instruction for this task (optional)" />
         </div>
         <DialogFooter>
-          {onForward && <Button variant="outline" onClick={onForward}>Forward to collaborators’ agent</Button>}
-          {onSend && <Button data-trace-target={sendTraceTarget} disabled={sending} onClick={async () => { setSending(true); try { await onSend(query.trim()); onClose(); setQuery(""); } catch (reason) { onError(String(reason)); } finally { setSending(false); } }}>{sending ? "Sending…" : "Send to Agent"}</Button>}
+          {onForward && <Button variant="outline" onClick={() => onForward(query.trim())}>Forward to collaborators’ agent</Button>}
+          {onSend && <Button data-trace-target={sendTraceTarget} disabled={sending} onClick={async () => { setError(undefined); setSending(true); try { await onSend(query.trim()); onClose(); setQuery(""); } catch (reason) { reportError(String(reason)); } finally { setSending(false); } }}>{sending ? "Sending…" : "Send to Agent"}</Button>}
           <Button data-trace-target={traceTargets("prompt.copy")} variant="outline" onClick={() => void copyPrompt()}>Copy prompt</Button>
           <ButtonGroup className="min-w-0 max-w-full">
             <Button data-trace-target={traceTargets("prompt.open-agent")}
@@ -149,6 +154,7 @@ const trackedFetch = operation.fetch;
             </DropdownMenu>
           </ButtonGroup>
         </DialogFooter>
+        {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
       </DialogContent>
     </Dialog>
   );

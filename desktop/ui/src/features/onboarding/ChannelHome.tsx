@@ -9,30 +9,25 @@ import {
 } from "@/components/ui/collapsible";
 import { RecentActivity } from "./RecentActivity";
 import { CollaborationNetwork } from "./CollaborationNetwork";
-
-export const homeTips = [
-  {
-    id: "switch-agent",
-    text: "Agent quota exhausted? Share your conversation and continue with another Agent.",
-  },
-  {
-    id: "handoff-design",
-    text: "Design ready? Hand the full Agent conversation to a collaborator to implement and verify.",
-  },
-  {
-    id: "working-style",
-    text: "Understand teammates’ Agent working style by exploring their shared conversations.",
-  },
-] as const;
+import { homeTips, tipRoles } from "./home-tips";
+import { Badge } from "@/components/ui/badge";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { TipFlow } from "./TipFlow";
+import type { AgentTarget } from "@/features/agent/AgentPromptDialog";
+export { homeTips } from "./home-tips";
 
 export function ChannelHome({
   accountId,
   onTry,
   busyTip,
+  defaultAgent = "codex",
+  installedAgents = {},
 }: {
   accountId: string;
   busyTip?: string;
   onTry: (id: string) => void;
+  defaultAgent?: AgentTarget;
+  installedAgents?: Record<string, { installed: boolean }>;
 }) {
   const key = `colab:onboarding:${accountId}`;
   const [hidden, setHidden] = useState<string[]>(() => {
@@ -43,6 +38,8 @@ export function ChannelHome({
     }
   });
   const [showAll, setShowAll] = useState(false);
+  const [role, setRole] = useState<string[]>(["all"]);
+  const [flow, setFlow] = useState<string>();
   const [ignored, setIgnored] = useState(false);
   const [tipsOpen, setTipsOpen] = useState(
     () => localStorage.getItem(`${key}:collapsed`) !== "true",
@@ -97,21 +94,25 @@ export function ChannelHome({
           )}
         </div>
         <CollapsibleContent>
+          <ToggleGroup aria-label="Tips for your role" value={role} onValueChange={setRole} className="my-3 flex-wrap" size="sm">
+            <ToggleGroupItem value="all">All roles</ToggleGroupItem>
+            {tipRoles.map(label => <ToggleGroupItem key={label} value={label}>{label}</ToggleGroupItem>)}
+          </ToggleGroup>
           <section className="flex flex-col" aria-label="Things to try">
             {homeTips
               .filter(
-                (tip) => showAll || (!ignored && !hidden.includes(tip.id)),
+                (tip) => (showAll || (!ignored && !hidden.includes(tip.id))) && (!role.length || role.includes("all") || role.includes(tip.role)),
               )
               .map((tip, index) => (
                 <div key={tip.id}>
                   {index > 0 && <Separator />}
                   <div className="flex items-center gap-3 py-4">
-                    <p className="min-w-0 flex-1 text-sm">{tip.text}</p>
+                    <div className="flex min-w-0 flex-1 flex-col items-start gap-2"><Badge variant="secondary">{tip.role}</Badge><p className="text-sm">{tip.text}</p></div>
                     <Button
                       size="sm"
                       variant="outline"
                       disabled={Boolean(busyTip)}
-                      onClick={() => onTry(tip.id)}
+                      onClick={() => ["switch-agent", "handoff-design", "get-unstuck"].includes(tip.id) ? onTry(tip.id) : setFlow(tip.id)}
                     >
                       {busyTip === tip.id ? "Checking…" : "Try"}
                       <ArrowRightIcon data-icon="inline-end" />
@@ -146,6 +147,7 @@ export function ChannelHome({
       </Collapsible>
       <Separator />
       <RecentActivity />
+      {flow && <TipFlow key={flow} id={flow} defaultAgent={defaultAgent} installedAgents={installedAgents} onClose={() => setFlow(undefined)} onMissingSessions={() => { setFlow(undefined); onTry("working-style"); }} onNavigate={id => { setFlow(undefined); onTry(id); }} />}
     </div>
   );
 }
