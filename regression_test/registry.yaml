@@ -12,3 +12,9 @@ targets:
   messages.tab: '[role="tab"]:has-text("Messages")'
 prerequisites:
   local-core: true
+
+environment:
+  default: local
+  adapter: environment/adapter.mjs
+  profiles:
+    local: environment/local.yaml

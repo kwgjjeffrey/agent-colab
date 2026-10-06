@@ -751,3 +751,7 @@ The independent Trace project-setup scaffold now supplies a managed root depende
 ### Regression review applied
 
 Removed the unsupported Browser-search draft, merged three overlapping scenarios, reorganized Module paths and excluded the negative runner fixture from product discovery. Added suite=business/release and explicit prerequisite metadata; seven draft scenarios belong to independent release acceptance. Agent runtime substitution remains unapproved and unimplemented. No new executable scripts were added.
+
+### Regression environment integration
+
+Registered project-owned read-only environment adapter and ignored local resource bindings. The existing Skill discovery pilot consumes the resolved Channel through ctx.resources. Generic Trace owns profile/override resolution, preflight, immutable-per-run resource choice and record injection. Real Agent end-to-end execution remains required; no runtime substitute was introduced. Current adapter checks Channel read access and registered runtime availability; unsupported permissions/control requirements block.

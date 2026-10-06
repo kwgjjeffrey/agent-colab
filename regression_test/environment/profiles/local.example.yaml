@@ -1,0 +1,4 @@
+# Copy to ../local.yaml (ignored). Use actual IDs or unique names; never credentials.
+parameters:
+  channel: YOUR_TEST_CHANNEL
+  # agent: YOUR_TEST_AGENT

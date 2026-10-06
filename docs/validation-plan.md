@@ -425,3 +425,7 @@ Initialized this existing repository through Trace project-setup; only root AGEN
 ### Regression review catalog verification
 
 Static discovery validates 76 cases: 74 drafts and two existing pilots, zero diagnostics. Business selection includes 69 records (two executable); release selection includes seven drafts (none executable). Historical run directories remain unchanged. Case-only descriptions have not been validated as product behavior.
+
+### Regression environment verification
+
+Real Channel-binding pilot run 20261006T133843Z-2db3622f passed. A missing Channel override was separately run and blocked before any assertion/script execution. Generic 27-test suite passed, including profile override consumption, recorded-resource identity, unavailable-resource blocking and credential-field rejection. These checks validate environment plumbing and read-only Channel discovery, not the unimplemented Agent command execution cases.

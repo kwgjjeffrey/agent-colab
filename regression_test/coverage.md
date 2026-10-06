@@ -53,7 +53,7 @@ Module paths derive from each case META. GUI/Skill/integration describe entry su
 
 Select explicitly with `--meta '{"suite":["business"]}'` or `--meta '{"suite":["release"]}'`; the GUI uses the same metadata fields. An unfiltered full run still means all executable active cases, so always select a suite for routine work. Case-only drafts remain excluded whatever the selection.
 
-Runtime substitution policy remains undecided. Tests requiring test-agent-runtime cannot run until an actual authorized runtime fixture is supplied. Missing prerequisites are blockers, not passing tests. No controlled runtime was introduced by this review.
+Real Agent execution is required for Agent end-to-end cases; no runtime substitute is used. Tests requiring test-agent-runtime cannot run until an actual authorized runtime fixture is supplied. Missing prerequisites are blockers, not passing tests. No controlled runtime was introduced by this review.
 
 ## Review decisions
 
@@ -61,4 +61,4 @@ Removed the unsupported Browser-search draft; merged three overlapping cases whi
 
 Integrity rejection and activation rollback, Channel removal and blueprint deletion, expiry and revocation, and resource-type variations require independent reported checks and fixture reset. Project cases use isolated resources or sandbox installations; effects metadata never creates isolation. Cost remains an estimate and no latency thresholds are fabricated.
 
-See review.md for the original per-case decision record. Its old IDs identify merged/removed drafts; it is not a second live catalog. Broader runtime execution strategy needs owner confirmation before implementation.
+See review.md for the original per-case decision record. Its old IDs identify merged/removed drafts; it is not a second live catalog. Agent execution scripts must consume real environment resource bindings.
