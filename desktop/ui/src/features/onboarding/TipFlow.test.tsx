@@ -23,9 +23,9 @@ it("loads only Session metadata on Try and builds a source-bound summary task", 
   await screen.findByText("Feature design");
   expect(request).toHaveBeenCalledTimes(1);
   expect(request.mock.calls[0][0]).toBe("/v1/channels/channel/sessions");
-  expect(screen.queryByText("My session")).toBeNull();
+  expect(screen.getByText("My session")).toBeTruthy();
   expect(screen.getByRole("button", { name: "Prepare prompt" }).hasAttribute("disabled")).toBe(true);
-  await userEvent.click(screen.getByRole("checkbox"));
+  await userEvent.click(screen.getAllByRole("checkbox")[0]);
   await userEvent.click(screen.getByRole("button", { name: "Prepare prompt" }));
   expect(screen.getByText(/Summarize recent team work/).textContent).toContain("colab://channel/channel/s1");
   expect(screen.getByText(/Summarize recent team work/).textContent).toContain("last synced 2026-10-06T10:00:00Z");
@@ -46,7 +46,7 @@ it("failed checks are retryable and never become missing-data success", async ()
   await screen.findByRole("alert");
   expect(screen.queryByText("No teammate’s Session yet")).toBeNull();
   await userEvent.click(screen.getByRole("button", { name: "Retry" }));
-  await screen.findByText("No teammate’s Session yet");
+  await screen.findByText("No shared Session yet");
   expect(request).toHaveBeenCalledTimes(2);
 });
 it("remote work requires a collaborator Agent and never dispatches on entry", async () => {

@@ -9,6 +9,9 @@
   teammate Session and offers the existing invitation path. No runtime task sent in this check.
 - Publication and installed-GUI acceptance are recorded after the release completes; mocked
   dispatch tests alone do not claim a new end-to-end runtime execution.
+- Installed acceptance of GUI 0.1.94-dev caught an over-restrictive team-summary source filter:
+  own shared Sessions were omitted. Summary/review now include all Channel Sessions; only
+  teammate-style/takeover restrict to collaborators. Regression asserts own sources remain visible.
 
 2026-10-06 Home 布局/频率跟进：GUI 74 测试及生产构建通过，定向断言验证标题紧跟三图、Agent/人频率 30 倍。GUI 0.1.93-dev 经公网 size/SHA-256 校验并提升至稳定清单 0.1.145-dev；标准安装器更新后版本匹配，真实桌面应用刷新及隔离浏览器均验证标题位于主角图右侧，其他制品不变。
 

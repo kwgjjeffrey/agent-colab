@@ -35,7 +35,7 @@ export function TipFlow({ id, defaultAgent, installedAgents, onClose, onMissingS
       .then(items => {
         if (!active) return;
         if (id === "reuse-skill") { setHasSkills(items.some(row => !row.canWithdraw)); return; }
-        setRows(items.filter(row => !row.canWithdraw));
+        setRows(["working-style", "take-over"].includes(id) ? items.filter(row => !row.canWithdraw) : items);
       }).catch(() => { if (active) setError("Could not check the shared context. Please retry."); });
     return () => { active = false; };
   }, [context?.channelId, id, retry]);
@@ -69,7 +69,7 @@ export function TipFlow({ id, defaultAgent, installedAgents, onClose, onMissingS
     {error ? <div role="alert"><p>{error}</p><Button variant="outline" onClick={() => setRetry(value => value + 1)}>Retry</Button></div> :
       id === "remote-check" ? <Empty><EmptyHeader><EmptyTitle>No collaborator’s Agent yet</EmptyTitle><EmptyDescription>Ask a teammate to add their Agent to this Channel from Messages.</EmptyDescription></EmptyHeader><Button onClick={() => onNavigate("remote-check")}>Open Messages</Button></Empty> :
       id === "reuse-skill" ? hasSkills === undefined ? <p role="status">Checking shared Skills…</p> : <Empty><EmptyHeader><EmptyTitle>{hasSkills ? "Explore your team’s Skills" : "No teammate has shared a Skill yet"}</EmptyTitle><EmptyDescription>{hasSkills ? "Choose a Skill in the list and install it into your preferred Agent." : "Share a reusable Skill, or ask a teammate to share theirs."}</EmptyDescription></EmptyHeader><Button onClick={() => onNavigate("reuse-skill")}>Open Skills</Button></Empty> :
-      rows === undefined ? <p role="status">Checking shared Sessions…</p> : !rows.length ? <Empty><EmptyHeader><EmptyTitle>No teammate’s Session yet</EmptyTitle><EmptyDescription>Invite teammates to share a conversation before trying this use case.</EmptyDescription></EmptyHeader><Button onClick={onMissingSessions}>Invite teammates to share</Button></Empty> :
+      rows === undefined ? <p role="status">Checking shared Sessions…</p> : !rows.length ? <Empty><EmptyHeader><EmptyTitle>{["working-style", "take-over"].includes(id) ? "No teammate’s Session yet" : "No shared Session yet"}</EmptyTitle><EmptyDescription>Invite teammates to share a conversation before trying this use case.</EmptyDescription></EmptyHeader><Button onClick={onMissingSessions}>Invite teammates to share</Button></Empty> :
       <FieldSet><FieldLegend>Shared Sessions</FieldLegend><div className="flex max-h-72 flex-col gap-3 overflow-y-auto">{rows.map(row => <Field key={row.id} orientation="horizontal"><Checkbox id={`tip-session-${row.id}`} disabled={!row.currentSnapshotId} checked={selected.includes(row.id)} onCheckedChange={checked => setSelected(ids => checked ? [...ids, row.id] : ids.filter(value => value !== row.id))} /><FieldLabel htmlFor={`tip-session-${row.id}`} className="min-w-0 flex-1"><div className="min-w-0"><p className="truncate">{row.name}</p><p className="text-xs text-muted-foreground">{row.contributorName} · {row.currentSnapshotId ? `Last synced ${new Date(row.updatedAt).toLocaleString()}` : "Initial sync in progress"}</p></div></FieldLabel></Field>)}</div></FieldSet>}
     <DialogFooter><Button variant="outline" onClick={onClose}>Cancel</Button>{sessionTasks[id] && Boolean(rows?.length) && <Button disabled={!resources.length} onClick={() => setPrompt(true)}>Prepare prompt</Button>}</DialogFooter>
   </DialogContent></Dialog>;
