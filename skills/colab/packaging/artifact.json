@@ -1,6 +1,6 @@
 {
   "name": "colab-skill",
-  "version": "0.1.50-trace.3",
+  "version": "0.1.51-dev",
   "localApi": ">=0.1.0 <0.2.0",
   "entrypoints": [
     "bin/colab-open",
