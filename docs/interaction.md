@@ -1,5 +1,7 @@
 # Colab 交互设计
 
+Home（2026-10-06）：紧凑横向协作网络并列 before agent / with agent / with Agent Colab；正向三角形，协作主体位于内环，人与 Agent 的独立频率为 1:10。价值陈述为 “Your team is about to work at agentic speed”，无强调底色。Tips 条目只由分隔线区分，整体可折叠且按账号记忆；不重复提供已有 Tab 的功能按钮。下方 Recent activity 用分页真实元数据展示共享、最近消费、Canvas 创建和 Messages/Canvas Agent 指令，资源可跳至既有详情。它不是完整安全审计，也不展示资源正文或工具日志。
+
 状态：首版结构稿  
 范围：Channel、Messages、Session、Files、Skills、Settings
 暂缓实现：独立于 Channel 的 DM、项目管理、Agent runtime 实际编排

@@ -36,6 +36,7 @@ mod codex_runtime;
 mod collaboration;
 mod files;
 mod messaging;
+mod activity;
 mod sessions;
 mod skills;
 mod system;
@@ -620,6 +621,8 @@ pub fn router(state: AppState, security: LocalSecurity) -> Router {
             "/v1/channels/{channel_id}/participants",
             get(messaging::participants),
         )
+        .route("/v1/channels/{channel_id}/activity",get(activity::list))
+        .route("/v1/shares/{share_id}/read-activity",axum::routing::post(activity::record_local_read))
         .route(
             "/v1/channels/{channel_id}/agent-runtimes",
             get(messaging::runtimes),

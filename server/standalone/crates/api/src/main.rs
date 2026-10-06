@@ -28,6 +28,7 @@ mod messaging;
 mod context_prompt;
 mod transfers;
 mod device_auth;
+mod activity;
 mod invite_links;
 
 #[derive(Clone)]
@@ -197,6 +198,8 @@ fn router(state: AppState) -> Router {
             get(list_channels).post(create_channel),
         )
         .route("/v1/channels/{channel_id}", patch(update_channel))
+        .route("/v1/channels/{channel_id}/activity", get(activity::list))
+        .route("/v1/shares/{share_id}/read-activity", post(activity::record_read))
         .route(
             "/v1/channels/{channel_id}/members",
             get(list_members).post(add_member),

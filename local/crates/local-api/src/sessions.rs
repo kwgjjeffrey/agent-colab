@@ -758,6 +758,7 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
     let start = before.saturating_sub(limit);
     let page = turns.drain(start..before).collect::<Vec<_>>();
     let next = (start > 0).then(|| encode_cursor(&snapshot, start));
+    activity::record_read(&state, &share_id, &user).await;
     Ok(Json(
         json!({"schemaVersion":1,"session":{"id":share_id,"title":name,"provider":adapter.trim_end_matches("-jsonl-v1")},"snapshot":{"id":snapshot},"turns":page,"page":{"hasMore":start>0,"nextCursor":next},"freshness":{"cache":"current"}}),
     ))

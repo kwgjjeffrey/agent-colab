@@ -1124,7 +1124,7 @@ const api = operation.response;
                   <TabsTrigger value="settings">Settings</TabsTrigger>
                 </TabsList>
               </div>
-              <TabsContent value="home" className="min-h-0 flex-1 overflow-auto"><ChannelHome key={`${selected.id}:${activeHomeTip ?? "idle"}`} accountId={auth.user?.id ?? ""} busyTip={homeTryBusy} onNavigate={setWorkspaceTab} onTry={id => void tryHomeCase(id)} /></TabsContent>
+              <TabsContent value="home" className="min-h-0 flex-1 overflow-auto"><ChannelHome key={`${selected.id}:${activeHomeTip ?? "idle"}`} accountId={auth.user?.id ?? ""} busyTip={homeTryBusy} onTry={id => void tryHomeCase(id)} /></TabsContent>
               <TabsContent data-trace-target={traceTargets("context.people", "context.resources")} data-trace-region={"messages"} value="messages" className="min-h-0 flex-1 overflow-hidden">
                 <MessagesView focusId={contextFocus?.kind === "message" ? contextFocus.id : undefined} channelId={selected.id} channelName={selected.name} settingsOpenToken={agentSettingsOpenToken} onSettingsOpenConsumed={()=>setAgentSettingsOpenToken(0)} defaultAgent={installation?.defaultAgent ?? "codex"} installedAgents={installation?.targets ?? {}} onError={setError} onNotice={setNotice} onActivityChange={setAgentActivity}/>
               </TabsContent>

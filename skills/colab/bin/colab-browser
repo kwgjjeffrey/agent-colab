@@ -140,6 +140,13 @@ def use_ref(core: str, ref: str):
         result = request("POST", f"/v1/files/{opened['id']}/materialize?wait=true", core=core)
     result = dict(result)
     result["tree"] = request("GET", f"/v1/files/{opened['id']}/tree", core=core)
+    if opened.get("canWithdraw") and opened.get("localPath"):
+        # The owner consumes the source directly, bypassing materialization. Metadata reporting
+        # is best-effort and never changes the useful tool result or breaks a successful use.
+        try:
+            request("POST", f"/v1/shares/{opened['id']}/read-activity", core=core)
+        except Exception:
+            pass
     return result
 
 def share_item(core: str, channel_ref: str, item_type: str, source: str, name: Optional[str]):

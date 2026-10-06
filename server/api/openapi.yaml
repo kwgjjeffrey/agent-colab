@@ -3,6 +3,28 @@ info:
   title: Colab Server API
   version: 0.1.0
 paths:
+  /v1/channels/{channelId}/activity:
+    get:
+      operationId: listChannelActivity
+      description: Current authorized shared items, latest successful Files/Session consumption per reader and object, Canvas creation, and durable Agent command records. Metadata only; no tool logs or resource bodies. Withdrawn resources are omitted.
+      parameters:
+        - { name: channelId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 50, default: 20 } }
+        - { name: before, in: query, schema: { type: string, format: date-time } }
+        - { name: beforeId, in: query, schema: { type: string } }
+      responses:
+        "200": { description: "items with id/action/actorName/resourceKind/resourceId/resourceName/occurredAt/targetName/source/state and nullable nextCursor {before,beforeId}; newest first" }
+        "400": { description: Invalid pagination cursor }
+        "403": { description: Caller is not a Channel member }
+  /v1/shares/{shareId}/read-activity:
+    post:
+      operationId: recordShareRead
+      description: Local Core reports successful Files or Session consumption. Actor comes from authenticated account; repeated reads coalesce. Not a complete security audit; reporting failure never fails the original read.
+      parameters:
+        - { name: shareId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "204": { description: Latest consumption time recorded }
+        "403": { description: Share withdrawn, unsupported, or caller not a member }
   /health/live:
     get:
       operationId: getLiveness

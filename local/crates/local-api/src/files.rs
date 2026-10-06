@@ -826,13 +826,16 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
         // Stale-while-revalidate: an existing snapshot is immediately usable. The durable worker
         // refreshes it in the background; browsing never waits for the network.
         share.sync_state = Some("syncing".into());
+        activity::record_read(&state, &share_id, &user_id).await;
         return Ok(Json(share));
     }
     wait_for_job(&state, JOB_MATERIALIZE, &share_id, &user_id).await?;
-    cached_materialization(&state, &share_id, &user_id)
+    let share = cached_materialization(&state, &share_id, &user_id)
         .await
         .map(Json)
-        .ok_or_else(|| LocalError::internal("Materialization completed without a local snapshot"))
+        .ok_or_else(|| LocalError::internal("Materialization completed without a local snapshot"))?;
+    activity::record_read(&state, &share_id, &user_id).await;
+    Ok(share)
 
 }).await
 }

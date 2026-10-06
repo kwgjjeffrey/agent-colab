@@ -21,6 +21,8 @@ fn unix_time_after(seconds: i64) -> i64 {
 }
 
 mod canvas;
+mod activity;
+pub use activity::{ChannelActivity, invalid_activity_cursor};
 mod device_auth;
 mod invite_links;
 pub use invite_links::{InviteLink, InviteTarget};

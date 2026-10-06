@@ -28,6 +28,7 @@
     "cn": "^0.4.0",
     "docx-preview": "0.4.1",
     "exceljs": "4.4.0",
+    "gsap": "3.14.2",
     "lucide-react": "1.48.0",
     "react": "19.3.0",
     "react-dom": "19.3.0",

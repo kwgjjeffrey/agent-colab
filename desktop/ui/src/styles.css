@@ -5,6 +5,24 @@
 
 @custom-variant dark (&:is(.dark *));
 
+.home-network-strip{display:grid;grid-template-columns:minmax(190px,.9fr) minmax(0,2.4fr);align-items:center;gap:24px;padding-block:16px}
+.home-network-strip h2{font-size:clamp(22px,2.3vw,30px);font-weight:550;line-height:1.22;letter-spacing:-.035em}
+.home-networks{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.home-networks figure{min-width:0;margin:0}
+.home-networks svg{width:100%;max-height:170px;overflow:visible}
+.home-networks figcaption{text-align:center;font-size:11px;color:var(--muted-foreground)}
+.network-edge{fill:none;stroke:var(--muted-foreground);stroke-width:1;stroke-linecap:round;opacity:.5}
+.network-bandwidth{stroke-width:9;opacity:.65}
+.network-human{fill:var(--muted);stroke:var(--muted-foreground);stroke-width:1.5}
+.network-halo{fill:none;stroke:var(--muted-foreground)}
+.network-agent{fill:#7546d9;stroke:var(--background);stroke-width:2}
+.network-agent-halo{stroke:#956be5}
+.network-person-icon{fill:none;stroke:var(--muted-foreground);stroke-width:1.8;stroke-linecap:round}
+.network-agent-icon{fill:none;stroke:white;stroke-width:1.4;stroke-linejoin:round}
+.network-packet{fill:var(--muted-foreground)}
+.network-agent-packet{fill:var(--primary);stroke:var(--background);stroke-width:1}
+@media(max-width:700px){.home-network-strip{grid-template-columns:1fr;gap:18px}.home-network-strip h2{max-width:400px}.home-networks{gap:4px}.home-networks figcaption{font-size:10px}}
+
 /* hiddenInset native controls overlay web content: reserve their own fixed row.
    Only Electron/macOS renders this region; browsers keep their native chrome. */
 .macos-titlebar {

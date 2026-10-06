@@ -1,5 +1,7 @@
 # Colab 实现计划
 
+2026-10-06 Home 完整调整：用户批准后动效已移植 GUI，正向三角形、协作主体内环、独立 1:10 周期及新标题；Tips 使用既有 shadcn Collapsible/Separator 并保存整区收起状态；删除重复入口，新增有界真实动态。Server migration 0036 与分页 API、Core 代理及成功消费上报、Skill owner-local use 上报均已实现。隔离真实数据库权限/分页/重复读取/撤回/Canvas及Messages命令验证通过；GUI 定向 7 测试及构建通过、Core/Server check 和 Skill 34 测试通过；真实隔离 GUI 已验证共享动态点击进入文件详情。发布和安装态仍待执行。
+
 2026-10-06 Home 视觉调整：`.trial/V-HOME-01-agentic-network` 动效样板完成，等待用户确认；不改正式 Home、不发布。后续仅 Tips 分隔线与折叠、删除重复入口、真实近期协作动态。
 
 2026-10-05 信息关联/Canvas 交互收尾（源码阶段）：@ 候选项按 Agent、成员、文件类型、Session、Canvas 区分图标；Files 行首用文件类型图标，贡献者头像缩小并跟随姓名；Messages 头像与右侧成员列表改为点击打开同一身份卡。Canvas mention 的发送改为先调用 Server 的只读 prompt 预览，再通过共享 Give to Agent 弹层复制或下发，附加 User query 独立输入且实际发送复用同一 prompt builder。Canvas 引用当前用户蓝色高亮、quote/code 样式、文档拖拽排序/移入目录及软删除已实现。代码验证：GUI 23 文件/56 测试及生产构建、Local Core/Server cargo check、Server Canvas prompt 定向测试通过；数据库迁移、安装态和真实跨端下发尚未验收，不标记完成发布。

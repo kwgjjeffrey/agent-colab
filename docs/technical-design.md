@@ -1,5 +1,7 @@
 # Colab 技术设计
 
+Home 近期动态（2026-10-06）：GUI → Local Core → Server 的 `/v1/channels/{id}/activity` 按 `(occurredAt,id)` 倒序游标分页，默认 20、最大 50，各来源先 limit 再合并。共享/Canvas/指令来自现有表；新增 `share_read_activity` 仅保存每位 reader 对每个 Share 的最新成功消费时间，Server 按账号和当前 Channel membership 鉴权。Files 物化、Session read 与 Skill 的 owner-local Files use 在成功后 best-effort 上报；失败不影响原任务，不能称为完整读取审计，历史读取无法补出。不给 GUI 预取正文或全量资产；刷新/翻页显式请求。
+
 Canvas 的 Markdown/CRDT 转换现由 Local Core 自有 ProseMirror Markdown +
 Tiptap Yjs binding helper 实现，替代原手写转换。能力边界、段尾硬换行映射及
 验证索引见 [Canvas 独立技术设计](canvas-technical-design.md#2026-10-04转换实现替换)。
