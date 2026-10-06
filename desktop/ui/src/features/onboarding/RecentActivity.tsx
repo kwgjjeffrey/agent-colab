@@ -4,6 +4,7 @@ import { Separator } from "@/components/ui/separator";
 import { useChannelContext } from "@/features/context/ChannelContext";
 import type { ContextResource } from "@/features/context/context-model";
 import { messageRequest } from "@/features/messages/api";
+import { AgentWorkDrawer, type AgentWorkRequest } from "@/features/agent/AgentWorkDrawer";
 
 export type Activity = {
   id: string;
@@ -23,6 +24,7 @@ export function RecentActivity() {
   const context = useChannelContext();
   const channelId = context?.channelId;
   const [rows, setRows] = useState<Activity[]>([]);
+  const [work, setWork] = useState<AgentWorkRequest>();
   const [cursor, setCursor] = useState<Cursor | null>(null);
   const [busy, setBusy] = useState(false),
     [error, setError] = useState<string>();
@@ -57,6 +59,7 @@ export function RecentActivity() {
     [channelId],
   );
   useEffect(() => {
+    setWork(undefined);
     void load();
   }, [load]);
   return (
@@ -106,9 +109,10 @@ export function RecentActivity() {
                       : "shared"}
               </p>
               {row.action === "requested" ? (
-                <p className="truncate text-sm text-muted-foreground">
-                  {row.resourceName} · {row.state}
-                </p>
+                <Button variant="ghost" size="sm" className="max-w-full justify-start" onClick={() => setWork({ id: row.id.slice("request:".length), state: row.state ?? "unknown", targetName: row.targetName ?? "Agent" })}>
+                  <span className="truncate">{row.resourceName} · {row.state}</span>
+                  <span className="shrink-0 text-xs text-muted-foreground">Work details</span>
+                </Button>
               ) : (
                 <Button
                   variant="ghost"
@@ -146,6 +150,7 @@ export function RecentActivity() {
           {busy ? "Loading…" : "Load more"}
         </Button>
       )}
+      <AgentWorkDrawer request={work} open={Boolean(work)} onOpenChange={open => { if (!open) setWork(undefined); }} />
     </section>
   );
 }

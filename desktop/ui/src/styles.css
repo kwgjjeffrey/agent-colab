@@ -76,7 +76,24 @@
   --sidebar-accent-foreground: oklch(0.95 0.01 150);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+  --role-individual: oklch(0.94 0.055 245);
+  --role-individual-foreground: oklch(0.4 0.15 250);
+  --role-collaborator: oklch(0.93 0.06 300);
+  --role-collaborator-foreground: oklch(0.42 0.16 300);
+  --role-lead: oklch(0.95 0.085 85);
+  --role-lead-foreground: oklch(0.43 0.1 65);
+  --role-reviewer: oklch(0.94 0.06 15);
+  --role-reviewer-foreground: oklch(0.43 0.16 15);
+  --role-skill: oklch(0.94 0.06 160);
+  --role-skill-foreground: oklch(0.4 0.105 160);
 }
+
+[data-slot="badge"][data-variant="role"] { --role-border: color-mix(in oklch, var(--role-foreground) 20%, transparent); }
+[data-role="Individual"] { --role-background: var(--role-individual); --role-foreground: var(--role-individual-foreground); }
+[data-role="Collaborator"] { --role-background: var(--role-collaborator); --role-foreground: var(--role-collaborator-foreground); }
+[data-role="Team lead"] { --role-background: var(--role-lead); --role-foreground: var(--role-lead-foreground); }
+[data-role="Reviewer"] { --role-background: var(--role-reviewer); --role-foreground: var(--role-reviewer-foreground); }
+[data-role="Skill sharing"] { --role-background: var(--role-skill); --role-foreground: var(--role-skill-foreground); }
 
 body { margin: 0; min-width: 720px; min-height: 520px; }
 button:not(:disabled), a[href], [role="button"]:not([aria-disabled="true"]), [role="tab"]:not([aria-disabled="true"]), [role="option"]:not([aria-disabled="true"]) { cursor: pointer; }

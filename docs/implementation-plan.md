@@ -710,6 +710,13 @@ acceptance. Production deployment, artifact publication and real Google browser 
 claimed by these isolated results.
 # 2026-10-06 release completion
 
+### Use cases density and activity task navigation
+
+Renamed visible Tips to Use cases without resetting preferences; inline colored role Badges
+reduce row height. Requested Recent activity entries open the existing task Drawer by the
+request ID in the authoritative activity key (not resourceId, which may identify the trigger
+message). No backend/schema or preload changes. 85 GUI tests and production build passed.
+
 ### 2026-10-06 role-oriented Tips
 
 Nine Home scenarios now have role badges and a role filter. Added six approved cases without

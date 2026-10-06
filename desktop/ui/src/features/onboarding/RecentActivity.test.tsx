@@ -11,6 +11,9 @@ vi.mock("@/features/messages/api", () => ({ messageRequest: request }));
 vi.mock("@/features/context/ChannelContext", () => ({
   useChannelContext: () => ({ channelId: "channel", navigate }),
 }));
+vi.mock("@/features/agent/AgentWorkDrawer", () => ({
+  AgentWorkDrawer: ({ request, open }: { request?: { id: string }; open: boolean }) => open ? <div role="dialog">Task {request?.id}</div> : null,
+}));
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
@@ -57,4 +60,13 @@ it("a failed request is a visible retry, not an empty success", async () => {
   expect(screen.queryByText("No activity yet.")).toBeNull();
   await userEvent.click(screen.getByRole("button", { name: "Retry" }));
   expect(await screen.findByText("No activity yet.")).toBeTruthy();
+});
+it.each(["Messages", "Canvas"])("%s activity opens its exact task, not the message or newest task", async source => {
+  request.mockResolvedValueOnce({ items: [{ id: "request:exact-task", action: "requested", actorName: "Alice", resourceKind: "message", resourceId: "trigger-message", resourceName: "Check build", occurredAt: "2026-10-06T10:00:00Z", targetName: "Builder", source, state: "succeeded" }], nextCursor: null });
+  render(<RecentActivity />);
+  expect(screen.queryByRole("dialog")).toBeNull();
+  await userEvent.click(await screen.findByRole("button", { name: /Check build.*Work details/ }));
+  expect(screen.getByRole("dialog").textContent).toBe("Task exact-task");
+  expect(navigate).not.toHaveBeenCalled();
+  expect(request).toHaveBeenCalledTimes(1);
 });

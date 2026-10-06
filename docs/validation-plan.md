@@ -1,5 +1,11 @@
 # 技术验证计划
 
+### 2026-10-06 compact Use cases / exact activity task
+
+85 GUI tests and production build passed. Regression covers both Messages and Canvas activity
+keys opening exactly their request, not trigger message or latest task; existing bounded-page
+resource navigation and retry tests remain green. Publication/native acceptance recorded below.
+
 ### 2026-10-06 role-oriented Tips acceptance
 
 - 83 GUI tests passed, including role filtering, dismiss/recovery, missing-data vs failed-request

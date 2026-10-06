@@ -81,7 +81,7 @@ export function ChannelHome({
               data-icon="inline-start"
               className={tipsOpen ? undefined : "-rotate-90"}
             />
-            Tips
+            Use cases
           </CollapsibleTrigger>
           {tipsOpen && (
             <Button
@@ -89,12 +89,12 @@ export function ChannelHome({
               size="sm"
               onClick={() => setShowAll(!showAll)}
             >
-              {showAll ? "Show active tips" : "View all use cases"}
+              {showAll ? "Show active use cases" : "View all use cases"}
             </Button>
           )}
         </div>
         <CollapsibleContent>
-          <ToggleGroup aria-label="Tips for your role" value={role} onValueChange={setRole} className="my-3 flex-wrap" size="sm">
+          <ToggleGroup aria-label="Use cases for your role" value={role} onValueChange={setRole} className="my-3 flex-wrap" size="sm">
             <ToggleGroupItem value="all">All roles</ToggleGroupItem>
             {tipRoles.map(label => <ToggleGroupItem key={label} value={label}>{label}</ToggleGroupItem>)}
           </ToggleGroup>
@@ -106,8 +106,8 @@ export function ChannelHome({
               .map((tip, index) => (
                 <div key={tip.id}>
                   {index > 0 && <Separator />}
-                  <div className="flex items-center gap-3 py-4">
-                    <div className="flex min-w-0 flex-1 flex-col items-start gap-2"><Badge variant="secondary">{tip.role}</Badge><p className="text-sm">{tip.text}</p></div>
+                  <div className="flex items-center gap-3 py-3">
+                    <div className="flex min-w-0 flex-1 items-start gap-3"><Badge variant="role" data-role={tip.role} className="mt-0.5">{tip.role}</Badge><p className="min-w-0 text-sm">{tip.text}</p></div>
                     <Button
                       size="sm"
                       variant="outline"
@@ -132,7 +132,7 @@ export function ChannelHome({
               ))}
             {!showAll && ignored && (
               <p className="text-sm text-muted-foreground">
-                Tips are tucked away. Explore them anytime with “View all use
+                Use cases are tucked away. Explore them anytime with “View all use
                 cases”.
               </p>
             )}

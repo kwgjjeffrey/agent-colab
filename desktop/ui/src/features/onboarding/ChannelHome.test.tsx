@@ -37,12 +37,12 @@ it("Try is not completion; explicit dismiss and real completion are account-scop
 it("the whole Tips section can be collapsed and stays collapsed after reopening", async () => {
   const props = { accountId: "collapse", onTry: vi.fn() };
   const view = render(<ChannelHome {...props} />);
-  await userEvent.click(screen.getByRole("button", { name: "Tips" }));
+  await userEvent.click(screen.getByRole("button", { name: "Use cases" }));
   expect(screen.queryByRole("button", { name: "Try" })).toBeNull();
   view.unmount();
   render(<ChannelHome {...props} />);
   expect(screen.queryByRole("button", { name: "Try" })).toBeNull();
-  await userEvent.click(screen.getByRole("button", { name: "Tips" }));
+  await userEvent.click(screen.getByRole("button", { name: "Use cases" }));
   expect(screen.getAllByRole("button", { name: "Try" })).toHaveLength(homeTips.length);
   expect(screen.queryByText("Your collaboration workspace")).toBeNull();
   expect(screen.getByRole("region", { name: "Recent activity" })).toBeTruthy();
