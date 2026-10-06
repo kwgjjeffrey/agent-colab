@@ -12,6 +12,15 @@
 - Installed acceptance of GUI 0.1.94-dev caught an over-restrictive team-summary source filter:
   own shared Sessions were omitted. Summary/review now include all Channel Sessions; only
   teammate-style/takeover restrict to collaborators. Regression asserts own sources remain visible.
+- Final stable promotion 0.1.147-dev / GUI 0.1.95-dev published from committed source 27648ee.
+  R2 public verification: 906680 bytes, SHA-256
+  70db62649557ee12663f8515c8d6b83f93c03c04e6f37abf668c90521e7b4c17.
+  Installed updater confirmed GUI 0.1.95-dev; other client components retained their versions.
+- Native installed GUI verified role badges/filter; team-summary Try selects the actual shared
+  Session with contributor and last-sync time; Prepare prompt includes task/source metadata;
+  adding User query then Forward preserves both the prepared task and exact additional query.
+  Send remains disabled until a target is selected. Cancel returns Home. No task was sent or
+  source Session body read as part of this UI acceptance.
 
 2026-10-06 Home 布局/频率跟进：GUI 74 测试及生产构建通过，定向断言验证标题紧跟三图、Agent/人频率 30 倍。GUI 0.1.93-dev 经公网 size/SHA-256 校验并提升至稳定清单 0.1.145-dev；标准安装器更新后版本匹配，真实桌面应用刷新及隔离浏览器均验证标题位于主角图右侧，其他制品不变。
 

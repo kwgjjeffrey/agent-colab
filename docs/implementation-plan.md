@@ -718,7 +718,9 @@ reuse. Try reuses Quick Share, selected-Session prompt preparation, collaborator
 the existing Skill installation view. Session bodies are not prefetched; source metadata is
 requested only on Try. Prompt forwarding retains both the prepared task and extra User query.
 GUI tests (83) and production build passed. Isolated real GUI verified Reviewer filtering and
-the missing-Session invitation prerequisite. GUI publication/installed acceptance follows below.
+the missing-Session invitation prerequisite. Published/installed GUI 0.1.95-dev via stable
+0.1.147-dev; native Session selection, prepared summary and additional-query forwarding accepted.
+Acceptance caught and fixed own-Session exclusion from summary/review; no runtime task was sent.
 
 Device-account and Home sample published through stable promotion `0.1.143-dev`.
 Server `0.1.142-dev`, macOS Core `0.1.87-dev`, GUI `0.1.91-dev`, Skill `0.1.51-dev`.
