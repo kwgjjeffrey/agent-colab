@@ -4,7 +4,7 @@ caseDirectories:
 regressionDirectory: .runs
 baseUrl: http://127.0.0.1:53480/embed
 monitoringUrl: http://127.0.0.1:53481/
-readySelector: '[aria-label="Channels"]'
+readySelector: '[role="tab"]'
 browser:
   mode: device
   profileDir: /Users/yuzhiyuan/.local/share/trace/browser-profiles/colab-regression-trial
@@ -13,3 +13,5 @@ targets:
   messages.tab: '[role="tab"]:has-text("Messages")'
 prerequisites:
   local-core: true
+monitoringEnabled: true
+monitoringPreviewUrl: http://127.0.0.1:53483/embed

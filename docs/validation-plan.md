@@ -308,3 +308,7 @@ Verified: Trace 12/12 tests and Colab locator 6/6 tests pass, including an unrel
 # 2026-10-05 macOS title-bar regression
 
 - Passed GUI `npm run check`; R2 full readback verified GUI SHA-256 `87c879cf04ea306d9778a9c21429ada12b0e012effbe359f189cde661761451f` (868886 bytes). Installed GUI 0.1.89-dev on Electron 0.1.22-dev, refreshed the native app and inspected screenshot: dedicated title row is above the rail, first Channel avatar no longer occupies the native-control region. Exercised native title-bar drag gesture. Browser/Windows exclusion remains explicit in the host/platform render guard.
+
+### 2026-10-06 Regression trial acceptance
+
+Run `20261006T003636Z-81eaa31e` captured a GUI readiness failure plus successful Skill case. Subsequent run at `20261006T003837Z` passed GUI Channel rail/Messages assertions and Skill Channel discovery/JSON/exit assertions in 4.83 s; runner-boundary timing limits passed. Negative fixture `20261006T004238Z-db443bf0` failed deliberately and remains rotten/excluded by default. Browser GUI at http://127.0.0.1:53482/ verified three destinations, authored description drawer, actual script read-only view, run sidebar/detail, and problems filter. Original performance page's real preview/highlight remains functional via separate 53483 diagnostic adapter. Automatic regression-to-cloud-trace association and provider/per-span performance assertions are not yet accepted.

@@ -669,3 +669,7 @@ Verified: Trace 12/12 tests and Colab locator 6/6 tests pass, including an unrel
 
 - Restored a fixed 38px native-control/drag row only in macOS Electron; channel rail and workspace begin below it. Browser and Windows layouts stay unchanged.
 - GUI type check and production build passed. GUI 0.1.89-dev published through the signed stable channel and installed on the unchanged Electron 0.1.22-dev. Refreshed native window shows the dedicated title bar above the channel rail; native drag gesture exercised on that region.
+
+### 2026-10-06 Trace regression prototype
+
+Project-owned pilot is isolated in `.trial/regression_test` (registry and GUI/Skill scripts); generic runner lives in the Trace repository's `.trial/regression_test`. No Colab product behavior or release boundaries changed. Two read-only cases verified through real Chrome/CDP GUI and real colab-browser command. Initial GUI readiness false positive was fixed by waiting for a business landmark; its original failure record remains. No client artifact built/released for this experiment.
