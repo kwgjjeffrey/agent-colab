@@ -1,6 +1,6 @@
 # Colab 实现计划
 
-2026-10-06 Home 完整调整：用户批准后动效已移植 GUI，正向三角形、协作主体内环、独立 1:10 周期及新标题；Tips 使用既有 shadcn Collapsible/Separator 并保存整区收起状态；删除重复入口，新增有界真实动态。Server migration 0036 与分页 API、Core 代理及成功消费上报、Skill owner-local use 上报均已实现。隔离真实数据库权限/分页/重复读取/撤回/Canvas及Messages命令验证通过；GUI 定向 7 测试及构建通过、Core/Server check 和 Skill 34 测试通过；真实隔离 GUI 已验证共享动态点击进入文件详情。发布和安装态仍待执行。
+2026-10-06 Home 完整调整已发布：动效正式移植，正向三角形、协作主体内环、独立 1:10 周期及新标题；Tips 使用既有 shadcn Collapsible/Separator 并保存整区收起状态；删除重复入口，新增有界真实动态。Server migration 0036、分页 API、Core 代理及成功消费上报、Skill owner-local use 上报完成。GUI 74 测试、生产构建、Core/Server check、Skill 34 测试及隔离 PostgreSQL 权限/分页/消费聚合验证通过。稳定清单 0.1.144-dev 发布并经公网 size/SHA-256 验证，本机安装 Core 0.1.88-dev、GUI 0.1.92-dev、Skill 0.1.52-dev；Server 0.1.144-dev readiness 正常。真实 GUI 验证共享动态定位文件、Tips 收起刷新持久化；已安装桌面应用刷新后显示新 Home 及真实历史动态，未切换账号或组织。
 
 2026-10-06 Home 视觉调整：`.trial/V-HOME-01-agentic-network` 动效样板完成，等待用户确认；不改正式 Home、不发布。后续仅 Tips 分隔线与折叠、删除重复入口、真实近期协作动态。
 
