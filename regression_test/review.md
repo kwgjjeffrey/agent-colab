@@ -1,6 +1,6 @@
 # Regression case review before script implementation
 
-Status: proposal; no cases or scripts changed by this review. Reviewed all 78 description-only cases and the existing pilots. Case discovery is not implementation evidence. No business tests were executed.
+Status: accepted consolidation applied to cases; see coverage.md for the current inventory. Runtime substitution is still undecided. Original per-case table below is historical review evidence. Reviewed all 78 description-only cases and the existing pilots. Case discovery is not implementation evidence. No business tests were executed.
 
 ## Decision
 

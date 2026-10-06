@@ -11,13 +11,16 @@ export const META = {
   "origin": "requirement",
   "status": "active",
   "effects": "isolated-write",
-  "cost": "slow",
+  "cost": "normal",
   "requires": [
-    "local-core"
+    "local-core",
+    "test-agent-runtime"
   ],
   "affectedPaths": [
     "desktop/ui/src/features/agent",
     "server/standalone/src",
     "local/src"
-  ]
+  ],
+  "suite": "business",
+  "testLevel": "end-to-end"
 };

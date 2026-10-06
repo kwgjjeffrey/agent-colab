@@ -18,5 +18,7 @@ export const META = {
   "affectedPaths": [
     "desktop/ui/src/features",
     "skills/colab/bin"
-  ]
+  ],
+  "suite": "business",
+  "testLevel": "end-to-end"
 };

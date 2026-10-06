@@ -10,7 +10,7 @@ export const META = {
   "priority": "critical",
   "origin": "requirement",
   "status": "active",
-  "effects": "read-only",
+  "effects": "isolated-write",
   "cost": "normal",
   "requires": [
     "local-core"
@@ -18,5 +18,7 @@ export const META = {
   "affectedPaths": [
     "desktop/ui/src/features",
     "skills/colab/bin"
-  ]
+  ],
+  "suite": "business",
+  "testLevel": "end-to-end"
 };

@@ -11,12 +11,15 @@ export const META = {
   "origin": "requirement",
   "status": "active",
   "effects": "isolated-write",
-  "cost": "slow",
+  "cost": "normal",
   "requires": [
-    "local-core"
+    "local-core",
+    "isolated-test-accounts"
   ],
   "affectedPaths": [
     "desktop/ui/src/features",
     "skills/colab/bin"
-  ]
+  ],
+  "suite": "business",
+  "testLevel": "end-to-end"
 };

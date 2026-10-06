@@ -13,10 +13,13 @@ export const META = {
   "effects": "isolated-write",
   "cost": "slow",
   "requires": [
-    "local-core"
+    "local-core",
+    "sandbox-installation"
   ],
   "affectedPaths": [
     "skills/colab/setup",
     "desktop/ui/src/features/updates"
-  ]
+  ],
+  "suite": "release",
+  "testLevel": "end-to-end"
 };

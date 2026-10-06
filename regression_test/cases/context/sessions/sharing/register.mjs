@@ -13,10 +13,13 @@ export const META = {
   "effects": "isolated-write",
   "cost": "normal",
   "requires": [
-    "local-core"
+    "local-core",
+    "isolated-test-accounts"
   ],
   "affectedPaths": [
     "desktop/ui/src/features",
     "skills/colab/bin"
-  ]
+  ],
+  "suite": "business",
+  "testLevel": "end-to-end"
 };

@@ -18,5 +18,7 @@ export const META = {
   "affectedPaths": [
     "desktop/ui/src/features/canvas",
     "skills/colab/bin/colab-canvas"
-  ]
+  ],
+  "suite": "business",
+  "testLevel": "end-to-end"
 };

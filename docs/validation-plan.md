@@ -384,3 +384,7 @@ Formal runtime acceptance: run `20261006T025324Z-5d33dbe0` passed GUI and Skill 
 ### 2026-10-06 — project initialization boundary
 
 Initialized this existing repository through Trace project-setup; only root AGENTS.md and regression instructions/example/ignore files were added or updated. A second invocation reported no changes. The underscore-prefixed example is not a case and no business case was executed. Generic tests verify preserved user instructions/configuration, idempotency, template exclusion and preflight rejection of escaped paths or malformed managed blocks.
+
+### Regression review catalog verification
+
+Static discovery validates 76 cases: 74 drafts and two existing pilots, zero diagnostics. Business selection includes 69 records (two executable); release selection includes seven drafts (none executable). Historical run directories remain unchanged. Case-only descriptions have not been validated as product behavior.

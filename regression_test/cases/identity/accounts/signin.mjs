@@ -13,11 +13,14 @@ export const META = {
   "effects": "isolated-write",
   "cost": "normal",
   "requires": [
-    "local-core"
+    "local-core",
+    "sandbox-installation"
   ],
   "affectedPaths": [
     "desktop/ui/src/main.tsx",
     "local/src",
     "server/standalone/src"
-  ]
+  ],
+  "suite": "release",
+  "testLevel": "end-to-end"
 };

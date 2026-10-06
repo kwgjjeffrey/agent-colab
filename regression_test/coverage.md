@@ -1,112 +1,64 @@
-# Agent Colab regression coverage — review draft
+# Agent Colab regression coverage
 
-This document defines selection rationale before script implementation. The project owns these cases; Trace owns discovery, filtering and execution. New files contain literal USECASE and META only. No new runner has been implemented or executed.
+Reviewed case inventory: 74 case-only scenarios and two existing executable discovery pilots. No new script has been implemented or executed. The deliberate runner failure fixture is retained under diagnostics/, outside registered case directories; historical runs are preserved.
 
-## Top-down capability tree
+## Module hierarchy
 
-The hierarchy follows business responsibility. GUI, Skill and integration are entry surfaces, not separate business modules. Each slash-separated Module path is a subtree: selecting `context` includes `context/files`, `context/sessions` and `context/skills`. The GUI and agent derive the tree from case metadata; no second module registry exists.
+Module paths derive from each case META. GUI/Skill/integration describe entry surface. Context handoff belongs to its resource type. Account isolation belongs to identity; runtime delivery belongs to agents/runtime; Canvas mention prompt correctness belongs to canvas/agents.
 
-### agents — 14 new cases
+- `agents/configuration` — 2 cases
+- `agents/feedback` — 2 cases
+- `agents/invocation` — 3 cases
+- `agents/policy` — 2 cases
+- `agents/prompts` — 1 cases
+- `agents/runtime` — 2 cases
+- `canvas/agents` — 1 cases
+- `canvas/documents` — 3 cases
+- `canvas/editing` — 3 cases
+- `canvas/reading` — 1 cases
+- `canvas/sync` — 2 cases
+- `channels/home` — 1 cases
+- `channels/lifecycle` — 3 cases
+- `channels/members` — 3 cases
+- `context/discovery` — 1 cases
+- `context/files/handoff` — 1 cases
+- `context/files/reading` — 3 cases
+- `context/files/recovery` — 1 cases
+- `context/files/sharing` — 4 cases
+- `context/sessions/handoff` — 1 cases
+- `context/sessions/reading` — 2 cases
+- `context/sessions/recovery` — 1 cases
+- `context/sessions/sharing` — 2 cases
+- `context/skills/discovery` — 1 cases
+- `context/skills/handoff` — 1 cases
+- `context/skills/installing` — 3 cases
+- `context/skills/sharing` — 2 cases
+- `identity/accounts` — 3 cases
+- `identity/devices` — 1 cases
+- `identity/organizations` — 1 cases
+- `identity/permissions` — 1 cases
+- `messages/realtime` — 1 cases
+- `messages/timeline` — 4 cases
+- `platform/installation` — 1 cases
+- `platform/recovery` — 1 cases
+- `platform/skill-targets` — 1 cases
+- `platform/updates` — 3 cases
+- `quick-share/access` — 2 cases
+- `quick-share/sharing` — 3 cases
 
-Bind a real runtime, enforce invocation policy, assemble the exact prompt, deliver and return results.
+## Execution groups
 
-- `agents/configuration`
-- `agents/delivery`
-- `agents/feedback`
-- `agents/invocation`
-- `agents/policy`
-- `agents/prompts`
-- `agents/runtime`
+- `suite=business`: 67 drafted scenarios plus two discovery pilots. Three controlled-input checks use `testLevel=contract`; the rest use end-to-end boundaries.
+- `suite=release`: seven drafted sign-in, installation, updater, target-install and process-recovery scenarios. Run as independent release acceptance.
 
-### canvas — 10 new cases
+Select explicitly with `--meta '{"suite":["business"]}'` or `--meta '{"suite":["release"]}'`; the GUI uses the same metadata fields. An unfiltered full run still means all executable active cases, so always select a suite for routine work. Case-only drafts remain excluded whatever the selection.
 
-Keep human editing and agent Markdown editing on one durable, convergent document.
+Runtime substitution policy remains undecided. Tests requiring test-agent-runtime cannot run until an actual authorized runtime fixture is supplied. Missing prerequisites are blockers, not passing tests. No controlled runtime was introduced by this review.
 
-- `canvas/documents`
-- `canvas/editing`
-- `canvas/mentions`
-- `canvas/reading`
-- `canvas/realtime`
-- `canvas/recovery`
+## Review decisions
 
-### collaboration — 9 new cases
+Removed the unsupported Browser-search draft; merged three overlapping cases while preserving assertions (account-switch realtime isolation, runtime offline visibility, Canvas section selection and prompt capture). Keep sharing and consumption independently diagnosable; share fixture helpers instead of building dependent lifecycle scripts.
 
-Create the relationship, discover its resources and manage membership.
+Integrity rejection and activation rollback, Channel removal and blueprint deletion, expiry and revocation, and resource-type variations require independent reported checks and fixture reset. Project cases use isolated resources or sandbox installations; effects metadata never creates isolation. Cost remains an estimate and no latency thresholds are fabricated.
 
-- `collaboration/channels`
-- `collaboration/discovery`
-- `collaboration/home`
-- `collaboration/members`
-
-### communication — 6 new cases
-
-Persist and distribute user-visible conversation reliably.
-
-- `communication/messages`
-- `communication/realtime`
-
-### context — 22 new cases
-
-Follow each context type from producer registration to agent consumption, freshness and withdrawal.
-
-- `context/files/reading`
-- `context/files/recovery`
-- `context/files/sharing`
-- `context/handoff`
-- `context/sessions/reading`
-- `context/sessions/recovery`
-- `context/sessions/sharing`
-- `context/skills/discovery`
-- `context/skills/installing`
-- `context/skills/sharing`
-
-### identity — 6 new cases
-
-Establish identity, tenant scope and authorization before any context is visible.
-
-- `identity/accounts`
-- `identity/devices`
-- `identity/organizations`
-- `identity/permissions`
-
-### platform — 6 new cases
-
-Make installation, component updates and recovery safe and usable.
-
-- `platform/installation`
-- `platform/recovery`
-- `platform/skill-targets`
-- `platform/updates`
-
-### quick-share — 5 new cases
-
-Deliver a fixed capability-scoped snapshot without adding membership.
-
-- `quick-share/consumption`
-- `quick-share/creation`
-- `quick-share/management`
-- `quick-share/permissions`
-- `quick-share/security`
-
-## Why these cases
-
-Select an observable business outcome, then add its important boundary: access denial, stale context, conflicting identity, retry, offline recovery or destructive overwrite. Separate GUI and Skill cases when they use genuinely different entry contracts. Cross-client synchronization and provider-runtime behavior use integration cases instead of duplicating every click sequence.
-
-Critical covers the collaboration loop, authorization, prompt correctness, durable writes and installation safety. Normal covers discovery ergonomics and recoverable operations. Extended is reserved for additional expensive variations; it is not a reason to bury core correctness.
-
-`effects=isolated-write` is a design requirement for scripts, not proof of sandboxing: future scripts must create disposable identities/resources or a sandbox installation, clean up only their own resources and never exercise destructive operations on the user's live workspace. Multi-account and runtime tests need controlled fixtures. Cost is an initial planning estimate, not a measured performance result.
-
-## Review and implementation order
-
-1. Review names, Purpose, Preconditions, Actions and Expected results in the GUI. Adjust business expectations before implementation.
-2. Implement the smallest critical vertical slices: Files/Session consumption, message-to-Agent prompt and reply, Canvas read/patch, access isolation.
-3. Add cross-client recovery and safe update fixtures after those slices have trustworthy evidence.
-4. Establish representative latency baselines, then add justified performance assertions. Prompt-content assertions are functional engineering checks, not latency measurements.
-
-## Existing executable pilots
-
-Two previous scripts remain executable under `collaboration/channels/discovery`: GUI navigation and Skill Channel discovery. The deliberately rotten runner diagnostic remains under `test-infrastructure/runner`, outside product coverage. It is excluded from normal regression.
-
-## Explicit exclusions
-
-Standalone DM, project management, audio/video, general bot marketplaces, unimplemented runtime adapters and Windows-specific qualification are not included in this macOS-first draft. Organization invitations and broader onboarding under active design are not silently treated as validated functionality. Existing product documentation includes both implemented behavior and roadmap text; this case inventory specifies expectations for review and does not certify feature implementation.
+See review.md for the original per-case decision record. Its old IDs identify merged/removed drafts; it is not a second live catalog. Broader runtime execution strategy needs owner confirmation before implementation.

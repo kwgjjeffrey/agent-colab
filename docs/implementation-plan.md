@@ -726,3 +726,7 @@ recorded in `docs/validation-plan.md`.
 ### 2026-10-06 — bounded Trace project initialization
 
 The independent Trace project-setup scaffold now supplies a managed root dependency/install block and project-owned regression instructions, commented case-only template and run-output ignore rule. Existing registry and all 78 review cases are preserved. Removed the stale pinned Trace-install paragraph in favor of the shared managed instructions.
+
+### Regression review applied
+
+Removed the unsupported Browser-search draft, merged three overlapping scenarios, reorganized Module paths and excluded the negative runner fixture from product discovery. Added suite=business/release and explicit prerequisite metadata; seven draft scenarios belong to independent release acceptance. Agent runtime substitution remains unapproved and unimplemented. No new executable scripts were added.

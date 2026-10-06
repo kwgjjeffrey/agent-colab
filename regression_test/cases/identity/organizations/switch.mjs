@@ -19,5 +19,7 @@ export const META = {
     "desktop/ui/src/main.tsx",
     "local/src",
     "server/standalone/src"
-  ]
+  ],
+  "suite": "business",
+  "testLevel": "end-to-end"
 };

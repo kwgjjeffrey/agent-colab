@@ -1,6 +1,6 @@
 export const USECASE = {
   "name": "Protect locally modified or unmanaged Skills",
-  "description": "Purpose: Capability distribution must not destroy a user's customization.\n\nPreconditions: A target contains an unmanaged same-name Skill, then a modified managed Skill.\n\nActions: Attempt install or update against each conflict.\n\nExpected results: Structured conflicts preserve local content; no silent overwrite occurs."
+  "description": "Purpose: Capability distribution must not destroy a user's customization.\n\nPreconditions: A target contains an unmanaged same-name Skill, then a modified managed Skill.\n\nActions: Attempt install or update against each conflict.\n\nExpected results: Structured conflicts preserve local content; no silent overwrite occurs.\n\nVariations: report each object type or failure condition independently. Reset its isolated fixture between variations; an earlier failure must not suppress later results."
 };
 
 export const META = {
@@ -18,5 +18,7 @@ export const META = {
   "affectedPaths": [
     "desktop/ui/src/features",
     "skills/colab/bin"
-  ]
+  ],
+  "suite": "business",
+  "testLevel": "end-to-end"
 };
