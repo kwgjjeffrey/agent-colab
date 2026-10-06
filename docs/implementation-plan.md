@@ -673,3 +673,11 @@ Verified: Trace 12/12 tests and Colab locator 6/6 tests pass, including an unrel
 ### 2026-10-06 Trace regression prototype
 
 Project-owned pilot is isolated in `.trial/regression_test` (registry and GUI/Skill scripts); generic runner lives in the Trace repository's `.trial/regression_test`. No Colab product behavior or release boundaries changed. Two read-only cases verified through real Chrome/CDP GUI and real colab-browser command. Initial GUI readiness false positive was fixed by waiting for a business landmark; its original failure record remains. No client artifact built/released for this experiment.
+
+### 2026-10-06 Regression formal directory integration
+
+Project-owned registry, GUI/Skill cases and ignored history moved from `.trial/regression_test` into `regression_test/`. Five historical records retain their timestamps/outcomes; relocated source/evidence references now use the formal paths. Generic execution, parsing and persistence stay in the independent Trace repository. Formal workspace at http://127.0.0.1:53481/ shares React/shadcn navigation, metadata badges and syntax-highlighted script drawers. Preview uses the existing 53480 adapter; no Colab production GUI/Core/Server behavior or artifacts changed.
+
+Verified formal browser: messages.send has trace-breathe animation, provider Grafana link carries the exact operation/origin, cases share their real project source, copy-path succeeds, historical 4.83-second run still shows two passed cases and its relocated screenshot. Trace typecheck/build and twenty tests passed. The latest historical 401 failure remains a failure; no fresh business E2E pass is claimed. Automatic provider trace correlation is still pending.
+
+Formal runtime acceptance: run `20261006T025324Z-5d33dbe0` passed GUI and Skill (two passed, one inactive fixture excluded), total 9.19 seconds. Prior run `20261006T025229Z-cd78ee22` remains recorded: GUI readiness matched six tabs and failed strict resolution, Skill passed. Fixed project readySelector to the unique Messages tab; do not weaken runner strictness or discard the prior failure. Desktop and narrow viewport interfaces verified; package dry run has no .trial/.runtime/.runs/node_modules payload.
