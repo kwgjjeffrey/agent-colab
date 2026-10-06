@@ -702,3 +702,11 @@ test, and five tracing scope tests passed. Nested tracing future copies caused d
 heap-bounded wrappers fixed it, with a large-future size regression test and normal-stack real Core
 acceptance. Production deployment, artifact publication and real Google browser login are not yet
 claimed by these isolated results.
+# 2026-10-06 release completion
+
+Device-account and Home sample published through stable promotion `0.1.143-dev`.
+Server `0.1.142-dev`, macOS Core `0.1.87-dev`, GUI `0.1.91-dev`, Skill `0.1.51-dev`.
+Installed updater and native Home/Try/invitation Session picker accepted; deployed-Server two-Core
+business checks passed. Native acceptance found and fixed stale Home share request replay on Channel
+remount before final GUI promotion. Full evidence and unperformed provider/clean-machine gates are
+recorded in `docs/validation-plan.md`.

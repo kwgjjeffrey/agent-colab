@@ -348,3 +348,20 @@ Formal runtime acceptance: run `20261006T025324Z-5d33dbe0` passed GUI and Skill 
 - Pending separate release acceptance: installed Electron deep-link path, fresh installer flow,
   production artifact/server versions and live Google browser exchange. Isolated identity/persistence
   tests do not claim those external deployment/provider paths passed.
+
+### 2026-10-06 published macOS acceptance
+
+- Server deployed at `0.1.142-dev`; remote current symlink and readiness verified.
+- Stable promotion `0.1.143-dev`: macOS Core `0.1.87-dev`, GUI `0.1.91-dev`,
+  Skill `0.1.51-dev`. Canonical R2 publisher verified public bytes and SHA-256;
+  unchanged artifacts retained their prior verification. Source committed before publication.
+- Installed updater consumed the signed stable channel and reported matching component versions.
+  Existing authenticated account migrated to device login without a replacement account.
+- Two fresh isolated Core instances against deployed Server passed bootstrap/repeat/isolation,
+  ordinary invitation membership, idempotence, revoke and last-credential/wrong-account protection.
+- Installed native App showed Home; Try opened actual Session picker; cancellation uploaded nothing.
+  `colab://join` joined an empty test Channel and opened its Session picker. Acceptance caught stale
+  Home requests reopening a second picker on Channel remount; GUI patch consumes the request.
+  Repeated Try/cancel/invite/remount now needs one Close only and returns to "No shared sessions yet".
+- GUI 70 tests and production build passed after the fix. Fresh-machine DMG installation and live
+  Google browser exchange were not performed in this run; do not treat them as verified.
