@@ -1,6 +1,6 @@
 # Colab 实现计划
 
-2026-10-06 Home 小幅调整：价值陈述移至 Agent Colab 图右侧；Agent 呼吸及传输周期由 0.6s 改为 0.2s，人保持 6s（30 倍）。GUI 74 测试通过，仅 GUI 制品需发布；安装态验收待执行。
+2026-10-06 Home 小幅调整已发布：价值陈述移至 Agent Colab 图右侧；Agent 呼吸及传输周期由 0.6s 改为 0.2s，人保持 6s（30 倍）。GUI 74 测试及构建通过；源码提交 8be6e55 后独立发布 GUI 0.1.93-dev，稳定清单 0.1.145-dev。公开 size/SHA-256 校验、标准安装器更新及真实桌面应用刷新视觉验收通过，其他制品不变。
 
 2026-10-06 Home 完整调整已发布：动效正式移植，正向三角形、协作主体内环、独立 1:10 周期及新标题；Tips 使用既有 shadcn Collapsible/Separator 并保存整区收起状态；删除重复入口，新增有界真实动态。Server migration 0036、分页 API、Core 代理及成功消费上报、Skill owner-local use 上报完成。GUI 74 测试、生产构建、Core/Server check、Skill 34 测试及隔离 PostgreSQL 权限/分页/消费聚合验证通过。稳定清单 0.1.144-dev 发布并经公网 size/SHA-256 验证，本机安装 Core 0.1.88-dev、GUI 0.1.92-dev、Skill 0.1.52-dev；Server 0.1.144-dev readiness 正常。真实 GUI 验证共享动态定位文件、Tips 收起刷新持久化；已安装桌面应用刷新后显示新 Home 及真实历史动态，未切换账号或组织。
 
