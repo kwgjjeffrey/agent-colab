@@ -17,6 +17,7 @@ export function AccountDevices({ onError, onChanged }: { onError: (message: stri
     setBusy(device.id);
     try {
       const response = await fetch(`/v1/auth/devices/${device.id}`, { method: "DELETE" });
+      if (response.status === 409) throw new Error("Link Google or another device before unlinking this account’s last device credential.");
       if (!response.ok) throw new Error(await response.text());
       setConfirm(undefined);
       if (device.current) onChanged(); else await load();

@@ -331,9 +331,12 @@ Formal runtime acceptance: run `20261006T025324Z-5d33dbe0` passed GUI and Skill 
 - Passed isolated persistence lifecycle test (0.08 s): replay/expiry/wrong proof, concurrent bootstrap,
   multiple device accounts, access/refresh revocation, no replacement account after revocation,
   new Google identity link versus existing identity no-merge, invitation expiry/permissions.
-- Passed GUI 27 files / 69 tests (5.02 s), production build; onboarding tests distinguish Try from
+- Passed final GUI 28 files / 70 tests (4.72 s), production build; onboarding tests distinguish Try from
   real completion and account-scoped dismiss, recover ignored tips. Passed Skill invitation test:
   own discovery endpoint, token retained in bootstrap URL, no credential/capability in output.
+- Final Skill suite: 34 tests passed (12.59 s). Repeated isolated two-Core acceptance passed;
+  database fixtures are restricted to a loopback `colab_device_test` database. Last-credential
+  unlink rejection has a readable UI explanation and a regression test.
 - Passed tracing five tests: wrapper future remains under 4 KiB around a 128 KiB business future;
   concurrent/persisted trace contexts retain correct parent and failure results. Debug Core initially
   failed with stack overflow; corrected shared wrapper allocation, then real UI + API runs passed

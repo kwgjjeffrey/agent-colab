@@ -6,6 +6,7 @@ from uuid import UUID
 from pathlib import Path
 from urllib.request import Request, build_opener, ProxyHandler
 from urllib.error import HTTPError
+from urllib.parse import urlparse
 
 
 def main():
@@ -14,6 +15,10 @@ def main():
     parser.add_argument("--b", required=True)
     parser.add_argument("--database", help="Isolated PostgreSQL fixture only; enables multi-account picker acceptance")
     args = parser.parse_args()
+    if args.database:
+        database = urlparse(args.database)
+        if database.hostname not in ("127.0.0.1", "localhost") or database.path != "/colab_device_test":
+            parser.error("--database must target the local disposable colab_device_test database")
     a, b = (json.loads(Path(path).read_text()) for path in (args.a, args.b))
     http = build_opener(ProxyHandler({}))
 
