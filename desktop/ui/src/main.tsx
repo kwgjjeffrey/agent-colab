@@ -1109,6 +1109,7 @@ const api = operation.response;
                   installedAgents={installation?.targets ?? {}}
                   onChoose={chooseFiles}
                   request={quickShareRequest}
+                  onRequestConsumed={() => setQuickShareRequest(undefined)}
                   onCreated={() => { if (auth.user && activeHomeTip) completeHomeTip(auth.user.id, activeHomeTip); setActiveHomeTip(undefined); }}
                 />
               </div>
