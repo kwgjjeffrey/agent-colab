@@ -20,4 +20,20 @@ Do not add placeholder UI actions or fake success states. A visible action must 
 
 Large modules must be split by owned capability. Comments should explain invariants, security boundaries, recovery behavior, and non-obvious protocol decisions; do not narrate straightforward syntax.
 
-Engineering tracing uses the separate `trace` Skill, not the Agent Colab Skill. Install its public [v0.1.1 release](https://github.com/kwgjjeffrey/trace/releases/tag/v0.1.1) (asset `trace-0.1.1.tgz`; verify its release manifest before installation), then follow that Skill's `setup/SKILL.md` and `instrumentation/SKILL.md`. This repository owns the operation registries and adapters; the trace Skill owns the generic catalog and investigation workflow. OTLP/Grafana destination and credentials must be supplied in ignored, per-developer or server-private configuration. Never add a personal tracing endpoint, tenant ID, token, or implicit default destination to tracked code, examples, or distributable artifacts. Tracing remains disabled when no destination is configured.
+Engineering tracing uses the separate Trace skill, not the Agent Colab Skill. This repository owns operation registries and project adapters; generic tooling stays in the separately installed skill. Follow the managed dependency instructions below.
+
+<!-- trace-skill:start -->
+## Trace skill dependency
+
+This project uses the separately installed Trace skill for instrumentation, trace analysis and regression tests. It is not vendored or Git-tracked here.
+
+If unavailable, install the whole skill:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/kwgjjeffrey/trace/main/setup/install.sh | sh
+```
+
+The installer verifies the release and prepares private runtime dependencies. Default installation: ~/.codex/skills/trace; set TRACE_INSTALL_DIR for another agent host. Read the installed SKILL.md, then load only instrumentation/, analysis/ or regression_test/ instructions needed for the task. Use setup/run.sh when Node is not on PATH.
+
+Project registries, adapters and cases stay in this repository; tokens and personal destinations stay in ignored or external private configuration. No configured destination means tracing stays disabled. Discover the project's actual registry paths; do not assume the skill installation owns project data.
+<!-- trace-skill:end -->

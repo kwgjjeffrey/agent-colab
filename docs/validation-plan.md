@@ -380,3 +380,7 @@ Formal runtime acceptance: run `20261006T025324Z-5d33dbe0` passed GUI and Skill 
 - Generic Trace contracts cover draft exclusion even by explicit ID, ancestor Module selection and segment-boundary matching. The full generic suite passed 24 tests; typecheck and shared GUI build passed.
 - No new Agent Colab functional or performance assertions have been executed. Draft metadata and expected results remain subject to human review before script implementation.
 - Formal GUI on port 53481 verified: default Active list shows 80 cases (78 case-only and two implemented); selecting the derived `context` ancestor shows all 22 child cases. Prompt-assembly case drawer and source preview expose the real USECASE/META file with no run function.
+
+### 2026-10-06 — project initialization boundary
+
+Initialized this existing repository through Trace project-setup; only root AGENTS.md and regression instructions/example/ignore files were added or updated. A second invocation reported no changes. The underscore-prefixed example is not a case and no business case was executed. Generic tests verify preserved user instructions/configuration, idempotency, template exclusion and preflight rejection of escaped paths or malformed managed blocks.

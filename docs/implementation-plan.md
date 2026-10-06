@@ -722,3 +722,7 @@ recorded in `docs/validation-plan.md`.
 - Added project-owned `regression_test/coverage.md` with a top-down business capability tree and selection rationale; Module uses slash-separated paths rather than GUI/Skill ownership.
 - Added 78 description-only cases (literal USECASE and META, no run implementation). The existing two executable discovery pilots remain; the rotten diagnostic fixture stays outside business coverage.
 - The separate Trace catalog displays drafts and excludes them from execution. No new business test scripts were implemented or run in this stage.
+
+### 2026-10-06 — bounded Trace project initialization
+
+The independent Trace project-setup scaffold now supplies a managed root dependency/install block and project-owned regression instructions, commented case-only template and run-output ignore rule. Existing registry and all 78 review cases are preserved. Removed the stale pinned Trace-install paragraph in favor of the shared managed instructions.
