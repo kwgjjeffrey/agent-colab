@@ -26,6 +26,8 @@ use url::Url;
 use uuid::Uuid;
 
 mod auth;
+mod device_auth;
+mod invite_links;
 mod observability;
 mod canvas;
 mod canvas_codec;
@@ -101,6 +103,7 @@ struct GoogleCredentials {
 struct PendingLogin {
     verifier: String,
     nonce: String,
+    link_user_id: Option<String>,
 }
 #[derive(Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -313,6 +316,9 @@ impl AppState {
         );
         if let Some(parent) = database_path.as_ref().parent() {
             fs::create_dir_all(parent).context("create local data directory")?;
+            #[cfg(unix)]
+            fs::set_permissions(parent, fs::Permissions::from_mode(0o700))
+                .context("protect local data directory")?;
         }
         let store =
             rusqlite::Connection::open(database_path.as_ref()).context("open local SQLite")?;
@@ -564,6 +570,13 @@ pub fn router(state: AppState, security: LocalSecurity) -> Router {
         .route("/v1/auth/google/start", get(auth::start_google))
         .route("/v1/auth/google/callback", get(auth::google_callback))
         .route("/v1/auth/status", get(auth::auth_status))
+        .route("/v1/auth/device/start", axum::routing::post(device_auth::start))
+        .route("/v1/auth/device/login", axum::routing::post(device_auth::login))
+        .route("/v1/auth/devices", get(device_auth::devices))
+        .route("/v1/auth/devices/{device_id}", delete(device_auth::unbind))
+        .route("/v1/channels/{channel_id}/invite-links", axum::routing::post(invite_links::create))
+        .route("/v1/invite-links/{id}", delete(invite_links::revoke))
+        .route("/v1/invite-links/accept", axum::routing::post(invite_links::accept))
         .route("/v1/auth/accounts", get(auth::list_accounts))
         .route("/v1/auth/switch", axum::routing::post(auth::switch_account))
         .route("/v1/auth/logout", axum::routing::post(auth::logout))
@@ -853,6 +866,8 @@ async fn enforce_local_security(
         if !valid {
             return StatusCode::UNAUTHORIZED.into_response();
         }
+        let join = request.uri().query().and_then(|query| url::form_urlencoded::parse(query.as_bytes()).find(|(key,_)|key=="join").map(|(_,value)|value.into_owned()));
+        let destination = join.map(|token| format!("/?{}",url::form_urlencoded::Serializer::new(String::new()).append_pair("join",&token).finish())).unwrap_or_else(||"/".into());
         return (
             [(
                 header::SET_COOKIE,
@@ -861,7 +876,7 @@ async fn enforce_local_security(
                     security.bearer
                 ),
             )],
-            Redirect::to("/"),
+            Redirect::to(&destination),
         )
             .into_response();
     }

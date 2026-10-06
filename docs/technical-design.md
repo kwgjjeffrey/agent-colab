@@ -533,7 +533,7 @@ Server 立即撤销整个 family。Local Core 用单飞锁串行刷新，在 acc
 lease，失败按指数退避（上限一小时），进程重启后可重新领取过期 lease；成功发送即删除 outbox
 行，避免继续保存明文短期邀请 token。SMTP/Cloudflare 只作为 email port adapter，不进入邀请领域逻辑。
 
-开发阶段优先 loopback `http://127.0.0.1:{ephemeral-port}/auth/callback`，避免自定义 scheme 被其他应用抢注；发行阶段再评估 universal/app link。首版只接 Google Auth，不建设邀请邮件、密码登录或其他 provider。
+Google 登录继续使用 loopback `http://127.0.0.1:{ephemeral-port}/auth/callback` 与 PKCE。设备登录增加安装专属 Ed25519 凭据：私钥仅存在 Local Core 的私有 SQLite，Server 用限时、单次、用途和账号绑定的 challenge 验签并签发原有账号 session。设备不是权限主体；一个设备可绑定多个账号，首次未知设备创建普通账号和个人 Channel，一个有效绑定自动登录，多个绑定必须选择。撤销后保留设备记录，不自动创建替代账号。Google 是主要外部身份；新 Google 身份可绑定当前自动创建账号，已有身份选择原账号，绝不自动合并。详见 `onboarding-design.md`。不建设密码登录或新的身份提供商。
 
 ## 10. 工程目录结构
 

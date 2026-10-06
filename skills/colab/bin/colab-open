@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import argparse
 import os
 import pathlib
 import subprocess
@@ -35,6 +36,9 @@ def start_local_core():
 
 
 def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--invitation", help="Channel invitation token; opens its Session share picker")
+    args = parser.parse_args()
     start_local_core()
     for _ in range(50):
         try:
@@ -46,7 +50,10 @@ def main() -> int:
             time.sleep(0.1)
     else:
         return failure("core_unavailable", "Local Core is unavailable. Run colab-setup to repair the installation, then retry.", 3)
-    url = endpoint + "/bootstrap?" + urllib.parse.urlencode({"token": bearer})
+    parameters = {"token": bearer}
+    if args.invitation:
+        parameters["join"] = args.invitation
+    url = endpoint + "/bootstrap?" + urllib.parse.urlencode(parameters)
     if sys.platform == "win32":
         os.startfile(url)  # type: ignore[attr-defined]
     else:

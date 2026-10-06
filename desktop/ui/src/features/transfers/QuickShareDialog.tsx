@@ -20,7 +20,7 @@ type SessionSource = Source & { id: string; codingAgent: string; threadId: strin
 type SkillSource = { sourceId: string; sourcePath: string; name: string; discoveredTargets: string[] };
 type TransferAccess = { displayName?: string; avatarUrl?: string; firstAccessedAt: string; lastAccessedAt: string; accessCount: number };
 type ManagedTransfer = { transferId: string; capability: string; state: "ready" | "revoked" | "expired"; expiresAt: string; createdAt: string; itemKind: ShareKind; itemName: string; accesses: TransferAccess[] };
-type Props = { defaultAgent: AgentTarget; installedAgents: Record<string, { installed: boolean }>; onChoose: (directory?: boolean) => Promise<string | null> };
+type Props = { defaultAgent: AgentTarget; installedAgents: Record<string, { installed: boolean }>; onChoose: (directory?: boolean) => Promise<string | null>; request?: { kind: ShareKind; token: number }; onCreated?: () => void };
 
 const agentRoots: Record<AgentTarget, string> = { codex: "~/.agents", claude: "~/.claude", myflicker: "~/.myflicker" };
 function basename(path: string) { return path.replace(/[\\/]+$/, "").split(/[\\/]/).pop() || "Shared context"; }
@@ -28,7 +28,7 @@ function initials(value?: string) { return value?.trim().slice(0, 1).toUpperCase
 
 /** Selection immediately creates one fixed snapshot. The result is a durable management surface,
  * not a final confirmation whose dismissal could hide a live share. */
-export function QuickShareControl({ defaultAgent, installedAgents, onChoose }: Props) {
+export function QuickShareControl({ defaultAgent, installedAgents, onChoose, request, onCreated }: Props) {
   const [open, setOpen] = useState(false);
   const [kind, setKind] = useState<ShareKind>();
   const [manage, setManage] = useState(false);
@@ -40,6 +40,7 @@ export function QuickShareControl({ defaultAgent, installedAgents, onChoose }: P
   const [expiresInHours, setExpiresInHours] = useState(24);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
+  useEffect(() => { if (request) start(request.kind); }, [request?.token]);
 
   useEffect(() => {
     if (!open || selected || manage || kind === "files" || !kind) return;
@@ -90,6 +91,7 @@ const trackedFetch = operation.fetch;
       const detail = await trackedFetch(`/v1/transfers/${created.transferId}`);
       if (!detail.ok) throw new Error(await detail.text());
       setSelected(await detail.json()); setExpiresInHours(24);
+      onCreated?.();
     } catch (reason) { operation.fail(); setError(String(reason)); } finally { setBusy(false); }
 
 });

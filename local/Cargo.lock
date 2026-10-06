@@ -402,6 +402,7 @@ dependencies = [
  "notify",
  "reqwest",
  "rfd",
+ "ring",
  "rusqlite",
  "serde",
  "serde_json",

@@ -2,7 +2,7 @@ import { traceTargets } from "@/api/trace-locators";
 import { runOperation, type OperationScope } from "@/api/operation-runner";
 import { initializeTelemetry } from "@/api/telemetry";
 void initializeTelemetry();
-import { FormEvent, StrictMode, useEffect, useState } from "react";
+import { FormEvent, StrictMode, useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import packageMetadata from "../package.json";
 import {
@@ -22,6 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -62,6 +63,9 @@ import {useUpdateProgress} from "@/features/updates/useUpdateProgress";
 import {isUpdateRunning} from "@/features/updates/progress";
 import {UpdateProgressView} from "@/features/updates/UpdateProgressView";
 import { QuickShareControl } from "@/features/transfers/QuickShareDialog";
+import { ChannelHome, completeHomeTip } from "@/features/onboarding/ChannelHome";
+import { InviteSessionDialog, type SessionInvite } from "@/features/onboarding/InviteSessionDialog";
+import { AccountDevices } from "@/features/onboarding/AccountDevices";
 import {
   Tooltip,
   TooltipContent,
@@ -108,7 +112,7 @@ const trackedFetch=operation.fetch;
   markUiReady: () => undefined,
 };
 
-type User = { displayName?: string; email: string; avatarUrl?: string };
+type User = { id: string; displayName?: string; email: string; avatarUrl?: string };
 type Auth = { authenticated: boolean; user?: User; error?: string };
 type Channel = {
   id: string;
@@ -187,8 +191,17 @@ function App() {
   const [installationMessage, setInstallationMessage] = useState<InstallationMessage>();
   const [installationMutationBusy, setInstallationMutationBusy] = useState(false);
   const [agentSettingsOpenToken, setAgentSettingsOpenToken] = useState(0);
-  const [workspaceTab, setWorkspaceTab] = useState<string | number>("messages");
-  const [settingsView, setSettingsView] = useState<"main" | "accounts" | "organizations">("main");
+  const [workspaceTab, setWorkspaceTab] = useState<string | number>("home");
+  const [deviceAccounts, setDeviceAccounts] = useState<Array<{ id: string; displayName?: string; avatarUrl?: string }>>([]);
+  const [quickShareRequest, setQuickShareRequest] = useState<{ kind: "session"; token: number }>();
+  const [activeHomeTip, setActiveHomeTip] = useState<string>();
+  const [sessionInvite, setSessionInvite] = useState<SessionInvite>();
+  const [homeTryBusy, setHomeTryBusy] = useState<string>();
+  const [shareSessionToken, setShareSessionToken] = useState(0);
+  const loginReady = useRef(false);
+  const bootstrapping = useRef(false);
+  const acceptingInvite = useRef(false);
+  const [settingsView, setSettingsView] = useState<"main" | "accounts" | "organizations" | "devices">("main");
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [updatesExpanded, setUpdatesExpanded] = useState(false);
   const [myAgentCount, setMyAgentCount] = useState(0);
@@ -448,16 +461,28 @@ const api = operation.response;
 }, {parent:parent?.operation});
 }
   useEffect(() => {
-    void refreshAuth(true);
+    if (bootstrapping.current) return;
+    bootstrapping.current = true;
+    const join = new URLSearchParams(location.search).get("join");
+    if (join) { localStorage.setItem("pendingChannelInviteLink", join); history.replaceState(null, "", location.pathname); }
+    void fetch("/v1/auth/device/start", { method: "POST" }).then(async response => {
+      if (!response.ok) throw new Error(await response.text());
+      const result = await response.json();
+      if (result.requiresSelection) setDeviceAccounts(result.accounts);
+      else { loginReady.current = true; await refreshAuth(true); }
+    }).catch(reason => { setError(readableError(reason)); void refreshAuth(true); });
     void refreshAccounts();
     // Give to Agent is available outside Settings, so target availability and the default Agent
     // must be loaded with the application rather than lazily when Settings is first opened.
     void loadInstallation().catch((reason) =>
       setInstallationMessage({ kind: "error", text: `Could not load installation status: ${String(reason)}` }),
     );
+  }, []);
+  useEffect(() => {
+    if (!authResolved || deviceAccounts.length) return;
     const timer = window.setInterval(() => void refreshAuth(), 1000);
     return () => window.clearInterval(timer);
-  }, []);
+  }, [authResolved, deviceAccounts.length]);
   useEffect(() => {
     // GUI resources are independently replaceable while Electron keeps running.
     // Compare this bundle's embedded version with the active ui.json whenever the
@@ -487,6 +512,10 @@ const fetch=operation.fetch;
       for (const raw of urls) {
         try {
           const url = new URL(raw);
+          if (url.hostname === "join") {
+            const token = url.searchParams.get("token");
+            if (token) localStorage.setItem("pendingChannelInviteLink", token);
+          }
           if (url.hostname === "invitation") {
             const token = url.searchParams.get("token");
             if (token)
@@ -499,6 +528,7 @@ const fetch=operation.fetch;
       await refreshAuth();
       await refreshAccounts();
       const accepted = await finishPendingInvitation();
+      await finishChannelInvite();
       if (!accepted && localStorage.getItem("pendingOrganizationInvitation"))
         await signIn();
       await host.showAndFocus();
@@ -508,8 +538,10 @@ const fetch=operation.fetch;
   useEffect(() => {
     if (!authResolved) return;
     if (auth.authenticated) {
+      if (!deviceAccounts.length) loginReady.current = true;
       void refreshOrganizations()
         .then(() => refreshChannels())
+        .then(() => finishChannelInvite())
         .catch((reason) => setWorkspaceLoadError(readableError(reason)))
         .finally(() => setInitialLoading(false));
       void finishPendingInvitation();
@@ -561,7 +593,7 @@ const trackedFetch = operation.fetch;
 
     setBusy(true);
     try {
-      const response = await trackedFetch("/v1/auth/switch", {
+      const response = await trackedFetch("/v1/auth/device/login", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ userId: account.userId }),
@@ -705,6 +737,35 @@ const trackedFetch = operation.fetch;
 
 });
 }
+  async function finishChannelInvite() {
+    if (!loginReady.current || acceptingInvite.current) return;
+    const token = localStorage.getItem("pendingChannelInviteLink");
+    if (!token) return;
+    acceptingInvite.current = true;
+    try {
+    const response = await fetch("/v1/invite-links/accept", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ token }) });
+    if (!response.ok) { if (response.status !== 401) setError(await response.text()); if(response.status===400) localStorage.removeItem("pendingChannelInviteLink"); return; }
+    const target = await response.json();
+    localStorage.removeItem("pendingChannelInviteLink");
+    await refreshOrganizations(); await refreshChannels();
+    setSelectedId(target.channelId); setWorkspaceTab("sessions"); setShareSessionToken(Date.now());
+    } finally { acceptingInvite.current = false; }
+  }
+  async function tryHomeCase(id: string) {
+    if (!selected || homeTryBusy) return;
+    if (id !== "working-style") { setActiveHomeTip(id); setQuickShareRequest({ kind: "session", token: Date.now() }); return; }
+    setHomeTryBusy(id);
+    try {
+      const response = await api(`/v1/channels/${selected.id}/sessions`);
+      const shares: SessionShare[] = await response.json();
+      if (shares.some(share => !share.canWithdraw && share.currentSnapshotId)) {
+        setSessionShares(shares); setWorkspaceTab("sessions"); return;
+      }
+      const invitation = await api(`/v1/channels/${selected.id}/invite-links`, { method: "POST" });
+      setSessionInvite(await invitation.json());
+    } catch (reason) { setError(readableError(reason)); }
+    finally { setHomeTryBusy(undefined); }
+  }
   async function loadMembers(parent?: OperationScope) {
 return runOperation("members.list", async (operation) => {
 const api = operation.response;
@@ -1000,13 +1061,13 @@ const api = operation.response;
             <PopoverContent data-trace-region={"settings"} side="right" align="end" className="max-h-[88vh] w-[28rem] overflow-y-auto p-3">
               <PopoverHeader className="mb-2 flex-row items-center gap-2">
                 {settingsView!=="main"&&<Button data-trace-nav={"settings.main"} size="icon-sm" variant="ghost" aria-label="Back to Settings" onClick={()=>setSettingsView("main")}><ChevronLeftIcon/></Button>}
-                <PopoverTitle>{settingsView==="accounts"?"Switch user":settingsView==="organizations"?"Switch organization":"Settings"}</PopoverTitle>
+                <PopoverTitle>{settingsView==="accounts"?"Switch user":settingsView==="organizations"?"Switch organization":settingsView==="devices"?"Linked devices":"Settings"}</PopoverTitle>
               </PopoverHeader>
               {settingsView==="accounts"?<div className="flex flex-col gap-1">
                 {accounts.map(account=><Button data-trace-target={traceTargets("auth.switch", "accounts.list")} key={account.userId} variant={account.active?"secondary":"ghost"} className="h-auto justify-start gap-3 p-2" disabled={busy||account.active} onClick={()=>void switchAccount(account).then(()=>setSettingsView("main"))}><Avatar><AvatarImage src={account.avatarUrl}/><AvatarFallback>{initials(account.displayName??account.email)}</AvatarFallback></Avatar><span className="min-w-0 flex-1 text-left"><strong className="block truncate">{account.displayName??account.email}</strong><small className="block truncate text-muted-foreground">{account.email}</small></span>{account.active&&<CheckIcon/>}</Button>)}
                 <Button data-trace-target={traceTargets("auth.sign-in")} variant="outline" disabled={busy} onClick={()=>void signIn()}><PlusIcon/>Add another account</Button>
                 {auth.authenticated&&<Button data-trace-target={traceTargets("auth.logout")} variant="ghost" className="text-destructive" disabled={busy} onClick={()=>void logout()}><LogOutIcon/>Sign out</Button>}
-              </div>:settingsView==="organizations"?<div className="flex flex-col gap-1">
+              </div>:settingsView==="devices"?<AccountDevices onError={setError} onChanged={()=>{setSettingsView("main");void refreshAuth();void refreshAccounts();}}/>:settingsView==="organizations"?<div className="flex flex-col gap-1">
                 {organizations.map(organization=><Button data-trace-target={traceTargets("organizations.switch", "organizations.list")} key={organization.id} variant={organization.active?"secondary":"ghost"} className="justify-start" disabled={busy||organization.active} onClick={()=>void switchOrganization(organization).then(()=>setSettingsView("main"))}><span className="min-w-0 flex-1 truncate text-left">{organization.name}</span>{organization.active&&<CheckIcon/>}</Button>)}
                 <Button data-trace-target={traceTargets("organizations.create")} variant="outline" onClick={()=>setShowCreateOrganization(true)}><PlusIcon/>Create Organization</Button>
               </div>:<div className="flex flex-col gap-4">
@@ -1015,6 +1076,7 @@ const api = operation.response;
                   <Button data-trace-nav={"organizations"} variant="ghost" className="h-auto justify-start px-2 py-2" onClick={()=>setSettingsView("organizations")}><span className="min-w-0 flex-1 text-left"><span className="block text-xs text-muted-foreground">Organization</span><strong className="block truncate">{organizations.find(item=>item.active)?.name??"No organization"}</strong></span><span className="text-xs text-muted-foreground">Switch</span><ChevronRightIcon/></Button>
                 </div>
                 {selected&&<Button data-trace-target={traceTargets("members.agent-count")} variant="outline" className="w-full justify-start" onClick={()=>{setSettingsOpen(false);setWorkspaceTab("messages");setAgentSettingsOpenToken(value=>value+1)}}><SparklesIcon/><span className="min-w-0 flex-1 text-left">My Agents</span><span className="text-muted-foreground">{myAgentCount}</span><ChevronRightIcon/></Button>}
+                {auth.authenticated&&<div className="flex gap-2"><Button variant="outline" onClick={()=>setSettingsView("devices")}>Linked devices</Button><Button variant="outline" disabled={busy} onClick={()=>void signIn()}>Link Google account</Button></div>}
                 <section><p className="mb-2 px-1 text-xs font-medium text-muted-foreground">Install Skill to local Agent runtime</p><div className="divide-y rounded-lg border">{([['codex','Codex'],['claude','Claude Code'],['myflicker','MyFlicker']] as const).map(([id,label])=>{const target=installation?.targets?.[id];return <div key={id} className="flex items-center gap-3 p-3"><Button data-trace-target={traceTargets("system.default-agent")} size="sm" variant="ghost" aria-label={`Use ${label} as default Agent`} disabled={installationBusy||!target?.installed||installation?.defaultAgent===id} onClick={()=>void setDefaultAgent(id)}>{installation?.defaultAgent===id&&<CheckIcon data-icon="inline-start"/>}{installation?.defaultAgent===id?"Default":"Set default"}</Button><div className="min-w-0 flex-1"><p className="text-sm font-medium">{label}</p><p className="text-xs text-muted-foreground">{target?.installed?"Installed":"Not installed"}</p></div><Button data-trace-target={traceTargets("system.skill-target")} size="sm" variant="outline" disabled={installationBusy||!installation} onClick={()=>void setAgentSkill(id,Boolean(target?.installed))}>{target?.installed?"Uninstall":"Install"}</Button></div>})}</div></section>
                 <section><div className="flex items-center gap-2"><Button data-trace-target={traceTargets("system.installation", "system.gui-version", "system.shell-update")} variant="ghost" className="min-w-0 flex-1 justify-start px-1" onClick={()=>setUpdatesExpanded(value=>!value)}><span className="min-w-0 flex-1 text-left">Updates</span><ChevronRightIcon className={updatesExpanded?"rotate-90 transition-transform":"transition-transform"}/></Button><Button data-trace-target={traceTargets("system.check-update", "system.update", "system.restart")} size="sm" variant="outline" disabled={installationBusy} onClick={()=>void(updateProgress?.restartRequired?restartInstalledCore():Object.values(installation?.components??{}).some(component=>component.updateAvailable)?updateInstallation():checkInstallation())}>{installationAction==="checking"?"Checking…":updateBusy?"Updating…":updateProgress?.restartRequired?"Restart":Object.values(installation?.components??{}).some(component=>component.updateAvailable)?"Update":"Check updates"}</Button></div>{(updateBusy || updateProgress?.restartRequired || ["failed","interrupted"].includes(updateProgress?.state??""))&&<UpdateProgressView progress={updateProgress}/>} {updatesExpanded&&<div className="mt-2 rounded-lg border"><div className="p-3"><p className="text-sm font-medium">Colab resources</p><p className="text-xs text-muted-foreground">Independently distributed local artifacts</p></div>{installationMessage&&!updateRunning&&<p role="status" className={`max-h-28 overflow-auto break-words border-y px-3 py-2 text-xs ${installationMessage.kind==="error"?"bg-destructive/10 text-destructive":"bg-muted text-muted-foreground"}`}>{installationMessage.text}</p>}{([['local-core','Local Core'],['desktop-ui','GUI Resources'],['colab-skill','Agent Colab Skill'],['electron-shell','Electron Shell']] as const).map(([id,label])=>{const component=installation?.components?.[id];return <div key={id} className="flex items-center gap-3 border-t p-3"><div className="min-w-0 flex-1"><p className="text-sm font-medium">{label}</p><p className="text-xs text-muted-foreground">{component?.installedVersion??"Not installed"}{component?.latestVersion?` · Latest ${component.latestVersion}`:""}</p></div>{component?.updateAvailable&&<span className="text-xs font-medium text-primary">Update available</span>}{id==="electron-shell"&&!host.isElectron&&component?.downloadUrl&&<Button size="sm" variant="outline" onClick={()=>void host.openExternal(component.downloadUrl!)}>Download app</Button>}</div>})}</div>}</section>
               </div>}
@@ -1046,10 +1108,13 @@ const api = operation.response;
                   defaultAgent={installation?.defaultAgent ?? "codex"}
                   installedAgents={installation?.targets ?? {}}
                   onChoose={chooseFiles}
+                  request={quickShareRequest}
+                  onCreated={() => { if (auth.user && activeHomeTip) completeHomeTip(auth.user.id, activeHomeTip); setActiveHomeTip(undefined); }}
                 />
               </div>
               <div className="flex items-center border-b px-8">
                 <TabsList variant="line">
+                  <TabsTrigger value="home">Home</TabsTrigger>
                   <TabsTrigger value="messages">Messages</TabsTrigger>
                   <TabsTrigger value="sessions">Sessions</TabsTrigger>
                   <TabsTrigger value="files">Files</TabsTrigger>
@@ -1058,11 +1123,14 @@ const api = operation.response;
                   <TabsTrigger value="settings">Settings</TabsTrigger>
                 </TabsList>
               </div>
+              <TabsContent value="home" className="min-h-0 flex-1 overflow-auto"><ChannelHome key={`${selected.id}:${activeHomeTip ?? "idle"}`} accountId={auth.user?.id ?? ""} busyTip={homeTryBusy} onNavigate={setWorkspaceTab} onTry={id => void tryHomeCase(id)} /></TabsContent>
               <TabsContent data-trace-target={traceTargets("context.people", "context.resources")} data-trace-region={"messages"} value="messages" className="min-h-0 flex-1 overflow-hidden">
                 <MessagesView focusId={contextFocus?.kind === "message" ? contextFocus.id : undefined} channelId={selected.id} channelName={selected.name} settingsOpenToken={agentSettingsOpenToken} onSettingsOpenConsumed={()=>setAgentSettingsOpenToken(0)} defaultAgent={installation?.defaultAgent ?? "codex"} installedAgents={installation?.targets ?? {}} onError={setError} onNotice={setNotice} onActivityChange={setAgentActivity}/>
               </TabsContent>
               <TabsContent data-trace-target={traceTargets("sessions.list")} data-trace-region={"sessions"} value="sessions">
                 <SessionsView
+                  shareOpenToken={shareSessionToken}
+                  onShareOpenConsumed={()=>setShareSessionToken(0)}
                   focusId={contextFocus?.kind === "session" ? contextFocus.id : undefined}
                   channelId={selected.id}
                   channelName={selected.name}
@@ -1147,6 +1215,10 @@ const api = operation.response;
           )}
         </section>
         </div>
+        <InviteSessionDialog invite={sessionInvite} onClose={() => setSessionInvite(undefined)} onError={setError} />
+        <Dialog open={deviceAccounts.length > 0}><DialogContent showCloseButton={false}><DialogHeader><DialogTitle>Choose your account</DialogTitle><DialogDescription>This device is linked to more than one Colab account.</DialogDescription></DialogHeader><div className="flex flex-col gap-2">{deviceAccounts.map(account => <Button key={account.id} variant="outline" disabled={busy} onClick={() => {
+          setBusy(true); void fetch("/v1/auth/device/login", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ userId: account.id }) }).then(async response => { if (!response.ok) throw new Error(await response.text()); loginReady.current=true; setDeviceAccounts([]); await refreshAuth(true); await refreshAccounts(); }).catch(reason => setError(readableError(reason))).finally(() => setBusy(false));
+        }}>{account.displayName ?? "Colab account"}</Button>)}</div></DialogContent></Dialog>
         <Dialog open={showCreate} onOpenChange={setShowCreate}>
           <DialogContent>
             <form onSubmit={(event) => void createChannel(event)}>

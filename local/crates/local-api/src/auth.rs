@@ -17,11 +17,13 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
         Uuid::new_v4().simple()
     );
     let challenge = URL_SAFE_NO_PAD.encode(Sha256::digest(verifier.as_bytes()));
+    let link_user_id = state.inner.session.lock().await.as_ref().map(|s| s.user.id.clone());
     state.inner.pending.lock().await.insert(
         flow_state.clone(),
         PendingLogin {
             verifier,
             nonce: nonce.clone(),
+            link_user_id,
         },
     );
     *state.inner.last_error.lock().await = None;
@@ -91,11 +93,15 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
     let id_token = google
         .id_token
         .ok_or_else(|| LocalError::bad_request("Google response did not include an ID token"))?;
-    let response = state
+    let mut session_request = state
         .inner
         .http
         .post(format!("{}/v1/auth/google/session", state.inner.server_url))
-        .json(&serde_json::json!({ "idToken": id_token, "nonce": pending.nonce }))
+        .json(&serde_json::json!({ "idToken": id_token, "nonce": pending.nonce }));
+    if let Some(user) = pending.link_user_id {
+        session_request = session_request.bearer_auth(access_token_for_user(&state, &user).await?);
+    }
+    let response = session_request
         .send()
         .await
         .map_err(LocalError::internal)?;
@@ -104,8 +110,9 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
         return fail(&state, format!("Colab session creation failed: {details}")).await;
     }
     let session: ColabSession = response.json().await.map_err(LocalError::internal)?;
-    save_account(&state, &session).await?;
-    *state.inner.session.lock().await = Some(session);
+    let _switch_guard = state.inner.account_switch_lock.lock().await;
+    device_auth::bind_current(&state, &session).await?;
+    device_auth::login_account(&state, &session.user.id).await?;
     *state.inner.last_error.lock().await = None;
     Ok(Html(
         "<!doctype html><html><head><meta name='viewport' content='width=device-width'><style>body{font-family:system-ui;margin:0;padding:64px;color:#17211e}a{display:inline-block;margin-top:12px;padding:12px 18px;border-radius:10px;background:#17211e;color:white;text-decoration:none;font-weight:650}p{color:#66716d}</style></head><body><h2>Signed in to Colab</h2><p>Your account is ready.</p><a href='agent-colab://auth-complete'>Open Colab</a></body></html>",

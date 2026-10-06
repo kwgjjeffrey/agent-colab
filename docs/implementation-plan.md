@@ -681,3 +681,24 @@ Project-owned registry, GUI/Skill cases and ignored history moved from `.trial/r
 Verified formal browser: messages.send has trace-breathe animation, provider Grafana link carries the exact operation/origin, cases share their real project source, copy-path succeeds, historical 4.83-second run still shows two passed cases and its relocated screenshot. Trace typecheck/build and twenty tests passed. The latest historical 401 failure remains a failure; no fresh business E2E pass is claimed. Automatic provider trace correlation is still pending.
 
 Formal runtime acceptance: run `20261006T025324Z-5d33dbe0` passed GUI and Skill (two passed, one inactive fixture excluded), total 9.19 seconds. Prior run `20261006T025229Z-cd78ee22` remains recorded: GUI readiness matched six tabs and failed strict resolution, Skill passed. Fixed project readySelector to the unique Messages tab; do not weaken runner strictness or discard the prior failure. Desktop and narrow viewport interfaces verified; package dry run has no .trial/.runtime/.runs/node_modules payload.
+
+### 2026-10-06 Device-account onboarding sample
+
+Rollback baseline committed before implementation: `27da1a6`; no independent worktree. Implemented
+Ed25519 device credential in private Local Core SQLite, signed purpose/account-bound login proofs,
+first-install ordinary account + personal Channel, one/multiple-binding login, Google identity linking
+without silent merging, and device unlink/session revocation. Server migrations 0034/0035 are additive.
+
+Channel Home is the default tab with three Try cases, account-scoped dismiss/completion and recoverable
+long-ignored tips. Try routes to existing Session pickers. Missing teammate Sessions produce a 24-hour
+revocable ordinary-member invitation prompt; recipient app/Skill links join the selected account and
+open the picker without selecting or uploading content. Google linking and linked devices remain in
+Settings. No scheduling, DM, Canvas redesign, or new workflow system added.
+
+Verified isolated Core → Server → PostgreSQL acceptance, including multi-account selection and
+current-device revocation; UI invitation join → picker → cancel leaves Sessions empty. UI Home,
+dismiss/reload and standard device confirmation inspected. GUI 69 tests + build, Skill invitation
+test, and five tracing scope tests passed. Nested tracing future copies caused debug stack overflow;
+heap-bounded wrappers fixed it, with a large-future size regression test and normal-stack real Core
+acceptance. Production deployment, artifact publication and real Google browser login are not yet
+claimed by these isolated results.

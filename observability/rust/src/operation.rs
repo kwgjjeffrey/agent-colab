@@ -2,7 +2,11 @@
 use super::*;
 use std::future::Future;
 
-pub async fn business<T, E>(id: &str, file: &str, function: &str, future: impl Future<Output = Result<T, E>>) -> Result<T, E> {
+pub fn business<T, E>(id: &str, file: &str, function: &str, future: impl Future<Output = Result<T, E>>) -> impl Future<Output = Result<T, E>> {
+    // Box before constructing the wrapper future: nested task-local scopes must not
+    // repeatedly embed/copy the full business state machine on Tokio's worker stack.
+    let future = Box::pin(future);
+    async move {
     let parent = parent();
     if !parent.span().span_context().is_valid() { return future.await; }
     let tracer = global::tracer("agent-colab.business");
@@ -22,6 +26,7 @@ pub async fn business<T, E>(id: &str, file: &str, function: &str, future: impl F
     if result.is_err() { cx.span().set_status(Status::error("business_error")); }
     cx.span().end_with_timestamp(start + elapsed);
     result
+    }
 }
 
 /// Capture the actual assembled command at its final assembly site, never an intermediate template.
@@ -63,7 +68,9 @@ pub async fn resume<F: Future>(envelope: &serde_json::Value, future: F) -> F::Ou
 }
 
 /// Service-owned registry is shipped unchanged; source metadata isn't copied into call sites.
-pub async fn registered_business<T,E>(registry: &'static str, id: &str, future: impl Future<Output=Result<T,E>>) -> Result<T,E> {
+pub fn registered_business<T,E>(registry: &'static str, id: &str, future: impl Future<Output=Result<T,E>>) -> impl Future<Output=Result<T,E>> {
+    let future = Box::pin(future);
+    async move {
     static REGISTRIES: std::sync::OnceLock<std::sync::Mutex<std::collections::HashMap<&'static str,serde_json::Value>>> = std::sync::OnceLock::new();
     let row = {
         let mut values = REGISTRIES.get_or_init(Default::default).lock().unwrap_or_else(|e| e.into_inner());
@@ -71,6 +78,7 @@ pub async fn registered_business<T,E>(registry: &'static str, id: &str, future: 
         value["spans"].as_array().and_then(|rows|rows.iter().find(|row|row["id"]==id)).cloned().unwrap_or_default()
     };
     business(id, row["source"]["path"].as_str().unwrap_or("unknown"), row["source"]["function"].as_str().unwrap_or("unknown"), future).await
+    }
 }
 
 pub fn prompt(kind: &str, request: Option<String>, content: &str, file: &'static str, function: &'static str) {prompt_at(kind,"preview",request,content,file,function)}
@@ -80,6 +88,19 @@ mod tests {
     use super::*;
     use opentelemetry_sdk::trace::{SpanData, SpanExporter, SdkTracerProvider};
     use std::sync::{Arc,Mutex};
+    #[test]
+    fn wrappers_do_not_embed_large_business_futures() {
+        let payload = [7u8; 128 * 1024];
+        let work = async move {
+            tokio::task::yield_now().await;
+            Ok::<_, ()>(std::hint::black_box(payload)[0])
+        };
+        assert!(std::mem::size_of_val(&work) >= 128 * 1024);
+        let wrapped = registered_business("{}", "test.large", work);
+        assert!(std::mem::size_of_val(&wrapped) < 4096);
+        let runtime = tokio::runtime::Builder::new_current_thread().build().unwrap();
+        assert_eq!(runtime.block_on(wrapped), Ok(7));
+    }
     #[derive(Clone,Debug,Default)]
     struct Capture(Arc<Mutex<Vec<SpanData>>>);
     impl SpanExporter for Capture {

@@ -13,3 +13,8 @@ sha2.workspace = true
 hex.workspace = true
 uuid.workspace = true
 thiserror.workspace = true
+ring = "0.17.14"
+base64.workspace = true
+
+[dev-dependencies]
+tokio.workspace = true

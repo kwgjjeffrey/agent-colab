@@ -50,6 +50,8 @@ type Source = {
   updatedAt: number;
 };
 type Props = {
+  shareOpenToken?: number;
+  onShareOpenConsumed?: () => void;
   focusId?: string;
   channelId: string;
   channelName: string;
@@ -63,6 +65,8 @@ type Props = {
 
 /** Presentation only; source cursors, snapshot caching and adapters stay inside Local Core. */
 export function SessionsView({
+  shareOpenToken,
+  onShareOpenConsumed,
   focusId,
   channelId,
   channelName,
@@ -104,6 +108,7 @@ const trackedFetch = operation.fetch;
     setSharing(true);
     setSourceSearch("");
   }
+  useEffect(() => { if (shareOpenToken) { choose(); onShareOpenConsumed?.(); } }, [shareOpenToken]);
   useEffect(() => {
     if (!sharing) return;
     const timer = window.setTimeout(() => void loadSources(sourceSearch), 150);

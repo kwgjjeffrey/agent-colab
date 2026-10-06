@@ -21,6 +21,10 @@ fn unix_time_after(seconds: i64) -> i64 {
 }
 
 mod canvas;
+mod device_auth;
+mod invite_links;
+pub use invite_links::{InviteLink, InviteTarget};
+pub use device_auth::{DeviceChallenge, DeviceAccount, LoginDevice};
 mod messaging;
 mod transfers;
 pub use canvas::{Canvas, CanvasFolder, CanvasUpdate};
@@ -251,8 +255,12 @@ impl Database {
         email: &str,
         display_name: Option<&str>,
         avatar_url: Option<&str>,
+        link_user_id: Option<Uuid>,
     ) -> anyhow::Result<CreatedSession> {
         let mut tx = self.pool.begin().await.context("begin auth transaction")?;
+        // Serialize callbacks for one provider identity before checking whether it exists.
+        sqlx::query("select pg_advisory_xact_lock(hashtextextended($1,1))")
+            .bind(subject).execute(&mut *tx).await?;
         let existing = sqlx::query_as::<_, (Uuid, String, Option<String>, Option<String>)>(
             "select u.id, u.email, u.display_name, u.avatar_url from auth_identities i join users u on u.id = i.user_id where i.provider = 'google' and i.subject = $1"
         )
@@ -272,8 +280,18 @@ impl Database {
                 avatar_url: avatar_url.map(str::to_owned),
             }
         } else {
-            let id = Uuid::new_v4();
-            sqlx::query(
+            let linkable = if let Some(id) = link_user_id {
+                let account = sqlx::query_scalar::<_, Uuid>("select id from users where id=$1 for update")
+                    .bind(id).fetch_optional(&mut *tx).await?;
+                let has_identity: bool = sqlx::query_scalar("select exists(select 1 from auth_identities where user_id=$1)")
+                    .bind(id).fetch_one(&mut *tx).await?;
+                account.filter(|_| !has_identity)
+            } else { None };
+            let id = linkable.unwrap_or_else(Uuid::new_v4);
+            if linkable.is_some() {
+                sqlx::query("update users set email=$2,display_name=$3,avatar_url=$4,updated_at=now() where id=$1")
+                    .bind(id).bind(email).bind(display_name).bind(avatar_url).execute(&mut *tx).await?;
+            } else { sqlx::query(
                 "insert into users (id, email, display_name, avatar_url) values ($1, $2, $3, $4)",
             )
             .bind(id)
@@ -283,6 +301,7 @@ impl Database {
             .execute(&mut *tx)
             .await
             .context("create user (email may already belong to another identity)")?;
+            }
             sqlx::query("insert into auth_identities (provider, subject, user_id) values ('google', $1, $2)")
                 .bind(subject).bind(id).execute(&mut *tx).await.context("create Google identity")?;
             AuthenticatedUser {

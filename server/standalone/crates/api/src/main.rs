@@ -27,6 +27,8 @@ mod email_outbox;
 mod messaging;
 mod context_prompt;
 mod transfers;
+mod device_auth;
+mod invite_links;
 
 #[derive(Clone)]
 struct AppState {
@@ -174,6 +176,16 @@ fn router(state: AppState) -> Router {
         .route("/health/ready", get(ready))
         .route("/v1/status", get(status))
         .route("/v1/auth/google/session", post(create_google_session))
+        .route("/v1/auth/device/challenge", post(device_auth::challenge))
+        .route("/v1/auth/device/accounts", post(device_auth::discover))
+        .route("/v1/auth/device/session", post(device_auth::login))
+        .route("/v1/auth/device/bind", post(device_auth::bind))
+        .route("/v1/auth/devices", get(device_auth::devices))
+        .route("/v1/auth/devices/{device_id}", delete(device_auth::unbind))
+        .route("/v1/channels/{channel_id}/invite-links", post(invite_links::create))
+        .route("/v1/invite-links/{id}", delete(invite_links::revoke))
+        .route("/v1/invite-links/accept", post(invite_links::accept))
+        .route("/invite/{token}", get(invite_links::landing))
         .route("/v1/auth/session/refresh", post(refresh_session))
         .route("/v1/auth/logout", post(logout))
         .route(
@@ -292,6 +304,7 @@ struct GoogleSessionRequest {
 
 async fn create_google_session(
     State(state): State<AppState>,
+    headers: HeaderMap,
     Json(request): Json<GoogleSessionRequest>,
 ) -> Result<Json<colab_server_persistence::CreatedSession>, ApiError> {
 colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.main.create-google-session", async {
@@ -307,6 +320,9 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
         eprintln!("Google identity rejected: {error:#}");
         ApiError::unauthorized("invalid_google_identity")
     })?;
+    let link_user_id = if headers.contains_key("authorization") {
+        Some(authenticated_user(&state, &headers).await?)
+    } else { None };
     let session = state
         .database
         .create_google_session(
@@ -314,6 +330,7 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
             &identity.email,
             identity.name.as_deref(),
             identity.picture.as_deref(),
+            link_user_id,
         )
         .await
         .map_err(|error| {

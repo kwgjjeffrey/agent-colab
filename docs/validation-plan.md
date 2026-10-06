@@ -320,3 +320,28 @@ Project-owned registry, GUI/Skill cases and ignored history moved from `.trial/r
 Verified formal browser: messages.send has trace-breathe animation, provider Grafana link carries the exact operation/origin, cases share their real project source, copy-path succeeds, historical 4.83-second run still shows two passed cases and its relocated screenshot. Trace typecheck/build and twenty tests passed. The latest historical 401 failure remains a failure; no fresh business E2E pass is claimed. Automatic provider trace correlation is still pending.
 
 Formal runtime acceptance: run `20261006T025324Z-5d33dbe0` passed GUI and Skill (two passed, one inactive fixture excluded), total 9.19 seconds. Prior run `20261006T025229Z-cd78ee22` remains recorded: GUI readiness matched six tabs and failed strict resolution, Skill passed. Fixed project readySelector to the unique Messages tab; do not weaken runner strictness or discard the prior failure. Desktop and narrow viewport interfaces verified; package dry run has no .trial/.runtime/.runs/node_modules payload.
+
+### 2026-10-06 Device-account onboarding sample
+
+- Passed actual isolated two-Core → Server → PostgreSQL `.trial/E2E-DEVICE-ONBOARDING-01/verify.py`:
+  bootstrap idempotence, separate device accounts, one personal Channel, ordinary-member invite,
+  idempotent join, unauthorized create/revoke, revoked token rejection, no automatic Session upload,
+  last-credential protection, wrong-account rejection, multiple-binding choice, selected foreground
+  account, current-device unlink clearing its session and remaining binding auto-login.
+- Passed isolated persistence lifecycle test (0.08 s): replay/expiry/wrong proof, concurrent bootstrap,
+  multiple device accounts, access/refresh revocation, no replacement account after revocation,
+  new Google identity link versus existing identity no-merge, invitation expiry/permissions.
+- Passed GUI 27 files / 69 tests (5.02 s), production build; onboarding tests distinguish Try from
+  real completion and account-scoped dismiss, recover ignored tips. Passed Skill invitation test:
+  own discovery endpoint, token retained in bootstrap URL, no credential/capability in output.
+- Passed tracing five tests: wrapper future remains under 4 KiB around a 128 KiB business future;
+  concurrent/persisted trace contexts retain correct parent and failure results. Debug Core initially
+  failed with stack overflow; corrected shared wrapper allocation, then real UI + API runs passed
+  on default Tokio stack. Earlier failed attempts are not treated as successful acceptance.
+- Real browser UI: Home visible; Try opens Session picker; dismiss survives reload; missing teammate
+  Sessions show invitation prompt; recipient link joins then opens Session picker; cancel shows
+  "No shared sessions yet"; linked device + shadcn unlink confirmation visible. No user Session was
+  uploaded during this acceptance. SQLite directory 0700 / database 0600 verified.
+- Pending separate release acceptance: installed Electron deep-link path, fresh installer flow,
+  production artifact/server versions and live Google browser exchange. Isolated identity/persistence
+  tests do not claim those external deployment/provider paths passed.

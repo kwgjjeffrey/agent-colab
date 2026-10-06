@@ -30,3 +30,4 @@ rfd.workspace = true
 wait-timeout.workspace = true
 yrs.workspace = true
 colab-observability = { path = "../../../observability/rust" }
+ring = "0.17.14"
