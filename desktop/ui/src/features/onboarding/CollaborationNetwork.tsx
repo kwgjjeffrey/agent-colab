@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import { gsap } from "gsap";
 
 export const humanCycle = 6;
-export const agentCycle = humanCycle / 10;
+export const agentCycle = humanCycle / 30;
 const points = [
   [130, 38],
   [50, 155],
@@ -127,7 +127,6 @@ export function CollaborationNetwork() {
   }, []);
   return (
     <div ref={root} className="home-network-strip">
-      <h2>Your team is about to work at agentic speed</h2>
       <div className="home-networks">
         {modes.map((label, mode) => (
           <figure key={label}>
@@ -224,6 +223,7 @@ export function CollaborationNetwork() {
           </figure>
         ))}
       </div>
+      <h2>Your team is about to work at agentic speed</h2>
     </div>
   );
 }

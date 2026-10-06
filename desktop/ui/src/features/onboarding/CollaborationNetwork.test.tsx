@@ -14,7 +14,8 @@ it("uses upright three-node networks and keeps the collaborating actor on each v
     removeEventListener: vi.fn(),
   }));
   render(<CollaborationNetwork />);
-  expect(humanCycle / agentCycle).toBe(10);
+  expect(humanCycle / agentCycle).toBe(30);
+  expect(screen.getByRole("heading").previousElementSibling?.className).toBe("home-networks");
   for (const [index, name] of [
     "before agent",
     "with agent",
