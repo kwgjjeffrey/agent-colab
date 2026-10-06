@@ -373,3 +373,10 @@ Formal runtime acceptance: run `20261006T025324Z-5d33dbe0` passed GUI and Skill 
   Repeated Try/cancel/invite/remount now needs one Close only and returns to "No shared sessions yet".
 - GUI 70 tests and production build passed after the fix. Fresh-machine DMG installation and live
   Google browser exchange were not performed in this run; do not treat them as verified.
+
+### 2026-10-06 — case inventory review, not business qualification
+
+- Catalog discovery: 81 files, 78 case-only drafts, two existing executable pilots and one rotten diagnostic fixture; zero parse diagnostics.
+- Generic Trace contracts cover draft exclusion even by explicit ID, ancestor Module selection and segment-boundary matching. The full generic suite passed 24 tests; typecheck and shared GUI build passed.
+- No new Agent Colab functional or performance assertions have been executed. Draft metadata and expected results remain subject to human review before script implementation.
+- Formal GUI on port 53481 verified: default Active list shows 80 cases (78 case-only and two implemented); selecting the derived `context` ancestor shows all 22 child cases. Prompt-assembly case drawer and source preview expose the real USECASE/META file with no run function.

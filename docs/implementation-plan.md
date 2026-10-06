@@ -716,3 +716,9 @@ Installed updater and native Home/Try/invitation Session picker accepted; deploy
 business checks passed. Native acceptance found and fixed stale Home share request replay on Channel
 remount before final GUI promotion. Full evidence and unperformed provider/clean-machine gates are
 recorded in `docs/validation-plan.md`.
+
+### 2026-10-06 — regression case review draft
+
+- Added project-owned `regression_test/coverage.md` with a top-down business capability tree and selection rationale; Module uses slash-separated paths rather than GUI/Skill ownership.
+- Added 78 description-only cases (literal USECASE and META, no run implementation). The existing two executable discovery pilots remain; the rotten diagnostic fixture stays outside business coverage.
+- The separate Trace catalog displays drafts and excludes them from execution. No new business test scripts were implemented or run in this stage.

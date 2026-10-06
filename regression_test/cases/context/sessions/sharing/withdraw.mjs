@@ -1,0 +1,22 @@
+export const USECASE = {
+  "name": "Withdraw a Session through Browser",
+  "description": "Purpose: Session sharing has the same contributor-control contract as Files.\n\nPreconditions: An owned Session share and a second test member exist.\n\nActions: Withdraw the item by reference, then retry discovery and new reading as the member.\n\nExpected results: The item is withdrawn and new remote consumption is denied without affecting unrelated shares."
+};
+
+export const META = {
+  "id": "context.sessions.sharing.withdraw",
+  "module": "context/sessions/sharing",
+  "surface": "skill",
+  "priority": "critical",
+  "origin": "requirement",
+  "status": "active",
+  "effects": "isolated-write",
+  "cost": "normal",
+  "requires": [
+    "local-core"
+  ],
+  "affectedPaths": [
+    "desktop/ui/src/features",
+    "skills/colab/bin"
+  ]
+};

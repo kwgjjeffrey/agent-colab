@@ -1,3 +1,3 @@
 export const USECASE={name:'Runner failure-reporting fixture',description:'Deliberately fail a named assertion to exercise non-green result analysis. This is a runner fixture, not a product defect. Execute only by explicit ID while inactive.'};
-export const META={id:'runner.failure.fixture',module:'runner',surface:'integration',priority:'extended',origin:'acceptance-gap',status:'rotten',statusReason:'Intentional negative fixture; excluded from ordinary regression',covers:[],requires:[],affectedPaths:[],effects:'read-only',cost:'fast'};
+export const META={id:'runner.failure.fixture',module:'test-infrastructure/runner',surface:'integration',priority:'extended',origin:'acceptance-gap',status:'rotten',statusReason:'Intentional negative fixture; excluded from ordinary regression',covers:[],requires:[],affectedPaths:[],effects:'read-only',cost:'fast'};
 export async function run(ctx){ctx.assert('Intentional expected/actual mismatch',false,true);}
