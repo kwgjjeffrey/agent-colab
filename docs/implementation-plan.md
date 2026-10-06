@@ -716,6 +716,8 @@ Renamed visible Tips to Use cases without resetting preferences; inline colored 
 reduce row height. Requested Recent activity entries open the existing task Drawer by the
 request ID in the authoritative activity key (not resourceId, which may identify the trigger
 message). No backend/schema or preload changes. 85 GUI tests and production build passed.
+GUI 0.1.96-dev published and installed through stable 0.1.148-dev; compact colored labels and
+native non-latest activity → exact instruction/response Drawer accepted.
 
 ### 2026-10-06 role-oriented Tips
 

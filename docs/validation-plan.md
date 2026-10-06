@@ -6,6 +6,15 @@
 keys opening exactly their request, not trigger message or latest task; existing bounded-page
 resource navigation and retry tests remain green. Publication/native acceptance recorded below.
 
+Stable promotion 0.1.148-dev / GUI 0.1.96-dev published from committed source 2ebf1f8.
+Public artifact readback verified 907103 bytes and SHA-256
+ffca20953dd136b8c9a4f0672bddea9659b5d2502a7c136d5ac1bbca78a96e89.
+Installed updater confirmed GUI 0.1.96-dev. Isolated browser screenshot confirms five distinct
+role palettes, labels beside case text and compact rows. Existing collapsed preference survives.
+Native Home clicked a non-latest completed activity (ACCOUNT_RUNTIME_OK_0d37efdc): the Drawer
+loaded that exact instruction/response and request eaa9da2d-3928-479f-9548-7d56180d2090, not
+the latest ASK_OWNER task. Tool call remains collapsed. No command dispatched during acceptance.
+
 ### 2026-10-06 role-oriented Tips acceptance
 
 - 83 GUI tests passed, including role filtering, dismiss/recovery, missing-data vs failed-request
