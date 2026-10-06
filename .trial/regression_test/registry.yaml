@@ -1,0 +1,15 @@
+schemaVersion: 1
+caseDirectories:
+  - cases
+regressionDirectory: .runs
+baseUrl: http://127.0.0.1:53480/embed
+monitoringUrl: http://127.0.0.1:53481/
+readySelector: '[aria-label="Channels"]'
+browser:
+  mode: device
+  profileDir: /Users/yuzhiyuan/.local/share/trace/browser-profiles/colab-regression-trial
+targets:
+  channel.rail: '[aria-label="Channels"]'
+  messages.tab: '[role="tab"]:has-text("Messages")'
+prerequisites:
+  local-core: true

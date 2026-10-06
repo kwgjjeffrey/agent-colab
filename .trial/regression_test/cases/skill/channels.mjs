@@ -1,0 +1,5 @@
+export const USECASE={name:'Discover accessible Channels through Colab Skill',description:`Preconditions: Local Core is running and signed in.
+Action: run the real colab-browser open --ref colab:// command.
+Expected: command exits successfully and returns a JSON result. Execution up to process exit takes less than 10 seconds. This limit includes CLI startup overhead; it is not a provider span duration.`};
+export const META={id:'skill.channels.discover',module:'channels',surface:'skill',priority:'critical',origin:'requirement',status:'active',covers:['browser.open'],requires:['local-core'],affectedPaths:['skills/colab'],effects:'read-only',cost:'fast'};
+export async function run(ctx){const r=await ctx.measure('CLI discovery to output and exit',()=>ctx.command('Discover Channels','python3',['skills/colab/bin/colab-browser','open','--ref','colab://']),{maximumMs:10000});ctx.assert('Command exits successfully',r.code,0);const value=JSON.parse(r.stdout);ctx.assert('JSON result is an object',typeof value,'object');ctx.assert('Result is successful',value.ok,true);}

@@ -1,0 +1,5 @@
+export const USECASE={name:'Display Channel rail and Messages navigation',description:`Preconditions: the developer GUI adapter and Local Core are running.
+Action: open the real GUI in a dedicated Chrome profile through CDP, then inspect the Channel rail and Messages tab.
+Expected: Channel controls and exactly one Messages tab are visible. No message is sent, updated or deleted.`};
+export const META={id:'gui.channels.navigation',module:'channels',surface:'gui',priority:'critical',origin:'requirement',status:'active',covers:['channels.list'],requires:['local-core'],affectedPaths:['desktop/ui'],effects:'read-only',cost:'normal'};
+export async function run(ctx){await ctx.measure('GUI navigation readiness',async()=>{const tabs=await ctx.observe('Messages tab exists',{target:'messages.tab',read:'count'});ctx.assert('One Messages tab is present',tabs,1);const visible=await ctx.page.locator('[aria-label="Channels"]').isVisible();ctx.assert('Channel rail is visible',visible,true);},{maximumMs:10000});await ctx.screenshot('Colab GUI navigation');}

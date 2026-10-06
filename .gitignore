@@ -61,3 +61,4 @@ observability/gui-locator/*-acceptance.png
 observability/providers.json
 observability/credentials.json
 observability/*-ingest.json
+.trial/regression_test/.runs/
