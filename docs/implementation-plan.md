@@ -1,5 +1,7 @@
 # Colab 实现计划
 
+2026-10-06 Home 视觉调整：`.trial/V-HOME-01-agentic-network` 动效样板完成，等待用户确认；不改正式 Home、不发布。后续仅 Tips 分隔线与折叠、删除重复入口、真实近期协作动态。
+
 2026-10-05 信息关联/Canvas 交互收尾（源码阶段）：@ 候选项按 Agent、成员、文件类型、Session、Canvas 区分图标；Files 行首用文件类型图标，贡献者头像缩小并跟随姓名；Messages 头像与右侧成员列表改为点击打开同一身份卡。Canvas mention 的发送改为先调用 Server 的只读 prompt 预览，再通过共享 Give to Agent 弹层复制或下发，附加 User query 独立输入且实际发送复用同一 prompt builder。Canvas 引用当前用户蓝色高亮、quote/code 样式、文档拖拽排序/移入目录及软删除已实现。代码验证：GUI 23 文件/56 测试及生产构建、Local Core/Server cargo check、Server Canvas prompt 定向测试通过；数据库迁移、安装态和真实跨端下发尚未验收，不标记完成发布。
 
 2026-10-04 信息关联主线：独立契约见 `docs/information-association.md`。已实现 Channel 内 Agent/User 身份卡关联 tasks/共享资产；Files、Sessions、Canvas 与 Messages 均可复制上下文提示词或经带用户指令的 Forward to Agent 弹层派发；Messages/Canvas 资源胶囊保存稳定 kind/ID，详情卡可跳至目标；消息操作提供 Copy to use in my agent 与 Tooltip。Server 对跨 Channel/失权引用重新授权，Canvas projection codec 保护胶囊身份。代码级验证：GUI 20 文件/51 测试、Server 6 测试、Skill 30 测试、Canvas codec 11 测试、Local Core cargo check 已通过。安装态、线上派发与视觉验收仍在验证，不据此宣称用户已收到制品。

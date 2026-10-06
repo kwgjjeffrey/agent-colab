@@ -14,6 +14,8 @@
 
 ## 当前验证
 
+- [`V-HOME-01-agentic-network/`](V-HOME-01-agentic-network/)：三组协作网络 GSAP 动效样板，用户确认后再移植正式 Home
+
 - [`F-CANVAS-03-markdown-roundtrip/`](F-CANVAS-03-markdown-roundtrip/)：真实 GUI schema 的 Markdown 往返损失审计、mention 身份扩展及现有 collaboration binding 增量更新验证；不宣称完整无损或正式 patch 已实现
 
 - [`interaction-wireframe/`](interaction-wireframe/)：Channel、Sessions、Files、Skills、Settings 的低保真功能布局

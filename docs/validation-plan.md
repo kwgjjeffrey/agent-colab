@@ -1,5 +1,7 @@
 # 技术验证计划
 
+2026-10-06 Home 动效样板：独立生产构建、真实浏览器三组布局和暂停/恢复通过。正式移植、活动数据链路、窄屏视觉验收尚未执行。
+
 ### Information-association / Canvas UI follow-up — 2026-10-05
 
 - [x] GUI TypeScript 与生产构建通过；23 文件/56 测试通过。Canvas mention hover 保持、共享 prompt 弹层 User query 与 Send、文档拖拽持久化请求和删除确认均有定向 UI 测试。
