@@ -9,7 +9,7 @@ export const META = {
   "surface": "gui",
   "priority": "critical",
   "origin": "requirement",
-  "status": "trial",
+  "status": "active",
   "effects": "isolated-write",
   "cost": "normal",
   "requires": [
@@ -20,7 +20,8 @@ export const META = {
     "skills/colab/bin/colab-browser"
   ],
   "suite": "business",
-  "testLevel": "end-to-end"
+  "testLevel": "end-to-end",
+  "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source 977b3a48a440: GUI changes actual member role; distinct actor receives 403 for management and invitation; finally removes owned membership."
 };
 
 import fs from "node:fs/promises";import path from "node:path";

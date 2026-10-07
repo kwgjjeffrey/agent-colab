@@ -13,7 +13,7 @@ def launch(name,owner=False):
   try:
    request(d,'GET','/v1/status');return root
   except:pass
- core=APP/'current/core';env=dict(os.environ,COLAB_APPLICATION_ROOT=str(root),COLAB_LOCAL_DATABASE_PATH=str(db),COLAB_DISCOVERY_FILE=str(d),COLAB_GUI_ROOT=str(APP/'current/ui'),COLAB_GOOGLE_OAUTH_CREDENTIALS_FILE=str(core/'google-oauth.json'),COLAB_SERVER_URL='http://127.0.0.1:'+str(53591 if name=='owner' else 53592) if name in ['owner','receiver'] else 'http://108.174.57.132:8787',HOSTNAME='Regression '+name)
+ core=APP/'current/core';env=dict(os.environ,COLAB_APPLICATION_ROOT=str(root),COLAB_LOCAL_DATABASE_PATH=str(db),COLAB_DISCOVERY_FILE=str(d),COLAB_GUI_ROOT=str(APP/'current/ui'),COLAB_SETUP_PATH=str(pathlib.Path(__file__).with_name('owned-setup').resolve()),COLAB_GOOGLE_OAUTH_CREDENTIALS_FILE=str(core/'google-oauth.json'),COLAB_SERVER_URL='http://127.0.0.1:'+str(53591 if name=='owner' else 53592) if name in ['owner','receiver'] else 'http://108.174.57.132:8787',HOSTNAME='Regression '+name)
  def start():
   log=(root/'core.log').open('ab');p=subprocess.Popen([str(core/'colabd')],env=env,stdout=log,stderr=log,start_new_session=True);log.close()
   for _ in range(100):
@@ -42,6 +42,6 @@ if __name__=='__main__':
   finally:request(primary,'DELETE','/v1/invite-links/'+link['id'])
   # Membership cases start with an org member outside the Channel.
   me=request(root/'discovery.json','GET','/v1/auth/status')['user'];rows=request(primary,'GET',f'/v1/channels/{cid}/members');row=next(x for x in rows if x['email']==me['email']);request(primary,'DELETE',f"/v1/channels/{cid}/members/{row['memberId']}")
- params.update(isolationConfirmed=True,isolatedCoreDiscoveryFile=str(owner/'discovery.json'),isolatedClientBaseUrl=json.loads((owner/'discovery.json').read_text())['endpoint']+'/',secondCoreDiscoveryFile=str(receiver/'discovery.json'),secondClientBaseUrl=json.loads((receiver/'discovery.json').read_text())['endpoint']+'/',secondMemberCoreDiscoveryFile=str(member/'discovery.json'),secondMemberEmail=request(member/'discovery.json','GET','/v1/auth/status')['user']['email'],thirdMemberEmail=request(third/'discovery.json','GET','/v1/auth/status')['user']['email'],continuousSourceFile=str(ROOT/'.fixtures/files/hello.txt'))
+ params.update(testUserId=request(primary,'GET','/v1/auth/status')['user']['id'],testOrganizationId=next(x['id'] for x in request(primary,'GET','/v1/organizations') if x.get('active')),isolationConfirmed=True,isolatedCoreDiscoveryFile=str(owner/'discovery.json'),isolatedClientBaseUrl=json.loads((owner/'discovery.json').read_text())['endpoint']+'/',secondCoreDiscoveryFile=str(receiver/'discovery.json'),secondClientBaseUrl=json.loads((receiver/'discovery.json').read_text())['endpoint']+'/',secondMemberCoreDiscoveryFile=str(member/'discovery.json'),secondMemberEmail=request(member/'discovery.json','GET','/v1/auth/status')['user']['email'],thirdMemberEmail=request(third/'discovery.json','GET','/v1/auth/status')['user']['email'],continuousSourceFile=str(ROOT/'.fixtures/files/hello.txt'))
  profile.write_text(yaml.safe_dump(config,sort_keys=False));os.chmod(profile,0o600)
  print(json.dumps({'clients':[str(x) for x in [owner,receiver,member,third]],'configured':True}))

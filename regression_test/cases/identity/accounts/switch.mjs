@@ -9,7 +9,7 @@ export const META = {
   "surface": "gui",
   "priority": "critical",
   "origin": "requirement",
-  "status": "trial",
+  "status": "active",
   "effects": "isolated-write",
   "cost": "normal",
   "requires": [],
@@ -21,7 +21,8 @@ export const META = {
     "skills/colab/bin/colab-messages"
   ],
   "suite": "business",
-  "testLevel": "end-to-end"
+  "testLevel": "end-to-end",
+  "statusReason": "Reviewed 20261007T111006Z-bdad100c, execution source d76d74ae46aa: Two genuine saved identities; GUI switch, old Channel absence, reload persistence and finally original actor restoration verified."
 };
 
 import fs from "node:fs/promises";import path from "node:path";

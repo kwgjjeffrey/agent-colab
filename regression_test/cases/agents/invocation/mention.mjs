@@ -9,7 +9,7 @@ export const META = {
   "surface": "gui",
   "priority": "critical",
   "origin": "requirement",
-  "status": "trial",
+  "status": "active",
   "effects": "isolated-write",
   "cost": "normal",
   "requires": [
@@ -21,7 +21,8 @@ export const META = {
     "local/src"
   ],
   "suite": "business",
-  "testLevel": "end-to-end"
+  "testLevel": "end-to-end",
+  "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source b54f5dc4ec79: Actual GUI mention creates the intended request; real runtime success and request-linked reply are verified."
 };
 
 import {invoke,complete} from "../../../support/agent.mjs";

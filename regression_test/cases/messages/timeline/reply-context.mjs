@@ -9,7 +9,7 @@ export const META = {
   "surface": "gui",
   "priority": "normal",
   "origin": "requirement",
-  "status": "trial",
+  "status": "active",
   "effects": "isolated-write",
   "cost": "normal",
   "requires": [
@@ -20,7 +20,8 @@ export const META = {
     "skills/colab/bin/colab-messages"
   ],
   "suite": "business",
-  "testLevel": "end-to-end"
+  "testLevel": "end-to-end",
+  "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source b1a4accc27bc: Actual GUI quote retains trigger and resource identity; exact committed reply survives reload."
 };
 
 import fs from "node:fs/promises";import path from "node:path";

@@ -159,7 +159,9 @@ const messageRequest = operation.message;
     setMessages((current) => {
       const next =
         after === 0
-          ? rows
+          // A cold discovery response can finish after a send/realtime commit. Keep newer
+          // messages for this Channel rather than erasing successfully committed entries.
+          ? [...rows, ...current.filter(item => item.channelId === channelId && !rows.some(row => row.id === item.id) && item.seq > (rows.at(-1)?.seq ?? 0))].sort((a, b) => a.seq - b.seq)
           : [
               ...current,
               ...rows.filter(

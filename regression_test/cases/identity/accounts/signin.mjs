@@ -9,7 +9,7 @@ export const META = {
   "surface": "gui",
   "priority": "critical",
   "origin": "requirement",
-  "status": "trial",
+  "status": "active",
   "effects": "isolated-write",
   "cost": "normal",
   "requires": [],
@@ -19,7 +19,8 @@ export const META = {
     "server/standalone/src"
   ],
   "suite": "release",
-  "testLevel": "end-to-end"
+  "testLevel": "end-to-end",
+  "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source 78337451bcf8: Real isolated device chooser signs into expected identity and loads navigation; finally restores login. Does not qualify Google linking."
 };
 
 import fs from "node:fs/promises";import path from "node:path";

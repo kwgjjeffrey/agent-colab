@@ -9,7 +9,7 @@ export const META = {
   "surface": "gui",
   "priority": "normal",
   "origin": "requirement",
-  "status": "trial",
+  "status": "active",
   "effects": "isolated-write",
   "cost": "normal",
   "requires": [],
@@ -19,7 +19,8 @@ export const META = {
     "server/standalone/src"
   ],
   "suite": "business",
-  "testLevel": "end-to-end"
+  "testLevel": "end-to-end",
+  "statusReason": "Reviewed Round 5 20261007T111006Z-bdad100c: real linked non-current device selected by ID, actual GUI unlink removes it, revoked client receives 401 and current device retains access. Fresh fixture availability is now checked before execution; an already revoked device is blocked, not a product failure."
 };
 
 import fs from "node:fs/promises";import path from "node:path";

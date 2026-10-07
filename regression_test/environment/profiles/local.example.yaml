@@ -22,3 +22,6 @@ parameters:
   # skillControlTarget: claude # Other target for the same owned disposable Skill.
   # secondClientBaseUrl: http://127.0.0.1:SECOND_CLIENT_PORT/
   # secondCoreDiscoveryFile: /private/path/to/second-client/discovery.json
+
+# Explicit baseline identity/tenant for the owned GUI clients.
+# Replace these values with actual prepared resource IDs.

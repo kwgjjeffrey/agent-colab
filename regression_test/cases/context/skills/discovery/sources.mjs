@@ -9,7 +9,7 @@ export const META = {
   "surface": "skill",
   "priority": "normal",
   "origin": "requirement",
-  "status": "trial",
+  "status": "active",
   "effects": "read-only",
   "cost": "normal",
   "requires": [
@@ -20,7 +20,8 @@ export const META = {
     "skills/colab/bin"
   ],
   "suite": "business",
-  "testLevel": "end-to-end"
+  "testLevel": "end-to-end",
+  "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source ef19fabf57ed: Real CLI source discovery includes known owned Skill and nonempty names."
 };
 
 import fs from "node:fs/promises";

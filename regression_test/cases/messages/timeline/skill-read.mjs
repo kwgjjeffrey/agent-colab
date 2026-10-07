@@ -9,7 +9,7 @@ export const META = {
   "surface": "skill",
   "priority": "normal",
   "origin": "requirement",
-  "status": "trial",
+  "status": "active",
   "effects": "read-only",
   "cost": "normal",
   "requires": [
@@ -20,7 +20,8 @@ export const META = {
     "skills/colab/bin/colab-messages"
   ],
   "suite": "business",
-  "testLevel": "end-to-end"
+  "testLevel": "end-to-end",
+  "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source 8b826b767a19: Real CLI selected message read and continuation cursor; incremental read excludes prior message."
 };
 
 import fs from "node:fs/promises";

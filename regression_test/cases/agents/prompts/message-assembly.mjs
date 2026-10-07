@@ -9,7 +9,7 @@ export const META = {
   "surface": "integration",
   "priority": "critical",
   "origin": "requirement",
-  "status": "trial",
+  "status": "active",
   "effects": "isolated-write",
   "cost": "normal",
   "requires": [
@@ -21,7 +21,8 @@ export const META = {
     "local/src"
   ],
   "suite": "business",
-  "testLevel": "end-to-end"
+  "testLevel": "end-to-end",
+  "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source 88412ea5131c: Actual request-specific provider input contains full message, exact blueprint instruction and scoped reply tool; CRDT details absent."
 };
 
 import {invoke,complete,actualPrompt} from "../../../support/agent.mjs";

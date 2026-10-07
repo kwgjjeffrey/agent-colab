@@ -9,7 +9,7 @@ export const META = {
   "surface": "gui",
   "priority": "normal",
   "origin": "requirement",
-  "status": "trial",
+  "status": "active",
   "effects": "isolated-write",
   "cost": "normal",
   "requires": [
@@ -21,7 +21,8 @@ export const META = {
     "local/src"
   ],
   "suite": "business",
-  "testLevel": "end-to-end"
+  "testLevel": "end-to-end",
+  "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source f1126d6718a5: Real runtime executes and replies before GUI deselection/deletion; other Channel participation and retained history are checked, retired selection is denied."
 };
 
 import fs from "node:fs/promises";import path from "node:path";

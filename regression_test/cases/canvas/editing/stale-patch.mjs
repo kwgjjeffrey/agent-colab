@@ -9,7 +9,7 @@ export const META = {
   "surface": "skill",
   "priority": "critical",
   "origin": "requirement",
-  "status": "trial",
+  "status": "active",
   "effects": "isolated-write",
   "cost": "normal",
   "requires": [
@@ -20,7 +20,8 @@ export const META = {
     "skills/colab/bin/colab-canvas"
   ],
   "suite": "business",
-  "testLevel": "end-to-end"
+  "testLevel": "end-to-end",
+  "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source 9592b36cdcb1: Actual unmatched contextual patch exits nonzero and full document projection remains unchanged."
 };
 
 import {invoke,complete} from "../../../support/agent.mjs";

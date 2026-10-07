@@ -9,7 +9,7 @@ export const META = {
   "surface": "integration",
   "priority": "critical",
   "origin": "requirement",
-  "status": "trial",
+  "status": "active",
   "effects": "isolated-write",
   "cost": "normal",
   "requires": [
@@ -21,7 +21,8 @@ export const META = {
     "local/src"
   ],
   "suite": "business",
-  "testLevel": "end-to-end"
+  "testLevel": "end-to-end",
+  "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source 7020f611a149: Only owned runtime disconnected; pending request does not claim execution; reconnect completes same trigger once and finally restores runtime."
 };
 
 import fs from "node:fs/promises";import path from "node:path";

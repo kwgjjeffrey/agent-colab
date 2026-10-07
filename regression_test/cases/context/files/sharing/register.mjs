@@ -9,7 +9,7 @@ export const META = {
   "surface": "gui",
   "priority": "critical",
   "origin": "requirement",
-  "status": "trial",
+  "status": "rotten",
   "effects": "isolated-write",
   "cost": "normal",
   "requires": [
@@ -20,7 +20,8 @@ export const META = {
     "skills/colab/bin"
   ],
   "suite": "business",
-  "testLevel": "end-to-end"
+  "testLevel": "end-to-end",
+  "statusReason": "Review found fixture semantics mismatch: another-member scenario uses another device of the same owner. Use distinct authenticated member to verify promised sharing boundary."
 };
 
 import fs from "node:fs/promises";import path from "node:path";
@@ -28,7 +29,9 @@ import {parameter,resource,core,cli,data,disposable,eventually} from "../../../.
 import {fixtures} from "../../../../support/fixtures.mjs";
 import {shareFiles} from "../../../../support/selection.mjs";
 
-export const REQUIREMENTS={"channel": {"permission": "read"}, "parameters": {"keys": ["secondCoreDiscoveryFile", "nativeChooserBoundary"]}};
-export async function run(ctx){
-const f=await fixtures(ctx),c=resource(ctx,'channel'),second=parameter(ctx,'secondCoreDiscoveryFile');const share=await shareFiles(ctx,f.files,path.basename(f.files));try{ctx.assert('GUI registers an owned Files item',share.canWithdraw,true);await eventually(ctx,'Background publication becomes consumable',()=>core(ctx,'GET','/v1/channels/'+c.id+'/files'),rows=>rows.some(x=>x.id===share.id&&x.currentRootOid),{timeoutMs:90000});const received=await core(ctx,'POST','/v1/files/'+share.id+'/materialize',undefined,{discoveryFile:second});ctx.assert('Second member obtains exact file bytes',await fs.readFile(path.join(received.localPath,'hello.txt'),'utf8'),'OWNED_TEST_'+ctx.runId);}finally{await core(ctx,'DELETE','/v1/files/'+share.id);}
-}
+export const REQUIREMENTS={"channel": {"permission": "read"}, "parameters": {"keys": ["secondMemberCoreDiscoveryFile", "secondMemberEmail", "nativeChooserBoundary"]}};
+export async function run(ctx){return withOtherMember(ctx,async target=>{
+const f=await fixtures(ctx),c=resource(ctx,'channel'),second=target.discoveryFile;const share=await shareFiles(ctx,f.files,path.basename(f.files));try{ctx.assert('GUI registers an owned Files item',share.canWithdraw,true);await eventually(ctx,'Background publication becomes consumable',()=>core(ctx,'GET','/v1/channels/'+c.id+'/files'),rows=>rows.some(x=>x.id===share.id&&x.currentRootOid),{timeoutMs:90000});const received=await core(ctx,'POST','/v1/files/'+share.id+'/materialize',undefined,{discoveryFile:second});ctx.assert('Second member obtains exact file bytes',await fs.readFile(path.join(received.localPath,'hello.txt'),'utf8'),'OWNED_TEST_'+ctx.runId);}finally{await core(ctx,'DELETE','/v1/files/'+share.id);}
+});}
+
+import {withOtherMember} from '../../../../support/controls.mjs';

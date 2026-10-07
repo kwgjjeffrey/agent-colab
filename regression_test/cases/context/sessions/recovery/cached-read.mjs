@@ -9,7 +9,7 @@ export const META = {
   "surface": "skill",
   "priority": "normal",
   "origin": "requirement",
-  "status": "trial",
+  "status": "active",
   "effects": "read-only",
   "cost": "normal",
   "requires": [],
@@ -18,7 +18,8 @@ export const META = {
     "skills/colab/bin"
   ],
   "suite": "business",
-  "testLevel": "end-to-end"
+  "testLevel": "end-to-end",
+  "statusReason": "Reviewed real actions, exact observed assertions and resource cleanup in Round 6 (20261007T115742Z-bfdf7648); corrected behavior verified."
 };
 
 import fs from "node:fs/promises";import path from "node:path";

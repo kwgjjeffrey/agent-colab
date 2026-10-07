@@ -9,7 +9,7 @@ export const META = {
   "surface": "integration",
   "priority": "critical",
   "origin": "requirement",
-  "status": "trial",
+  "status": "rotten",
   "effects": "isolated-write",
   "cost": "normal",
   "requires": [
@@ -21,7 +21,8 @@ export const META = {
     "local/src"
   ],
   "suite": "business",
-  "testLevel": "end-to-end"
+  "testLevel": "end-to-end",
+  "statusReason": "Review found fixture cleanup gap: enables Agent in second Channel without restoring previous selection. Restore participation in finally and verify before reactivation."
 };
 
 import fs from "node:fs/promises";import path from "node:path";

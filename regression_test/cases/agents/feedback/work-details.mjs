@@ -9,7 +9,7 @@ export const META = {
   "surface": "gui",
   "priority": "normal",
   "origin": "requirement",
-  "status": "trial",
+  "status": "rotten",
   "effects": "read-only",
   "cost": "normal",
   "requires": [
@@ -21,7 +21,8 @@ export const META = {
     "local/src"
   ],
   "suite": "business",
-  "testLevel": "end-to-end"
+  "testLevel": "end-to-end",
+  "statusReason": "Review found assertion coverage gap: script invokes successful execution only, but USECASE promises progress and failure distinction. Add controlled real runtime failure and drawer assertions before reactivation."
 };
 
 import fs from "node:fs/promises";import path from "node:path";

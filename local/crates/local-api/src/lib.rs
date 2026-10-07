@@ -393,6 +393,8 @@ impl AppState {
                 [],
             )?;
         }
+        let has_job_error_status = store.prepare("pragma table_info(local_jobs)")?.query_map([], |row| row.get::<_, String>(1))?.filter_map(Result::ok).any(|name|name=="last_error_status");
+        if !has_job_error_status { store.execute("alter table local_jobs add column last_error_status integer", [])?; }
         for table in ["local_jobs", "canvas_outbox", "local_session_sources"] {
             let exists = store.prepare(&format!("pragma table_info({table})"))?.query_map([], |row| row.get::<_, String>(1))?.filter_map(Result::ok).any(|name|name=="trace_context");
             if !exists { store.execute(&format!("alter table {table} add column trace_context text"), [])?; }

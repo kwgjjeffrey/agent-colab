@@ -1,5 +1,26 @@
 export const USECASE={name:'Display Channel rail and Messages navigation',description:`Preconditions: the developer GUI adapter and Local Core are running.
 Action: open the real GUI in a dedicated Chrome profile through CDP, then inspect the Channel rail and Messages tab.
 Expected: Channel controls and exactly one Messages tab are visible. No message is sent, updated or deleted.`};
-export const META={id:'gui.channels.navigation',module:'channels/discovery',surface:'gui',priority:'critical',suite:'business',testLevel:'end-to-end',origin:'requirement',status:'trial',covers:['channels.list'],requires:['local-core'],affectedPaths:['desktop/ui'],effects:'read-only',cost:'normal'};
-export async function run(ctx){await ctx.measure('GUI navigation readiness',async()=>{await ctx.page.getByRole('tab',{name:'Messages',exact:true}).waitFor({timeout:30000});const tabs=await ctx.observe('Messages tab exists',{target:'messages.tab',read:'count'});ctx.assert('One Messages tab is present',tabs,1);const visible=await ctx.page.locator('[aria-label="Channels"]').isVisible();ctx.assert('Channel rail is visible',visible,true);},{maximumMs:10000});await ctx.screenshot('Colab GUI navigation');}
+export const META={
+  "id": "gui.channels.navigation",
+  "module": "channels/discovery",
+  "surface": "gui",
+  "priority": "critical",
+  "suite": "business",
+  "testLevel": "end-to-end",
+  "origin": "requirement",
+  "status": "active",
+  "covers": [
+    "channels.list"
+  ],
+  "requires": [
+    "local-core"
+  ],
+  "affectedPaths": [
+    "desktop/ui"
+  ],
+  "effects": "read-only",
+  "cost": "normal",
+  "statusReason": "Reviewed real actions, exact observed assertions and resource cleanup in Round 6 (20261007T115742Z-bfdf7648); corrected behavior verified."
+};
+export async function run(ctx){await ctx.measure('GUI navigation readiness',async()=>{await ctx.page.getByRole('tab',{name:'Messages',exact:true}).waitFor({timeout:30000});const tabs=await ctx.observe('Messages tab exists',{target:'messages.tab',read:'count'});ctx.assert('One Messages tab is present',tabs,1);const visible=await ctx.page.locator('[aria-label="Channels"]').isVisible();ctx.assert('Channel rail is visible',visible,true);},{maximumMs:ctx.parameters.guiNavigationMaximumMs});await ctx.screenshot('Colab GUI navigation');}

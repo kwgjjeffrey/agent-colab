@@ -130,13 +130,13 @@ async fn finish_job(state: &AppState, job: &LocalJob, result: &Result<(), LocalE
         Ok(()) => {
             // If generation advanced while this job ran, another filesystem event arrived. Keep
             // it pending instead of allowing this older snapshot to mark the logical job done.
-            let _ = store.execute("update local_jobs set state=case when generation=?2 then 'completed' else 'pending' end,next_attempt_at=case when generation=?2 then next_attempt_at else unixepoch() end,last_error=null,completed_at=case when generation=?2 then current_timestamp else null end,updated_at=current_timestamp where id=?1", rusqlite::params![job.id,job.generation]);
+            let _ = store.execute("update local_jobs set state=case when generation=?2 then 'completed' else 'pending' end,next_attempt_at=case when generation=?2 then next_attempt_at else unixepoch() end,last_error=null,last_error_status=null,completed_at=case when generation=?2 then current_timestamp else null end,updated_at=current_timestamp where id=?1", rusqlite::params![job.id,job.generation]);
         }
         Err(error) => {
             // 2,4,8… seconds, capped at five minutes. Failed remains observable while the due
             // timestamp makes it automatically retryable; a manual retry simply advances it.
             let delay = 2_i64.pow((job.attempts as u32 + 1).min(8)).min(300);
-            let _ = store.execute("update local_jobs set state=case when generation=?4 then 'failed' else 'pending' end,last_error=case when generation=?4 then ?2 else null end,next_attempt_at=case when generation=?4 then unixepoch()+?3 else unixepoch() end,updated_at=current_timestamp where id=?1",rusqlite::params![job.id,error.message,delay,job.generation]);
+            let _ = store.execute("update local_jobs set state=case when generation=?4 then 'failed' else 'pending' end,last_error=case when generation=?4 then ?2 else null end,last_error_status=case when generation=?4 then ?5 else null end,next_attempt_at=case when generation=?4 then unixepoch()+?3 else unixepoch() end,updated_at=current_timestamp where id=?1",rusqlite::params![job.id,error.message,delay,job.generation,i64::from(error.status.as_u16())]);
         }
     }
 }
@@ -151,22 +151,22 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
 
     let dedupe_key = format!("{kind}:{user_id}:{share_id}");
     for _ in 0..120 {
-        let result: Option<(String, Option<String>)> = {
+        let result: Option<(String, Option<String>, Option<u16>)> = {
             let store = state.inner.store.lock().await;
             store
                 .query_row(
-                    "select state,last_error from local_jobs where dedupe_key=?1",
+                    "select state,last_error,last_error_status from local_jobs where dedupe_key=?1",
                     [&dedupe_key],
-                    |row| Ok((row.get(0)?, row.get(1)?)),
+                    |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
                 )
                 .ok()
         };
         match result {
-            Some((state, _)) if state == "completed" => return Ok(()),
-            Some((state, error)) if state == "failed" => {
-                return Err(LocalError::internal(
-                    error.unwrap_or_else(|| "File synchronization failed".into()),
-                ));
+            Some((state, _, _)) if state == "completed" => return Ok(()),
+            Some((state, error, status)) if state == "failed" => {
+                // Durable execution must preserve authorization/validation semantics; a 403
+                // must never become a retryable-looking 500 merely because it crossed a job.
+                return Err(LocalError { status: status.and_then(|s|StatusCode::from_u16(s).ok()).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR), message:error.unwrap_or_else(||"File synchronization failed".into()) });
             }
             None => return Err(LocalError::internal("Local sync job disappeared")),
             _ => tokio::time::sleep(std::time::Duration::from_millis(250)).await,
@@ -996,7 +996,7 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
             )));
         }
     }
-    let tree = git_text(&repo, &target, &["ls-tree", "-rz", "--full-tree", &latest.root_oid])?;
+    let tree = git_text(&repo, &repo, &["ls-tree", "-rz", "--full-tree", &latest.root_oid])?;
     validate_materialized_tree(&tree)?;
     fs::create_dir_all(&target).map_err(LocalError::internal)?;
     git(
@@ -1578,6 +1578,17 @@ mod job_tests {
         assert_eq!(retried.trace_context,envelope);
         assert_eq!(retried.id,leased.id);
         drop(recovered);fs::remove_dir_all(root).unwrap();
+    }
+
+    #[tokio::test]
+    async fn durable_job_preserves_forbidden_status() {
+        let (state, root) = test_state();
+        enqueue_job(&state, JOB_MATERIALIZE, "share", "user", 0).await.unwrap();
+        let job = claim_job(&state).await.unwrap().unwrap();
+        finish_job(&state, &job, &Err(LocalError { status:StatusCode::FORBIDDEN, message:"denied".into() })).await;
+        let error=wait_for_job(&state,JOB_MATERIALIZE,"share","user").await.unwrap_err();
+        assert_eq!(error.status,StatusCode::FORBIDDEN);assert_eq!(error.message,"denied");
+        drop(state);fs::remove_dir_all(root).unwrap();
     }
 
     #[tokio::test]

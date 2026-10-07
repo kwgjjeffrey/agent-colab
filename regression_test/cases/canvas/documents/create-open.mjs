@@ -9,7 +9,7 @@ export const META = {
   "surface": "gui",
   "priority": "critical",
   "origin": "requirement",
-  "status": "trial",
+  "status": "rotten",
   "effects": "isolated-write",
   "cost": "normal",
   "requires": [
@@ -20,11 +20,12 @@ export const META = {
     "skills/colab/bin/colab-canvas"
   ],
   "suite": "business",
-  "testLevel": "end-to-end"
+  "testLevel": "end-to-end",
+  "statusReason": "Review found false-positive locator: title can match resource tree even when editor never opens. Require actual editor/document identity and persisted edited title."
 };
 
 import {openTab} from "../../../support/gui.mjs";
 import {parameter,resource,core,disposable,eventually} from "../../../support/client.mjs";
 import {createDocument,deleteDocument} from "../../../support/canvas.mjs";
 export const REQUIREMENTS={"channel": {"permission": "read"}};
-export async function run(ctx){const doc=await createDocument(ctx);try{await ctx.page.getByRole('tab',{name:'Messages',exact:true}).click();await ctx.page.getByRole('tab',{name:'Canvas',exact:true}).click();await ctx.page.locator('[data-trace-region="canvas-tree"]').getByText(doc.title,{exact:true}).click();ctx.assert('Created document can be reopened',await ctx.page.getByText(doc.title,{exact:true}).first().isVisible(),true);}finally{await deleteDocument(ctx,doc);}}
+export async function run(ctx){const doc=await createDocument(ctx);try{const title=doc.title+' renamed',marker='REOPEN_'+ctx.runId;await ctx.page.getByRole('heading',{name:doc.title,exact:true}).dblclick();const input=ctx.page.locator('section header input');await input.fill(title);await input.press('Enter');const editor=ctx.page.locator('[contenteditable="true"]');await editor.fill(marker);await eventually(ctx,'Edited title and body are durable',()=>core(ctx,'GET','/v1/canvases/'+doc.id+'/document'),v=>v.content.includes(marker));const rows=await core(ctx,'GET','/v1/channels/'+resource(ctx,'channel').id+'/canvases');ctx.assert('Edited title belongs to the created document',rows.find(x=>x.id===doc.id)?.title,title);await ctx.page.getByRole('tab',{name:'Messages',exact:true}).click();await ctx.page.getByRole('tab',{name:'Canvas',exact:true}).click();await ctx.page.locator('[data-trace-region="canvas-tree"]').getByText(title,{exact:true}).click();await ctx.page.getByRole('heading',{name:title,exact:true}).waitFor();await editor.waitFor();ctx.assert('Reopened editor contains the persisted document body',(await editor.innerText()).includes(marker),true);}finally{await deleteDocument(ctx,doc);}}

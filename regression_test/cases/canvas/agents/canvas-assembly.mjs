@@ -9,7 +9,7 @@ export const META = {
   "surface": "gui",
   "priority": "critical",
   "origin": "requirement",
-  "status": "trial",
+  "status": "active",
   "effects": "isolated-write",
   "cost": "slow",
   "requires": [
@@ -23,7 +23,8 @@ export const META = {
     "skills/colab/bin/colab-canvas"
   ],
   "suite": "business",
-  "testLevel": "end-to-end"
+  "testLevel": "end-to-end",
+  "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source 0d83e6bb0843: Real Canvas heading/mention prompt inspected; selected heading/reference checked; request is created and real runtime succeeds; owned document removed."
 };
 
 import fs from "node:fs/promises";import path from "node:path";

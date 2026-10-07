@@ -9,7 +9,7 @@ export const META = {
   "surface": "integration",
   "priority": "critical",
   "origin": "requirement",
-  "status": "trial",
+  "status": "active",
   "effects": "isolated-write",
   "cost": "slow",
   "requires": [],
@@ -18,7 +18,8 @@ export const META = {
     "desktop/ui/src/features/updates"
   ],
   "suite": "release",
-  "testLevel": "end-to-end"
+  "testLevel": "end-to-end",
+  "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source 9bb969082631: Real signed product installer in bounded root; immutable cached bytes verified, targets/links checked and installed Core booted. Cold network download not qualified."
 };
 
 import fs from "node:fs/promises";import path from "node:path";

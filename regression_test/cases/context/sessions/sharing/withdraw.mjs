@@ -9,7 +9,7 @@ export const META = {
   "surface": "skill",
   "priority": "critical",
   "origin": "requirement",
-  "status": "trial",
+  "status": "active",
   "effects": "isolated-write",
   "cost": "normal",
   "requires": [
@@ -20,7 +20,8 @@ export const META = {
     "skills/colab/bin"
   ],
   "suite": "business",
-  "testLevel": "end-to-end"
+  "testLevel": "end-to-end",
+  "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source 222a3700e8a8: Independent real Session first read then withdrawn via Skill; subsequent consumer read denied."
 };
 
 import fs from "node:fs/promises";

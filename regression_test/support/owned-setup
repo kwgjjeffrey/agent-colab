@@ -1,0 +1,8 @@
+#!/usr/bin/env python3
+"""Route the real setup code into the explicitly owned client; never daily targets."""
+import os,pathlib,runpy,sys
+root=pathlib.Path(os.environ['COLAB_APPLICATION_ROOT']).resolve()
+allowed=pathlib.Path(__file__).resolve().parents[1]/'.fixtures'/'clients'
+if not root.is_relative_to(allowed.resolve()):raise SystemExit('Owned setup root required')
+sys.argv=['installer.py',str(root),*sys.argv[1:]]
+runpy.run_path(str(pathlib.Path(__file__).with_name('installer.py')),run_name='__main__')

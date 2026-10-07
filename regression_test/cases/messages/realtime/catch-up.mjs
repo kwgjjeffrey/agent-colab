@@ -9,7 +9,7 @@ export const META = {
   "surface": "gui",
   "priority": "critical",
   "origin": "requirement",
-  "status": "trial",
+  "status": "active",
   "effects": "isolated-write",
   "cost": "normal",
   "requires": [
@@ -20,7 +20,8 @@ export const META = {
     "skills/colab/bin/colab-messages"
   ],
   "suite": "business",
-  "testLevel": "end-to-end"
+  "testLevel": "end-to-end",
+  "statusReason": "Reviewed 20261007T111006Z-bdad100c, execution source 9df918d6f62d: Owned receiver realtime interrupted; real committed messages all reconcile exactly once; transport restored and browser context closed."
 };
 
 import fs from "node:fs/promises";import path from "node:path";

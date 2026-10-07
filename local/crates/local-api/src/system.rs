@@ -19,11 +19,17 @@ async fn default_agent(state: &AppState) -> String {
         .unwrap_or_else(|_| "codex".into())
 }
 
+// Keep update/installer state in the same explicitly configured application root as Core.
+// An isolated client must never inherit another client's pending update or activation paths.
+fn installation_root() -> PathBuf {
+    if let Some(root)=std::env::var_os("COLAB_APPLICATION_ROOT") { return root.into(); }
+    #[cfg(target_os="windows")]
+    if let Some(root)=std::env::var_os("LOCALAPPDATA") { return PathBuf::from(root).join("AgentColab"); }
+    std::env::var_os("HOME").or_else(||std::env::var_os("USERPROFILE")).map(PathBuf::from).unwrap_or_default().join(".local/share/agent-colab")
+}
+
 pub(super) async fn update_progress() -> Json<serde_json::Value> {
-    let root = std::env::var_os("HOME")
-        .map(PathBuf::from)
-        .unwrap_or_default()
-        .join(".local/share/agent-colab");
+    let root = installation_root();
     Json(super::update_status::read(&root))
 }
 
@@ -42,7 +48,7 @@ fn setup_path() -> Result<PathBuf, LocalError> {
         .or_else(|| std::env::var_os("USERPROFILE"))
         .ok_or_else(|| LocalError::internal("user home directory is unavailable"))?;
     let home = PathBuf::from(home);
-    let managed = home.join(".local/share/agent-colab/current/skill/setup/colab-setup");
+    let managed = installation_root().join("current/skill/setup/colab-setup");
     if managed.exists() {
         Ok(managed)
     } else {
@@ -102,11 +108,7 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
     };
     let mut value = setup(vec![operation.into()]).await?;
     value["shellUpdatePending"] = serde_json::Value::Bool(
-        std::env::var_os("HOME")
-            .map(PathBuf::from)
-            .unwrap_or_default()
-            .join(".local/share/agent-colab/pending-shell-update.json")
-            .exists(),
+        installation_root().join("pending-shell-update.json").exists(),
     );
     value["defaultAgent"] = serde_json::Value::String(default_agent(&state).await);
     // Existing installations predate runtime registration. Refresh them whenever Settings reads

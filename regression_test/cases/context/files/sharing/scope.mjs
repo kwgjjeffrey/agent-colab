@@ -9,7 +9,7 @@ export const META = {
   "surface": "gui",
   "priority": "critical",
   "origin": "requirement",
-  "status": "trial",
+  "status": "active",
   "effects": "isolated-write",
   "cost": "normal",
   "requires": [
@@ -20,7 +20,8 @@ export const META = {
     "skills/colab/bin"
   ],
   "suite": "business",
-  "testLevel": "end-to-end"
+  "testLevel": "end-to-end",
+  "statusReason": "Reviewed 20261007T111006Z-bdad100c, execution source 1837efa3c2bb: Actual GUI excludes dist; receiver bytes verify included file and absence of excluded file; independent share cleaned."
 };
 
 import fs from "node:fs/promises";import path from "node:path";

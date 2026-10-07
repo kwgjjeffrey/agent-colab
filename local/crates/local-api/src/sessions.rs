@@ -627,7 +627,7 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
         .bearer_auth(&token)
         .send()
         .await
-        .map_err(LocalError::internal)?;
+        .map_err(|error| LocalError { status: StatusCode::SERVICE_UNAVAILABLE, message:error.to_string() })?;
     if !response.status().is_success() {
         return Err(remote_error(response).await);
     }
@@ -691,11 +691,11 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
                 .bearer_auth(&token)
                 .send()
                 .await
-                .map_err(LocalError::internal)?;
+                .map_err(|error| LocalError { status: StatusCode::SERVICE_UNAVAILABLE, message:error.to_string() })?;
             if !response.status().is_success() {
                 return Err(remote_error(response).await);
             }
-            while let Some(bytes) = response.chunk().await.map_err(LocalError::internal)? {
+            while let Some(bytes) = response.chunk().await.map_err(|error| LocalError { status:StatusCode::SERVICE_UNAVAILABLE, message:error.to_string() })? {
                 output.write_all(&bytes).map_err(LocalError::internal)?;
             }
         }
@@ -731,8 +731,19 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
     // This is a no-op for consumers. For the contributor it must succeed; hiding the upload
     // error would replace the actionable cause with a misleading "no synchronized snapshot".
     sync_source(&state, &share_id).await?;
-    let mut path = materialize(&state, &share_id).await?;
     let user = current_user_id(&state).await?;
+    let (mut path, cache_state) = match materialize(&state, &share_id).await {
+        Ok(path) => (path, "current"),
+        Err(error) if matches!(error.status, StatusCode::BAD_GATEWAY | StatusCode::SERVICE_UNAVAILABLE | StatusCode::GATEWAY_TIMEOUT) => {
+            // Offline reads may reuse only this authenticated user's previously materialized
+            // immutable view. Authorization denials and malformed responses never use fallback.
+            let cached: Option<String> = state.inner.store.lock().await.query_row(
+                "select raw_path from session_materializations where share_id=?1 and user_id=?2",
+                [&share_id, &user], |row|row.get(0)).optional().map_err(LocalError::internal)?;
+            match cached.filter(|path|Path::new(path).is_file()) { Some(path)=>(path,"stale"), None=>return Err(error) }
+        }
+        Err(error) => return Err(error),
+    };
     let (adapter, name, mut snapshot) = {
         let store = state.inner.store.lock().await;
         let cached: Option<(String, String)> = store
@@ -778,7 +789,7 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
     let next = (start > 0).then(|| encode_cursor(&snapshot, start));
     activity::record_read(&state, &share_id, &user).await;
     Ok(Json(
-        json!({"schemaVersion":1,"session":{"id":share_id,"title":name,"provider":adapter.trim_end_matches("-jsonl-v1")},"snapshot":{"id":snapshot},"turns":page,"page":{"hasMore":start>0,"nextCursor":next},"freshness":{"cache":"current"}}),
+        json!({"schemaVersion":1,"session":{"id":share_id,"title":name,"provider":adapter.trim_end_matches("-jsonl-v1")},"snapshot":{"id":snapshot},"turns":page,"page":{"hasMore":start>0,"nextCursor":next},"freshness":{"cache":cache_state}}),
     ))
 
 }).await
