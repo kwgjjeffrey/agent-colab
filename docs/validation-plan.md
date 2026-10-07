@@ -2,7 +2,7 @@
 
 ### 2026-10-07 Resource visual rollback
 
-Restoring pre-refinement presentation at user request. The earlier 93 Vitest tests are frontend unit/component/source checks with mocks, not Trace end-to-end regression. Native restoration acceptance and publication pending.
+Restored pre-refinement presentation at user request: git diff 4271026 -- desktop/ui/src desktop/ui/tests docs/interaction.md is empty. The earlier 93 Vitest tests are frontend unit/component/source checks with mocks, not Trace end-to-end regression. Build passed. GUI 0.1.99-dev published with 907433-byte public readback / SHA-256 104d9d68265611c9d3de68616aae1c3a4a1a70ace6647600bd3e8d06e1cc64a9 and normal installer confirmed 0.1.151-dev promotion. Native Sessions shows original rows and actions without the rejected duplicate heading/type tiles. No full Trace regression was run. Independent synthetic concept rendered in browser and Sessions/Files tab switch passed; it is not a real product or business acceptance.
 
 ### 2026-10-07 Sessions / Files visual refinement
 

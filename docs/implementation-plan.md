@@ -2,7 +2,7 @@
 
 ### 2026-10-07 Revert rejected resource visual refinement
 
-User rejected the duplicate page heading, oversized icon tiles, excessive type hierarchy and spacing. Restore Sessions/Files presentation exactly to checkpoint 4271026; do not change business paths. Previous refinement evidence below is historical, not design acceptance. Future visual work stays in a standalone concept until approved. GUI-only restoration publication and native checks pending.
+User rejected the duplicate page heading, oversized icon tiles, excessive type hierarchy and spacing. Sessions/Files presentation restored exactly to checkpoint 4271026; no business path changes. Source rollback 1892998 committed before GUI-only restoration publication. GUI 0.1.99-dev / promotion 0.1.151-dev published and installed. Previous refinement evidence below is historical, not design acceptance. Future visual work stays in standalone .trial/V-UI-02-resource-concept until approved.
 
 ### 2026-10-07 Resource workspace visual refinement
 
