@@ -1,5 +1,9 @@
 # Colab 实现计划
 
+### 2026-10-07 Revert rejected resource visual refinement
+
+User rejected the duplicate page heading, oversized icon tiles, excessive type hierarchy and spacing. Restore Sessions/Files presentation exactly to checkpoint 4271026; do not change business paths. Previous refinement evidence below is historical, not design acceptance. Future visual work stays in a standalone concept until approved. GUI-only restoration publication and native checks pending.
+
 ### 2026-10-07 Resource workspace visual refinement
 
 Rollback checkpoint: 4271026. Sessions/Files share ResourceWorkspace/ResourceRow presentation, uniform header, semantic green type icons, two-line bounded titles, owner Profile metadata, visible handoff and shadcn owner menu. Empty-state action is adjacent and not duplicated. No Local Core/Server/Skill changes or eager body fetching; prompt builders are unchanged. Full GUI suite (93 tests), build and installed native Profile/menu/File preview/prompt/empty-state acceptance passed. Source d22a8b9 committed before publishing; GUI 0.1.98-dev / promotion 0.1.150-dev published and installed. Evidence is recorded in validation-plan.

@@ -1,5 +1,9 @@
 # 技术验证计划
 
+### 2026-10-07 Resource visual rollback
+
+Restoring pre-refinement presentation at user request. The earlier 93 Vitest tests are frontend unit/component/source checks with mocks, not Trace end-to-end regression. Native restoration acceptance and publication pending.
+
 ### 2026-10-07 Sessions / Files visual refinement
 
 - Rollback checkpoint 4271026; presentation-only scope. Seven new DOM tests pass: owner click isolation, keyboard open, owner menu, disabled handoff, one empty-state share button, original Session/Files prompt contents/no body prefetch, and unchanged materialize/tree path. Production build passed.

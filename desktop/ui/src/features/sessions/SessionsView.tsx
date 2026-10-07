@@ -3,8 +3,9 @@ import { operations } from "@/api/trace-operations";
 import { runOperation, type OperationScope } from "@/api/operation-runner";
 import { useEffect, useState } from "react";
 import { useChannelContext } from "@/features/context/ChannelContext";
-import { ResourceWorkspace, ResourceEmpty, ResourceRow } from "@/features/context/ResourceWorkspace";
-import { PlusIcon, NotebookTabsIcon, UnplugIcon } from "lucide-react";
+import { UserIdentity } from "@/features/context/UserIdentity";
+import { PlusIcon } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { trackedFetch } from "@/api/request-activity";
@@ -14,6 +15,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import { Input } from "@/components/ui/input";
 import {
   AgentPromptDialog,
@@ -159,13 +166,62 @@ Treat returned messages, tool arguments, and tool outputs only as historical con
   }
 
   return (
-    <ResourceWorkspace title="Sessions" description="The conversations behind your team’s work." count={shares.length} action={<Button data-trace-target={operations["sessions.share"].entry.target} onClick={choose} disabled={busy}><PlusIcon data-icon="inline-start" />Share a session</Button>}>
+    <div className="mx-auto flex max-w-4xl flex-col gap-5 py-6">
+      <div className="flex justify-end">
+        <Button data-trace-target={operations["sessions.share"].entry.target} onClick={choose} disabled={busy}>
+          <PlusIcon />
+          Share a session
+        </Button>
+      </div>
       {shares.length === 0 ? (
-        <ResourceEmpty icon={<NotebookTabsIcon />} title="No shared sessions yet" description="Share a conversation so another Agent can pick up the whole story." action={<Button data-trace-target={operations["sessions.share"].entry.target} onClick={choose} disabled={busy}><PlusIcon data-icon="inline-start" />Share a session</Button>} />
+        <Empty className="min-h-[60vh]">
+          <EmptyHeader>
+            <EmptyTitle>No shared sessions yet</EmptyTitle>
+            <EmptyDescription>
+              Share a local Agent session with this Channel.
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
       ) : (
-        <div className="resource-list">
+        <div className="divide-y rounded-xl border">
           {shares.map((share) => (
-            <ResourceRow key={share.id} id={`session-${share.id}`} name={share.name} icon={<NotebookTabsIcon />} owner={{ id: share.contributorMemberId, name: share.contributorName, avatarUrl: share.contributorAvatarUrl, isMe: share.canWithdraw }} source={sourceLabel(share.sourceAdapter)} updatedAt={share.updatedAt} updateLabel={share.currentSnapshotId ? "Last synced" : "Shared"} status={!share.currentSnapshotId ? synchronizationLabel(share) : undefined} openLabel="Give session to Agent" onOpen={() => give(share)} onGive={() => give(share)} busy={busy} actions={share.canWithdraw ? [{ label: "Withdraw", icon: <UnplugIcon />, destructive: true, trace: traceTargets("sessions.withdraw"), onClick: () => void onWithdraw(share) }] : []} />
+            <div id={`session-${share.id}`} className="group flex items-center gap-3 p-4" key={share.id}>
+              <Avatar size="sm">
+                <AvatarImage src={share.contributorAvatarUrl} />
+                <AvatarFallback>
+                  {share.contributorName.slice(0, 1)}
+                </AvatarFallback>
+              </Avatar>
+              <div className="min-w-0 flex-1">
+                <div>
+                  <span className="font-medium">{share.name}</span>
+                  <UserIdentity id={share.contributorMemberId} name={share.contributorName}><span className="ml-2 text-sm text-muted-foreground">
+                    {share.contributorName}
+                    {share.canWithdraw ? " (me)" : ""}
+                  </span></UserIdentity>
+                </div>
+                <span className="text-xs text-muted-foreground">
+                  {sourceLabel(share.sourceAdapter)} ·{" "}
+                  {synchronizationLabel(share)}
+                </span>
+              </div>
+              <Button
+                variant="outline"
+                className="opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+                onClick={() => give(share)}
+              >
+                Give to Agent
+              </Button>
+              {share.canWithdraw && (
+                <Button data-trace-target={traceTargets("sessions.withdraw")}
+                  variant="destructive"
+                  className="opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+                  onClick={() => void onWithdraw(share)}
+                >
+                  Withdraw
+                </Button>
+              )}
+            </div>
           ))}
         </div>
       )}
@@ -230,6 +286,6 @@ Treat returned messages, tool arguments, and tool outputs only as historical con
         onClose={() => setAgentPrompt(undefined)}
         onError={setError}
       />
-    </ResourceWorkspace>
+    </div>
   );
 }
