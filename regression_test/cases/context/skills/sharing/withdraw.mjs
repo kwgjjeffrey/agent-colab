@@ -11,7 +11,7 @@ export const META = {
   "surface": "gui",
   "priority": "critical",
   "origin": "requirement",
-  "status": "trial",
+  "status": "active",
   "effects": "isolated-write",
   "cost": "normal",
   "requires": [
@@ -22,7 +22,8 @@ export const META = {
     "skills/colab/bin"
   ],
   "suite": "business",
-  "testLevel": "end-to-end"
+  "testLevel": "end-to-end",
+  "statusReason": "20261007T123407Z-b23e54a6: real owned Skill publication succeeds; direct installation on fresh consumer returns 500 Query returned no rows. Source confirms materialized_share requires discovery-populated skill_share_cache although direct ensure never populates it. This is a product cache dependency defect; later revocation assertions were not reached."
 };
 
 import fs from "node:fs/promises";

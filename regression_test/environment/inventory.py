@@ -4,13 +4,13 @@ from concurrent.futures import ThreadPoolExecutor
 sys.path.insert(0,str(pathlib.Path(__file__).resolve().parents[2]/'skills/colab/lib'))
 from local_api import request
 def read_route(route):
-    # Preflight is a read-only availability probe. One transient gateway retry avoids
+    # Preflight is a read-only availability probe. Bounded transient gateway/timeout retries avoid
     # excluding an entire selection; authorization and binding errors are never retried.
-    for attempt in range(2):
+    for attempt in range(3):
         try:
-            return request('GET',route,timeout=6)
+            return request('GET',route,timeout=4)
         except Exception as error:
-            if attempt or not re.search(r'HTTP (502|503|504)',str(error)):
+            if attempt==2 or not (re.search(r'HTTP (502|503|504)',str(error)) or isinstance(error,TimeoutError)):
                 raise
             time.sleep(0.25)
 

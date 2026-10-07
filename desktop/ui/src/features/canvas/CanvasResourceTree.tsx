@@ -24,7 +24,7 @@ export function CanvasResourceTree({ channelId, documents, folders, selectedId, 
   async function move(id: string, folderId: string | null, index: number) {
     return runOperation("canvas.move", async operation => {
     const mutate=operation.response;
-    try { await mutate(`/v1/canvases/${id}/position`, { method: "PATCH", body: JSON.stringify({ folderId, index }) }); await onChanged(operation); }
+    try { await mutate(`/v1/canvases/${id}/position`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ folderId, index }) }); await onChanged(operation); }
     catch (reason) { operation.fail(); onError(String(reason)); }
     finally { setDragging(undefined); }
     });

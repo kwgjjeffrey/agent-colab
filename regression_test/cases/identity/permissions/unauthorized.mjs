@@ -9,7 +9,7 @@ export const META = {
   "surface": "skill",
   "priority": "critical",
   "origin": "requirement",
-  "status": "trial",
+  "status": "active",
   "effects": "read-only",
   "cost": "normal",
   "requires": [
@@ -21,7 +21,8 @@ export const META = {
     "server/standalone/src"
   ],
   "suite": "business",
-  "testLevel": "end-to-end"
+  "testLevel": "end-to-end",
+  "statusReason": "Latest scoped round 20261007T123407Z-b23e54a6: existing protected resources remain readable to owner and reject actual other identity with 403/404 across Messages, Files materialization, Session and Canvas reads."
 };
 
 import fs from "node:fs/promises";import path from "node:path";

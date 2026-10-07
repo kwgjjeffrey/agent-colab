@@ -9,7 +9,7 @@ export const META = {
   "surface": "gui",
   "priority": "critical",
   "origin": "requirement",
-  "status": "trial",
+  "status": "active",
   "effects": "isolated-write",
   "cost": "normal",
   "requires": [
@@ -20,7 +20,8 @@ export const META = {
     "skills/colab/bin/colab-browser"
   ],
   "suite": "business",
-  "testLevel": "end-to-end"
+  "testLevel": "end-to-end",
+  "statusReason": "20261007T124601Z-dcff5e91: real GUI adds the distinct member, their authenticated client discovers the intended Channel, and actual member identity cleanup succeeds on confirmed Core 0.1.92."
 };
 
 import fs from "node:fs/promises";import path from "node:path";
@@ -29,5 +30,5 @@ import {openTab} from "../../../support/gui.mjs";
 
 export const REQUIREMENTS={"channel": {"permission": "read"}, "parameters": {"keys": ["secondMemberEmail", "secondMemberCoreDiscoveryFile"]}};
 export async function run(ctx){
-const c=resource(ctx,'channel'),email=parameter(ctx,'secondMemberEmail'),second=parameter(ctx,'secondMemberCoreDiscoveryFile');const before=await core(ctx,'GET','/v1/channels/'+c.id+'/members');ctx.assert('Invite fixture is not already a member',!before.some(m=>m.email===email),true);await openTab(ctx,'Messages');await ctx.page.getByRole('button',{name:'Add user',exact:true}).click();const d=ctx.page.getByRole('dialog');await d.locator('input[name="email"]').fill(email);await d.getByRole('button',{name:'Add user',exact:true}).click();const rows=await eventually(ctx,'Existing Organization member joins this Channel',()=>core(ctx,'GET','/v1/channels/'+c.id+'/members'),rows=>rows.some(m=>m.email===email));const added=rows.find(m=>m.email===email);try{const accessible=await core(ctx,'GET','/v1/channels',undefined,{discoveryFile:second});ctx.assert('Invited member can discover intended Channel',accessible.some(x=>x.id===c.id),true);}finally{await core(ctx,'DELETE','/v1/channels/'+c.id+'/members/'+added.memberId);}
+const c=resource(ctx,'channel'),email=parameter(ctx,'secondMemberEmail'),second=parameter(ctx,'secondMemberCoreDiscoveryFile');const before=await core(ctx,'GET','/v1/channels/'+c.id+'/members');ctx.assert('Invite fixture is not already a member',!before.some(m=>m.email===email),true);await openTab(ctx,'Messages');await ctx.page.getByRole('button',{name:'Add user',exact:true}).click();const d=ctx.page.getByRole('dialog');await d.locator('input[name="email"]').fill(email);try{await d.getByRole('button',{name:'Add user',exact:true}).click();const rows=await eventually(ctx,'Existing Organization member joins this Channel',()=>core(ctx,'GET','/v1/channels/'+c.id+'/members'),rows=>rows.some(m=>m.email===email));const added=rows.find(m=>m.email===email);const accessible=await core(ctx,'GET','/v1/channels',undefined,{discoveryFile:second});ctx.assert('Invited member can discover intended Channel',accessible.some(x=>x.id===c.id),true);}finally{const rows=await core(ctx,'GET','/v1/channels/'+c.id+'/members');const added=rows.find(m=>m.email===email);if(added)await core(ctx,'DELETE','/v1/channels/'+c.id+'/members/'+(added.memberId??added.userId));}
 }

@@ -9,7 +9,7 @@ export const META = {
   "surface": "integration",
   "priority": "critical",
   "origin": "requirement",
-  "status": "trial",
+  "status": "active",
   "effects": "isolated-write",
   "cost": "normal",
   "requires": [
@@ -20,7 +20,8 @@ export const META = {
     "skills/colab/bin"
   ],
   "suite": "business",
-  "testLevel": "end-to-end"
+  "testLevel": "end-to-end",
+  "statusReason": "Reviewed Round 6 and 20261007T123407Z-b23e54a6: bound registered source is edited, published root must advance, and original source bytes are restored in finally. Repeated watcher timeout is a real continuous-publication failure; script behavior is valid. Product defect remains open."
 };
 
 import fs from "node:fs/promises";import path from "node:path";

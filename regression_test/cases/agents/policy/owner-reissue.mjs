@@ -9,7 +9,7 @@ export const META = {
   "surface": "gui",
   "priority": "critical",
   "origin": "requirement",
-  "status": "trial",
+  "status": "active",
   "effects": "isolated-write",
   "cost": "normal",
   "requires": [
@@ -21,7 +21,8 @@ export const META = {
     "local/src"
   ],
   "suite": "business",
-  "testLevel": "end-to-end"
+  "testLevel": "end-to-end",
+  "statusReason": "20261007T124601Z-dcff5e91 on confirmed Core 0.1.92: non-owner rejection, real owner reply execution, exact assembled prompt, preserved rejected request and policy/membership cleanup all verified."
 };
 
 import fs from "node:fs/promises";import path from "node:path";
