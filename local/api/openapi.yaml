@@ -14,7 +14,7 @@ paths:
   /v1/channels/{channelId}/activity:
     get:
       operationId: listLocalChannelActivity
-      description: Authorized metadata-only recent activity. Loads one bounded page, never resource contents. Reuses Server cursor unchanged.
+      description: Authorized recent activity with stable object identities and bounded rich instruction previews. Loads one bounded page, never shared resource bodies or task logs. Reuses Server cursor unchanged.
       parameters:
         - { name: channelId, in: path, required: true, schema: { type: string, format: uuid } }
         - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 50, default: 20 } }

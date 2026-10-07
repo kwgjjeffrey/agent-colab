@@ -11,8 +11,21 @@ vi.mock("@/features/messages/api", () => ({ messageRequest: request }));
 vi.mock("@/features/context/ChannelContext", () => ({
   useChannelContext: () => ({ channelId: "channel", navigate }),
 }));
+vi.mock("@/features/context/MentionCapsule", () => ({
+  MentionCapsule: ({ id, label }: { id: string; label: string }) => (
+    <button data-object-id={id} onClick={() => {}}>
+      {label}
+    </button>
+  ),
+}));
 vi.mock("@/features/agent/AgentWorkDrawer", () => ({
-  AgentWorkDrawer: ({ request, open }: { request?: { id: string }; open: boolean }) => open ? <div role="dialog">Task {request?.id}</div> : null,
+  AgentWorkDrawer: ({
+    request,
+    open,
+  }: {
+    request?: { id: string };
+    open: boolean;
+  }) => (open ? <div role="dialog">Task {request?.id}</div> : null),
 }));
 afterEach(() => {
   cleanup();
@@ -36,7 +49,9 @@ it("fetches one bounded page and locates the clicked shared object", async () =>
     })
     .mockResolvedValueOnce({ items: [], nextCursor: null });
   render(<RecentActivity />);
-  await userEvent.click(await screen.findByRole("button", { name: "Design" }));
+  await userEvent.click(
+    await screen.findByRole("link", { name: "Alice shared Design" }),
+  );
   expect(navigate).toHaveBeenCalledWith({
     id: "1",
     kind: "session",
@@ -61,12 +76,73 @@ it("a failed request is a visible retry, not an empty success", async () => {
   await userEvent.click(screen.getByRole("button", { name: "Retry" }));
   expect(await screen.findByText("No activity yet.")).toBeTruthy();
 });
-it.each(["Messages", "Canvas"])("%s activity opens its exact task, not the message or newest task", async source => {
-  request.mockResolvedValueOnce({ items: [{ id: "request:exact-task", action: "requested", actorName: "Alice", resourceKind: "message", resourceId: "trigger-message", resourceName: "Check build", occurredAt: "2026-10-06T10:00:00Z", targetName: "Builder", source, state: "succeeded" }], nextCursor: null });
+it.each(["Messages", "Canvas"])(
+  "%s activity opens its exact task, not the message or newest task",
+  async (source) => {
+    request.mockResolvedValueOnce({
+      items: [
+        {
+          id: "request:exact-task",
+          action: "requested",
+          actorName: "Alice",
+          resourceKind: "message",
+          resourceId: "trigger-message",
+          resourceName: "Check build",
+          occurredAt: "2026-10-06T10:00:00Z",
+          targetName: "Builder",
+          source,
+          state: "succeeded",
+        },
+      ],
+      nextCursor: null,
+    });
+    render(<RecentActivity />);
+    expect(screen.queryByRole("dialog")).toBeNull();
+    await userEvent.click(
+      await screen.findByRole("link", { name: "Alice requested Check build" }),
+    );
+    expect(screen.getByRole("dialog").textContent).toBe("Task exact-task");
+    expect(navigate).not.toHaveBeenCalled();
+    expect(request).toHaveBeenCalledTimes(1);
+  },
+);
+it("object capsules retain their stable identities without opening the activity", async () => {
+  request.mockResolvedValueOnce({
+    items: [
+      {
+        id: "request:task",
+        action: "requested",
+        actorName: "Alice",
+        actorMemberId: "member-id",
+        resourceKind: "message",
+        resourceId: "message",
+        resourceName: "Check build",
+        occurredAt: "2026-10-06T10:00:00Z",
+        targetName: "Builder",
+        targetBlueprintId: "blueprint-id",
+        source: "Messages",
+        state: "succeeded",
+        previewContent: {
+          content: [
+            {
+              type: "mention",
+              attrs: { kind: "files", id: "file-id", label: "Plan" },
+            },
+          ],
+        },
+      },
+    ],
+    nextCursor: null,
+  });
   render(<RecentActivity />);
+  const target = await screen.findByRole("button", { name: "Builder" });
+  expect(target.getAttribute("data-object-id")).toBe("blueprint-id");
+  await userEvent.click(target);
+  await userEvent.click(screen.getByRole("button", { name: "Plan" }));
   expect(screen.queryByRole("dialog")).toBeNull();
-  await userEvent.click(await screen.findByRole("button", { name: /Check build.*Work details/ }));
-  expect(screen.getByRole("dialog").textContent).toBe("Task exact-task");
   expect(navigate).not.toHaveBeenCalled();
-  expect(request).toHaveBeenCalledTimes(1);
+  const row = screen.getByRole("link", { name: "Alice requested Check build" });
+  row.focus();
+  await userEvent.keyboard("{Enter}");
+  expect(screen.getByRole("dialog").textContent).toBe("Task task");
 });

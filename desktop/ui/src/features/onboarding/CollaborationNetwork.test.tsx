@@ -36,6 +36,6 @@ it("uses upright three-node networks and keeps the collaborating actor on each v
     );
   }
   expect(screen.getByRole("heading").textContent).toBe(
-    "Your team is about to work at agentic speed",
+    "Your team is about to work at agentic velocity",
   );
 });

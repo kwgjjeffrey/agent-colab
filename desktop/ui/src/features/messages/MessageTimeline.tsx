@@ -9,9 +9,8 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { ContextCapsule } from "@/features/context/ContextCapsule";
+import { MentionCapsule } from "@/features/context/MentionCapsule";
 import { UserIdentity } from "@/features/context/UserIdentity";
-import { isResourceKind } from "@/features/context/context-model";
 import { AgentIdentityLink } from "@/features/context/AgentIdentityLink";
 import type { Blueprint, ChannelMessage, AgentRequestStatus } from "./types";
 import { MemberAvatar } from "./AgentAvatar";
@@ -64,7 +63,12 @@ export function MessageTimeline({
   useLayoutEffect(() => {
     restored.current = false;
   }, [channelId]);
-  useLayoutEffect(() => { if (focusId) document.getElementById(`message-${focusId}`)?.scrollIntoView({ block: "center" }); }, [focusId, messages]);
+  useLayoutEffect(() => {
+    if (focusId)
+      document
+        .getElementById(`message-${focusId}`)
+        ?.scrollIntoView({ block: "center" });
+  }, [focusId, messages]);
   if (!messages.length)
     return (
       <div className="grid h-full place-items-center text-sm text-muted-foreground">
@@ -278,47 +282,15 @@ function renderNodes(
   return node.content.map((item, index) =>
     item.type === "text" ? (
       item.text
-    ) : item.type === "mention" && isResourceKind(item.attrs?.kind) ? (
-      <ContextCapsule
-        key={index}
-        kind={item.attrs.kind}
-        id={item.attrs.id ?? ""}
-        label={item.attrs.label ?? "Context"}
-      />
-    ) : item.type === "mention" && item.attrs?.kind === "member" ? (
-      <UserIdentity
-        key={index}
-        id={item.attrs.id}
-        name={item.attrs.label ?? "Member"}
-      >
-        <span
-          className={mentionClass(
-            item.attrs.kind,
-            item.attrs.id,
-            currentMemberId,
-          )}
-        >
-          @{item.attrs.label}
-        </span>
-      </UserIdentity>
     ) : item.type === "mention" ? (
-      <AgentIdentityLink
-        key={index}
-        id={item.attrs?.id}
-        label={item.attrs?.label ?? "Agent"}
-      >
-        <span
-          key={index}
-          className={mentionClass(
-            item.attrs?.kind,
-            item.attrs?.id,
-            currentMemberId,
-          )}
-          data-mention-kind={item.attrs?.kind ?? "agent"}
-        >
-          @{item.attrs?.label ?? "Agent"}
-        </span>
-      </AgentIdentityLink>
+      <span key={index} className="mx-1">
+        <MentionCapsule
+          kind={item.attrs?.kind}
+          id={item.attrs?.id}
+          label={item.attrs?.label ?? "Context"}
+          currentMemberId={currentMemberId}
+        />
+      </span>
     ) : item.type === "hardBreak" ? (
       <br key={index} />
     ) : (

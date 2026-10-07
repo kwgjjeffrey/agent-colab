@@ -1,5 +1,7 @@
 # Colab 交互设计
 
+Home 收口（2026-10-07）：价值陈述使用 agentic velocity。Recent activity 使用完整主谓宾标题，成员、Agent 和资源复用同一 MentionCapsule/Profile；指令摘要保留结构化 mention。标题 14px、摘要/时间 12px，统一行内间距与上下留白。整行（含键盘 Enter/Space）打开资源详情或精确 request 的 Work details；胶囊点击只打开 Profile，不触发行跳转。任务详情仍只在点击后加载。
+
 Home 收口（2026-10-06）：Tips 展示名称改为 Use cases，保留已有账号偏好键。角色 Badge 与场景文案同行，不再堆叠；五类角色分别使用蓝、紫、金、玫红、绿语义色。Recent activity 的 Messages/Canvas 指令行直接打开该活动 ID 中 request 对应的已有 Work details Drawer，不跳消息、不默认最新任务；正文仍仅在用户点击后加载。
 
 Tips 角色场景（2026-10-06）：每条显示角色 Badge，顶部可按 Individual / Collaborator / Team lead / Reviewer / Skill sharing 筛选；这是使用视角，不是账号权限。新增求助、接手、团队总结、决策评审、远端检查、Skill 复用六条。共享类 Try 复用 Quick Share；Session 消费类只在 Try 时读取当前 Channel 的 Session 元数据，用户选择来源后得到任务预填的标准提示词，可追加 User query、复制或转发。未同步的 Session 不可选择；缺少同事 Session 进入已有邀请分享流程。远端检查复用选择 Agent + 可编辑指令，必须显式发送；缺少 Agent 有明确提示。Skill 复用进入已有安装界面。保留折叠、dismiss 和恢复，不新建工作流、调度或权限系统。

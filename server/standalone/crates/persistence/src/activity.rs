@@ -16,11 +16,14 @@ pub struct ChannelActivity {
     pub id: String,
     pub action: String,
     pub actor_name: String,
+    pub actor_member_id: Uuid,
     pub resource_kind: String,
     pub resource_id: Uuid,
     pub resource_name: String,
     pub occurred_at: String,
     pub target_name: Option<String>,
+    pub target_blueprint_id: Option<Uuid>,
+    pub preview_content: Option<serde_json::Value>,
     pub source: Option<String>,
     pub state: Option<String>,
 }
@@ -43,33 +46,101 @@ impl Database {
             return Ok(None);
         }
         // Limit each source before merging. No resource bodies or full Channel lists are loaded.
-        let rows=sqlx::query_as::<_,ChannelActivity>(r#"
+        let mut rows=sqlx::query_as::<_,ChannelActivity>(r#"
 with shares as (
- select 'share:'||s.id id,'shared'::text action,coalesce(u.display_name,u.email) actor_name,s.kind resource_kind,s.id resource_id,s.name resource_name,s.created_at occurred_at,null::text target_name,null::text source,null::text state
+ select 'share:'||s.id id,'shared'::text action,coalesce(u.display_name,u.email) actor_name,s.kind resource_kind,s.id resource_id,s.name resource_name,s.created_at occurred_at,null::text target_name,null::text source,null::text state,om.id actor_member_id,null::uuid target_blueprint_id
  from channel_shares s join organization_members om on om.id=s.contributor_member_id join users u on u.id=om.user_id
  where s.channel_id=$1 and s.state='active' and s.kind in ('files','session') and ($2::timestamptz is null or (s.created_at,'share:'||s.id)<($2::timestamptz,$3)) order by s.created_at desc,s.id desc limit $4
 ), reads as (
- select 'read:'||r.share_id||':'||r.reader_member_id id,'read'::text action,coalesce(u.display_name,u.email) actor_name,s.kind resource_kind,s.id resource_id,s.name resource_name,r.read_at occurred_at,null::text target_name,null::text source,null::text state
+ select 'read:'||r.share_id||':'||r.reader_member_id id,'read'::text action,coalesce(u.display_name,u.email) actor_name,s.kind resource_kind,s.id resource_id,s.name resource_name,r.read_at occurred_at,null::text target_name,null::text source,null::text state,om.id actor_member_id,null::uuid target_blueprint_id
  from share_read_activity r join channel_shares s on s.id=r.share_id join organization_members om on om.id=r.reader_member_id join users u on u.id=om.user_id
  where r.channel_id=$1 and s.state='active' and ($2::timestamptz is null or (r.read_at,'read:'||r.share_id||':'||r.reader_member_id)<($2::timestamptz,$3)) order by r.read_at desc,r.share_id desc,r.reader_member_id desc limit $4
 ), commands as (
- select 'request:'||r.id id,'requested'::text action,coalesce(u.display_name,u.email) actor_name,'message'::text resource_kind,coalesce(r.trigger_message_id,r.id) resource_id,left(r.query,160) resource_name,r.created_at occurred_at,b.name target_name,case when r.source_canvas_id is null then 'Messages' else 'Canvas' end source,r.state
+ select 'request:'||r.id id,'requested'::text action,coalesce(u.display_name,u.email) actor_name,'message'::text resource_kind,coalesce(r.trigger_message_id,r.id) resource_id,left(r.query,160) resource_name,r.created_at occurred_at,b.name target_name,case when r.source_canvas_id is null then 'Messages' else 'Canvas' end source,r.state,om.id actor_member_id,b.id target_blueprint_id
  from agent_requests r join agent_blueprints b on b.id=r.target_blueprint_id join organization_members om on om.id=r.requester_member_id join users u on u.id=om.user_id
  where r.channel_id=$1 and ($2::timestamptz is null or (r.created_at,'request:'||r.id)<($2::timestamptz,$3)) order by r.created_at desc,r.id desc limit $4
 ), documents as (
- select 'canvas:'||c.id id,'created'::text action,coalesce(u.display_name,u.email) actor_name,'canvas'::text resource_kind,c.id resource_id,c.title resource_name,c.created_at occurred_at,null::text target_name,null::text source,null::text state
+ select 'canvas:'||c.id id,'created'::text action,coalesce(u.display_name,u.email) actor_name,'canvas'::text resource_kind,c.id resource_id,c.title resource_name,c.created_at occurred_at,null::text target_name,null::text source,null::text state,om.id actor_member_id,null::uuid target_blueprint_id
  from canvases c join organization_members om on om.id=c.created_by_member_id join users u on u.id=om.user_id
  where c.channel_id=$1 and c.archived_at is null and ($2::timestamptz is null or (c.created_at,'canvas:'||c.id)<($2::timestamptz,$3)) order by c.created_at desc,c.id desc limit $4
 )
-select id,action,actor_name,resource_kind,resource_id,resource_name,to_char(occurred_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"') occurred_at,target_name,source,state from (select * from shares union all select * from reads union all select * from commands union all select * from documents) all_activity order by all_activity.occurred_at desc,id desc limit $4
+select a.id,action,actor_name,actor_member_id,resource_kind,resource_id,resource_name,to_char(occurred_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"') occurred_at,target_name,target_blueprint_id,source,state,m.content preview_content
+from (select * from (select * from shares union all select * from reads union all select * from commands union all select * from documents) all_activity order by occurred_at desc,id desc limit $4) a
+left join channel_messages m on a.action='requested' and m.id=a.resource_id and m.channel_id=$1
+order by a.occurred_at desc,a.id desc
 "#).bind(channel).bind(before).bind(before_id).bind(limit.clamp(1,51)).fetch_all(&self.pool).await?;
+        for row in &mut rows {
+            row.preview_content = row.preview_content.as_ref().map(activity_preview);
+        }
         Ok(Some(rows))
     }
+}
+
+// A feed preview preserves atomic identities, but never ships a whole message or task log.
+fn activity_preview(document: &serde_json::Value) -> serde_json::Value {
+    fn visit(
+        node: &serde_json::Value,
+        left: &mut usize,
+        out: &mut Vec<serde_json::Value>,
+        depth: usize,
+    ) {
+        if *left == 0 || out.len() >= 40 || depth > 20 {
+            return;
+        }
+        match node["type"].as_str() {
+            Some("text") => {
+                let text = node["text"].as_str().unwrap_or("");
+                let clipped: String = text.chars().take(*left).collect();
+                *left -= clipped.chars().count();
+                out.push(serde_json::json!({"type":"text","text":clipped}));
+            }
+            Some("mention") => {
+                let attrs = &node["attrs"];
+                let label: String = attrs["label"]
+                    .as_str()
+                    .unwrap_or("Context")
+                    .chars()
+                    .take(160)
+                    .collect();
+                out.push(serde_json::json!({"type":"mention","attrs":{"id":attrs["id"],"kind":attrs["kind"],"label":label}}));
+                *left = left.saturating_sub(1);
+            }
+            Some("hardBreak") => out.push(serde_json::json!({"type":"text","text":" "})),
+            _ => {
+                if let Some(children) = node["content"].as_array() {
+                    for child in children {
+                        if *left == 0 || out.len() >= 40 {
+                            break;
+                        }
+                        visit(child, left, out, depth + 1);
+                    }
+                }
+            }
+        }
+    }
+    let mut out = Vec::new();
+    visit(document, &mut 160, &mut out, 0);
+    serde_json::json!({"type":"doc","content":out})
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn feed_preview_is_bounded_and_keeps_atomic_identity() {
+        let doc = serde_json::json!({"type":"doc","content":[{"type":"paragraph","content":[{"type":"mention","attrs":{"id":"file-id","kind":"files","label":"Plan"}},{"type":"text","text":"界".repeat(500)}]}]});
+        let preview = activity_preview(&doc);
+        assert_eq!(preview["content"][0]["attrs"]["id"], "file-id");
+        assert_eq!(
+            preview["content"][1]["text"]
+                .as_str()
+                .unwrap()
+                .chars()
+                .count(),
+            159
+        );
+        assert!(preview.to_string().len() < 1024);
+    }
     #[tokio::test]
     #[ignore = "requires isolated COLAB_ACTIVITY_TEST_DATABASE_URL"]
     async fn recent_activity_permissions_pagination_and_reads() {
@@ -120,6 +191,7 @@ mod tests {
             .unwrap();
         assert_eq!(page.len(), 20);
         assert_eq!(page[0].action, "read");
+        assert_eq!(page[0].actor_member_id, org.member_id);
         assert_eq!(
             page.iter().filter(|r| r.action == "read").count(),
             1,

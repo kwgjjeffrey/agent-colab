@@ -1,5 +1,11 @@
 # 技术验证计划
 
+### 2026-10-07 Activity / website
+
+- GUI: 86 tests passed, including bounded page fetch, exact task from Messages/Canvas activity, nested capsule click isolation and Enter activation. Production build passed.
+- Isolated PostgreSQL: activity membership, cursor pagination, coalesced reads and actor identity passed; rich preview retains atomic IDs and caps text at 160 characters. Two targeted tests passed in 0.15s. No full Server suite was run.
+- Independent website: build and three release-asset selection tests passed; dependency audit reports zero vulnerabilities after patched sharp override. Cloudflare deployment produced Worker version `6eaa0714-d106-45bb-bdfd-f4cea39c805e`. Public readback and responsive browser acceptance still pending; no fresh-machine installation claimed.
+
 ### 2026-10-06 compact Use cases / exact activity task
 
 85 GUI tests and production build passed. Regression covers both Messages and Canvas activity

@@ -223,7 +223,7 @@ export function CollaborationNetwork() {
           </figure>
         ))}
       </div>
-      <h2>Your team is about to work at agentic speed</h2>
+      <h2>Your team is about to work at agentic velocity</h2>
     </div>
   );
 }
