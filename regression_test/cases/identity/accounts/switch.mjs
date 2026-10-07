@@ -12,10 +12,7 @@ export const META = {
   "status": "active",
   "effects": "isolated-write",
   "cost": "normal",
-  "requires": [
-    "local-core",
-    "isolated-test-accounts"
-  ],
+  "requires": [],
   "affectedPaths": [
     "desktop/ui/src/main.tsx",
     "local/src",
@@ -26,3 +23,12 @@ export const META = {
   "suite": "business",
   "testLevel": "end-to-end"
 };
+
+import fs from "node:fs/promises";import path from "node:path";
+import {parameter,resource,core,cli,data,disposable,eventually} from "../../../support/client.mjs";
+import {isolated} from "../../../support/controls.mjs";
+
+export const REQUIREMENTS={"parameters": {"keys": ["isolationConfirmed", "isolatedClientBaseUrl", "isolatedCoreDiscoveryFile", "secondAccountId"]}};
+export async function run(ctx){
+const target=isolated(ctx),accounts=await core(ctx,'GET','/v1/auth/accounts',undefined,target),second=parameter(ctx,'secondAccountId');const first=accounts.find(x=>x.active);ctx.assert('Both real accounts are saved',!!first&&accounts.some(x=>x.userId===second),true);const firstChannels=await core(ctx,'GET','/v1/channels',undefined,target);await ctx.page.goto(target.baseUrl);try{await ctx.page.getByRole('button',{name:'Settings',exact:true}).click();await ctx.page.locator('[data-trace-nav="accounts"]').click();await ctx.page.getByRole('button').filter({hasText:accounts.find(x=>x.userId===second).email}).click();const switched=await eventually(ctx,'Active account changes',()=>core(ctx,'GET','/v1/auth/accounts',undefined,target),rows=>rows.some(x=>x.active&&x.userId===second));const secondChannels=await core(ctx,'GET','/v1/channels',undefined,target);for(const channel of firstChannels.filter(a=>!secondChannels.some(b=>a.id===b.id)))ctx.assert('Old account navigation is absent',await ctx.page.getByRole('button',{name:channel.name,exact:true}).count(),0);await ctx.page.reload();ctx.assert('Current account remains selected after reload',(await core(ctx,'GET','/v1/auth/accounts',undefined,target)).find(x=>x.active).userId,second);}finally{await core(ctx,'POST','/v1/auth/switch',{userId:first.userId},target);}
+}

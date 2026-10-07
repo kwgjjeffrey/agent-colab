@@ -13,8 +13,7 @@ export const META = {
   "effects": "isolated-write",
   "cost": "normal",
   "requires": [
-    "local-core",
-    "test-agent-runtime"
+    "local-core"
   ],
   "affectedPaths": [
     "desktop/ui/src/features/agent",
@@ -24,3 +23,12 @@ export const META = {
   "suite": "business",
   "testLevel": "end-to-end"
 };
+
+import fs from "node:fs/promises";import path from "node:path";
+import {parameter,resource,core,cli,data,disposable,eventually} from "../../../support/client.mjs";
+import {invoke,complete} from "../../../support/agent.mjs";
+
+export const REQUIREMENTS={"channel": {"permission": "read"}, "agent": {"state": "online", "capability": "execute"}, "parameters": {"keys": ["secondDisposableChannelId"]}};
+export async function run(ctx){
+const a=resource(ctx,'agent'),otherId=parameter(ctx,'secondDisposableChannelId');await core(ctx,'PATCH','/v1/channels/'+otherId+'/blueprints/'+a.id+'/selection',{enabled:true});const first=await invoke(ctx);await complete(ctx,first);const second=await invoke(ctx);await complete(ctx,second);const otherCtx={...ctx,resources:{...ctx.resources,channel:{...resource(ctx,'channel'),id:otherId}}};const third=await invoke(otherCtx);await complete(otherCtx,third);async function thread(task){const events=await core(ctx,'GET','/v1/agent-requests/'+task.request.id+'/events',undefined,{capture:false});return events.events.find(e=>e.params?.threadId)?.params.threadId;}const ids=await Promise.all([thread(first),thread(second),thread(third)]);ctx.assert('Each request identifies a real provider thread',ids.every(Boolean),true);ctx.assert('Channel A resumes the same thread',ids[0],ids[1]);ctx.assert('Other Channel uses a separate thread',ids[2]!==ids[0],true);
+}

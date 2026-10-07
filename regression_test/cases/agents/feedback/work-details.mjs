@@ -13,8 +13,7 @@ export const META = {
   "effects": "read-only",
   "cost": "normal",
   "requires": [
-    "local-core",
-    "test-agent-runtime"
+    "local-core"
   ],
   "affectedPaths": [
     "desktop/ui/src/features/agent",
@@ -24,3 +23,13 @@ export const META = {
   "suite": "business",
   "testLevel": "end-to-end"
 };
+
+import fs from "node:fs/promises";import path from "node:path";
+import {parameter,resource,core,cli,data,disposable,eventually} from "../../../support/client.mjs";
+import {invoke,complete} from "../../../support/agent.mjs";
+import {openTab} from "../../../support/gui.mjs";
+
+export const REQUIREMENTS={"channel": {"permission": "read"}, "agent": {"state": "online", "capability": "execute"}};
+export async function run(ctx){
+const task=await invoke(ctx,{gui:true});await complete(ctx,task);await ctx.page.getByRole('button').filter({hasText:task.agent.name}).filter({hasText:/tasks/}).click();const pop=ctx.page.getByLabel('Agent tasks');await pop.getByRole('button').first().click();const work=ctx.page.locator('[data-trace-region="agent-work"]');await work.waitFor();ctx.assert('Work view exposes the intended Agent',(await work.innerText()).includes(task.agent.name),true);const events=await eventually(ctx,'Work events finish persistence',()=>core(ctx,'GET','/v1/agent-requests/'+task.request.id+'/events',undefined,{capture:false}),v=>v.events.length>0,{timeoutMs:20000});ctx.assert('Persisted work contains real runtime events',events.events.length>0,true);await ctx.screenshot('Real Agent work details');await ctx.page.reload();await openTab(ctx,'Messages');ctx.assert('Result survives reload',await ctx.page.getByText('REGRESSION_OK',{exact:false}).count()>0,true);
+}

@@ -22,3 +22,14 @@ export const META = {
   "suite": "business",
   "testLevel": "end-to-end"
 };
+
+import fs from "node:fs/promises";import path from "node:path";
+import {parameter,resource,core,cli,data,disposable,eventually} from "../../../support/client.mjs";
+import {createDocument,deleteDocument} from "../../../support/canvas.mjs";
+import {openTab} from "../../../support/gui.mjs";
+import {secondary} from "../../../support/controls.mjs";
+
+export const REQUIREMENTS={"channel": {"permission": "read"}, "parameters": {"keys": ["secondClientBaseUrl"]}};
+export async function run(ctx){
+const d=await createDocument(ctx),c=resource(ctx,'channel'),other=await secondary(ctx);try{await other.getByRole('button',{name:c.name,exact:true}).click();await other.getByRole('tab',{name:'Canvas',exact:true}).click();await other.locator('[data-trace-region="canvas-tree"]').getByText(d.title,{exact:true}).click();const first=ctx.page.locator('[contenteditable="true"]'),second=other.locator('[contenteditable="true"]');await first.fill('EDIT_A_'+ctx.runId);await second.press('End');await second.pressSequentially(' EDIT_B_'+ctx.runId);const projection=await eventually(ctx,'Both real clients converge',()=>core(ctx,'GET','/v1/canvases/'+d.id+'/document'),x=>x.content?.includes('EDIT_A_'+ctx.runId)&&x.content?.includes('EDIT_B_'+ctx.runId),{timeoutMs:30000});ctx.assert('First edit is not duplicated',projection.content.split('EDIT_A_'+ctx.runId).length-1,1);ctx.assert('Second edit is not duplicated',projection.content.split('EDIT_B_'+ctx.runId).length-1,1);await ctx.page.reload();await other.reload();await openTab(ctx,'Canvas');await ctx.page.locator('[data-trace-region="canvas-tree"]').getByText(d.title,{exact:true}).click();await other.getByRole('tab',{name:'Canvas',exact:true}).click();await other.locator('[data-trace-region="canvas-tree"]').getByText(d.title,{exact:true}).click();ctx.assert('Both rendered projections agree',await first.innerText(),await second.innerText());}finally{await other.close();await deleteDocument(ctx,d);}
+}

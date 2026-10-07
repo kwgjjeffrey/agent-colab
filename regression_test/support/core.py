@@ -5,7 +5,7 @@ from local_api import request, LocalApiError
 try:
     if len(sys.argv)>4 and sys.argv[4]:
         os.environ['COLAB_DISCOVERY_FILE']=sys.argv[4]
-    value=request(sys.argv[1],sys.argv[2],body=json.loads(sys.argv[3]) if len(sys.argv)>3 else None,timeout=15)
+    value=request(sys.argv[1],sys.argv[2],body=json.load(sys.stdin) if sys.argv[3]=="-" else json.loads(sys.argv[3]) if len(sys.argv)>3 else None,timeout=15)
     print(json.dumps({'ok':True,'data':value}))
 except LocalApiError as e:
     print(json.dumps({'ok':False,'error':str(e)}));sys.exit(1)

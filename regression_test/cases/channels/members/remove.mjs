@@ -22,3 +22,11 @@ export const META = {
   "suite": "business",
   "testLevel": "end-to-end"
 };
+
+import fs from "node:fs/promises";import path from "node:path";
+import {parameter,resource,core,cli,data,disposable,eventually} from "../../../support/client.mjs";
+
+export const REQUIREMENTS={"channel": {"permission": "read"}, "parameters": {"keys": ["disposable", "secondMemberEmail", "secondCoreDiscoveryFile"]}};
+export async function run(ctx){
+disposable(ctx);const c=resource(ctx,'channel'),email=parameter(ctx,'secondMemberEmail'),second=parameter(ctx,'secondCoreDiscoveryFile');await core(ctx,'POST','/v1/channels/'+c.id+'/members',{email,role:'member'});const member=(await core(ctx,'GET','/v1/channels/'+c.id+'/members')).find(m=>m.email===email);ctx.assert('Test collaborator is present',!!member,true);await cli(ctx,'colab-browser',['remove-member','--channel','colab://channel/'+c.id,'--user',member.memberId]);const denied=await core(ctx,'GET','/v1/channels/'+c.id+'/messages',undefined,{discoveryFile:second,expectFailure:true});ctx.assert('Removed member is denied at service boundary',/HTTP (403|404)/.test(denied.error),true);ctx.assert('Owner retains access',Array.isArray(await core(ctx,'GET','/v1/channels/'+c.id+'/members')),true);
+}

@@ -12,9 +12,7 @@ export const META = {
   "status": "active",
   "effects": "isolated-write",
   "cost": "slow",
-  "requires": [
-    "sandbox-installation"
-  ],
+  "requires": [],
   "affectedPaths": [
     "skills/colab/setup",
     "desktop/ui/src/features/updates"
@@ -22,3 +20,12 @@ export const META = {
   "suite": "release",
   "testLevel": "end-to-end"
 };
+
+import fs from "node:fs/promises";import path from "node:path";
+import {parameter,resource,core,cli,data,disposable,eventually} from "../../../support/client.mjs";
+import {setup,receipt,links,installRoot} from "../../../support/installation.mjs";
+
+export const REQUIREMENTS={"parameters": {"keys": ["releaseManifestUrl", "testServerUrl"]}};
+export async function run(ctx){
+await setup(ctx,'install',parameter(ctx,'releaseManifestUrl'),['--agent','codex']);const installed=await receipt(ctx);ctx.assert('Fresh installation has independent artifact versions',['local-core','desktop-ui','colab-skill'].every(k=>!!installed.componentVersions[k]),true);const status=await setup(ctx,'status',parameter(ctx,'releaseManifestUrl'));const value=JSON.parse(status.stdout);ctx.assert('Sandbox Skill is discoverable',value.targets.codex.installed,true);for(const target of Object.values(await links(ctx)))ctx.assert('Activated artifact resolves inside sandbox',path.resolve(installRoot(ctx),'current',target).startsWith(installRoot(ctx)+path.sep),true);const result=await ctx.command('Start installed Core health probe','python3',['regression_test/support/installation_health.py',installRoot(ctx)]);ctx.assert('Downloaded Core is usable',result.code,0);
+}

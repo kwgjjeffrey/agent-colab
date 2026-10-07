@@ -13,8 +13,7 @@ export const META = {
   "effects": "read-only",
   "cost": "normal",
   "requires": [
-    "local-core",
-    "isolated-test-accounts"
+    "local-core"
   ],
   "affectedPaths": [
     "desktop/ui/src/main.tsx",
@@ -24,3 +23,11 @@ export const META = {
   "suite": "business",
   "testLevel": "end-to-end"
 };
+
+import fs from "node:fs/promises";import path from "node:path";
+import {parameter,resource,core,cli,data,disposable,eventually} from "../../../support/client.mjs";
+
+export const REQUIREMENTS={"channel": {"permission": "read"}, "parameters": {"keys": ["secondCoreDiscoveryFile", "privateResourceRoutes"]}};
+export async function run(ctx){
+const second=parameter(ctx,'secondCoreDiscoveryFile'),c=resource(ctx,'channel');for(const route of ['/v1/channels/'+c.id+'/messages',...parameter(ctx,'privateResourceRoutes')]){const denied=await core(ctx,'GET',route,undefined,{discoveryFile:second,expectFailure:true,capture:false});ctx.assert('Protected resource denies direct access: '+route,/HTTP (403|404)/.test(denied.error),true);}
+}

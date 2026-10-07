@@ -22,3 +22,12 @@ export const META = {
   "suite": "business",
   "testLevel": "contract"
 };
+
+import fs from "node:fs/promises";import path from "node:path";
+import {parameter,resource,core,cli,data,disposable,eventually} from "../../../support/client.mjs";
+import {receiveTransfer} from "../../../support/transfers.mjs";
+
+export const REQUIREMENTS={"channel": {"permission": "read"}, "parameters": {"keys": ["diagnosticLogFiles"]}};
+export async function run(ctx){
+const secret='REGRESSION_SECRET_'+crypto.randomUUID();const invalid='agent-colab-transfer://'+crypto.randomUUID()+'/'+secret;const error=await receiveTransfer(ctx,invalid,{expectFailure:true});ctx.assert('Receive error does not disclose bearer token',!JSON.stringify(error).includes(secret),true);const logs=parameter(ctx,'diagnosticLogFiles');for(const file of logs){const contents=await fs.readFile(file,'utf8');ctx.assert('General diagnostics redact capability: '+path.basename(file),!contents.includes(secret),true);}
+}

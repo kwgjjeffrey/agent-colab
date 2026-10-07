@@ -22,3 +22,14 @@ export const META = {
   "suite": "business",
   "testLevel": "end-to-end"
 };
+
+import fs from "node:fs/promises";import path from "node:path";
+import {parameter,resource,core,cli,data,disposable,eventually} from "../../../../support/client.mjs";
+import {fixtures} from "../../../../support/fixtures.mjs";
+import {openTab} from "../../../../support/gui.mjs";
+import {withPathSelection} from "../../../../support/selection.mjs";
+
+export const REQUIREMENTS={"channel": {"permission": "read"}, "parameters": {"keys": ["secondCoreDiscoveryFile", "nativeChooserBoundary"]}};
+export async function run(ctx){
+const f=await fixtures(ctx);await fs.mkdir(path.join(f.files,'dist'));await fs.writeFile(path.join(f.files,'dist','excluded.txt'),'EXCLUDED_'+ctx.runId);await fs.writeFile(path.join(f.files,'large.bin'),Buffer.alloc(1024*1024,1));await openTab(ctx,'Files');let share;await withPathSelection(ctx,f.files,async()=>{await ctx.page.getByRole('button',{name:'Share files',exact:true}).click();const d=ctx.page.getByRole('dialog');const candidate=d.getByRole('checkbox').filter({has:ctx.page.locator('input')});const inspection=await core(ctx,'POST','/v1/files/inspect-source',{localPath:f.files,syncExcludes:['dist']});ctx.assert('Scope excludes exactly the fixture file',inspection.excludedFiles,1);ctx.assert('Included counts reflect confirmed scope',inspection.includedFiles,2);const label=d.getByText('dist',{exact:true});const check=label.locator('..').getByRole('checkbox');if(!(await check.isChecked()))await check.check();await d.getByRole('button',{name:'Share',exact:true}).click();});const rows=await eventually(ctx,'Scoped share is registered',()=>core(ctx,'GET','/v1/channels/'+resource(ctx,'channel').id+'/files'),rows=>rows.some(x=>x.name===path.basename(f.files)));share=rows.find(x=>x.name===path.basename(f.files));try{await eventually(ctx,'Scoped publication finishes',()=>core(ctx,'GET','/v1/channels/'+resource(ctx,'channel').id+'/files'),rows=>rows.some(x=>x.id===share.id&&x.currentRootOid),{timeoutMs:90000});const receipt=await core(ctx,'POST','/v1/files/'+share.id+'/materialize',undefined,{discoveryFile:parameter(ctx,'secondCoreDiscoveryFile')});ctx.assert('Allowed fixture is present',await fs.readFile(path.join(receipt.localPath,'hello.txt'),'utf8'),'OWNED_TEST_'+ctx.runId);ctx.assert('Excluded fixture is absent',await fs.access(path.join(receipt.localPath,'dist','excluded.txt')).then(()=>true,()=>false),false);}finally{await core(ctx,'DELETE','/v1/files/'+share.id);}
+}

@@ -27,7 +27,9 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import {parameter,resource,channelRef,cli,core,data,disposable,eventually} from "../../../../support/client.mjs";
 export async function run(ctx) {
-disposable(ctx);const ref=parameter(ctx,'sessionRef');const before=await cli(ctx,'colab-session-reader',['read','--ref',ref]);ctx.assert('Fixture is readable before withdrawal',before.ok,true);await cli(ctx,'colab-browser',['withdraw','--item',ref]);const after=await cli(ctx,'colab-browser',['open','--ref',ref],{expectedCode:1});ctx.assert('Withdrawn resource is not discoverable',after.ok,false);
+disposable(ctx);const c=resource(ctx,'channel'),source=await ownedSession(ctx);const share=await core(ctx,'POST','/v1/channels/'+c.id+'/sessions/share',{sourcePath:source,sourceAdapter:'codex-jsonl-v1',name:'Withdraw Session '+ctx.runId});const ref='colab://channel/'+c.id+'/'+share.id;const second={discoveryFile:parameter(ctx,'secondCoreDiscoveryFile')};await core(ctx,'POST','/v1/sessions/'+share.id+'/read',{turnLimit:1},second);await cli(ctx,'colab-browser',['withdraw','--item',ref]);const after=await core(ctx,'POST','/v1/sessions/'+share.id+'/read',{turnLimit:1},{...second,expectFailure:true});ctx.assert('Withdrawn Session denies fresh remote consumption',/HTTP (403|404)/.test(after.error),true);
 }
 
-export const REQUIREMENTS={"parameters": {"keys": ["sessionRef"]}};
+export const REQUIREMENTS={channel:{permission:"read"},parameters:{keys:["disposable","secondCoreDiscoveryFile"]}};
+
+import {ownedSession} from "../../../../support/fixtures.mjs";

@@ -22,3 +22,15 @@ export const META = {
   "suite": "business",
   "testLevel": "end-to-end"
 };
+
+import fs from "node:fs/promises";import path from "node:path";
+import {parameter,resource,core,cli,data,disposable,eventually} from "../../../support/client.mjs";
+import {ownedFiles} from "../../../support/fixtures.mjs";
+import {openTab} from "../../../support/gui.mjs";
+import {withPathSelection} from "../../../support/selection.mjs";
+import {receiveTransfer,revokeTransfer} from "../../../support/transfers.mjs";
+
+export const REQUIREMENTS={"channel": {"permission": "read"}, "parameters": {"keys": ["nativeChooserBoundary"]}};
+export async function run(ctx){
+const source=await ownedFiles(ctx);await openTab(ctx,'Messages');let transfer;await withPathSelection(ctx,source,async()=>{await ctx.page.getByRole('button',{name:'Quick Share',exact:true}).click();await ctx.page.getByRole('menuitem',{name:'Share Files',exact:true}).click();const response=ctx.page.waitForResponse(r=>r.url().endsWith('/v1/transfers')&&r.request().method()==='POST');await ctx.page.getByRole('dialog').getByRole('button',{name:'Choose Files',exact:true}).click();transfer=await (await response).json();});ctx.assert('GUI creates a real fixed transfer',!!transfer.transferId,true);try{await fs.writeFile(path.join(source,'hello.txt'),'CHANGED_AFTER_SHARE');const received=await receiveTransfer(ctx,transfer.capability);ctx.assert('Fixed Files snapshot preserves original content',await fs.readFile(path.join(received.items[0].localPath,'hello.txt'),'utf8'),'OWNED_TEST_'+ctx.runId);}finally{await revokeTransfer(ctx,transfer.transferId);}
+}

@@ -12,10 +12,7 @@ export const META = {
   "status": "active",
   "effects": "isolated-write",
   "cost": "normal",
-  "requires": [
-    "local-core",
-    "sandbox-installation"
-  ],
+  "requires": [],
   "affectedPaths": [
     "skills/colab/setup",
     "desktop/ui/src/features/updates"
@@ -23,3 +20,12 @@ export const META = {
   "suite": "release",
   "testLevel": "end-to-end"
 };
+
+import fs from "node:fs/promises";import path from "node:path";
+import {parameter,resource,core,cli,data,disposable,eventually} from "../../../support/client.mjs";
+import {isolated} from "../../../support/controls.mjs";
+
+export const REQUIREMENTS={"parameters": {"keys": ["isolationConfirmed", "isolatedCoreDiscoveryFile", "isolatedClientBaseUrl", "disposableSkillTarget"]}};
+export async function run(ctx){
+const target=isolated(ctx),agent=parameter(ctx,'disposableSkillTarget');const before=await core(ctx,'GET','/v1/system/installation',undefined,target);await ctx.page.goto(target.baseUrl);await ctx.page.getByRole('button',{name:'Settings',exact:true}).click();const row=ctx.page.locator('div').filter({hasText:agent}).filter({has:ctx.page.getByRole('button',{name:'Install',exact:true})}).last();await row.getByRole('button',{name:'Install',exact:true}).click();await eventually(ctx,'Selected target is genuinely installed',()=>core(ctx,'GET','/v1/system/installation',undefined,target),v=>v.targets[agent].installed);await row.getByRole('button',{name:'Set default',exact:true}).click();ctx.assert('Default selection is persisted',(await core(ctx,'GET','/v1/system/installation',undefined,target)).defaultAgent,agent);await row.getByRole('button',{name:'Uninstall',exact:true}).click();const after=await eventually(ctx,'Managed target is removed',()=>core(ctx,'GET','/v1/system/installation',undefined,target),v=>!v.targets[agent].installed);for(const other of Object.keys(before.targets).filter(x=>x!==agent))ctx.assert('Unrelated target is preserved',after.targets[other],before.targets[other]);
+}

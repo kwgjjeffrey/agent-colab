@@ -12,9 +12,7 @@ export const META = {
   "status": "active",
   "effects": "read-only",
   "cost": "normal",
-  "requires": [
-    "local-core"
-  ],
+  "requires": [],
   "affectedPaths": [
     "desktop/ui/src/features",
     "skills/colab/bin"
@@ -22,3 +20,12 @@ export const META = {
   "suite": "business",
   "testLevel": "end-to-end"
 };
+
+import fs from "node:fs/promises";import path from "node:path";
+import {parameter,resource,core,cli,data,disposable,eventually} from "../../../../support/client.mjs";
+import {isolated,control} from "../../../../support/controls.mjs";
+
+export const REQUIREMENTS={"parameters": {"keys": ["sessionRef", "isolationConfirmed", "isolatedCoreDiscoveryFile", "isolatedClientBaseUrl", "networkControl"]}};
+export async function run(ctx){
+const target=isolated(ctx),ref=parameter(ctx,'sessionRef'),id=ref.split('/').pop();const before=await core(ctx,'POST','/v1/sessions/'+id+'/read',{turnLimit:20},target);await control(ctx,'networkControl','disconnect');try{const after=await core(ctx,'POST','/v1/sessions/'+id+'/read',{turnLimit:20},target);ctx.assert('Cached turns remain usable',JSON.stringify(after.turns),JSON.stringify(before.turns));ctx.assert('Offline freshness is explicit',!!(after.syncState||after.snapshot?.syncState||after.snapshot?.syncedAt),true);}finally{await control(ctx,'networkControl','connect');}
+}

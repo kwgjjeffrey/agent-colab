@@ -13,9 +13,7 @@ export const META = {
   "effects": "isolated-write",
   "cost": "normal",
   "requires": [
-    "local-core",
-    "test-agent-runtime",
-    "isolated-test-accounts"
+    "local-core"
   ],
   "affectedPaths": [
     "desktop/ui/src/features/agent",
@@ -25,3 +23,12 @@ export const META = {
   "suite": "business",
   "testLevel": "end-to-end"
 };
+
+import fs from "node:fs/promises";import path from "node:path";
+import {parameter,resource,core,cli,data,disposable,eventually} from "../../../support/client.mjs";
+import {openTab} from "../../../support/gui.mjs";
+
+export const REQUIREMENTS={"channel": {"permission": "read"}, "agent": {"state": "online", "capability": "execute"}, "parameters": {"keys": ["disposable", "secondDisposableChannelId"]}};
+export async function run(ctx){
+disposable(ctx);const c=resource(ctx,'channel'),second=parameter(ctx,'secondDisposableChannelId');const blueprint=await core(ctx,'POST','/v1/channels/'+c.id+'/blueprints',{name:'Disposable '+ctx.runId,loadingInstruction:'Reply REGRESSION_OK without side effects',runtimeId:resource(ctx,'agent').runtimeId,invocationPolicy:'process'});await core(ctx,'PATCH','/v1/channels/'+second+'/blueprints/'+blueprint.id+'/selection',{enabled:true});await openTab(ctx,'Messages');await ctx.page.locator('[data-trace-nav="agents.manager"]').click();const dialog=ctx.page.getByRole('dialog');const row=dialog.getByRole('button',{name:blueprint.name,exact:true}).locator('..');await row.getByRole('checkbox').uncheck();await eventually(ctx,'First Channel participation is removed',()=>core(ctx,'GET','/v1/channels/'+c.id+'/blueprints'),rows=>rows.some(x=>x.id===blueprint.id&&!x.inChannel));ctx.assert('Second Channel retains participation',(await core(ctx,'GET','/v1/channels/'+second+'/blueprints')).some(x=>x.id===blueprint.id&&x.inChannel),true);await row.getByRole('button',{name:blueprint.name,exact:true}).click();await dialog.getByRole('button',{name:'Remove Agent',exact:true}).click();await eventually(ctx,'Owned blueprint is deleted',()=>core(ctx,'GET','/v1/channels/'+second+'/blueprints'),rows=>!rows.some(x=>x.id===blueprint.id));ctx.assert('Deleted blueprint cannot be selected',(await core(ctx,'PATCH','/v1/channels/'+c.id+'/blueprints/'+blueprint.id+'/selection',{enabled:true},{expectFailure:true})).ok,false);
+}

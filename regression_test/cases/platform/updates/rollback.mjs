@@ -12,10 +12,7 @@ export const META = {
   "status": "active",
   "effects": "isolated-write",
   "cost": "slow",
-  "requires": [
-    "local-core",
-    "sandbox-installation"
-  ],
+  "requires": [],
   "affectedPaths": [
     "skills/colab/setup",
     "desktop/ui/src/features/updates"
@@ -23,3 +20,12 @@ export const META = {
   "suite": "release",
   "testLevel": "end-to-end"
 };
+
+import fs from "node:fs/promises";import path from "node:path";
+import {parameter,resource,core,cli,data,disposable,eventually} from "../../../support/client.mjs";
+import {setup,receipt,links} from "../../../support/installation.mjs";
+
+export const REQUIREMENTS={"parameters": {"keys": ["baseManifestUrl", "tamperedManifestUrl", "unhealthyManifestUrl", "testServerUrl"]}};
+export async function run(ctx){
+await setup(ctx,'install',parameter(ctx,'baseManifestUrl'));const before=await receipt(ctx),beforeLinks=await links(ctx);for(const manifest of [parameter(ctx,'tamperedManifestUrl'),parameter(ctx,'unhealthyManifestUrl')]){await setup(ctx,'update',manifest,[],{expectedCode:1});ctx.assert('Failed update preserves prior artifact versions',(await receipt(ctx)).componentVersions,before.componentVersions);ctx.assert('Failed activation restores prior links',await links(ctx),beforeLinks);}
+}

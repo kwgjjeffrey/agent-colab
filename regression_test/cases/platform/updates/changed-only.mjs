@@ -12,10 +12,7 @@ export const META = {
   "status": "active",
   "effects": "isolated-write",
   "cost": "slow",
-  "requires": [
-    "local-core",
-    "sandbox-installation"
-  ],
+  "requires": [],
   "affectedPaths": [
     "skills/colab/setup",
     "desktop/ui/src/features/updates"
@@ -23,3 +20,12 @@ export const META = {
   "suite": "release",
   "testLevel": "end-to-end"
 };
+
+import fs from "node:fs/promises";import path from "node:path";
+import {parameter,resource,core,cli,data,disposable,eventually} from "../../../support/client.mjs";
+import {setup,receipt,links} from "../../../support/installation.mjs";
+
+export const REQUIREMENTS={"parameters": {"keys": ["baseManifestUrl", "singleComponentManifestUrl", "changedComponent", "testServerUrl"]}};
+export async function run(ctx){
+await setup(ctx,'install',parameter(ctx,'baseManifestUrl'));const before=await receipt(ctx),beforeLinks=await links(ctx);await setup(ctx,'update',parameter(ctx,'singleComponentManifestUrl'));const after=await receipt(ctx),afterLinks=await links(ctx),changed=parameter(ctx,'changedComponent');const difference=Object.keys(after.componentVersions).filter(k=>before.componentVersions[k]!==after.componentVersions[k]);ctx.assert('Exactly one intended artifact advances',difference,[changed]);const names={'local-core':'core','desktop-ui':'ui','colab-skill':'skill'};for(const [component,name] of Object.entries(names))if(component!==changed)ctx.assert(component+' activation stays unchanged',afterLinks[name],beforeLinks[name]);
+}

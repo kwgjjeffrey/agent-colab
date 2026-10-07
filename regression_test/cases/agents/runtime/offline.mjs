@@ -13,8 +13,7 @@ export const META = {
   "effects": "isolated-write",
   "cost": "normal",
   "requires": [
-    "local-core",
-    "test-agent-runtime"
+    "local-core"
   ],
   "affectedPaths": [
     "desktop/ui/src/features/agent",
@@ -24,3 +23,13 @@ export const META = {
   "suite": "business",
   "testLevel": "end-to-end"
 };
+
+import fs from "node:fs/promises";import path from "node:path";
+import {parameter,resource,core,cli,data,disposable,eventually} from "../../../support/client.mjs";
+import {invoke,complete} from "../../../support/agent.mjs";
+import {control} from "../../../support/controls.mjs";
+
+export const REQUIREMENTS={"channel": {"permission": "read"}, "parameters": {"keys": ["isolationConfirmed", "runtimeControl"]}};
+export async function run(ctx){
+if(parameter(ctx,'isolationConfirmed')!==true)ctx.block('Only a disposable runtime may be disconnected');await control(ctx,'runtimeControl','disconnect');try{const task=await invoke(ctx);const pending=(await core(ctx,'GET','/v1/channels/'+task.channel.id+'/agent-requests')).find(x=>x.id===task.request.id);ctx.assert('Offline request does not claim runtime execution',!['running','succeeded'].includes(pending.state),true);await control(ctx,'runtimeControl','connect');await complete(ctx,task);const rows=await core(ctx,'GET','/v1/channels/'+task.channel.id+'/agent-requests');ctx.assert('Reconnect retains one request for the trigger',rows.filter(x=>x.triggerMessageId===task.message.id).length,1);}finally{await control(ctx,'runtimeControl','connect');}
+}

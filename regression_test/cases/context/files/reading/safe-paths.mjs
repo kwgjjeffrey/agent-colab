@@ -22,3 +22,12 @@ export const META = {
   "suite": "business",
   "testLevel": "contract"
 };
+
+import fs from "node:fs/promises";import path from "node:path";
+import {parameter,resource,core,cli,data,disposable,eventually} from "../../../../support/client.mjs";
+import {isolated} from "../../../../support/controls.mjs";
+
+export const REQUIREMENTS={"channel": {"permission": "read"}, "parameters": {"keys": ["isolationConfirmed", "isolatedCoreDiscoveryFile", "isolatedClientBaseUrl", "unsafeMaterializationFixtures"]}};
+export async function run(ctx){
+const target=isolated(ctx),cases=parameter(ctx,'unsafeMaterializationFixtures');ctx.assert('Traversal and escaping symlink variants are configured',cases.some(x=>x.kind==='traversal')&&cases.some(x=>x.kind==='symlink'),true);for(const variant of cases){const before=await fs.readFile(variant.outsideSentinel,'utf8');const denied=await core(ctx,'POST','/v1/files/'+variant.shareId+'/materialize',undefined,{...target,expectFailure:true});ctx.assert(variant.kind+' malformed materialization is rejected',!!denied.error,true);ctx.assert(variant.kind+' cannot overwrite external sentinel',await fs.readFile(variant.outsideSentinel,'utf8'),before);}
+}
