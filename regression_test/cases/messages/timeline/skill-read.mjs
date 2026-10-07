@@ -22,3 +22,12 @@ export const META = {
   "suite": "business",
   "testLevel": "end-to-end"
 };
+
+import fs from "node:fs/promises";
+import path from "node:path";
+import {parameter,resource,channelRef,cli,core,data,disposable,eventually} from "../../../support/client.mjs";
+export async function run(ctx) {
+const ref=channelRef(ctx);const firstEnvelope=await cli(ctx,'colab-messages',['messages','list','--channel',ref,'--limit','20']);const result=data(firstEnvelope);const rows=Array.isArray(result)?result:result.messages;ctx.assert('Message list is structured',Array.isArray(rows),true);if(!rows.length)ctx.block('Channel requires fixture messages');const first=rows[0];const detail=data(await cli(ctx,'colab-messages',['messages','read','--channel',ref,'--id',first.id]));ctx.assert('Read returns selected message',detail.id,first.id);const seq=firstEnvelope.page?.nextAfter;ctx.assert('Message has a cursor',Number.isFinite(seq),true);const later=data(await cli(ctx,'colab-messages',['messages','list','--channel',ref,'--after',String(seq)]));ctx.assert('Incremental read excludes previous messages',(Array.isArray(later)?later:later.messages).every(m=>m.id!==first.id),true);
+}
+
+export const REQUIREMENTS={"channel": {"permission": "read"}};

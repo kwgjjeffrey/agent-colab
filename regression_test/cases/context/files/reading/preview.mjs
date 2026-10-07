@@ -22,3 +22,9 @@ export const META = {
   "suite": "business",
   "testLevel": "end-to-end"
 };
+
+import {openTab,item,handoff} from "../../../../support/gui.mjs";
+import {parameter} from "../../../../support/client.mjs";
+export async function run(ctx){const row=await item(ctx,'Files','filesName');await row.locator('[data-trace-target~="files.browse"]').click();await ctx.page.getByText(parameter(ctx,'previewFileName'),{exact:true}).click();ctx.assert('Preview renders actual expected content',await ctx.page.getByText(parameter(ctx,'previewExpectedText'),{exact:false}).isVisible(),true);await ctx.screenshot('File preview');}
+
+export const REQUIREMENTS={"channel": {"permission": "read"}, "parameters": {"keys": ["previewExpectedText", "previewFileName"]}};

@@ -22,3 +22,9 @@ export const META = {
   "suite": "business",
   "testLevel": "end-to-end"
 };
+
+import {invoke,complete} from "../../../support/agent.mjs";
+import {parameter,resource,core,cli,data,disposable} from "../../../support/client.mjs";
+export async function run(ctx){disposable(ctx);const ref=parameter(ctx,'canvasRef'),before=data(await cli(ctx,'colab-canvas',['read','--ref',ref]));const old=parameter(ctx,'canvasOldText'),next='regression-'+ctx.runId;ctx.assert('Patch fixture exists in projection',before.content.includes(old),true);const patch='*** Begin Patch\n*** Update File: document.md\n@@\n-'+old+'\n+'+next+'\n*** End Patch\n';const result=await ctx.command('Canvas apply patch','python3',['skills/colab/bin/colab-canvas','apply-patch','--ref',ref],{input:patch});ctx.assert('Canvas patch command succeeded',result.code,0);const after=data(await cli(ctx,'colab-canvas',['read','--ref',ref]));ctx.assert('Projection includes the patched content',after.content.includes(next),true);}
+
+export const REQUIREMENTS={"parameters": {"keys": ["canvasOldText", "canvasRef"]}};

@@ -13,8 +13,7 @@ export const META = {
   "effects": "isolated-write",
   "cost": "normal",
   "requires": [
-    "local-core",
-    "test-agent-runtime"
+    "local-core"
   ],
   "affectedPaths": [
     "desktop/ui/src/features/agent",
@@ -24,3 +23,9 @@ export const META = {
   "suite": "business",
   "testLevel": "end-to-end"
 };
+
+import {invoke,complete,actualPrompt} from "../../../support/agent.mjs";
+import {parameter,resource,core,cli,data,disposable} from "../../../support/client.mjs";
+export async function run(ctx){const task=await invoke(ctx);await complete(ctx,task);const prompt=await actualPrompt(ctx,task.request);ctx.assert('Actual runtime input contains the full triggering message',prompt.includes(task.message.body),true);const agents=await core(ctx,'GET','/v1/channels/'+task.channel.id+'/blueprints');const instruction=agents.find(a=>a.id===task.agent.id).loadingInstruction;ctx.assert('Exact blueprint instruction is included',prompt.includes(instruction),true);ctx.assert('Reply tool is scoped to the request',prompt.includes(task.request.id)&&prompt.includes('request reply'),true);ctx.assert('No CRDT implementation context is leaked',/Yrs|yjs|stateVector|updateV2/.test(prompt),false);}
+
+export const REQUIREMENTS={"channel": {"permission": "read"}, "agent": {"state": "online", "capability": "execute"}};

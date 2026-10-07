@@ -13,8 +13,7 @@ export const META = {
   "effects": "isolated-write",
   "cost": "normal",
   "requires": [
-    "local-core",
-    "test-agent-runtime"
+    "local-core"
   ],
   "affectedPaths": [
     "desktop/ui/src/features/agent",
@@ -24,3 +23,9 @@ export const META = {
   "suite": "business",
   "testLevel": "end-to-end"
 };
+
+import {invoke,complete} from "../../../support/agent.mjs";
+import {parameter,resource,core,cli,data,disposable} from "../../../support/client.mjs";
+export async function run(ctx){const task=await invoke(ctx,{gui:true});await complete(ctx,task);await ctx.screenshot('Real Agent completed');}
+
+export const REQUIREMENTS={"channel": {"permission": "read"}, "agent": {"state": "online", "capability": "execute"}};

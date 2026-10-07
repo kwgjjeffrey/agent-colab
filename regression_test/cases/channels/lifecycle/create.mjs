@@ -22,3 +22,9 @@ export const META = {
   "suite": "business",
   "testLevel": "end-to-end"
 };
+
+import {openTab} from "../../../support/gui.mjs";
+import {parameter,resource,core,disposable,eventually} from "../../../support/client.mjs";
+import {createDocument,deleteDocument} from "../../../support/canvas.mjs";
+export const REQUIREMENTS={"channel": {"permission": "read"}};
+export async function run(ctx){const name='Regression GUI '+ctx.runId;await ctx.page.getByRole('button',{name:'Create channel',exact:true}).click();await ctx.page.getByLabel('Channel name',{exact:true}).fill(name);await ctx.page.getByRole('dialog').getByRole('button',{name:'Create',exact:true}).click();await ctx.page.getByRole('button',{name,exact:true}).waitFor();const rows=await core(ctx,'GET','/v1/channels');ctx.assert('GUI creates exactly one named Channel',rows.filter(r=>r.name===name).length,1);ctx.assert('New Channel creator has management role',['admin','owner'].includes(rows.find(r=>r.name===name).role),true);ctx.assert('Messages navigation is usable',await ctx.page.getByRole('tab',{name:'Messages',exact:true}).isVisible(),true);}

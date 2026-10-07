@@ -22,3 +22,12 @@ export const META = {
   "suite": "business",
   "testLevel": "end-to-end"
 };
+
+import fs from "node:fs/promises";
+import path from "node:path";
+import {parameter,resource,channelRef,cli,core,data,disposable,eventually} from "../../../../support/client.mjs";
+export async function run(ctx) {
+const ref=parameter(ctx,'sessionRef');const basic=data(await cli(ctx,'colab-session-reader',['read','--ref',ref,'--turn-limit','20']));const detailed=data(await cli(ctx,'colab-session-reader',['read','--ref',ref,'--turn-limit','20','--include-outputs','--max-output-chars-per-item','80']));ctx.assert('Session returns turns',Array.isArray(basic.turns)&&Array.isArray(detailed.turns),true);const items=detailed.turns.flatMap(t=>t.items);ctx.assert('Large output fixture is explicitly truncated',items.some(x=>x.result?.truncated===true),true);const expected=parameter(ctx,'expectedUserMessage');ctx.assert('User intent survives output limits',items.some(x=>(typeof x.content==='string'?x.content:Array.isArray(x.content)?x.content.map(c=>c.text??'').join(''):x.text)===expected),true);
+}
+
+export const REQUIREMENTS={"parameters": {"keys": ["expectedUserMessage", "sessionRef"]}};

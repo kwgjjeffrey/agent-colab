@@ -22,3 +22,12 @@ export const META = {
   "suite": "business",
   "testLevel": "end-to-end"
 };
+
+import fs from "node:fs/promises";
+import path from "node:path";
+import {parameter,resource,channelRef,cli,core,data,disposable,eventually} from "../../../../support/client.mjs";
+export async function run(ctx) {
+disposable(ctx);const ref=parameter(ctx,'sessionRef');const before=await cli(ctx,'colab-session-reader',['read','--ref',ref]);ctx.assert('Fixture is readable before withdrawal',before.ok,true);await cli(ctx,'colab-browser',['withdraw','--item',ref]);const after=await cli(ctx,'colab-browser',['open','--ref',ref],{expectedCode:1});ctx.assert('Withdrawn resource is not discoverable',after.ok,false);
+}
+
+export const REQUIREMENTS={"parameters": {"keys": ["sessionRef"]}};

@@ -22,3 +22,11 @@ export const META = {
   "suite": "business",
   "testLevel": "end-to-end"
 };
+
+import fs from "node:fs/promises";
+import {parameter,resource,core,cli,data,disposable,eventually} from "../../../../support/client.mjs";
+import {item} from "../../../../support/gui.mjs";
+export async function run(ctx){
+disposable(ctx);const ref=parameter(ctx,'skillRef'),id=ref.split('/').pop(),second=parameter(ctx,'secondCoreDiscoveryFile'),target=parameter(ctx,'skillTarget');const receipt=await core(ctx,'POST','/v1/skills/'+id+'/targets/'+target+'/ensure',undefined,{discoveryFile:second});const original=await fs.readFile(receipt.installedPath+'/SKILL.md','utf8');const row=await item(ctx,'Skills','skillName');await row.getByRole('button',{name:'Withdraw',exact:true}).click();await eventually(ctx,'Skill leaves active discovery',()=>core(ctx,'GET','/v1/channels/'+resource(ctx,'channel').id+'/skills'),rows=>!rows.some(s=>s.id===id));const denied=await core(ctx,'POST','/v1/skills/'+id+'/targets/'+target+'/ensure',undefined,{discoveryFile:second,expectFailure:true});ctx.assert('Fresh receiver fetch is denied',/HTTP (403|404)/.test(denied.error),true);ctx.assert('Previously installed local bytes remain',await fs.readFile(receipt.installedPath+'/SKILL.md','utf8'),original);
+}
+export const REQUIREMENTS={"parameters": {"keys": ["disposable", "skillRef", "skillName", "skillTarget", "secondCoreDiscoveryFile"]}};

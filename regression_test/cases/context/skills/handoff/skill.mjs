@@ -22,3 +22,9 @@ export const META = {
   "suite": "business",
   "testLevel": "end-to-end"
 };
+
+import {openTab,item,handoff} from "../../../../support/gui.mjs";
+import {parameter} from "../../../../support/client.mjs";
+export async function run(ctx){await handoff(ctx,'Skills','skillName','colab-skill-tool','skillRef');ctx.assert('Skill prompt uses idempotent consumption',(await ctx.page.getByRole('dialog').locator('pre').innerText()).includes('ensure'),true);}
+
+export const REQUIREMENTS={"channel": {"permission": "read"}, "parameters": {"keys": ["skillName", "skillRef"]}};

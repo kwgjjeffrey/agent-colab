@@ -22,3 +22,9 @@ export const META = {
   "suite": "business",
   "testLevel": "end-to-end"
 };
+
+import {openTab,item,handoff} from "../../../support/gui.mjs";
+import {parameter} from "../../../support/client.mjs";
+export async function run(ctx){await openTab(ctx,'Home');await ctx.page.getByText('Recent activity',{exact:true}).waitFor();const label=parameter(ctx,'expectedActivityLabel');ctx.assert('Expected real activity is displayed',await ctx.page.getByText(label,{exact:false}).isVisible(),true);await ctx.page.getByText(label,{exact:false}).click();ctx.assert('Activity opens the expected destination',await ctx.page.getByRole('tab',{name:parameter(ctx,'activityDestinationTab'),exact:true}).getAttribute('aria-selected'),'true');}
+
+export const REQUIREMENTS={"channel": {"permission": "read"}, "parameters": {"keys": ["activityDestinationTab", "expectedActivityLabel"]}};

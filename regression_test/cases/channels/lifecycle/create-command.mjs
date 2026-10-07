@@ -22,3 +22,10 @@ export const META = {
   "suite": "business",
   "testLevel": "end-to-end"
 };
+
+import fs from "node:fs/promises";
+import path from "node:path";
+import {parameter,resource,channelRef,cli,core,data,disposable,eventually} from "../../../support/client.mjs";
+export async function run(ctx) {
+const name='regression-'+ctx.runId;const created=data(await cli(ctx,'colab-browser',['create-channel','--name',name]));ctx.assert('Create command confirms creation',created.created,true);const ref='colab://channel/'+encodeURIComponent(name);const renamed=name+'-renamed';await cli(ctx,'colab-browser',['update-channel','--channel',ref,'--name',renamed]);const listing=data(await cli(ctx,'colab-browser',['open','--ref','colab://']));ctx.assert('Updated Channel is discoverable',listing.some(c=>c.name===renamed),true);
+}

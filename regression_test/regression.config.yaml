@@ -17,4 +17,4 @@ environment:
   default: local
   adapter: environment/adapter.mjs
   profiles:
-    local: environment/local.yaml
+    local: environment/environment.local.yaml

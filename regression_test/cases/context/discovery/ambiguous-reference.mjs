@@ -22,3 +22,12 @@ export const META = {
   "suite": "business",
   "testLevel": "end-to-end"
 };
+
+import fs from "node:fs/promises";
+import path from "node:path";
+import {parameter,resource,channelRef,cli,core,data,disposable,eventually} from "../../../support/client.mjs";
+export async function run(ctx) {
+const ref=parameter(ctx,'ambiguousRef');const result=await cli(ctx,'colab-browser',['open','--ref',ref],{expectedCode:2});ctx.assert('Ambiguity is reported',result.error?.code??result.code,'ambiguous_reference');const candidates=result.error?.details?.candidates??result.details?.candidates;ctx.assert('Multiple explicit candidates are provided',Array.isArray(candidates)&&candidates.length>1,true);const resolved=await cli(ctx,'colab-browser',['open','--ref',candidates[0].preciseRef]);ctx.assert('Explicit candidate resolves',resolved.ok,true);
+}
+
+export const REQUIREMENTS={"parameters": {"keys": ["ambiguousRef"]}};

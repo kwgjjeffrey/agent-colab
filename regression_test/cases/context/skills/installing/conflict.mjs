@@ -22,3 +22,11 @@ export const META = {
   "suite": "business",
   "testLevel": "end-to-end"
 };
+
+import fs from "node:fs/promises";
+import {parameter,resource,core,cli,data,disposable,eventually} from "../../../../support/client.mjs";
+
+export async function run(ctx){
+disposable(ctx);const ref=parameter(ctx,'skillRef'),target=parameter(ctx,'skillTarget'),file=parameter(ctx,'skillConflictFile');const original=await fs.readFile(file,'utf8');const result=await cli(ctx,'colab-skill-tool',['ensure','--ref',ref,'--target',target],{expectedCode:1});ctx.assert('Conflict is reported',JSON.stringify(result).toLowerCase().includes('conflict'),true);ctx.assert('Conflicting local bytes are preserved',await fs.readFile(file,'utf8'),original);
+}
+export const REQUIREMENTS={"parameters": {"keys": ["skillConflictFile", "skillRef", "skillTarget"]}};

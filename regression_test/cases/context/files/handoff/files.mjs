@@ -22,3 +22,9 @@ export const META = {
   "suite": "business",
   "testLevel": "end-to-end"
 };
+
+import {openTab,item,handoff} from "../../../../support/gui.mjs";
+import {parameter} from "../../../../support/client.mjs";
+export async function run(ctx){await handoff(ctx,'Files','filesName','colab-browser','filesRef');}
+
+export const REQUIREMENTS={"channel": {"permission": "read"}, "parameters": {"keys": ["filesName", "filesRef"]}};

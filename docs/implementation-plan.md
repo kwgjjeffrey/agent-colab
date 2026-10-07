@@ -759,3 +759,11 @@ Removed the unsupported Browser-search draft, merged three overlapping scenarios
 ### Regression environment integration
 
 Registered project-owned read-only environment adapter and ignored local resource bindings. The existing Skill discovery pilot consumes the resolved Channel through ctx.resources. Generic Trace owns profile/override resolution, preflight, immutable-per-run resource choice and record injection. Real Agent end-to-end execution remains required; no runtime substitute was introduced. Current adapter checks Channel read access and registered runtime availability; unsupported permissions/control requirements block.
+
+### Regression scripts — production fixture checkpoint (2026-10-07)
+
+Implementation remains in progress. The catalog currently discovers 76 cases: 36 have executable exports (34 newly implemented scripts and two existing pilots); 40 remain case-only. An executable export is not proof that every described variation has been verified.
+
+Project configuration is now `regression_test/regression.config.yaml`; private resource parameters are `regression_test/environment/environment.local.yaml`. Project support calls real GUI, Skill and Local Core boundaries. Scripts select actual resources from the resolved environment, with required parameters checked before execution. A dedicated production test Channel, blueprint and owned Files/Session/Skill fixture sources were created. No second signed-in account was found; cross-member cases need additional bindings. Destructive account/runtime/installer cases still need explicitly isolated targets.
+
+The remaining case-only scripts and broader variation coverage are required work; this checkpoint does not complete the requested suite.

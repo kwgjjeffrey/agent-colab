@@ -1,6 +1,6 @@
 # Project regression tests
 
-Cases belong in the directories registered by registry.yaml; execution records belong in its regressionDirectory. Do not copy the Trace runtime or dependencies into this repository.
+Cases belong in the directories registered by regression.config.yaml; execution records belong in its regressionDirectory. Do not copy the Trace runtime or dependencies into this repository.
 
 Each .mjs case exports literal USECASE {name,description} and META. Start from cases/_example.mjs. Rename the copy so it is discoverable. Leave run absent until a real implementation is requested; never add a placeholder runner. Active means the case is relevant, not that it has an implemented or verified script.
 

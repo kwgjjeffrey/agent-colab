@@ -1,0 +1,10 @@
+import fs from 'node:fs/promises';import path from 'node:path';
+export function parameter(ctx,key){const value=ctx.parameters[key];if(value===undefined||value==='')ctx.block('Missing environment parameter: '+key);return value;}
+export function resource(ctx,key){const value=ctx.resources[key];if(!value)ctx.block('Missing environment resource: '+key);return value;}
+export const channelRef=ctx=>'colab://channel/'+encodeURIComponent(resource(ctx,'channel').id);
+export async function cli(ctx,tool,args,{expectedCode=0}={}){const r=await ctx.measure(tool+' '+args[0],()=>ctx.command(tool,'python3',['skills/colab/bin/'+tool,...args]));ctx.assert(tool+' exit status',expectedCode===0?r.code===0:r.code!==0,true);try{return JSON.parse(r.stdout);}catch{ctx.assert(tool+' returns JSON',false,true);}}
+export async function core(ctx,method,route,body,{expectFailure=false,discoveryFile,capture=true}={}){const r=await ctx.measure(method+' '+route,()=>ctx.command('Local Core '+method,'python3',['regression_test/support/core.py',method,route,JSON.stringify(body??null),...(discoveryFile?[discoveryFile]:[])],{capture}));const v=JSON.parse(r.stdout);ctx.assert('Local Core operation outcome',v.ok,!expectFailure);return v.data??v;}
+export async function eventually(ctx,name,read,predicate,{timeoutMs=20000}={}){const start=performance.now();let value;while(performance.now()-start<timeoutMs){value=await read();if(predicate(value)){ctx.assert(name,true,true);return value;}await new Promise(r=>setTimeout(r,2000));}ctx.assert(name,false,true);}
+export function data(envelope){return envelope.data??envelope;}
+export function disposable(ctx){if(ctx.parameters.disposable!==true)ctx.block('Environment must explicitly bind disposable test resources');}
+export async function text(ctx,relative){const base=parameter(ctx,'materializedRoot');const file=path.resolve(base,relative);if(!file.startsWith(path.resolve(base)+path.sep))ctx.block('Fixture path escapes materialized root');return fs.readFile(file,'utf8');}

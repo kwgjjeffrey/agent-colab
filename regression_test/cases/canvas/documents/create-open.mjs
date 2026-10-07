@@ -22,3 +22,9 @@ export const META = {
   "suite": "business",
   "testLevel": "end-to-end"
 };
+
+import {openTab} from "../../../support/gui.mjs";
+import {parameter,resource,core,disposable,eventually} from "../../../support/client.mjs";
+import {createDocument,deleteDocument} from "../../../support/canvas.mjs";
+export const REQUIREMENTS={"channel": {"permission": "read"}};
+export async function run(ctx){const doc=await createDocument(ctx);try{await ctx.page.getByRole('tab',{name:'Messages',exact:true}).click();await ctx.page.getByRole('tab',{name:'Canvas',exact:true}).click();await ctx.page.getByText(doc.title,{exact:true}).click();ctx.assert('Created document can be reopened',await ctx.page.getByText(doc.title,{exact:true}).first().isVisible(),true);}finally{await deleteDocument(ctx,doc);}}

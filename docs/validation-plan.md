@@ -437,3 +437,14 @@ Static discovery validates 76 cases: 74 drafts and two existing pilots, zero dia
 ### Regression environment verification
 
 Real Channel-binding pilot run 20261006T133843Z-2db3622f passed. A missing Channel override was separately run and blocked before any assertion/script execution. Generic 27-test suite passed, including profile override consumption, recorded-resource identity, unavailable-resource blocking and credential-field rejection. These checks validate environment plumbing and read-only Channel discovery, not the unimplemented Agent command execution cases.
+
+### Regression script checkpoint (2026-10-07)
+
+- Catalog: 76 cases, 36 executable exports, no discovery diagnostics. The formal Trace GUI reload displays executable versus case-only status from the same source.
+- Trace source: 28 tests pass and TypeScript checking passes, including stdin transport with suppressed sensitive command-output persistence.
+- Production run `20261007T011547Z-5cb247b6`: message nonce retry passed; the other selected pilot was blocked by inventory timeout. Inventory now batches independent reads and still reports unavailable resources explicitly.
+- Production run `20261007T012447Z-05779a5d`: actual Skill source discovery passed; other failures were retained for diagnosis.
+- Production run `20261007T013028Z-264f85f9`: complete Session fixture output inclusion/truncation passed. Pagination failed because the current reader rejects the previous snapshot cursor after source growth, contrary to the pinned-pagination contract in agent-interface.md.
+- Real Codex requests reached `succeeded` and produced request-linked `REGRESSION_OK` replies. The initial helper incorrectly expected `completed`; it was corrected. Full feedback run `20261007T012235Z-049a5fdd` subsequently failed on a Local Core HTTP 502 while probing the reply endpoint; a later direct request-scoped probe succeeded. The failed record remains non-green.
+- Owned Files fixture registration returned an active share, but no published root exists and materialization reports `No file snapshot has been published`. Do not claim Files producer/consumer verification passed.
+- No full-suite success or complete implementation claim. Cross-account, controlled disconnection, installer rollback and remaining scripts/variations are unverified or not yet implemented.

@@ -1,4 +1,24 @@
-# Copy to ../local.yaml (ignored). Use actual IDs or unique names; never credentials.
+# Copy to ../environment.local.yaml (ignored). Use actual IDs or unique names; never credentials.
 parameters:
   channel: YOUR_TEST_CHANNEL
   # agent: YOUR_TEST_AGENT
+  # disposable: true # Only when every mutation target is an owned disposable fixture.
+  # filesRef: colab://channel/CHANNEL_ID/FILES_ID
+  # filesName: Regression Files
+  # expectedRelativePath: hello.txt
+  # expectedText: "Owned regression fixture\n"
+  # previewFileName: hello.txt
+  # sessionRef: colab://channel/CHANNEL_ID/SESSION_ID
+  # sessionName: Regression Session
+  # sessionSourcePath: /absolute/path/to/owned/session.jsonl
+  # sessionExpectedTurnMarkers: [FIXTURE_USER_0, FIXTURE_USER_1]
+  # expectedUserMessage: FIXTURE_USER_1
+  # skillRef: colab://channel/CHANNEL_ID/SKILL_ID
+  # skillName: Regression Skill
+  # skillSourceFile: /absolute/path/to/owned/skill/SKILL.md
+  # skillSourceQuery: regression-owned-skill
+  # skillSourceName: regression-owned-skill
+  # skillTarget: codex
+  # skillConflictFile: /absolute/path/to/disposable/conflicting/SKILL.md
+  # secondClientBaseUrl: http://127.0.0.1:SECOND_CLIENT_PORT/
+  # secondCoreDiscoveryFile: /private/path/to/second-client/discovery.json

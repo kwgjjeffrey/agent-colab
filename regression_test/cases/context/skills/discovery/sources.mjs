@@ -22,3 +22,12 @@ export const META = {
   "suite": "business",
   "testLevel": "end-to-end"
 };
+
+import fs from "node:fs/promises";
+import path from "node:path";
+import {parameter,resource,channelRef,cli,core,data,disposable,eventually} from "../../../../support/client.mjs";
+export async function run(ctx) {
+const query=parameter(ctx,'skillSourceQuery');const found=data(await cli(ctx,'colab-skill-tool',['sources','--query',query,'--recent-hours','87600']));const rows=Array.isArray(found)?found:found.sources;ctx.assert('Fixture Skill source is discoverable',rows.some(s=>s.name===parameter(ctx,'skillSourceName')),true);ctx.assert('All discovered Skills carry names',rows.every(s=>typeof s.name==='string'&&s.name.length>0),true);
+}
+
+export const REQUIREMENTS={"parameters": {"keys": ["skillSourceName", "skillSourceQuery"]}};
