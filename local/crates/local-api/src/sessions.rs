@@ -1398,6 +1398,38 @@ mod tests {
     }
 
     #[test]
+    fn native_title_catalog_regression() {
+        struct Fixture(PathBuf);
+        impl Drop for Fixture {
+            fn drop(&mut self) { let _ = fs::remove_dir_all(&self.0); }
+        }
+        let fixture = Fixture(std::env::temp_dir().join(format!("colab-native-title-{}", Uuid::new_v4())));
+        let home = &fixture.0;
+        let codex = home.join(".codex/sessions/project/thread.jsonl");
+        let claude = home.join(".claude/projects/project/thread.jsonl");
+        for path in [&codex, &claude] { fs::create_dir_all(path.parent().unwrap()).unwrap(); }
+        let original = "{\"type\":\"message\",\"role\":\"user\",\"content\":\"Original instruction\"}\n";
+        fs::write(&codex, original).unwrap();
+        fs::write(&claude, format!("{original}{{\"type\":\"custom-title\",\"customTitle\":\"Old CC name\"}}\n{{\"type\":\"summary\",\"summary\":\"Generated summary\"}}\n{{\"type\":\"custom-title\",\"customTitle\":\"Current CC name\"}}\n")).unwrap();
+        let db = rusqlite::Connection::open(home.join(".codex/state_5.sqlite")).unwrap();
+        db.execute_batch("create table threads(rollout_path text,name text,title text)").unwrap();
+        db.execute("insert into threads values(?1,'Native Codex name','Original instruction')", [codex.to_string_lossy().as_ref()]).unwrap();
+        let (_, first) = discover_session_catalog(Some(home), &HashMap::new());
+        assert_eq!(first.iter().find(|entry| entry.provider == "codex").unwrap().name, "Native Codex name");
+        assert_eq!(first.iter().find(|entry| entry.provider == "claude-code").unwrap().name, "Current CC name");
+        let known = first.into_iter().map(|entry| ((entry.provider.clone(), entry.source_path.clone()), entry)).collect();
+        assert!(discover_session_catalog(Some(home), &known).1.is_empty());
+        db.execute("update threads set name='Renamed Codex name'", []).unwrap();
+        let (_, renamed) = discover_session_catalog(Some(home), &known);
+        assert_eq!(renamed.len(), 1);
+        assert_eq!(renamed[0].name, "Renamed Codex name");
+        assert_eq!(fs::read_to_string(&codex).unwrap(), original);
+        db.execute("update threads set name=null", []).unwrap();
+        assert_eq!(discover_session_catalog(Some(home), &HashMap::new()).1.iter().find(|entry| entry.provider == "codex").unwrap().name, "Original instruction");
+        drop(db);
+    }
+
+    #[test]
     fn session_catalog_indexes_three_providers_and_skips_unchanged_files() {
         let home = std::env::temp_dir().join(format!("colab-catalog-{}", Uuid::new_v4()));
         let fixtures = [

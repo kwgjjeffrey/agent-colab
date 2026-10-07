@@ -823,4 +823,6 @@ Continuous Files publication remains a qualified failing case. Fresh consumer Sk
 Execution infrastructure findings: CLI interruption left detached workers locking the browser; cancellation repair passed a real spawned CLI SIGINT contract test, and all 35 Trace tests pass. Running daily Core had reverted to 0.1.88-dev while the Server contract expected memberId; restored confirmed 0.1.92-dev and verified usable member identities before further cleanup. Cases now use actual committed GUI message/share identities instead of earliest-page or unstable display-name lookup.
 # Session native titles (2026-10-07)
 
+The repository-owned Trace regression case is `regression_test/cases/context/sessions/discovery/native-title.mjs`; its real catalog fixture test and reviewed execution are recorded in the validation plan. No daily client records are mutated by this case.
+
 Local Core source discovery now uses Codex `threads.name` (then `title`) from a read-only client metadata database. Metadata-only renames update the catalog without reparsing unchanged transcripts. Claude Code uses the latest `customTitle`, then provider summary; absent native metadata retains the previous first-message fallback. Explicit share names remain authoritative. Existing remote share names are not silently overwritten.
