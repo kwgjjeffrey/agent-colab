@@ -12,7 +12,7 @@ const quickShareSource = readFileSync(
 
 describe("Files source selection", () => {
   it("keeps one visible picker action in Channel Files", () => {
-    expect(filesViewSource).toContain("<PlusIcon /> Share files");
+    expect(filesViewSource).toContain('data-icon="inline-start" />Share files');
     expect(filesViewSource).not.toContain("Choose a file</DropdownMenuItem>");
     expect(filesViewSource).not.toContain("Choose a folder</DropdownMenuItem>");
   });

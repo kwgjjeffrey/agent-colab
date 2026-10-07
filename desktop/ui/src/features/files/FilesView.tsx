@@ -3,18 +3,11 @@ import { operations } from "@/api/trace-operations";
 import { runOperation, type OperationScope } from "@/api/operation-runner";
 import { useEffect, useState } from "react";
 import { useChannelContext } from "@/features/context/ChannelContext";
-import { UserIdentity } from "@/features/context/UserIdentity";
+import { ResourceWorkspace, ResourceEmpty, ResourceRow } from "@/features/context/ResourceWorkspace";
 import { FileTypeIcon } from "@/features/context/ContextIcon";
-import { CheckIcon, PlusIcon } from "lucide-react";
+import { CheckIcon, PlusIcon, FolderOpenIcon, SlidersHorizontalIcon, UnplugIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { trackedFetch } from "@/api/request-activity";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyTitle,
-} from "@/components/ui/empty";
 import {
   Dialog,
   DialogContent,
@@ -257,71 +250,16 @@ const trackedFetch = operation.fetch;
   }
 
   return (
-    <div className="mx-auto flex max-w-4xl flex-col gap-5 py-6">
-      <div className="flex justify-end">
-        <Button data-trace-target={traceTargets("files.share", "files.choose", "system.choose-path")} disabled={busy} onClick={() => void choose()}>
-          <PlusIcon /> Share files
-        </Button>
-      </div>
+    <ResourceWorkspace title="Files" description="Shared context, kept close to its source." count={shares.length} action={<Button data-trace-target={traceTargets("files.share", "files.choose", "system.choose-path")} disabled={busy} onClick={() => void choose()}><PlusIcon data-icon="inline-start" />Share files</Button>}>
       {shares.length === 0 ? (
-        <Empty className="min-h-[60vh]">
-          <EmptyHeader>
-            <EmptyTitle>No shared files yet</EmptyTitle>
-            <EmptyDescription>
-              Share a local file or folder to make its context available to this
-              Channel.
-            </EmptyDescription>
-          </EmptyHeader>
-        </Empty>
+        <ResourceEmpty icon={<FolderOpenIcon />} title="No shared files yet" description="Share a file or folder. Your team’s Agents can work with the original context." action={<Button data-trace-target={traceTargets("files.share", "files.choose", "system.choose-path")} disabled={busy} onClick={() => void choose()}><PlusIcon data-icon="inline-start" />Share files</Button>} />
       ) : (
-        <div className="divide-y rounded-xl border">
+        <div className="resource-list">
           {shares.map((share) => (
-            <div key={share.id} className="group flex items-center gap-4 p-4">
-                <button data-trace-target={traceTargets("files.browse", "files.materialize")}
-                  type="button"
-                  className="min-w-0 flex-1 cursor-pointer text-left"
-                  onClick={() => void browse(share)}
-                >
-                  <span className="flex min-w-0 items-center gap-2">
-                    <FileTypeIcon name={share.name} className="size-5 shrink-0 text-muted-foreground" />
-                    <span className="truncate font-medium">{share.name}</span>
-                  </span>
-                  {share.syncState && share.syncState !== "ready" && (
-                    <p className={share.syncState === "failed" ? "text-sm text-destructive" : "text-sm text-muted-foreground"}>
-                      {share.syncState === "failed" ? share.syncError || "Synchronization failed" : share.syncState === "preparing" ? "Preparing first snapshot…" : "Synchronizing…"}
-                    </p>
-                  )}
-                </button>
-                <UserIdentity id={share.contributorMemberId} name={share.contributorName}><span className="inline-flex shrink-0 items-center gap-1 text-sm text-muted-foreground"><Avatar className="size-4"><AvatarImage src={share.contributorAvatarUrl} alt="" /><AvatarFallback className="text-[9px]">{share.contributorName.slice(0, 1).toUpperCase()}</AvatarFallback></Avatar>{share.contributorName}{share.canWithdraw ? " (me)" : ""}</span></UserIdentity>
-                {share.syncState === "failed" && (
-                  <Button data-trace-target={traceTargets("files.retry")} variant="outline" disabled={busy} onClick={() => onRetry(share)}>
-                    Retry
-                  </Button>
-                )}
-                {share.canWithdraw && (
-                  <Button data-trace-target={traceTargets("files.scope.read", "files.inspect")} variant="outline" className="opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100" disabled={busy} onClick={() => void editScope(share)}>
-                    Sync scope
-                  </Button>
-                )}
-                <Button data-trace-target={traceTargets("files.handoff")}
-                  variant="outline"
-                  className="opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
-                  disabled={busy || !share.currentRootOid}
-                  onClick={() => void giveToAgent(share)}
-                >
-                  Give to Agent
-                </Button>
-                {share.canWithdraw && (
-                  <Button data-trace-target={traceTargets("files.withdraw")}
-                    variant="destructive"
-                    className="opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
-                    disabled={busy}
-                    onClick={() => void onWithdraw(share)}
-                  >
-                    Withdraw
-                  </Button>
-                )}
-            </div>
+            <ResourceRow key={share.id} name={share.name} icon={<FileTypeIcon name={share.name} />} owner={{ id: share.contributorMemberId, name: share.contributorName, avatarUrl: share.contributorAvatarUrl, isMe: share.canWithdraw }} updatedAt={share.updatedAt} updateLabel={share.currentRootOid ? "Last synced" : "Shared"} onOpen={() => void browse(share)} openLabel="Open files" trace={traceTargets("files.browse", "files.materialize")} onGive={() => void giveToAgent(share)} giveTrace={traceTargets("files.handoff")} giveDisabled={!share.currentRootOid} busy={busy} status={share.syncState && share.syncState !== "ready" ? <span className={share.syncState === "failed" ? "text-destructive" : undefined}>{share.syncState === "failed" ? share.syncError || "Synchronization failed" : share.syncState === "preparing" ? "Preparing first snapshot…" : "Synchronizing…"}</span> : undefined} trailing={share.syncState === "failed" ? <Button data-trace-target={traceTargets("files.retry")} variant="outline" size="sm" disabled={busy} onClick={() => onRetry(share)}>Retry</Button> : undefined} actions={share.canWithdraw ? [
+              { label: "Sync scope", icon: <SlidersHorizontalIcon />, trace: traceTargets("files.scope.read", "files.inspect"), onClick: () => void editScope(share) },
+              { label: "Withdraw", icon: <UnplugIcon />, destructive: true, trace: traceTargets("files.withdraw"), onClick: () => onWithdraw(share) },
+            ] : []} />
           ))}
         </div>
       )}
@@ -376,6 +314,6 @@ const trackedFetch = operation.fetch;
         </DialogContent>
       </Dialog>
       {browseError && <p className="text-sm text-destructive">{browseError}</p>}
-    </div>
+    </ResourceWorkspace>
   );
 }

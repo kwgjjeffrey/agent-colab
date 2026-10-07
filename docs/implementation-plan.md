@@ -1,5 +1,9 @@
 # Colab 实现计划
 
+### 2026-10-07 Resource workspace visual refinement
+
+Rollback checkpoint: 4271026. Sessions/Files share ResourceWorkspace/ResourceRow presentation, uniform header, semantic green type icons, two-line bounded titles, owner Profile metadata, visible handoff and shadcn owner menu. Empty-state action is adjacent and not duplicated. No Local Core/Server/Skill changes or eager body fetching; prompt builders are unchanged. Build and 7 new interaction/prompt tests passed; complete test run, publication and installed acceptance are recorded in validation-plan when verified.
+
 ### 2026-10-07 Activity object consistency / GA preparation
 
 Implemented shared MentionCapsule across Messages, editor mentions and Activity, stable actor/target IDs and bounded rich instruction previews, complete titles, uniform row spacing, subordinate details and full-row keyboard/click navigation to the exact object/task. GUI 86 tests and production build passed; isolated PostgreSQL pagination/permissions and preview-boundary tests passed (2). Committed fe2dd07, published/installed GUI 0.1.97-dev and deployed Server 0.1.149-dev; native Profile and exact older-task acceptance passed (see validation-plan). Product website is a separate repository at `../agent-colab-website`, committed before Cloudflare deployment at https://agent-colab-website.yuzhyuan.workers.dev. Public HTML and two durable installation routes passed readback. [GA UI audit](ga-ui-audit.md) records bounded follow-up proposals rather than silently expanding this implementation.

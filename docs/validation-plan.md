@@ -1,5 +1,10 @@
 # 技术验证计划
 
+### 2026-10-07 Sessions / Files visual refinement
+
+- Rollback checkpoint 4271026; presentation-only scope. Seven new DOM tests pass: owner click isolation, keyboard open, owner menu, disabled handoff, one empty-state share button, original Session/Files prompt contents/no body prefetch, and unchanged materialize/tree path. Production build passed.
+- Native installed visual/menu/File Explorer/prompt acceptance and GUI publication are pending; no backend changes require deployment.
+
 ### 2026-10-07 Activity / website
 
 - GUI: 86 tests passed, including bounded page fetch, exact task from Messages/Canvas activity, nested capsule click isolation and Enter activation. Production build passed.
