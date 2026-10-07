@@ -9,7 +9,7 @@ export const META = {
   "surface": "gui",
   "priority": "normal",
   "origin": "requirement",
-  "status": "rotten",
+  "status": "active",
   "effects": "isolated-write",
   "cost": "normal",
   "requires": [
@@ -21,7 +21,7 @@ export const META = {
   ],
   "suite": "business",
   "testLevel": "end-to-end",
-  "statusReason": "Review found fixture semantics mismatch: another-member scenario uses another device of the same owner. Use distinct authenticated member to verify promised sharing boundary."
+  "statusReason": "Round 12 20261007T122018Z-9daf491a: GUI Skill sharing, real distinct member access to identical published root, source withdrawal and membership cleanup verified."
 };
 
 import fs from "node:fs/promises";import path from "node:path";

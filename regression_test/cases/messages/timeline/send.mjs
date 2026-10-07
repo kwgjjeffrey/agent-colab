@@ -9,7 +9,7 @@ export const META = {
   "surface": "gui",
   "priority": "critical",
   "origin": "requirement",
-  "status": "trial",
+  "status": "active",
   "effects": "isolated-write",
   "cost": "normal",
   "requires": [
@@ -20,7 +20,8 @@ export const META = {
     "skills/colab/bin/colab-messages"
   ],
   "suite": "business",
-  "testLevel": "end-to-end"
+  "testLevel": "end-to-end",
+  "statusReason": "Round 12 20261007T122018Z-9daf491a: actual GUI POST identity, exact committed message ID, exactly one rendered copy on both independent client contexts verified after cold-list merge race repair."
 };
 
 import fs from "node:fs/promises";

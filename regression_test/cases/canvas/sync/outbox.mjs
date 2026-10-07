@@ -9,7 +9,7 @@ export const META = {
   "surface": "gui",
   "priority": "critical",
   "origin": "requirement",
-  "status": "trial",
+  "status": "active",
   "effects": "isolated-write",
   "cost": "normal",
   "requires": [
@@ -20,7 +20,8 @@ export const META = {
     "skills/colab/bin/colab-canvas"
   ],
   "suite": "business",
-  "testLevel": "end-to-end"
+  "testLevel": "end-to-end",
+  "statusReason": "Round 6 20261007T115742Z-bfdf7648: reviewed real offline edit, pending-state observation, isolated Core restart and reconnection cleanup. Offline GUI cannot reopen its Channel after restart; this is a genuine recovery-path failure. Outbox upload assertions were not reached, so do not infer storage corruption from this result."
 };
 
 import fs from "node:fs/promises";import path from "node:path";

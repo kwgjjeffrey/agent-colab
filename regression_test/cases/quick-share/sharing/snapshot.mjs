@@ -9,7 +9,7 @@ export const META = {
   "surface": "gui",
   "priority": "critical",
   "origin": "requirement",
-  "status": "trial",
+  "status": "rotten",
   "effects": "isolated-write",
   "cost": "normal",
   "requires": [
@@ -20,7 +20,8 @@ export const META = {
     "skills/colab/bin/colab-transfer"
   ],
   "suite": "business",
-  "testLevel": "end-to-end"
+  "testLevel": "end-to-end",
+  "statusReason": "Round 3 fails before assertions on an empty command response; verify source-discovery response/exit and fixture lifecycle before interpreting snapshot semantics."
 };
 
 import fs from "node:fs/promises";import path from "node:path";

@@ -9,7 +9,7 @@ export const META = {
   "surface": "gui",
   "priority": "critical",
   "origin": "requirement",
-  "status": "rotten",
+  "status": "active",
   "effects": "isolated-write",
   "cost": "normal",
   "requires": [
@@ -21,7 +21,7 @@ export const META = {
   ],
   "suite": "business",
   "testLevel": "end-to-end",
-  "statusReason": "Review found false-positive locator: title can match resource tree even when editor never opens. Require actual editor/document identity and persisted edited title."
+  "statusReason": "Round 12 20261007T122018Z-9daf491a: durable edited title verified by document ID, actual editor body persists across navigation, and owned document cleanup verified."
 };
 
 import {openTab} from "../../../support/gui.mjs";

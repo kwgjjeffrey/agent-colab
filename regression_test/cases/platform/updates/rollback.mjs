@@ -9,7 +9,7 @@ export const META = {
   "surface": "integration",
   "priority": "critical",
   "origin": "requirement",
-  "status": "trial",
+  "status": "active",
   "effects": "isolated-write",
   "cost": "slow",
   "requires": [],
@@ -18,7 +18,8 @@ export const META = {
     "desktop/ui/src/features/updates"
   ],
   "suite": "release",
-  "testLevel": "end-to-end"
+  "testLevel": "end-to-end",
+  "statusReason": "Round 3 20261007T102452Z-cbabd0e6: verified signed bad-hash and correctly hashed unhealthy candidates against the real installer in an isolated root. Unhealthy candidate acceptance is a real installer gap (setup explicitly lacks readiness/rollback), not a script false positive. Product defect remains open."
 };
 
 import fs from "node:fs/promises";import path from "node:path";

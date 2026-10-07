@@ -9,7 +9,7 @@ export const META = {
   "surface": "gui",
   "priority": "normal",
   "origin": "requirement",
-  "status": "trial",
+  "status": "rotten",
   "effects": "isolated-write",
   "cost": "normal",
   "requires": [
@@ -20,7 +20,8 @@ export const META = {
     "skills/colab/bin"
   ],
   "suite": "business",
-  "testLevel": "end-to-end"
+  "testLevel": "end-to-end",
+  "statusReason": "Round 6 shows test race: reconnect permits automatic retry before the GUI Retry button is selected. Control a stable failed publication and inspect the actual GUI row before validating manual Retry."
 };
 
 import fs from "node:fs/promises";import path from "node:path";
