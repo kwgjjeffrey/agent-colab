@@ -2,7 +2,7 @@
 
 ### 2026-10-07 Resource workspace visual refinement
 
-Rollback checkpoint: 4271026. Sessions/Files share ResourceWorkspace/ResourceRow presentation, uniform header, semantic green type icons, two-line bounded titles, owner Profile metadata, visible handoff and shadcn owner menu. Empty-state action is adjacent and not duplicated. No Local Core/Server/Skill changes or eager body fetching; prompt builders are unchanged. Build and 7 new interaction/prompt tests passed; complete test run, publication and installed acceptance are recorded in validation-plan when verified.
+Rollback checkpoint: 4271026. Sessions/Files share ResourceWorkspace/ResourceRow presentation, uniform header, semantic green type icons, two-line bounded titles, owner Profile metadata, visible handoff and shadcn owner menu. Empty-state action is adjacent and not duplicated. No Local Core/Server/Skill changes or eager body fetching; prompt builders are unchanged. Full GUI suite (93 tests), build and installed native Profile/menu/File preview/prompt/empty-state acceptance passed. Source d22a8b9 committed before publishing; GUI 0.1.98-dev / promotion 0.1.150-dev published and installed. Evidence is recorded in validation-plan.
 
 ### 2026-10-07 Activity object consistency / GA preparation
 

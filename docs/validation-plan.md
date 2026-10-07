@@ -3,7 +3,8 @@
 ### 2026-10-07 Sessions / Files visual refinement
 
 - Rollback checkpoint 4271026; presentation-only scope. Seven new DOM tests pass: owner click isolation, keyboard open, owner menu, disabled handoff, one empty-state share button, original Session/Files prompt contents/no body prefetch, and unchanged materialize/tree path. Production build passed.
-- Native installed visual/menu/File Explorer/prompt acceptance and GUI publication are pending; no backend changes require deployment.
+- Full GUI suite: 93 tests across 32 files passed; production build passed. Source d22a8b9 committed before canonical GUI-only publication. Stable promotion 0.1.150-dev / GUI 0.1.98-dev published and installed with normal setup. Public readback verified 908874 bytes, SHA-256 7206e6bf3cf1ba1074c157d357821e593247e04b8dd93e65e18777ac0dc907e9.
+- Installed native acceptance: Sessions/Files headers, icons and metadata render; mouse owner menu opens Withdraw; contributor opens Profile without opening handoff; Session handoff opens its existing reader prompt; Files opens actual AGENTS.md preview and its original read-only colab-browser prompt; empty Files shows exactly one real Share files action. No withdrawal, sharing or Agent dispatch performed. Screenshots are ignored local dist/ga-review/sessions-refined.jpg and files-refined.jpg. No backend changes require deployment.
 
 ### 2026-10-07 Activity / website
 
