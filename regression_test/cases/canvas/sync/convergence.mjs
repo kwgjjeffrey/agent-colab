@@ -6,7 +6,7 @@ export const USECASE = {
 export const META = {
   "id": "canvas.realtime.convergence",
   "module": "canvas/sync",
-  "surface": "integration",
+  "surface": "gui",
   "priority": "critical",
   "origin": "requirement",
   "status": "active",

@@ -150,13 +150,18 @@ pub(super) async fn start(State(state): State<AppState>) -> Result<Json<StartRes
         return Err(remote_error(response).await);
     }
     let accounts: Vec<DeviceAccount> = response.json().await.map_err(LocalError::internal)?;
-    if accounts.len() == 1 {
+    let current = state.inner.session.lock().await.as_ref().map(|s| s.user.id.clone());
+    let remembered = current.filter(|id| accounts.iter().any(|a| &a.id == id));
+    let requires_selection = accounts.len() > 1 && remembered.is_none();
+    if let Some(id) = remembered {
+        Box::pin(login_account(&state, &id)).await?;
+    } else if accounts.len() == 1 {
         Box::pin(login_account(&state, &accounts[0].id)).await?;
     } else {
         *state.inner.session.lock().await = None;
     }
     Ok(Json(StartResult {
-        requires_selection: accounts.len() > 1,
+        requires_selection,
         accounts,
     }))
 }

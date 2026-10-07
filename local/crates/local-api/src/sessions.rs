@@ -701,10 +701,15 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
         }
         output.flush().map_err(LocalError::internal)?;
         fs::rename(temporary, &final_path).map_err(LocalError::internal)?;
-        if let Some((_, old_path)) = previous {
-            if old_path != final_path {
-                let _ = fs::remove_file(old_path);
-            }
+        // Retain immutable views for cursors already issued to readers. A new current
+        // snapshot must not invalidate an in-flight pagination session.
+        let mut views: Vec<_> = fs::read_dir(&dir).map_err(LocalError::internal)?
+            .filter_map(Result::ok).filter(|e| e.path().extension().is_some_and(|x| x == "jsonl"))
+            .collect();
+        views.sort_by_key(|e| e.metadata().and_then(|m| m.modified()).ok());
+        let remove_count = views.len().saturating_sub(8);
+        for view in views.into_iter().take(remove_count) {
+            if view.path() != final_path { let _ = fs::remove_file(view.path()); }
         }
     }
     let store = state.inner.store.lock().await;
@@ -726,9 +731,9 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
     // This is a no-op for consumers. For the contributor it must succeed; hiding the upload
     // error would replace the actionable cause with a misleading "no synchronized snapshot".
     sync_source(&state, &share_id).await?;
-    let path = materialize(&state, &share_id).await?;
+    let mut path = materialize(&state, &share_id).await?;
     let user = current_user_id(&state).await?;
-    let (adapter, name, snapshot) = {
+    let (adapter, name, mut snapshot) = {
         let store = state.inner.store.lock().await;
         let cached: Option<(String, String)> = store
             .query_row(
@@ -747,6 +752,19 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
         let (adapter, name) = cached.unwrap_or_else(|| ("codex-jsonl-v1".into(), share_id.clone()));
         (adapter, name, snapshot)
     };
+    if let Some(cursor) = body.cursor.as_deref() {
+        let bytes = URL_SAFE_NO_PAD.decode(cursor).map_err(|_| LocalError::bad_request("Invalid Session cursor"))?;
+        let view: Value = serde_json::from_slice(&bytes).map_err(|_| LocalError::bad_request("Invalid Session cursor"))?;
+        let pinned = view["snapshot"].as_str().ok_or_else(|| LocalError::bad_request("Invalid Session cursor"))?;
+        uuid::Uuid::parse_str(pinned).map_err(|_| LocalError::bad_request("Invalid Session snapshot"))?;
+        if pinned != snapshot {
+            // materialize above checked present authorization before any cached bytes are used.
+            let old = state.inner.data_root.join("sessions").join(&user).join(&share_id).join(format!("{pinned}.jsonl"));
+            if !old.is_file() { return Err(LocalError::bad_request("Pinned Session snapshot expired; restart pagination")); }
+            path = old.to_string_lossy().into();
+            snapshot = pinned.to_string();
+        }
+    }
     let mut turns = project_jsonl(
         Path::new(&path),
         &adapter,

@@ -1,3 +1,4 @@
+import path from 'node:path';
 export const USECASE = {
   "name": "Withdraw an owned Files share",
   "description": "Purpose: The product must honestly enforce the contributor's control.\n\nPreconditions: A test Files share is visible to two members.\n\nActions: Withdraw it in the GUI and attempt a new read as the other member.\n\nExpected results: The share leaves active discovery and new fetches are denied; already downloaded copies are not claimed to be erased."
@@ -26,7 +27,11 @@ export const META = {
 import fs from "node:fs/promises";
 import {parameter,resource,core,cli,data,disposable,eventually} from "../../../../support/client.mjs";
 import {item} from "../../../../support/gui.mjs";
+import {fixtures} from '../../../../support/fixtures.mjs';
+import {shareFiles} from '../../../../support/selection.mjs';
 export async function run(ctx){
-disposable(ctx);const ref=parameter(ctx,'filesRef'),id=ref.split('/').pop(),second=parameter(ctx,'secondCoreDiscoveryFile');await core(ctx,'POST','/v1/files/'+id+'/materialize',undefined,{discoveryFile:second});const row=await item(ctx,'Files','filesName');await row.getByRole('button',{name:'Withdraw',exact:true}).click();await eventually(ctx,'Files share leaves active discovery',()=>core(ctx,'GET','/v1/channels/'+resource(ctx,'channel').id+'/files'),rows=>!rows.some(s=>s.id===id));const denied=await core(ctx,'POST','/v1/files/'+id+'/materialize',undefined,{discoveryFile:second,expectFailure:true});ctx.assert('Fresh receiver fetch is denied by authorization',/HTTP (403|404)/.test(denied.error),true);
+ disposable(ctx);const f=await fixtures(ctx),c=resource(ctx,'channel'),second=parameter(ctx,'secondCoreDiscoveryFile');const share=await shareFiles(ctx,f.files,path.basename(f.files));const id=share.id;
+ await eventually(ctx,'Owned withdrawal fixture is published',()=>core(ctx,'GET','/v1/channels/'+c.id+'/files'),rows=>rows.some(x=>x.id===id&&x.currentRootOid),{timeoutMs:90000});
+ await core(ctx,'POST','/v1/files/'+id+'/materialize',undefined,{discoveryFile:second});const row=ctx.page.locator('div.group').filter({hasText:share.name});await row.getByRole('button',{name:'Withdraw',exact:true}).click();await eventually(ctx,'Files share leaves active discovery',()=>core(ctx,'GET','/v1/channels/'+c.id+'/files'),rows=>!rows.some(s=>s.id===id));const denied=await core(ctx,'POST','/v1/files/'+id+'/materialize',undefined,{discoveryFile:second,expectFailure:true});ctx.assert('Fresh receiver fetch is denied by authorization',/HTTP (403|404)/.test(denied.error),true);
 }
 export const REQUIREMENTS={"parameters": {"keys": ["disposable", "filesRef", "filesName", "secondCoreDiscoveryFile"]}};

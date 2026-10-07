@@ -996,6 +996,8 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
             )));
         }
     }
+    let tree = git_text(&repo, &target, &["ls-tree", "-rz", "--full-tree", &latest.root_oid])?;
+    validate_materialized_tree(&tree)?;
     fs::create_dir_all(&target).map_err(LocalError::internal)?;
     git(
         &repo,
@@ -1730,5 +1732,25 @@ fn wait_with_output_timeout(
                 "Git metadata generation exceeded 120 seconds and was cancelled",
             ))
         }
+    }
+}
+
+// Git is the transport validator, but its checkout intentionally supports symlinks.
+// Shared contexts must be self-contained: reject links and escaping paths before checkout.
+fn validate_materialized_tree(tree: &str) -> Result<(), LocalError> {
+    for entry in tree.split('\0').filter(|e| !e.is_empty()) {
+        let (meta, name) = entry.split_once('\t').ok_or_else(|| LocalError::bad_request("Invalid shared file tree"))?;
+        let mode = meta.split_whitespace().next().unwrap_or_default();
+        if !matches!(mode, "100644" | "100755") || name.split('/').any(|p| matches!(p, "" | "." | ".." | ".git")) || name.contains('\\') {
+            return Err(LocalError::bad_request("Unsafe path or link in shared file tree"));
+        }
+    }
+    Ok(())
+}
+#[cfg(test)] mod hostile_tree_tests {
+    #[test] fn rejects_escape_and_link_before_checkout() {
+        assert!(super::validate_materialized_tree("120000 blob oid\tlink\0").is_err());
+        assert!(super::validate_materialized_tree("100644 blob oid\t../sentinel\0").is_err());
+        assert!(super::validate_materialized_tree("100644 blob oid\tnested/file.txt\0").is_ok());
     }
 }

@@ -186,7 +186,7 @@ struct AddMemberResponse {
 #[derive(Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct ChannelMember {
-    user_id: Option<String>,
+    member_id: Option<String>,
     email: String,
     display_name: Option<String>,
     avatar_url: Option<String>,
@@ -1297,5 +1297,15 @@ impl IntoResponse for LocalError {
             Json(serde_json::json!({ "error": self.message })),
         )
             .into_response()
+    }
+}
+
+#[cfg(test)]
+mod membership_wire_tests {
+    #[test]
+    fn preserves_organization_member_identity_through_core() {
+        let input=serde_json::json!({"memberId":"member-123","email":"fixture@device.invalid","displayName":"Fixture","avatarUrl":null,"role":"member","status":"joined"});
+        let member:super::ChannelMember=serde_json::from_value(input.clone()).unwrap();
+        assert_eq!(serde_json::to_value(member).unwrap(),input);
     }
 }
