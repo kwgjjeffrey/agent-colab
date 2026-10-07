@@ -17,6 +17,6 @@ export const META = {
   effects: 'read-only', // isolated-write requires real disposable fixtures and scoped cleanup.
   cost: 'fast', // Estimate until measured; never invent performance limits.
   covers: [], // Existing operation IDs, when registered; do not invent IDs.
-  requires: [], // Match prerequisites explicitly configured in registry.yaml.
+  requires: [], // Match prerequisites explicitly configured in regression.config.yaml.
   affectedPaths: [], // Actual capability-owned repository-relative source paths.
 };

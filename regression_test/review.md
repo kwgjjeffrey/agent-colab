@@ -124,3 +124,17 @@ The duplicate channels/channels and messages/messages labels should be flattened
 | `quick-share.management.expiry` | Keep | `quick-share/sharing` | Distinct observable business outcome; retain independent result. |
 | `quick-share.permissions.expired-revoked` | Refine | `quick-share/access` | Use independent expiry and revocation variations; do not make one depend on the other. |
 | `quick-share.security.redaction` | Contract test | `quick-share/access` | Retain coverage with controlled inputs; do not build expensive full-browser fault injection for this assertion. |
+
+## Execution review — 2026-10-07
+
+All 76 registered scenarios now have runners; none was removed or marked rotten to make the suite green. Full runs and focused rechecks remain in the project run directory. The latest verification counts are recorded in validation-plan.md after execution, rather than inferred from exports.
+
+Execution corrected several test defects: request state is `succeeded`, result matching must use the exact request identity, persisted work events/rendered replies arrive asynchronously, Canvas references include their resource kind, and GUI handoff references can use readable names. Skill handoff depends on completed installation-state loading. Session source discovery resolves the provider UUID against the actual source filename, not an assumed equality with the catalog's filename-stem identifier.
+
+Quick Share consumption wording now follows the documented interface: received Session provides local transcript bytes and a source adapter; it does not promise a normal shared-Session Reader handle. The test invokes the actual packaged transfer CLI with an anonymous client and verifies Files/Session/Skill content. Fixed-snapshot tests change a real runtime Session by issuing a subsequent instruction, never by forging or editing its transcript.
+
+Files fixture failures were traced to an unusable local-source binding and inherited Git ignores. A new contributor-owned share was prepared and its published root verified. Disposable source repositories bound ignore rules without changing the outer repository. Native path selection remains a declared fixture boundary.
+
+Preserve product-contract failures such as rejection of a pinned Session cursor after source growth. Real executed-blueprint deletion has returned `blueprint_delete_failed`; the message sender foreign key lacks deletion handling, a concrete lead rather than proof from a mock. Missing second identities and isolated fault/release fixtures remain environment blockers.
+
+Latest qualification: completed full run 20261007T064300Z-a39585a6 plus focused rechecks 20261007T070231Z-d5d9e782 and 20261007T070725Z-8fc400be cover all 76 IDs with latest evidence of 39 passes, three failures and 34 preflight blockers. Canvas restoration passed twice; File preview reports four independent variants; Home prepares actual activity rather than requiring hand-entered labels; Skill conflict and uninstall prepare and restore only the managed regression-owned Skill. Actor-history preparation explicitly requests a Channel reply through the supplied command, rather than accepting an unposted model final answer as message history.

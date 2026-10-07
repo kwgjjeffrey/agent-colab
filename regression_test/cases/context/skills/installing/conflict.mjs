@@ -23,10 +23,11 @@ export const META = {
   "testLevel": "end-to-end"
 };
 
-import fs from "node:fs/promises";
-import {parameter,resource,core,cli,data,disposable,eventually} from "../../../../support/client.mjs";
-
+import fs from 'node:fs/promises';import path from 'node:path';
+import {parameter,cli,data,disposable} from '../../../../support/client.mjs';
+export const REQUIREMENTS={parameters:{keys:['disposable','skillRef','skillTarget']}};
 export async function run(ctx){
-disposable(ctx);const ref=parameter(ctx,'skillRef'),target=parameter(ctx,'skillTarget'),file=parameter(ctx,'skillConflictFile');const original=await fs.readFile(file,'utf8');const result=await cli(ctx,'colab-skill-tool',['ensure','--ref',ref,'--target',target],{expectedCode:1});ctx.assert('Conflict is reported',JSON.stringify(result).toLowerCase().includes('conflict'),true);ctx.assert('Conflicting local bytes are preserved',await fs.readFile(file,'utf8'),original);
+ disposable(ctx);const ref=parameter(ctx,'skillRef'),target=parameter(ctx,'skillTarget');const receipt=data(await cli(ctx,'colab-skill-tool',['ensure','--ref',ref,'--target',target]));if(!path.basename(receipt.installedPath).startsWith('regression-owned'))ctx.block('Conflict checks require the owned regression Skill');const file=path.join(receipt.installedPath,'SKILL.md'),original=await fs.readFile(file,'utf8'),modified=original+'\nLOCAL_EDIT_'+ctx.runId+'\n';
+ try{await fs.writeFile(file,modified);const result=await cli(ctx,'colab-skill-tool',['ensure','--ref',ref,'--target',target],{expectedCode:1});ctx.assert('Local modification conflict is reported',/conflict|locally modified/i.test(JSON.stringify(result)),true);ctx.assert('Conflicting local bytes are preserved',await fs.readFile(file,'utf8'),modified);}
+ finally{await fs.writeFile(file,original);await cli(ctx,'colab-skill-tool',['ensure','--ref',ref,'--target',target]);ctx.assert('Owned installation is restored',await fs.readFile(file,'utf8'),original);}
 }
-export const REQUIREMENTS={"parameters": {"keys": ["skillConflictFile", "skillRef", "skillTarget"]}};

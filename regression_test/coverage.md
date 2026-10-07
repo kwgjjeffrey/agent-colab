@@ -48,12 +48,12 @@ Module paths derive from each case META. GUI/Skill/integration describe entry su
 
 ## Execution groups
 
-- `suite=business`: 67 drafted scenarios plus two discovery pilots. Three controlled-input checks use `testLevel=contract`; the rest use end-to-end boundaries.
-- `suite=release`: seven drafted sign-in, installation, updater, target-install and process-recovery scenarios. Run as independent release acceptance.
+- `suite=business`: 69 executable scenarios including two discovery pilots. Three controlled-input checks use `testLevel=contract`; the rest use end-to-end boundaries.
+- `suite=release`: seven executable sign-in, installation, updater, target-install and process-recovery scenarios. Run as independent release acceptance.
 
-Select explicitly with `--meta '{"suite":["business"]}'` or `--meta '{"suite":["release"]}'`; the GUI uses the same metadata fields. An unfiltered full run still means all executable active cases, so always select a suite for routine work. Case-only drafts remain excluded whatever the selection.
+Select explicitly with `--meta '{"suite":["business"]}'` or `--meta '{"suite":["release"]}'`; the GUI uses the same metadata fields. An unfiltered full run still means all executable active cases, so always select a suite for routine work. All 76 current cases have runners. Missing resource/control prerequisites block before execution.
 
-Real Agent execution is required for Agent end-to-end cases; no runtime substitute is used. Tests requiring test-agent-runtime cannot run until an actual authorized runtime fixture is supplied. Missing prerequisites are blockers, not passing tests. No controlled runtime was introduced by this review.
+Real Agent execution is required for Agent end-to-end cases; no runtime substitute is used. Tests consume the actual registered Codex runtime. Cross-account and fault/recovery variants still require their separately bound resources and controls. Missing prerequisites are blockers, not passing tests. No controlled runtime was introduced by this review.
 
 ## Review decisions
 
@@ -62,3 +62,9 @@ Removed the unsupported Browser-search draft; merged three overlapping cases whi
 Integrity rejection and activation rollback, Channel removal and blueprint deletion, expiry and revocation, and resource-type variations require independent reported checks and fixture reset. Project cases use isolated resources or sandbox installations; effects metadata never creates isolation. Cost remains an estimate and no latency thresholds are fabricated.
 
 See review.md for the original per-case decision record. Its old IDs identify merged/removed drafts; it is not a second live catalog. Agent execution scripts must consume real environment resource bindings.
+
+## Implementation and qualification are separate
+
+All 76 registered cases now export real runners. Full selection includes all of them; environment preflight can still block a runner. The original execution records are retained under the configured `.runs` directory, including failed attempts and focused rechecks. The live catalog is the scripts themselves, not this coverage document.
+
+The first full execution caught script races, incorrect source references and fixture ownership/ignore mistakes. Corrections were verified with focused real GUI/Skill/Core runs, followed by another full selection. Results must distinguish passes, product-contract failures, unresolved execution failures and environment blockers. A missing second identity or isolated fault/release fixture is not product failure or successful script qualification.
