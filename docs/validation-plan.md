@@ -4,7 +4,9 @@
 
 - GUI: 86 tests passed, including bounded page fetch, exact task from Messages/Canvas activity, nested capsule click isolation and Enter activation. Production build passed.
 - Isolated PostgreSQL: activity membership, cursor pagination, coalesced reads and actor identity passed; rich preview retains atomic IDs and caps text at 160 characters. Two targeted tests passed in 0.15s. No full Server suite was run.
-- Independent website: build and three release-asset selection tests passed; dependency audit reports zero vulnerabilities after patched sharp override. Cloudflare deployment produced Worker version `6eaa0714-d106-45bb-bdfd-f4cea39c805e`. Public readback and responsive browser acceptance still pending; no fresh-machine installation claimed.
+- Independent website: build and three release-asset selection tests passed; dependency audit reports zero vulnerabilities after patched sharp override. Cloudflare deployment produced Worker version `6eaa0714-d106-45bb-bdfd-f4cea39c805e`. Public HTML matches build SHA-256 `000663e0fb8ee08cf96c42855eef8c92be8c80eccc13bdd3f2918145501a9629`; fixed Mac download redirects to an official DMG with final HTTP 200; install script readback passes `bash -n`; unknown routes return 404 and download POST returns 405. Desktop browser preview passed. No fresh-machine installation or mobile browser acceptance claimed.
+- Source committed as `fe2dd07` before release. GUI 0.1.97-dev / promotion 0.1.149-dev published and installed through normal setup; public GUI verification: 907440 bytes, SHA-256 `5cacbfd25d5cf74b3d1a63c5da06be944bcc68a801221c1a50943d37b7e95c93`. Server 0.1.149-dev built from committed HEAD and deployed with readiness passing.
+- Native installed GUI confirms velocity headline, rich Activity capsules and Agent Profile without row navigation. Clicking an older activity opens request `2c8d6d9d-56af-4016-adc7-06d188a2c4c8`, showing its exact instruction, intermediate reply and `REGRESSION_OK`, oldest to newest, tool call collapsed. No Agent command dispatched in this acceptance. Screenshot: ignored local `dist/ga-review/home-after.jpg`.
 
 ### 2026-10-06 compact Use cases / exact activity task
 

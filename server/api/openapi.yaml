@@ -13,7 +13,7 @@ paths:
         - { name: before, in: query, schema: { type: string, format: date-time } }
         - { name: beforeId, in: query, schema: { type: string } }
       responses:
-        "200": { description: "items with id/action/actorName/actorMemberId/resourceKind/resourceId/resourceId/resourceName/occurredAt/targetName/targetBlueprintId/previewContent/source/state and nullable nextCursor {before,beforeId}; newest first" }
+        "200": { description: "items with id/action/actorName/actorMemberId/resourceKind/resourceId/resourceName/occurredAt/targetName/targetBlueprintId/previewContent/source/state and nullable nextCursor {before,beforeId}; newest first" }
         "400": { description: Invalid pagination cursor }
         "403": { description: Caller is not a Channel member }
   /v1/shares/{shareId}/read-activity:
