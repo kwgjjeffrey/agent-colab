@@ -11,6 +11,7 @@ use rusqlite::OptionalExtension;
 use serde_json::{Value, json};
 use std::collections::{HashMap, HashSet};
 use std::io::{BufRead, BufReader, Read, Seek, SeekFrom};
+mod native_titles;
 
 const SESSION_SEGMENT_TARGET_BYTES: usize = 8 * 1024 * 1024;
 const SESSION_RECORD_MAX_BYTES: usize = 32 * 1024 * 1024;
@@ -262,6 +263,24 @@ fn discover_session_catalog(
         &mut seen,
         &mut changed,
     );
+    // A client rename can change its metadata database without touching the transcript.
+    let titles = native_titles::codex_titles(home);
+    for entry in &mut changed {
+        if entry.provider == "codex" {
+            if let Some(title) = titles.get(&entry.source_path) { entry.name = title.clone(); }
+        }
+    }
+    for (key, old) in known {
+        if old.provider == "codex" && seen.contains(key) {
+            if let Some(title) = titles.get(&old.source_path) {
+                if title != &old.name && !changed.iter().any(|entry| entry.catalog_id == old.catalog_id) {
+                    let mut renamed = old.clone();
+                    renamed.name = title.clone();
+                    changed.push(renamed);
+                }
+            }
+        }
+    }
     (seen, changed)
 }
 
@@ -348,6 +367,27 @@ fn scan_jsonl(
     }
 }
 fn session_title(path: &Path) -> Option<String> {
+    if path.components().any(|part| part.as_os_str() == ".claude") {
+        let file = fs::File::open(path).ok()?;
+        let mut custom = None;
+        let mut summary = None;
+        for line in BufReader::new(file).lines().map_while(Result::ok) {
+            // Skip conversation bodies; only provider title records participate.
+            if !line.contains("\"custom-title\"") && !line.contains("\"summary\"") { continue; }
+            let Ok(record) = serde_json::from_str::<Value>(&line) else { continue };
+            let target = match record["type"].as_str() {
+                Some("custom-title") => Some((&mut custom, "customTitle")),
+                Some("summary") => Some((&mut summary, "summary")),
+                _ => None,
+            };
+            if let Some((target, field)) = target {
+                if let Some(title) = record[field].as_str().filter(|title| !title.trim().is_empty()) {
+                    *target = Some(title.to_owned());
+                }
+            }
+        }
+        if let Some(title) = custom.or(summary) { return Some(title); }
+    }
     let file = fs::File::open(path).ok()?;
     for line in BufReader::new(file).lines().take(80) {
         let line = line.ok()?;
@@ -419,6 +459,10 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
     let name = body
         .name
         .filter(|x| !x.trim().is_empty())
+        .or_else(|| {
+            let home = std::env::var_os("HOME").map(PathBuf::from)?;
+            native_titles::codex_titles(&home).remove(&path.to_string_lossy().into_owned())
+        })
         .or_else(|| session_title(&path))
         .unwrap_or_else(|| {
             path.file_stem()
