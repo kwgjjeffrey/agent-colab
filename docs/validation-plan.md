@@ -1,5 +1,9 @@
 # 技术验证计划
 
+### 2026-10-07 Existing Claude Code history acceptance
+
+Installed Skill/Core discovered real local Claude source catalog 08855b0f4dd0858e70a2b62f (2516616a-f12e-4b9e-9a05-0e8f01a5a1c3.jsonl), shared it through the existing regression Channel, then read latest user turn and previous user turn using the returned snapshot cursor. All commands returned ok:true without launching or authenticating Claude Code. Test share CC history acceptance 2026-10-07 was withdrawn; original history unchanged. This validates discovery/share/snapshot/read/pagination, not complete assistant/tool projection fidelity or a second-device consumer. Existing first-user-text default title limitation also applies to Claude sources.
+
 ### 2026-10-07 Channel overflow / Session row repair
 
 Production build and 86 frontend tests passed (not E2E). Canonical publisher verified GUI 907936 bytes / SHA-256 339545af69b5d4369e1ffccff71b499a5315f1bece88ccd1b10b9e4499888bac. Normal updater installed GUI 0.1.100-dev. Native app refreshed, actual demo long Session rendered as one line with avatar at top and owner/source/time together. Native rail scroll reached bottom Channels/Create while Settings remained fixed. Actual row hover exposed Give/Withdraw without reserving width. Screenshot ignored dist/ga-review/session-row-fixed.jpg. Narrow-width truncation and tooltip visibility were not independently exercised; no full Trace regression claimed. Default name limitation remains documented in implementation-plan.
