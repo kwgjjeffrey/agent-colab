@@ -826,3 +826,13 @@ Execution infrastructure findings: CLI interruption left detached workers lockin
 The repository-owned Trace regression case is `regression_test/cases/context/sessions/discovery/native-title.mjs`; its real catalog fixture test and reviewed execution are recorded in the validation plan. No daily client records are mutated by this case.
 
 Local Core source discovery now uses Codex `threads.name` (then `title`) from a read-only client metadata database. Metadata-only renames update the catalog without reparsing unchanged transcripts. Claude Code uses the latest `customTitle`, then provider summary; absent native metadata retains the previous first-message fallback. Explicit share names remain authoritative. Existing remote share names are not silently overwritten.
+
+## Six remaining results repaired and verified (2026-10-07)
+
+Run `20261007T100143Z-dbfc219d`: scoped repair rounds `20261007T141446Z-ebb4b1fa` (Files continuous update), `20261007T141635Z-ef5ef721` (manual Retry, installer readiness, three-kind Quick Share snapshots), `20261007T142528Z-f836461e` (Canvas offline recovery) and `20261007T142740Z-4d2cdec7` (Skill withdrawal) passed. Original failures, a startup preflight timeout and the intermediate ambiguous-name script failure remain preserved. These are current per-case results, not one new full regression against every changed artifact.
+
+Core 0.1.93-dev fixes direct Skill consumption's missing discovery metadata and restores offline account/tenant catalog navigation. GUI 0.1.101-dev hydrates persisted Canvas replicas separately from Server updates; it shows Offline rather than claiming Synced. Canvas script waits for durable outbox evidence before restart. Auth rejection never falls back to cached discovery; no replica from another account is served. Skill 0.1.53-dev probes candidate Core readiness in an empty disposable database before changing links; unhealthy candidates leave prior artifacts and receipt untouched. Database rollback is not attempted.
+
+Manual Retry script now acquires its control before reconnect/automatic retry. Skill withdrawal uses a unique round-owned source name and failure cleanup. Retry and Quick Share scripts are qualified active after reviewed real execution. Continuous Files publication passed on the current resident runtime; its old timeout did not reproduce and no watcher product change is claimed.
+
+Validation: Core library tests 27 passed / 1 opt-in ignored; GUI TypeScript/build passed; Skill Tool tests 2 passed; installer unhealthy-candidate probe rejected; the six scoped cases passed. Local artifacts activated for daily/owned clients; no public release channel promoted.

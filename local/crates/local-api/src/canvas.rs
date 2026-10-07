@@ -154,12 +154,8 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
         ))
         .bearer_auth(token)
         .send()
-        .await
-        .map_err(LocalError::internal)?;
-    if !response.status().is_success() {
-        return Err(remote_error(response).await);
-    }
-    Ok(Json(response.json().await.map_err(LocalError::internal)?))
+        .await;
+    collaboration::cached_discovery(&state, format!("canvases:{channel}"), response).await
 
 }).await
 }
@@ -276,12 +272,8 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
         ))
         .bearer_auth(token)
         .send()
-        .await
-        .map_err(LocalError::internal)?;
-    if !response.status().is_success() {
-        return Err(remote_error(response).await);
-    }
-    Ok(Json(response.json().await.map_err(LocalError::internal)?))
+        .await;
+    collaboration::cached_discovery(&state, format!("canvas-folders:{channel}"), response).await
 
 }).await
 }
@@ -783,4 +775,27 @@ mod tests {
             .is_err()
         );
     }
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(super) struct LocalReplica { update: String, last_server_seq: i64, pending: i64 }
+
+// GUI hydration is separate from remote cursor repair: a local snapshot contains unsent edits
+// and must never be represented as an acknowledged Server update or a Synced state.
+pub(super) async fn local_replica(
+    State(state): State<AppState>, AxumPath(canvas): AxumPath<String>,
+) -> Result<Json<LocalReplica>, LocalError> {
+colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.canvas.local-replica", async {
+    let account = current_user_id(&state).await?;
+    {
+        let store = state.inner.store.lock().await;
+        store.query_row("select 1 from canvas_replicas where account_id=?1 and canvas_id=?2", rusqlite::params![account, canvas], |_| Ok(()))
+            .map_err(|_| LocalError { status: StatusCode::NOT_FOUND, message: "No local Canvas replica for this account".into() })?;
+    }
+    let (doc, last_server_seq) = load_replica(&state, &account, &canvas).await?;
+    let bytes = doc.transact().encode_state_as_update_v1(&StateVector::default());
+    let pending = pending_count(&state, &account, &canvas).await?;
+    Ok(Json(LocalReplica { update: STANDARD.encode(bytes), last_server_seq, pending }))
+}).await
 }

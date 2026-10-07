@@ -9,7 +9,7 @@ export const META = {
   "surface": "gui",
   "priority": "critical",
   "origin": "requirement",
-  "status": "rotten",
+  "status": "active",
   "effects": "isolated-write",
   "cost": "normal",
   "requires": [
@@ -21,7 +21,7 @@ export const META = {
   ],
   "suite": "business",
   "testLevel": "end-to-end",
-  "statusReason": "Round 3 fails before assertions on an empty command response; verify source-discovery response/exit and fixture lifecycle before interpreting snapshot semantics."
+  "statusReason": "Reviewed 20261007T141635Z-ef5ef721: GUI creates Files, real Agent Session, and owned Skill fixed shares; receiver preserves original content and excludes subsequent source changes for all three. Source bytes and transfer revocation cleanup verified. Prior empty-response error did not reproduce on current runtime."
 };
 
 import fs from "node:fs/promises";import path from "node:path";

@@ -18,9 +18,8 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
         ))
         .bearer_auth(token)
         .send()
-        .await
-        .map_err(LocalError::internal)?;
-    proxy_json(response).await
+        .await;
+    cached_discovery(&state, format!("channels:{organization_id}"), response).await
 
 }).await
 }
@@ -36,13 +35,8 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
         .get(format!("{}/v1/organizations", state.inner.server_url))
         .bearer_auth(token)
         .send()
-        .await
-        .map_err(LocalError::internal)?;
-    if !response.status().is_success() {
-        return Err(remote_error(response).await);
-    }
-    let mut organizations: Vec<Organization> =
-        response.json().await.map_err(LocalError::internal)?;
+        .await;
+    let mut organizations: Vec<Organization> = cached_discovery(&state, "organizations".into(), response).await?.0;
     let user_id = current_user_id(&state).await?;
     let key = format!("current_organization:{user_id}");
     let stored = {
@@ -323,4 +317,34 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
     .await
 
 }).await
+}
+
+// Offline navigation uses only a previously authorized catalog for this exact account/tenant.
+// A received authorization rejection must never fall back to stale membership.
+pub(super) async fn cached_discovery<T: serde::de::DeserializeOwned + Serialize>(
+    state: &AppState, scope: String, response: Result<reqwest::Response, impl std::fmt::Display>,
+) -> Result<Json<Vec<T>>, LocalError> {
+    let user = current_user_id(state).await?;
+    let key = format!("offline_discovery:{user}:{scope}");
+    match response {
+        Ok(response) if response.status().is_success() => {
+            let rows: Vec<T> = response.json().await.map_err(LocalError::internal)?;
+            let value = serde_json::to_string(&rows).map_err(LocalError::internal)?;
+            let store = state.inner.store.lock().await;
+            store.execute("insert into local_settings(key,value) values(?1,?2) on conflict(key) do update set value=excluded.value", [&key, &value]).map_err(LocalError::internal)?;
+            Ok(Json(rows))
+        }
+        Ok(response) if !matches!(response.status().as_u16(), 502 | 503 | 504) => {
+            let store = state.inner.store.lock().await;
+            store.execute("delete from local_settings where key=?1", [&key]).map_err(LocalError::internal)?;
+            drop(store);
+            Err(remote_error(response).await)
+        }
+        _ => {
+            let store = state.inner.store.lock().await;
+            let value: String = store.query_row("select value from local_settings where key=?1", [&key], |r| r.get(0))
+                .map_err(|_| LocalError::internal("Offline catalog unavailable; connect once to load this account"))?;
+            Ok(Json(serde_json::from_str(&value).map_err(LocalError::internal)?))
+        }
+    }
 }

@@ -333,9 +333,24 @@ const canvasJson=operation.json;
     const pending = (async () => {return runOperation("canvas.reconcile", async (operation)=>{
 const canvasJson=operation.json;
 
-      const rows = await canvasJson<CanvasUpdate[]>(
+      const response = await operation.fetch(
         `/v1/canvases/${canvasId}/updates?after=${seq.current}&limit=1000`,
       );
+      if (!response.ok) {
+        if (![500, 502, 503, 504].includes(response.status)) throw new Error(await response.text());
+        const cached = await canvasJson<{update: string; lastServerSeq: number; pending: number}>(
+          `/v1/canvases/${canvasId}/local-replica`,
+        );
+        Y.applyUpdate(document, decode(cached.update), REMOTE);
+        seq.current = Math.max(seq.current, cached.lastServerSeq);
+        if (mounted.current) {
+          setReady(true);
+          setState("offline");
+          setError("Offline — showing locally saved edits. Reconnect to synchronize.");
+        }
+        return;
+      }
+      const rows = await response.json() as CanvasUpdate[];
       for (const row of rows) {
         Y.applyUpdate(document, decode(row.update), REMOTE);
         seq.current = Math.max(seq.current, row.serverSeq);

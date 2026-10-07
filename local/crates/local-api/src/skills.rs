@@ -526,6 +526,21 @@ pub(super) async fn sync_materialization(
 ) -> Result<SkillShare, LocalError> {
 colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.skills.sync-materialization", async {
 
+    // Direct consumers must resolve authorized metadata without requiring a preceding GUI list.
+    // Cache presence is not authority: the revisions endpoint still checks current membership.
+    let cached = {
+        let store = state.inner.store.lock().await;
+        store.query_row("select 1 from skill_share_cache where share_id=?1", [share_id], |_| Ok(())).is_ok()
+    };
+    if !cached {
+        let channels = collaboration::list_channels(State(state.clone())).await?.0;
+        let mut found = false;
+        for channel in channels {
+            let shares = list_skill_shares(State(state.clone()), AxumPath(channel.id)).await?.0;
+            if shares.iter().any(|share| share.id == share_id) { found = true; break; }
+        }
+        if !found { return Err(LocalError { status: StatusCode::NOT_FOUND, message: "Skill is not available in the current Organization".into() }); }
+    }
     let token = access_token(state).await?;
     let response = state
         .inner

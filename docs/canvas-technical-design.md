@@ -904,3 +904,7 @@ local_core_unavailable
 4. v1 文档规模和并发人数支持目标。
 
 已经进入发布数据的 schema/encoding 后续必须通过版本迁移，不能靠客户端猜测。
+
+### Offline GUI hydration after Core restart (2026-10-07)
+
+Local Core retains account-scoped Organization/Channel/Canvas/folder discovery in local_settings after successful authorized reads. Transport or gateway unavailability can reuse that catalog; an explicit authorization rejection clears the affected cached catalog and never falls back. GUI can render its existing account replica via GET /v1/canvases/{id}/local-replica (update, lastServerSeq, pending). This is GUI CRDT hydration, not a Skill interface. It neither advances the remote cursor nor marks the document synced. Remote updates remain the repair path after reconnect; the durable outbox preserves clientUpdateId and ordered submission. The GUI displays Offline while showing cached edits.

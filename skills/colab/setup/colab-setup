@@ -286,6 +286,43 @@ def select_artifacts(manifest: dict) -> dict:
     if missing: raise RuntimeError(f"release has no {system}-{arch} artifact for: {', '.join(sorted(missing))}")
     return selected
 
+def verify_core_readiness(core: pathlib.Path, gui: pathlib.Path, server_url: str):
+    """Probe a candidate in private disposable state before changing any active pointer.
+
+    An empty account DB prevents runtime registration or user-data migration. Never start
+    the candidate against the resident database: pre-activation validation must be reversible.
+    """
+    import urllib.request
+    with tempfile.TemporaryDirectory(prefix="colab-readiness-") as directory:
+        root = pathlib.Path(directory)
+        discovery = root/"discovery.json"
+        env = dict(os.environ, COLAB_APPLICATION_ROOT=str(root),
+                   COLAB_LOCAL_DATABASE_PATH=str(root/"probe.sqlite3"),
+                   COLAB_DISCOVERY_FILE=str(discovery), COLAB_LOCAL_ADDRESS="127.0.0.1:0",
+                   COLAB_SERVER_URL=server_url, COLAB_GUI_ROOT=str(gui),
+                   COLAB_GOOGLE_OAUTH_CREDENTIALS_FILE=str(ROOT/"config/google-oauth.json" if (ROOT/"config/google-oauth.json").exists() else core/"google-oauth.json"))
+        executable = core/("colabd.exe" if os.name == "nt" else "colabd")
+        with (root/"probe.log").open("wb") as log:
+            child = subprocess.Popen([str(executable)], env=env, stdout=log, stderr=log)
+            try:
+                opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+                deadline = time.monotonic()+20
+                while time.monotonic()<deadline:
+                    if child.poll() is not None:
+                        raise RuntimeError("candidate Core exited before readiness; active installation preserved")
+                    try:
+                        metadata = json.loads(discovery.read_text())
+                        request = urllib.request.Request(metadata["endpoint"]+"/v1/status", headers={"Authorization":"Bearer "+metadata["bearer"]})
+                        with opener.open(request, timeout=1) as response:
+                            if response.status == 200: return
+                    except (OSError, ValueError, KeyError): pass
+                    time.sleep(.2)
+                raise RuntimeError("candidate Core readiness timed out; active installation preserved")
+            finally:
+                child.terminate()
+                try: child.wait(timeout=5)
+                except subprocess.TimeoutExpired: child.kill(); child.wait()
+
 def main():
     parser=argparse.ArgumentParser(prog="colab-setup")
     parser.add_argument("operation", choices=["install","update","update-shell","status","check","install-agent","uninstall-agent","open"])
@@ -447,6 +484,7 @@ def main():
                 credentials.chmod(0o600)
         if not credentials.exists():
             raise RuntimeError("this release does not include the publisher's Google OAuth client configuration")
+        verify_core_readiness(ROOT/"versions/local-core"/component_versions["local-core"], ROOT/"versions/desktop-ui"/component_versions["desktop-ui"], args.server_url)
         for agent in agents:
             activate_link(TARGETS[agent],skill_root)
             remove_managed_legacy_link(agent)

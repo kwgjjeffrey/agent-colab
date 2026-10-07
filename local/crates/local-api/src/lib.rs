@@ -668,6 +668,7 @@ pub fn router(state: AppState, security: LocalSecurity) -> Router {
             get(canvas::list_canvases).post(canvas::create_canvas),
         )
         .route("/v1/canvases/{canvas_id}", patch(canvas::rename_canvas).delete(canvas::archive_canvas))
+        .route("/v1/canvases/{canvas_id}/local-replica", get(canvas::local_replica))
         .route("/v1/canvases/{canvas_id}/position", patch(canvas::move_canvas))
         .route("/v1/canvases/{canvas_id}/agent-prompt", axum::routing::post(canvas::agent_prompt))
         .route(

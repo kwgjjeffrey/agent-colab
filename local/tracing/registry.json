@@ -1162,6 +1162,14 @@
         "path": "local/crates/local-api/src/messaging.rs",
         "function": "run_runtime_stream"
       }
+    },
+    {
+      "id": "core.canvas.local-replica",
+      "description": "Load this account’s persisted Canvas replica for offline GUI recovery without acknowledging remote synchronization",
+      "source": {
+        "path": "local/crates/local-api/src/canvas.rs",
+        "function": "local_replica"
+      }
     }
   ]
 }

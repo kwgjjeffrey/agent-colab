@@ -3,6 +3,15 @@ info:
   title: Colab Local API
   version: 0.1.0
 paths:
+  /v1/canvases/{canvasId}/local-replica:
+    get:
+      operationId: readLocalCanvasReplica
+      description: GUI-only hydration from the current account’s persisted Yrs replica. It includes unsent edits and never acknowledges Server delivery. Skill uses the document projection instead.
+      parameters:
+        - { name: canvasId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: "base64 update, lastServerSeq and pending outbox count" }
+        "404": { description: No persisted replica for the current account }
   /v1/shares/{shareId}/read-activity:
     post:
       operationId: recordLocalShareRead
