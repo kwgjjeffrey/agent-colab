@@ -9,7 +9,7 @@ export const META = {
   "surface": "skill",
   "priority": "critical",
   "origin": "requirement",
-  "status": "active",
+  "status": "trial",
   "effects": "read-only",
   "cost": "normal",
   "requires": [

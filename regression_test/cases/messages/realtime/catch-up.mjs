@@ -6,10 +6,10 @@ export const USECASE = {
 export const META = {
   "id": "communication.realtime.catch-up",
   "module": "messages/realtime",
-  "surface": "integration",
+  "surface": "gui",
   "priority": "critical",
   "origin": "requirement",
-  "status": "active",
+  "status": "trial",
   "effects": "isolated-write",
   "cost": "normal",
   "requires": [

@@ -9,7 +9,7 @@ export const META = {
   "surface": "gui",
   "priority": "critical",
   "origin": "requirement",
-  "status": "active",
+  "status": "trial",
   "effects": "isolated-write",
   "cost": "normal",
   "requires": [
@@ -34,6 +34,6 @@ export const REQUIREMENTS={"channel": {"permission": "read"}, "agent": {"state":
 import {withOtherMember} from '../../../support/controls.mjs';
 export async function run(ctx){
 return withOtherMember(ctx,async()=>{
-disposable(ctx);const c=resource(ctx,'channel'),a=resource(ctx,'agent'),other={discoveryFile:parameter(ctx,'secondMemberCoreDiscoveryFile')};const before=(await core(ctx,'GET','/v1/channels/'+c.id+'/blueprints')).find(x=>x.id===a.id);try{await core(ctx,'PATCH','/v1/channels/'+c.id+'/blueprints/'+a.id,{...before,invocationPolicy:'awaiting_owner'});const original=await core(ctx,'POST','/v1/channels/'+c.id+'/messages',messageBody('NON_OWNER_'+ctx.runId,{mentions:[a]}),other);await eventually(ctx,'Original request is rejected',()=>core(ctx,'GET','/v1/channels/'+c.id+'/agent-requests'),rows=>rows.some(r=>r.triggerMessageId===original.id&&r.state==='rejected'));await openTab(ctx,'Messages');await ctx.page.locator('#message-'+original.id).getByRole('button',{name:/^Quote /}).click();const task=await invoke(ctx,{gui:true});await complete(ctx,task);ctx.assert('Owner instruction preserves reply context',task.message.replyToMessageId,original.id);const prompt=await actualPrompt(ctx,task.request);ctx.assert('Assembled prompt includes full owner reply',prompt.includes('REGRESSION_OK')&&prompt.includes(original.id),true);ctx.assert('Rejected request remains rejected',(await core(ctx,'GET','/v1/channels/'+c.id+'/agent-requests')).find(r=>r.triggerMessageId===original.id).state,'rejected');}finally{await core(ctx,'PATCH','/v1/channels/'+c.id+'/blueprints/'+a.id,before);}
+disposable(ctx);const c=resource(ctx,'channel'),a=resource(ctx,'agent'),other={discoveryFile:parameter(ctx,'secondMemberCoreDiscoveryFile')};const before=(await core(ctx,'GET','/v1/channels/'+c.id+'/blueprints')).find(x=>x.id===a.id);try{await core(ctx,'PATCH','/v1/channels/'+c.id+'/blueprints/'+a.id,{...before,invocationPolicy:'awaiting_owner'});const original=await core(ctx,'POST','/v1/channels/'+c.id+'/messages',messageBody('NON_OWNER_'+ctx.runId,{mentions:[a]}),other);await eventually(ctx,'Original request is rejected',()=>core(ctx,'GET','/v1/channels/'+c.id+'/agent-requests'),rows=>rows.some(r=>r.triggerMessageId===original.id&&r.state==='rejected'));await openTab(ctx,'Messages');await ctx.page.locator('#message-'+original.id).getByRole('button',{name:/^Quote /}).click();const task=await invoke(ctx,{gui:true});await complete(ctx,task);ctx.assert('Owner instruction preserves reply context',task.message.replyToMessageId,original.id);const prompt=await actualPrompt(ctx,task.request);ctx.assert('Assembled prompt includes full owner reply',prompt.includes('REGRESSION_OK')&&prompt.includes('NON_OWNER_'+ctx.runId),true);ctx.assert('Rejected request remains rejected',(await core(ctx,'GET','/v1/channels/'+c.id+'/agent-requests')).find(r=>r.triggerMessageId===original.id).state,'rejected');}finally{await core(ctx,'PATCH','/v1/channels/'+c.id+'/blueprints/'+a.id,before);}
 });
 }

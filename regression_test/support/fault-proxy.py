@@ -9,7 +9,7 @@ class Handler(socketserver.BaseRequestHandler):
    while b'\r\n\r\n' not in raw:
     raw+=self.request.recv(65536)
     if not raw:return
-   path=raw.split(b' ',2)[1].decode();websocket=b'upgrade: websocket' in raw.lower();publication=any(x in path for x in ['/sync-','/file-revisions','/git-objects','/session-segments'])
+   path=raw.split(b' ',2)[1].decode();websocket=b'upgrade: websocket' in raw.lower();publication=any(x in path for x in ['/sync-','/file-revisions','/git-objects','/session-segments']) or '/files/' in path and '/revisions' in path
    def blocked():
     mode=state.read_text().strip() if state.exists() else 'on'
     return mode=='off' or mode=='publication-off' and publication or mode=='realtime-off' and websocket

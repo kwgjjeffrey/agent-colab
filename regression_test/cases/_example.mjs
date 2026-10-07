@@ -13,7 +13,7 @@ export const META = {
   surface: 'skill', // gui | skill | integration
   priority: 'critical', // critical | normal | extended
   origin: 'requirement', // requirement | bug | acceptance-gap
-  status: 'active', // Lifecycle is independent of script implementation.
+  status: 'trial', // Promote after reviewing real actions, assertions and cleanup.
   effects: 'read-only', // isolated-write requires real disposable fixtures and scoped cleanup.
   cost: 'fast', // Estimate until measured; never invent performance limits.
   covers: [], // Existing operation IDs, when registered; do not invent IDs.

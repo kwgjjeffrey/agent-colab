@@ -10,7 +10,7 @@ export const META = {
   "surface": "gui",
   "priority": "critical",
   "origin": "requirement",
-  "status": "active",
+  "status": "trial",
   "effects": "isolated-write",
   "cost": "normal",
   "requires": [
@@ -32,6 +32,6 @@ import {shareFiles} from '../../../../support/selection.mjs';
 export async function run(ctx){
  disposable(ctx);const f=await fixtures(ctx),c=resource(ctx,'channel'),second=parameter(ctx,'secondCoreDiscoveryFile');const share=await shareFiles(ctx,f.files,path.basename(f.files));const id=share.id;
  await eventually(ctx,'Owned withdrawal fixture is published',()=>core(ctx,'GET','/v1/channels/'+c.id+'/files'),rows=>rows.some(x=>x.id===id&&x.currentRootOid),{timeoutMs:90000});
- await core(ctx,'POST','/v1/files/'+id+'/materialize',undefined,{discoveryFile:second});const row=ctx.page.locator('div.group').filter({hasText:share.name});await row.getByRole('button',{name:'Withdraw',exact:true}).click();await eventually(ctx,'Files share leaves active discovery',()=>core(ctx,'GET','/v1/channels/'+c.id+'/files'),rows=>!rows.some(s=>s.id===id));const denied=await core(ctx,'POST','/v1/files/'+id+'/materialize',undefined,{discoveryFile:second,expectFailure:true});ctx.assert('Fresh receiver fetch is denied by authorization',/HTTP (403|404)/.test(denied.error),true);
+ await core(ctx,'POST','/v1/files/'+id+'/materialize',undefined,{discoveryFile:second});const row=ctx.page.locator('div.group').filter({hasText:share.name});await row.getByRole('button',{name:'Withdraw',exact:true}).click();await eventually(ctx,'Files share leaves active discovery',()=>core(ctx,'GET','/v1/channels/'+c.id+'/files'),rows=>!rows.some(s=>s.id===id));const denied=await core(ctx,'POST','/v1/files/'+id+'/materialize',undefined,{discoveryFile:parameter(ctx,'isolatedCoreDiscoveryFile'),expectFailure:true});ctx.assert('Fresh receiver fetch is denied by authorization',/HTTP (403|404)/.test(denied.error),true);
 }
-export const REQUIREMENTS={"parameters": {"keys": ["disposable", "filesRef", "filesName", "secondCoreDiscoveryFile"]}};
+export const REQUIREMENTS={"parameters": {"keys": ["disposable", "filesRef", "filesName", "secondCoreDiscoveryFile", "isolatedCoreDiscoveryFile"]}};
