@@ -68,3 +68,7 @@ Source/content bindings (`filesRef`, `sessionRef`, `skillRef`, `canvasRef`, expe
 The current native chooser fixture supplies only the OS-selected path. The GUI then performs actual inspection, registration, publication, authorization and consumption. It does not validate the operating system's file chooser UI.
 
 The installer adapter redirects only installer destinations into `.fixtures/<run>/<case>/installation` and disables service registration. The product installer performs actual downloads, verification, extraction and activation. The health probe starts the downloaded Core with an owned database/discovery path, then terminates that process. Nothing is installed over the daily client.
+
+When reusing a Files binding, check that the selected client is its contributor and `currentRootOid` exists. Fixtures stored under an ignored project directory need their own source-ignore boundary; `support/fixtures.mjs` initializes an empty fixture Git repository for this purpose. This never changes the outer project's ignore rules.
+
+Optional `archiveCache` and `archiveCacheHashes` select previously downloaded immutable archives. The adapter verifies each selected blob's SHA-256 before copying it into the new installation's private cache; the product installer still validates manifest metadata, extracts and activates the artifacts. A cache-backed installation proves installation/health behavior, not cold network throughput.

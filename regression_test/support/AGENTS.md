@@ -15,3 +15,7 @@ Case independence: shared read fixtures must survive the suite. Withdrawal cases
 The real installer is loaded in installer.py with bounded destination constants and --no-restart. installation_health.py starts only that newly downloaded executable with owned state paths. Process controls supplied by environment parameters may manipulate isolated process/transport lifecycle, but must not supply substitute test assertions or business execution.
 
 Quick Share capabilities are passed through stdin with capture:false. transfer_cli.py invokes the actual packaged CLI in-process so its parser sees the capability without exposing it in OS arguments. Never screenshot a secret-bearing handoff prompt or persist capability output.
+
+Verification refinements: await persisted runtime events and request-specific rendered reply IDs after reload. A provider thread UUID is not the source catalog's filename-stem threadId; resolve its exact .jsonl filename suffix and require one match. Skill handoff must wait for installation-state loading before opening the prompt. Base UI controlled checkboxes commit asynchronously: click, then verify the durable selection rather than assuming synchronous uncheck.
+
+Owned Files fixtures initialize an empty Git repository inside their ignored fixture directory, bounding source ignore rules so the project's outer `.fixtures` ignore cannot exclude every test file. Verify contributor identity and a published root before consumer tests. A previously registered share is not sufficient proof of a usable fixture.

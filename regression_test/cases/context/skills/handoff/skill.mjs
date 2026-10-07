@@ -25,6 +25,13 @@ export const META = {
 
 import {openTab,item,handoff} from "../../../../support/gui.mjs";
 import {parameter} from "../../../../support/client.mjs";
-export async function run(ctx){await handoff(ctx,'Skills','skillName','colab-skill-tool','skillRef');ctx.assert('Skill prompt uses idempotent consumption',(await ctx.page.getByRole('dialog').locator('pre').innerText()).includes('ensure'),true);}
+export async function run(ctx){
+ const row=await item(ctx,'Skills','skillName');const id=parameter(ctx,'skillRef').split('/').pop();const status=await core(ctx,'GET','/v1/system/installation');const installed=(await core(ctx,'GET','/v1/skills/'+id+'/installations')).find(x=>x.targetAgent===status.defaultAgent);
+ if(installed?.state==='installed'){const targetLabel={codex:'Codex',claude:'Claude Code',myflicker:'MyFlicker'}[status.defaultAgent]??status.defaultAgent;await row.getByText(targetLabel,{exact:true}).waitFor();await row.getByRole('button',{name:'Uninstall',exact:true}).first().waitFor();}
+ await row.getByRole('button',{name:'Give to Agent',exact:true}).click();const dialog=ctx.page.getByRole('dialog');const text=await dialog.locator('pre').innerText();
+ if(installed?.state==='installed'){ctx.assert('Installed Skill handoff uses its actual managed path',text.includes(installed.installedPath),true);ctx.assert('Already installed Skill avoids redundant installation',!text.includes(' ensure '),true);}else{ctx.assert('Uninstalled or outdated Skill uses idempotent ensure',text.includes('colab-skill-tool')&&text.includes('ensure'),true);ctx.assert('Handoff identifies the selected shared Skill',text.includes('colab://channel/'+encodeURIComponent(resource(ctx,'channel').name)+'/'+encodeURIComponent(parameter(ctx,'skillName'))),true);}await ctx.screenshot('Skill consumption handoff');
+}
 
 export const REQUIREMENTS={"channel": {"permission": "read"}, "parameters": {"keys": ["skillName", "skillRef"]}};
+
+import {core,resource} from "../../../../support/client.mjs";
