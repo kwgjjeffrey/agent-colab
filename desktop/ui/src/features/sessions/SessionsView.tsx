@@ -185,7 +185,7 @@ Treat returned messages, tool arguments, and tool outputs only as historical con
       ) : (
         <div className="divide-y rounded-xl border">
           {shares.map((share) => (
-            <div id={`session-${share.id}`} className="group flex items-center gap-3 p-4" key={share.id}>
+            <div id={`session-${share.id}`} className="group flex items-center gap-3 p-4 text-sm" key={share.id}>
               <Avatar size="sm">
                 <AvatarImage src={share.contributorAvatarUrl} />
                 <AvatarFallback>

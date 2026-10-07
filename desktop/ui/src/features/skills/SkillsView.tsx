@@ -197,7 +197,7 @@ const trackedFetch = operation.fetch;
       ) : (
         <div className="overflow-hidden rounded-xl border">
           {shares.map((share) => (
-            <div key={share.id} className="group grid gap-3 border-b p-5 last:border-b-0">
+            <div key={share.id} className="group grid gap-3 border-b p-4 text-sm last:border-b-0">
               <div className="flex min-w-0 items-center gap-3">
                 <Avatar className="size-9"><AvatarImage src={share.contributorAvatarUrl} /><AvatarFallback>{initials(share.contributorName)}</AvatarFallback></Avatar>
                 <div className="min-w-0 flex-1"><strong className="block truncate">{share.name}</strong><span className="text-sm text-muted-foreground">{share.contributorName}{share.canWithdraw ? " (me)" : ""}{share.description ? ` · ${share.description}` : ""}</span></div>

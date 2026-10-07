@@ -276,7 +276,7 @@ const trackedFetch = operation.fetch;
       ) : (
         <div className="divide-y rounded-xl border">
           {shares.map((share) => (
-            <div key={share.id} className="group flex items-center gap-4 p-4">
+            <div key={share.id} className="group flex items-center gap-3 p-4 text-sm">
                 <button data-trace-target={traceTargets("files.browse", "files.materialize")}
                   type="button"
                   className="min-w-0 flex-1 cursor-pointer text-left"

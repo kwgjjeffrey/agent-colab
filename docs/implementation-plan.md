@@ -1,5 +1,9 @@
 # Colab 实现计划
 
+### 2026-10-07 Bounded resource typography / spacing cleanup
+
+Stopped layout redesign at user request. Only three existing row containers changed: Sessions/Files/Skills primary text uses text-sm; Files gap matches Sessions gap-3; Skills padding matches p-4. No new elements, navigation, data or prompt changes. Production build passes. Not published yet; concurrent unrelated Core/regression work is preserved.
+
 ### 2026-10-07 Revert rejected resource visual refinement
 
 User rejected the duplicate page heading, oversized icon tiles, excessive type hierarchy and spacing. Sessions/Files presentation restored exactly to checkpoint 4271026; no business path changes. Source rollback 1892998 committed before GUI-only restoration publication. GUI 0.1.99-dev / promotion 0.1.151-dev published and installed. Previous refinement evidence below is historical, not design acceptance. Future visual work stays in standalone .trial/V-UI-02-resource-concept until approved.
