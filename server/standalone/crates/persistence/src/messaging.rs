@@ -168,7 +168,7 @@ pub struct AgentRequestWorkDetails {
 impl Database {
     pub async fn forward_source_valid(&self, user: Uuid, channel: Uuid, target: Uuid, messages: &[Uuid]) -> anyhow::Result<bool> {
         if self.channel_actor(user, channel).await?.is_none() { return Ok(false); }
-        let target_valid: bool = sqlx::query_scalar("select exists(select 1 from channel_agents ca join agent_blueprints ab on ab.id=ca.blueprint_id where ca.channel_id=$1 and ab.id=$2 and ab.runtime_id is not null)").bind(channel).bind(target).fetch_one(&self.pool).await?;
+        let target_valid: bool = sqlx::query_scalar("select exists(select 1 from channel_agents ca join agent_blueprints ab on ab.id=ca.blueprint_id where ca.channel_id=$1 and ab.id=$2 and ab.runtime_id is not null and ab.deleted_at is null)").bind(channel).bind(target).fetch_one(&self.pool).await?;
         let count: i64 = sqlx::query_scalar("select count(*) from channel_messages where channel_id=$1 and id=any($2)").bind(channel).bind(messages).fetch_one(&self.pool).await?;
         Ok(target_valid && count as usize == messages.len() && messages.len() <= 100)
     }
@@ -235,7 +235,7 @@ Ok(sqlx::query_as::<_,ChannelMessage>("with recursive chain(id,reply_to_message_
         };
         let owner = owner_member_id.unwrap_or(actor_member);
         let rows = sqlx::query_as::<_, AgentBlueprint>(
-            "select ab.id,ab.owner_member_id,coalesce(u.display_name,u.email) owner_name,u.avatar_url owner_avatar_url,ab.name,ab.loading_instruction,ab.loading_command,ab.runtime_device,ab.runtime_agent,ab.runtime_id,case when ar.id is null then null else ar.device_name||' · '||initcap(ar.provider) end runtime_label,ab.invocation_policy,(ca.blueprint_id is not null) in_channel,(ab.owner_member_id=$3) editable,ab.updated_at::text updated_at from agent_blueprints ab join organization_members om on om.id=ab.owner_member_id join users u on u.id=om.user_id left join agent_runtimes ar on ar.id=ab.runtime_id left join channel_agents ca on ca.blueprint_id=ab.id and ca.channel_id=$1 where ab.organization_id=$2 and ab.owner_member_id=$4 order by ab.updated_at desc"
+            "select ab.id,ab.owner_member_id,coalesce(u.display_name,u.email) owner_name,u.avatar_url owner_avatar_url,ab.name,ab.loading_instruction,ab.loading_command,ab.runtime_device,ab.runtime_agent,ab.runtime_id,case when ar.id is null then null else ar.device_name||' · '||initcap(ar.provider) end runtime_label,ab.invocation_policy,(ca.blueprint_id is not null) in_channel,(ab.owner_member_id=$3) editable,ab.updated_at::text updated_at from agent_blueprints ab join organization_members om on om.id=ab.owner_member_id join users u on u.id=om.user_id left join agent_runtimes ar on ar.id=ab.runtime_id left join channel_agents ca on ca.blueprint_id=ab.id and ca.channel_id=$1 where ab.organization_id=$2 and ab.owner_member_id=$4 and ab.deleted_at is null order by ab.updated_at desc"
         ).bind(channel_id).bind(organization_id).bind(actor_member).bind(owner).fetch_all(&self.pool).await?;
         Ok(Some(rows))
     }
@@ -320,7 +320,7 @@ Ok(sqlx::query_as::<_,ChannelMessage>("with recursive chain(id,reply_to_message_
         let Some((member_id, _)) = self.channel_actor(user_id, channel_id).await? else {
             return Ok(None);
         };
-        let updated:Option<Uuid>=sqlx::query_scalar("update agent_blueprints set name=$4,loading_instruction=$5,loading_command=$6,runtime_device=$7,runtime_agent=$8,runtime_id=$9,invocation_policy=$10,updated_at=now() where id=$1 and owner_member_id=$2 and organization_id=(select organization_id from channels where id=$3) and exists(select 1 from agent_runtimes ar where ar.id=$9 and ar.owner_member_id=$2 and ar.available and ar.provider='codex') returning id")
+        let updated:Option<Uuid>=sqlx::query_scalar("update agent_blueprints set name=$4,loading_instruction=$5,loading_command=$6,runtime_device=$7,runtime_agent=$8,runtime_id=$9,invocation_policy=$10,updated_at=now() where id=$1 and owner_member_id=$2 and deleted_at is null and organization_id=(select organization_id from channels where id=$3) and exists(select 1 from agent_runtimes ar where ar.id=$9 and ar.owner_member_id=$2 and ar.available and ar.provider='codex') returning id")
             .bind(id).bind(member_id).bind(channel_id).bind(name).bind(instruction).bind(command).bind(runtime_device).bind(runtime_agent).bind(runtime_id).bind(policy).fetch_optional(&self.pool).await?;
         if updated.is_none() {
             return Ok(None);
@@ -342,7 +342,7 @@ Ok(sqlx::query_as::<_,ChannelMessage>("with recursive chain(id,reply_to_message_
             return Ok(false);
         };
         let owned: bool = sqlx::query_scalar(
-            "select exists(select 1 from agent_blueprints where id=$1 and owner_member_id=$2)",
+            "select exists(select 1 from agent_blueprints where id=$1 and owner_member_id=$2 and deleted_at is null)",
         )
         .bind(id)
         .bind(member_id)
@@ -373,8 +373,15 @@ Ok(sqlx::query_as::<_,ChannelMessage>("with recursive chain(id,reply_to_message_
         else {
             return Ok(false);
         };
-        let affected = sqlx::query("delete from agent_blueprints where id=$1 and owner_member_id=$2 and organization_id=$3")
-            .bind(id).bind(member_id).bind(organization_id).execute(&self.pool).await?.rows_affected();
+        let mut tx = self.pool.begin().await?;
+        // Deletion retires configuration, not messages or completed request evidence.
+        let affected = sqlx::query("update agent_blueprints set deleted_at=now(),updated_at=now() where id=$1 and owner_member_id=$2 and organization_id=$3 and deleted_at is null")
+            .bind(id).bind(member_id).bind(organization_id).execute(&mut *tx).await?.rows_affected();
+        if affected == 1 {
+            sqlx::query("delete from channel_agents where blueprint_id=$1").bind(id).execute(&mut *tx).await?;
+            sqlx::query("update agent_requests set state='failed' where target_blueprint_id=$1 and state='queued'").bind(id).execute(&mut *tx).await?;
+        }
+        tx.commit().await?;
         Ok(affected == 1)
     }
 
@@ -441,7 +448,7 @@ Ok(sqlx::query_as::<_,ChannelMessage>("with recursive chain(id,reply_to_message_
         let Some((requester, _)) = self.channel_actor(user_id, channel_id).await? else {
             return Ok(None);
         };
-        let target_row:Option<(String,Uuid,String,Option<Uuid>,String,String)>=sqlx::query_as("select ab.name,ab.owner_member_id,coalesce(owner.display_name,owner.email),ab.runtime_id,ab.invocation_policy,ab.loading_instruction from agent_blueprints ab join channel_agents ca on ca.blueprint_id=ab.id join organization_members oom on oom.id=ab.owner_member_id join users owner on owner.id=oom.user_id where ab.id=$1 and ca.channel_id=$2").bind(target).bind(channel_id).fetch_optional(&self.pool).await?;
+        let target_row:Option<(String,Uuid,String,Option<Uuid>,String,String)>=sqlx::query_as("select ab.name,ab.owner_member_id,coalesce(owner.display_name,owner.email),ab.runtime_id,ab.invocation_policy,ab.loading_instruction from agent_blueprints ab join channel_agents ca on ca.blueprint_id=ab.id join organization_members oom on oom.id=ab.owner_member_id join users owner on owner.id=oom.user_id where ab.id=$1 and ca.channel_id=$2 and ab.deleted_at is null").bind(target).bind(channel_id).fetch_optional(&self.pool).await?;
         let Some((target_name, target_owner, target_owner_name, runtime_id, policy, instruction)) =
             target_row
         else {
@@ -612,7 +619,7 @@ Ok(sqlx::query_as::<_,ChannelMessage>("with recursive chain(id,reply_to_message_
         sqlx::query("update agent_requests set state=case when attempts>=3 then 'failed' else 'queued' end,claimed_at=null,accepted_at=null where runtime_id=$1 and state='running' and (claimed_at is null or claimed_at<now()-interval '30 minutes')")
             .bind(runtime_id).execute(&mut *tx).await?;
         let row:Option<(Uuid,Uuid,Uuid,String,Uuid,String,String,String,String,String,Option<i64>)>=sqlx::query_as(
-            "select req.id,req.channel_id,req.target_blueprint_id,b.name,b.owner_member_id,coalesce(owner.display_name,owner.email),coalesce(requester.display_name,requester.email),b.loading_instruction,req.kind,req.query,req.trigger_seq from agent_requests req join agent_blueprints b on b.id=req.target_blueprint_id join agent_runtimes r on r.id=req.runtime_id join organization_members om on om.id=r.owner_member_id join organization_members boom on boom.id=b.owner_member_id join users owner on owner.id=boom.user_id join organization_members rom on rom.id=req.requester_member_id join users requester on requester.id=rom.user_id where req.runtime_id=$1 and om.user_id=$2 and r.available and req.state='queued' order by req.created_at for update of req skip locked limit 1"
+            "select req.id,req.channel_id,req.target_blueprint_id,b.name,b.owner_member_id,coalesce(owner.display_name,owner.email),coalesce(requester.display_name,requester.email),b.loading_instruction,req.kind,req.query,req.trigger_seq from agent_requests req join agent_blueprints b on b.id=req.target_blueprint_id join agent_runtimes r on r.id=req.runtime_id join organization_members om on om.id=r.owner_member_id join organization_members boom on boom.id=b.owner_member_id join users owner on owner.id=boom.user_id join organization_members rom on rom.id=req.requester_member_id join users requester on requester.id=rom.user_id where req.runtime_id=$1 and om.user_id=$2 and r.available and b.deleted_at is null and req.state='queued' order by req.created_at for update of req skip locked limit 1"
         ).bind(runtime_id).bind(user_id).fetch_optional(&mut *tx).await?;
         let Some((
             id,

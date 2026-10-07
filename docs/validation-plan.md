@@ -472,3 +472,5 @@ Real Channel-binding pilot run 20261006T133843Z-2db3622f passed. A missing Chann
 - Trace staged source update: 30/30 generic tests pass, shared GUI build succeeds, installed/source worker SHA-256 match. Timeout tests verify owned subprocess termination; functional snapshots compare nested values rather than object identity.
 
 2026-10-07: Trace Run/Round integration verified against real Colab Skill channel discovery. Run 20261007T093625Z-c5da8dfa and its scoped second round both passed (4 assertions each). Historical executions preserved. GUI Ask Agent uses the shared run_record interface rather than a duplicated Report. This verifies regression infrastructure, not remediation of the three outstanding product failures or remaining coverage blockers. User authorized current accounts and Agents as real pre-GA testing resources; environment bindings still must describe actual available resources.
+
+2026-10-07: Core membership wire roundtrip and snapshot cursor unit checks pass. End-to-end rechecks and complete production regression remain in progress; these unit checks do not certify all cases.
