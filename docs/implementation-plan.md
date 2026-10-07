@@ -1,5 +1,9 @@
 # Colab 实现计划
 
+### 2026-10-07 Channel overflow / Session row repair
+
+Published and installed GUI 0.1.100-dev / promotion 0.1.152-dev from committed c49d312. Channel list scrolls independently above fixed Settings. Session avatar is top-aligned; title uses single-line truncate and existing shadcn Tooltip; owner/source/sync metadata share the secondary line. Hover/focus actions are positioned outside normal flow, so invisible buttons no longer reserve title width. No prompt or data-loading changes. Source name remains share.name; Core discovery currently derives its default from first valid user text (80 characters), not guaranteed provider-native title. That limitation is not claimed fixed.
+
 ### 2026-10-07 Bounded resource typography / spacing cleanup
 
 Stopped layout redesign at user request. Only three existing row containers changed: Sessions/Files/Skills primary text uses text-sm; Files gap matches Sessions gap-3; Skills padding matches p-4. No new elements, navigation, data or prompt changes. Production build passes. Not published yet; concurrent unrelated Core/regression work is preserved.

@@ -1,5 +1,9 @@
 # 技术验证计划
 
+### 2026-10-07 Channel overflow / Session row repair
+
+Production build and 86 frontend tests passed (not E2E). Canonical publisher verified GUI 907936 bytes / SHA-256 339545af69b5d4369e1ffccff71b499a5315f1bece88ccd1b10b9e4499888bac. Normal updater installed GUI 0.1.100-dev. Native app refreshed, actual demo long Session rendered as one line with avatar at top and owner/source/time together. Native rail scroll reached bottom Channels/Create while Settings remained fixed. Actual row hover exposed Give/Withdraw without reserving width. Screenshot ignored dist/ga-review/session-row-fixed.jpg. Narrow-width truncation and tooltip visibility were not independently exercised; no full Trace regression claimed. Default name limitation remains documented in implementation-plan.
+
 ### 2026-10-07 Minor typography / spacing cleanup
 
 Three existing resource row class changes only, confirmed by source diff. TypeScript/Vite production build passed. No end-to-end regression or installed visual acceptance claimed; this source-only change is not yet released. Existing Core/regression dirty files were not included.
