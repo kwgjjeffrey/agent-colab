@@ -27,6 +27,7 @@ try:
         data={kind:job.result() for kind,job in jobs.items()}
     if 'channels' in data:data['channels']=[{k:r.get(k) for k in ['id','name','role']} for r in data['channels']]
     print(json.dumps(data))
-except Exception:
-    print(json.dumps({'error':'Local Core inventory unavailable; check sign-in and connection'}))
+except Exception as error:
+    status=re.search(r'HTTP [0-9]{3}',str(error))
+    print(json.dumps({'error':'Local Core inventory unavailable: '+(status.group(0) if status else type(error).__name__)}))
     sys.exit(1)
