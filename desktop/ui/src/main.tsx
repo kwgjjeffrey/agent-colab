@@ -1004,10 +1004,10 @@ const api = operation.response;
         )}
         <div className="grid min-h-0 flex-1 grid-cols-[72px_1fr] overflow-hidden">
         <aside data-trace-target={traceTargets("channels.list")} data-trace-region={"channels"}
-          className="flex h-full flex-col items-center justify-between bg-sidebar-foreground px-2 py-3"
+          className="flex h-full min-h-0 flex-col items-center gap-3 bg-sidebar-foreground px-2 py-3"
           aria-label="Channels"
         >
-          <div className="flex flex-col items-center gap-3">
+          <div className="flex min-h-0 w-full flex-1 flex-col items-center gap-3 overflow-y-auto">
             {channels.map((channel) => (
               <Tooltip key={channel.id}>
                 <TooltipTrigger
@@ -1017,7 +1017,7 @@ const api = operation.response;
                       variant={
                         selectedId === channel.id ? "default" : "secondary"
                       }
-                      className="size-11 rounded-full"
+                      className="size-11 shrink-0 rounded-full"
                       onClick={() => setSelectedId(channel.id)}
                       aria-label={channel.name}
                     />
@@ -1035,7 +1035,7 @@ const api = operation.response;
                     <Button data-trace-target={traceTargets("channels.create")}
                       size="icon"
                       variant="outline"
-                      className="size-11 rounded-full border-dashed"
+                      className="size-11 shrink-0 rounded-full border-dashed"
                       onClick={() => setShowCreate(true)}
                       aria-label="Create channel"
                     />

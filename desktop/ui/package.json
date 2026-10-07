@@ -1,6 +1,6 @@
 {
   "name": "@colab/desktop-ui",
-  "version": "0.1.99-dev",
+  "version": "0.1.100-dev",
   "license": "Apache-2.0",
   "private": true,
   "type": "module",
