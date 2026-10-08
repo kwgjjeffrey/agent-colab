@@ -662,7 +662,7 @@ const messageRequest = operation.message;
         </DialogContent>
       </Dialog>
       <Dialog open={agentsOpen} onOpenChange={setAgentsOpen}>
-        <DialogContent data-trace-region={"agents-manager"} className="sm:max-w-4xl">
+        <DialogContent data-trace-region={"agents-manager"} className="max-h-[85vh] overflow-hidden sm:max-w-4xl">
           <DialogHeader>
             <DialogTitle>Agents</DialogTitle>
             <DialogDescription>
@@ -671,8 +671,8 @@ const messageRequest = operation.message;
                 : "Agents this member brought into the Channel."}
             </DialogDescription>
           </DialogHeader>
-          <div className="grid min-h-[30rem] grid-cols-[17rem_minmax(0,1fr)] overflow-hidden rounded-lg border">
-            <aside className="border-r p-3">
+          <div className="grid h-[min(36rem,65vh)] min-h-0 grid-cols-[17rem_minmax(0,1fr)] overflow-hidden rounded-lg border">
+            <aside className="min-h-0 overflow-y-auto border-r p-3">
               {managingOwn && (
                 <>
                   <Button
@@ -720,9 +720,10 @@ const messageRequest = operation.message;
                 </div>
               ))}
             </aside>
-            <section className="min-w-0 p-5">
+            <section className="min-h-0 min-w-0 overflow-y-auto p-5">
               {focused || draft ? (
                 <BlueprintForm
+                  key={focused?.id ?? "new"}
                   blueprint={focused}
                   runtimes={runtimes}
                   onSubmit={saveBlueprint}
@@ -830,6 +831,11 @@ function BlueprintForm({
     available = runtimes.filter(
       (runtime) => runtime.available && runtime.provider === "codex",
     );
+  const runtimeItems = available.map(runtime => ({ value: runtime.id, label: `${runtime.deviceName} · Codex` }));
+  // Retain the bound identity even when that device is no longer an available choice.
+  if (blueprint?.runtimeId && !runtimeItems.some(item => item.value === blueprint.runtimeId)) {
+    runtimeItems.push({ value: blueprint.runtimeId, label: blueprint.runtimeLabel || blueprint.runtimeDevice || "Unavailable runtime" });
+  }
   return (
     <form data-trace-target={traceTargets("agents.save")} onSubmit={onSubmit}>
       <FieldGroup>
@@ -862,6 +868,7 @@ function BlueprintForm({
           <FieldLabel>Agent runtime</FieldLabel>
           <Select
             name="runtimeId"
+            items={runtimeItems}
             defaultValue={blueprint?.runtimeId}
             disabled={!editable}
             required
@@ -869,7 +876,7 @@ function BlueprintForm({
             <SelectTrigger>
               <SelectValue placeholder="Choose a connected runtime" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent alignItemWithTrigger={false}>
               <SelectGroup>
                 {available.map((runtime) => (
                   <SelectItem key={runtime.id} value={runtime.id}>
@@ -889,13 +896,14 @@ function BlueprintForm({
           <FieldLabel>Upon request by others</FieldLabel>
           <Select
             name="invocationPolicy"
+            items={[{value:"refuse",label:"Refuse"},{value:"awaiting_owner",label:"Ask me first"},{value:"process",label:"Process"}]}
             defaultValue={blueprint?.invocationPolicy ?? "awaiting_owner"}
             disabled={!editable}
           >
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent alignItemWithTrigger={false}>
               <SelectGroup>
                 <SelectItem value="refuse">Refuse</SelectItem>
                 <SelectItem value="awaiting_owner">Ask me first</SelectItem>

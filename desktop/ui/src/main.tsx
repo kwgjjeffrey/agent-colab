@@ -310,8 +310,11 @@ return runOperation("members.agent-count", async operation => {
 const api=operation.response;
 
     const response = await api(`/v1/channels/${channelId}/participants`, undefined, true);
-    const participants = await response.json() as Array<{ isCurrent: boolean; agentCount: number }>;
-    return participants.find((participant) => participant.isCurrent)?.agentCount ?? 0;
+    const participants = await response.json() as Array<{ isCurrent: boolean; memberId: string }>;
+    const owner = participants.find((participant) => participant.isCurrent);
+    if (!owner) return 0;
+    const blueprints = await (await api(`/v1/channels/${channelId}/blueprints?ownerMemberId=${encodeURIComponent(owner.memberId)}`, undefined, true)).json() as unknown[];
+    return blueprints.length;
 
 });
 }
