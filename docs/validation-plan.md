@@ -2,10 +2,18 @@
 
 ### 2026-10-09 Actual asset previews — candidate validation
 
-Trace Run `20261008T175800Z-b7e764d9` passed the scoped real Core/Server
-four-asset preview and breadcrumb return case. Subsequent readability and
-scrolling changes still require packaged acceptance. Five focused GUI component
-tests passed. This is not release acceptance or a full regression-suite claim.
+Trace Run `20261008T182031Z-7615ccd9` passed the scoped real Core/Server
+four-asset preview and breadcrumb return case against packaged GUI 121/Core 96.
+Eight focused GUI component tests and production build passed, including opaque
+Session cursor continuation. Public GUI verification: 921358 bytes, SHA-256
+`4cbfd961681aa7341676b38c53d6ff650d6a9c22fcb8833f34133cc6c41a5682`.
+Promotion 173 retains Shell 23 and Skill 55. Normal daily App installation
+completed; /ui.json reports 121 and lsof identifies the active Core 96 executable.
+Native second Channel acceptance verified real SKILL.md, installation popover,
+MyFlicker conversation with earlier-page entrance, Files internal trail/content,
+and breadcrumb return to usable Add. No asset was installed, removed or changed.
+The legacy damaged Session snapshot is not claimed repaired; its original bytes
+remain unchanged. This is not a full regression-suite claim.
 
 ### 2026-10-09 Detail navigation repair
 

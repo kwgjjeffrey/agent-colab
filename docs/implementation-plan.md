@@ -6,7 +6,11 @@ Replace embedded collection remnants with actual Session conversation, SKILL.md,
 and Files content. One inline breadcrumb owns navigation, including file paths;
 no redundant Back row, duplicate title or collection Share action. Session and
 Skill reading panels scroll independently and share Markdown typography.
-Candidate GUI 120 / Core 96 / promotion 172 is not yet published or installed.
+GUI 121 / Core 96 / promotion 173 is published with public size/hash verification.
+Normal App update installed promotion 173. Active GUI reports 121; the running
+Core executable is versions/local-core/0.1.96-dev/colabd. Native acceptance
+verified real Skill正文 and installation popover, MyFlicker Session conversation,
+Files tree/content with one trail, and breadcrumb return to Add.
 User requested prioritizing preview continuity over peripheral hardening.
 
 ### 2026-10-09 Asset detail navigation repair
