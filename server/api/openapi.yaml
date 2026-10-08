@@ -3,6 +3,33 @@ info:
   title: Colab Server API
   version: 0.1.0
 paths:
+  /v1/channels/{channelId}/catalog-items/position:
+    patch:
+      operationId: positionCatalogItem
+      description: Atomically move an authorized item and insert before an optional direct sibling. Omitted before appends; null parentId moves to root. Stable item and consumer identities are unchanged.
+      parameters:
+        - {name: channelId, in: path, required: true, schema: {type: string, format: uuid}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [kind, itemId]
+              properties:
+                kind: {type: string, enum: [catalog, canvas, session, files, skill]}
+                itemId: {type: string, format: uuid}
+                parentId: {type: [string, 'null'], format: uuid}
+                before:
+                  type: object
+                  required: [kind, itemId]
+                  properties:
+                    kind: {type: string, enum: [catalog, canvas, session, files, skill]}
+                    itemId: {type: string, format: uuid}
+      responses:
+        '204': {description: Placement committed}
+        '400': {description: Invalid or stale anchor, invalid destination, cycle or unavailable item; no partial move}
+        '403': {description: Not authorized}
   /v1/auth/profile:
     get:
       operationId: getAccountProfile

@@ -331,7 +331,7 @@ export function CatalogWorkspace({
         </Button>
         <DropdownMenu>
           <DropdownMenuTrigger render={<Button variant="ghost" className="justify-start"/>}><PlusIcon/>Add</DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-52">
+          <DropdownMenuContent keepMounted align="start" className="w-52">
             <DropdownMenuGroup>{kinds.map(({kind,label})=><DropdownMenuItem key={kind} onClick={()=>add(kind)}><ItemIcon kind={kind} name={label}/>{label}</DropdownMenuItem>)}</DropdownMenuGroup>
             <DropdownMenuSeparator/>{quickShare}
           </DropdownMenuContent>

@@ -442,3 +442,10 @@ Files 返回只读本地路径和树；Session 返回可继续分页的 Reader h
 Canvas is exposed to an Agent as a Markdown text projection, never as raw CRDT nodes or internal blocks. The request prompt supplies the exact document reference and presents tools in task order: read the current document first, apply a Codex-style patch only if the task requires an edit, and list other Channel documents only if broader exploration is needed. The prompt introduces optional commands with the unambiguous sentence: `Tools below are at your disposal if the user's task requires them.`
 
 An Agent mention dispatch carries the full visible mention and its containing Heading section. The Server resolves the requester, document title, Channel name, and Agent blueprint from authoritative records; the GUI cannot inject a different identity or runtime destination. The Agent continues the persistent `(Canvas, Agent)` provider thread and edits through `colab-canvas`, so runtime delivery never writes Canvas storage directly.
+### Catalog ordering compatibility (2026-10-09)
+
+Explorer continues using stable identities and returns children in the persisted
+GUI sibling order. Existing `move --parent` remains compatible and appends at
+the destination; no new consumer-reference protocol is required. The Local API
+placement endpoint also accepts `before: {kind,itemId}` for GUI drag ordering.
+Legacy browser remains usable; only Explorer exposes the Catalog hierarchy.

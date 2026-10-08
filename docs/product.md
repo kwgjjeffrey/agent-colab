@@ -237,3 +237,10 @@ Agent 的能力与偏好配置，包括 system instruction、skills，以及通�
 `@agent` 首先创建一条可审计的 Agent Request，不等于无条件远程执行。Ask me first 与 Refuse 对非 owner 请求都记录终态 `rejected`，区别仅是前者自动回复并引导 owner 发出自己的指令，不存在待批准任务。Owner 回复并再次 mention Agent 时产生全新命令，完整回复是 query，原请求沿引用链提供上下文；owner 可以增补或改写要求。已授权命令遇到 runtime 离线时仍保留待投递，并在对话中说明。Agent 通过受约束的进度/结果上报工具写回摘要，不把完整推理、终端日志或所有工具调用广播给群成员。
 
 首版若进入实现，只包含文本消息、成员、引用现有 Shared Item、`@agent` 请求、调用策略、离线排队和摘要反馈。表情、已读、正在输入、音视频、协同编辑、通用 bot 市场和项目任务管理均不作为首版范围。
+### Home and Add refinement (2026-10-09)
+
+Home is the overview, use-case guidance and activity destination. Add is an
+immediate creation menu, with Quick Share in a cascade. Mixed assets support
+dragging into Catalogs, sibling ordering and moving back to root; placement is
+shared persistent information, not a device-local visual preference. Catalog
+folders and shared local-file collections must remain visually distinguishable.
