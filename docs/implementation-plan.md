@@ -2,7 +2,7 @@
 
 ### 2026-10-08 full-width Messages composer surface
 
-Moved the muted background to the entire bottom composer, including Send and reply context; removed the nested input border/rounding. Placeholder retained. GUI-only 0.1.105-dev / promotion 0.1.157-dev. Build and installed visual check pending.
+Moved the muted background to the entire bottom composer, including Send and reply context; removed the nested input border/rounding. Placeholder retained. GUI-only 0.1.105-dev / promotion 0.1.157-dev. TypeScript / production build passed. Published and normally installed; actual GUI metadata matches 105. Native screenshot confirms continuous gray background across the whole composer, including Send, with no nested input card and the placeholder retained. Public readback verified 914181 bytes / SHA-256 `cc741b94fab811a54426c93806387bfac086899620b3b366b27fdd37a20f1e0a`. This two-class presentation adjustment has native visual acceptance; message behavior is unchanged from the separately recorded GUI 104 passing regression.
 
 ### 2026-10-08 Messages composer visibility
 
