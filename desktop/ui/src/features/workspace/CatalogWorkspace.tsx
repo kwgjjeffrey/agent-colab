@@ -288,12 +288,12 @@ export function CatalogWorkspace({
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
                   <DropdownMenuGroup>
-                    {kinds.map(({ kind, label, icon: TypeIcon }) => (
+                    {kinds.map(({ kind, label }) => (
                       <DropdownMenuItem
                         key={kind}
                         onClick={() => add(kind, item.id)}
                       >
-                        <TypeIcon />
+                        <ItemIcon kind={kind} name={label}/>
                         {label}
                       </DropdownMenuItem>
                     ))}
