@@ -184,6 +184,7 @@ function App() {
   const [error, setError] = useState<string>();
   const [notice, setNotice] = useState<string>();
   const [members, setMembers] = useState<Member[]>([]);
+  const [channelInviteBusy, setChannelInviteBusy] = useState(false);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [fileShares, setFileShares] = useState<FileShare[]>([]);
@@ -464,6 +465,8 @@ const api = operation.response;
   useEffect(() => {
     if (bootstrapping.current) return;
     bootstrapping.current = true;
+    const invitedChannel = new URLSearchParams(location.hash.slice(1)).get("channel");
+    if (invitedChannel) { setSelectedId(invitedChannel); setWorkspaceTab("home"); history.replaceState(null, "", location.pathname + location.search); }
     const join = new URLSearchParams(location.search).get("join");
     if (join) { localStorage.setItem("pendingChannelInviteLink", join); history.replaceState(null, "", location.pathname); }
     void fetch("/v1/auth/device/start", { method: "POST" }).then(async response => {
@@ -729,6 +732,15 @@ const trackedFetch = operation.fetch;
     await refreshOrganizations(); await refreshChannels();
     setSelectedId(target.channelId); setWorkspaceTab("sessions"); setShareSessionToken(Date.now());
     } finally { acceptingInvite.current = false; }
+  }
+  async function inviteToChannel() {
+    if (!selected || channelInviteBusy) return;
+    setChannelInviteBusy(true);
+    try {
+      const invitation = await api(`/v1/channels/${selected.id}/invite-links`, { method: "POST" });
+      setSessionInvite({ ...await invitation.json(), channelName: selected.name, purpose: "join" });
+    } catch (reason) { setError(readableError(reason)); }
+    finally { setChannelInviteBusy(false); }
   }
   async function tryHomeCase(id: string) {
     if (!selected || homeTryBusy) return;
@@ -1165,6 +1177,8 @@ const api = operation.response;
                   onLoad={() => void loadMembers()}
                   onRole={changeRole}
                   onRemove={removeMember}
+                  onInvite={() => void inviteToChannel()}
+                  inviteBusy={channelInviteBusy}
                 />
               </TabsContent>
             </Tabs></ChannelContextProvider>
@@ -1311,6 +1325,8 @@ function ChannelSettings({
   onLoad,
   onRole,
   onRemove,
+  onInvite,
+  inviteBusy,
 }: {
   channel: Channel;
   members: Member[];
@@ -1320,6 +1336,8 @@ function ChannelSettings({
   onLoad: () => void;
   onRole: (m: Member, r: string) => void;
   onRemove: (m: Member) => void;
+  onInvite: () => void;
+  inviteBusy: boolean;
 }) {
   const [people, setPeople] = useState<OrganizationPerson[]>([]);
   const [iconPreparing, setIconPreparing] = useState(false);
@@ -1385,6 +1403,7 @@ const trackedFetch = operation.fetch;
             the Organization and Channel.
           </p>
         </div>
+        {canManage && <Button variant="outline" className="w-fit" disabled={busy || inviteBusy} onClick={onInvite}>{inviteBusy ? "Creating invitation…" : "Invite via Agent"}</Button>}
         {canManage && (
           <form data-trace-target={traceTargets("members.add", "members.search")} onSubmit={onAdd}>
             <FieldGroup>

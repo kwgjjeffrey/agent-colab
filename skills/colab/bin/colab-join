@@ -1,0 +1,49 @@
+#!/usr/bin/env python3
+"""Join a Channel invitation using this device's selected Colab account."""
+import argparse
+import pathlib
+import subprocess
+import sys
+import time
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "lib"))
+from local_api import request, LocalApiError
+from output import success, failure
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--invitation", required=True)
+    parser.add_argument("--no-open", action="store_true", help="Join without opening the GUI")
+    args = parser.parse_args()
+    try:
+        # Setup may just have restarted Core. Readiness must be observed, not inferred
+        # from an on-disk installation receipt or stale discovery file.
+        for attempt in range(60):
+            try:
+                status = request("GET", "/v1/auth/status", timeout=2)
+                break
+            except (LocalApiError, TimeoutError) as error:
+                if (isinstance(error, LocalApiError) and error.exit_code != 3) or attempt == 59:
+                    raise
+                time.sleep(1)
+        if not status.get("authenticated"):
+            accounts = request("POST", "/v1/auth/device/start", timeout=60)
+            if accounts.get("requiresSelection"):
+                return failure("account_selection_required", "Choose your Colab account in the app, then run this invitation command again. No Channel has been joined.", 2)
+            if not request("GET", "/v1/auth/status").get("authenticated"):
+                return failure("login_required", "Device login could not complete. Open Colab to choose or connect an account, then retry.", 2)
+        target = request("POST", "/v1/invite-links/accept", body={"token": args.invitation})
+        if not args.no_open:
+            subprocess.run([sys.executable, str(pathlib.Path(__file__).with_name("colab-open")), "--channel", target["channelId"]], check=True, stdout=subprocess.DEVNULL)
+        return success({"joined": True, "channel": {"id": target["channelId"], "name": target["channelName"]}})
+    except LocalApiError as error:
+        return failure("join_failed", str(error).replace(args.invitation, "[redacted]"), error.exit_code)
+    except (KeyError, subprocess.CalledProcessError):
+        return failure("open_failed", "Invitation was accepted, but the Channel could not be opened. Open Colab to continue.", 4)
+    except TimeoutError:
+        return failure("core_unavailable", "Local Core did not become ready. Repair the installation and retry.", 3)
+
+
+if __name__ == "__main__":
+    raise SystemExit(__import__("telemetry").run(main))

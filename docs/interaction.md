@@ -1,5 +1,7 @@
 # Colab 交互设计
 
+Channel Settings → Members 增加 Invite via Agent（owner/admin）。按需创建现有 24 小时普通成员邀请，标准 Dialog 提供单条 macOS bootstrap 命令的提示词、复制和撤销；不自动分享资料。命令补齐签名安装、Core 服务与设备账号准备，加入后定位 Channel Home。多账号未选择时必须由用户选择。
+
 ### 2026-10-08 workspace continuity and onboarding
 
 macOS window close hides the existing renderer; activation restores it. A cold renderer restores the last accessible Channel and its saved tab. Focus only checks active GUI resources; ordinary reconciliation retains the current workspace. Channel Settings offers a preview, image upload and local Generate icon action rather than a text icon field; rail/header share the same image renderer. Skills actions use the same centered workspace gutters as Sessions.

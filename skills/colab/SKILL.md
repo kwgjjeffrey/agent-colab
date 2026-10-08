@@ -28,6 +28,7 @@ the updater; it is not the business-tool output contract.
 ## Operations
 
 - Open the Agent Colab GUI: `bin/colab-open`.
+- Join a Channel invitation: `bin/colab-join --invitation '<token>'`. It preserves the selected account, uses device registration/login only when signed out, and opens the joined Channel. Multiple unselected accounts require a user choice. Invitation receipts never echo the token. Before installation, use the invitation's single bootstrap command; it prepares the signed client artifacts and service before invoking this entry.
 - Receive a one-time context handoff without joining a Channel: `bin/colab-transfer receive --capability 'agent-colab-transfer://…'`. The command downloads the fixed snapshot and returns each item's local path (and the Files tree) ready for native tools.
 - Create a one-time handoff: `bin/colab-transfer create --item files=/absolute/path --item session=/absolute/thread.jsonl::codex-jsonl-v1 --item skill=/absolute/skill --expires-in 86400`.
 - Revoke a handoff created on this device: `bin/colab-transfer revoke --transfer-id <id>`.

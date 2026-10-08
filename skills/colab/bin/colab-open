@@ -15,12 +15,18 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "lib"))
 from lib.platform_paths import application_root
 from output import success, failure
+from local_api import request, LocalApiError
 
 ROOT = application_root()
 DISCOVERY = pathlib.Path(os.environ.get("COLAB_DISCOVERY_FILE", ROOT / "discovery.json"))
 
 
 def start_local_core():
+    try:
+        request("GET", "/v1/status", timeout=2)
+        return
+    except (LocalApiError, TimeoutError):
+        pass
     if sys.platform == "darwin":
         subprocess.run(
             ["launchctl", "kickstart", "-k", f"gui/{os.getuid()}/online.agent-colab.core"],
@@ -38,6 +44,7 @@ def start_local_core():
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--invitation", help="Channel invitation token; opens its Session share picker")
+    parser.add_argument("--channel", help="Open an already joined Channel")
     args = parser.parse_args()
     start_local_core()
     for _ in range(50):
@@ -53,7 +60,12 @@ def main() -> int:
     parameters = {"token": bearer}
     if args.invitation:
         parameters["join"] = args.invitation
-    url = endpoint + "/bootstrap?" + urllib.parse.urlencode(parameters)
+    if args.channel:
+        # A fragment survives bootstrap redirects without changing the Core contract.
+        fragment = "#channel=" + urllib.parse.quote(args.channel, safe="")
+    else:
+        fragment = ""
+    url = endpoint + "/bootstrap?" + urllib.parse.urlencode(parameters) + fragment
     if sys.platform == "win32":
         os.startfile(url)  # type: ignore[attr-defined]
     else:
