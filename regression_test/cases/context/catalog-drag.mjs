@@ -31,6 +31,9 @@ export async function run(ctx){
   const sb=await sidebar.boundingBox(),br=await row(b.id).boundingBox();
   await ctx.page.mouse.move(br.x+br.width/2,br.y+br.height/2);await ctx.page.mouse.down();await ctx.page.mouse.move(br.x+12,br.y+5,{steps:5});await ctx.page.mouse.move(sb.x+sb.width/2,sb.y+sb.height-20,{steps:20});await ctx.page.mouse.up();
   await eventually(ctx,'Dragging to root persists removal from Catalog',()=>core(ctx,'GET',route+'/catalog-items?limit=200'),rows=>rows.some(item=>item.id===b.id&&item.parentId===null));
+  await eventually(ctx,'Moved row appears once after both branches refresh',()=>row(b.id).count(),count=>count===1);
+  await row(b.id).scrollIntoViewIfNeeded();
+  await row(a.id).scrollIntoViewIfNeeded();
   await drag(ctx.page,row(b.id),row(a.id),0.05);
   await eventually(ctx,'Before drop persists sibling order',()=>core(ctx,'GET',route+'/catalog-items?limit=200'),rows=>rows.findIndex(item=>item.id===b.id)<rows.findIndex(item=>item.id===a.id));
   await ctx.page.reload();await row(b.id).waitFor();

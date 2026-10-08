@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
 import {
   FolderIcon,
   ChevronRightIcon,
@@ -94,6 +94,7 @@ export function CatalogWorkspace({
   quickShare,
 }: Props) {
   const [branches, setBranches] = useState<Record<string, CatalogItem[]>>({});
+  const loadEpoch=useRef(0);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [selectedCatalog, setSelectedCatalog] = useState<CatalogItem>();
   const [error, setError] = useState<string>();
@@ -119,6 +120,7 @@ export function CatalogWorkspace({
     return () => window.removeEventListener("colab:catalog-changed", refresh);
   }, []);
   async function load(parent?: string) {
+    const epoch=loadEpoch.current;
     const result: CatalogItem[] = [];
     let offset = 0;
     while (true) {
@@ -129,10 +131,11 @@ export function CatalogWorkspace({
       if (page.length < 200) break;
       offset += page.length;
     }
-    setBranches((current) => ({ ...current, [parent ?? "root"]: result }));
+    if(epoch===loadEpoch.current)setBranches((current) => ({ ...current, [parent ?? "root"]: result }));
   }
   useEffect(() => {
     setBranches({});
+    loadEpoch.current++;
     setExpanded({});
     setSelectedCatalog(undefined);
     setError(undefined);
@@ -216,6 +219,7 @@ export function CatalogWorkspace({
     setError(undefined);
     try {
       await action();
+      loadEpoch.current++;
       window.dispatchEvent(new Event("colab:catalog-changed"));
     } catch (reason) {
       setError(String(reason));
@@ -231,6 +235,7 @@ export function CatalogWorkspace({
     if(position==="after"&&target){const index=siblings.findIndex(row=>row.id===target.id);before=siblings.slice(index+1).find(row=>row.id!==source.id);}
     try {
       await mutate(()=>catalogRequest(`/v1/channels/${channelId}/catalog-items/position`,"PATCH",{kind:source.kind,itemId:source.id,parentId,before:before?{kind:before.kind,itemId:before.id}:undefined}));
+      setBranches(current=>Object.fromEntries(Object.entries(current).map(([key,items])=>[key,items.filter(item=>item.id!==source.id)])));
       if(parentId){setExpanded(current=>({...current,[parentId]:true}));await load(parentId);}
       await load(source.parentId??undefined);await load(parentId??undefined);
     }catch{/* mutate exposes the authoritative failure; no optimistic success. */}
