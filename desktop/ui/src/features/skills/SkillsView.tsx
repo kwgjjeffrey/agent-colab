@@ -225,7 +225,7 @@ const trackedFetch = operation.fetch;
                 <WorkspaceActions><Button variant="outline" onClick={() => setAgentPrompt({ share, rows: installations[share.id] ?? [] })}>Give to Agent</Button>
                 {share.canWithdraw && <Button data-trace-target={traceTargets("skills.withdraw")} variant="destructive" disabled={working === share.id} onClick={() => void withdraw(share)}>Withdraw</Button>}</WorkspaceActions>
               </div>
-              {preview !== undefined ? <article data-trace-region="skill-preview"><PreviewMarkdown>{preview}</PreviewMarkdown></article> : !error && <p className="text-muted-foreground">Loading Skill preview…</p>}
+              {preview !== undefined ? <article data-trace-region="skill-preview">{share.description && <p className="text-sm text-muted-foreground">{share.description}</p>}<PreviewMarkdown>{preview.replace(/^---\r?\n[\s\S]*?\r?\n---(?:\r?\n|$)/, "")}</PreviewMarkdown></article> : !error && <p className="text-muted-foreground">Loading Skill preview…</p>}
               <WorkspaceActions><Popover>
                 <PopoverTrigger render={<Button variant="outline" />}>Install to Agent</PopoverTrigger>
                 <PopoverContent align="end" className="w-80">

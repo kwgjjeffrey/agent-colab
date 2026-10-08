@@ -12,25 +12,31 @@ export function SessionPreview({ id }: { id: string }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>();
   const [warnings, setWarnings] = useState<Array<{code:string;count:number}>>([]);
+  const [olderCursor, setOlderCursor] = useState<string>();
   const generation = useRef(0);
   useEffect(() => {
     setTurns(undefined);
     setError(undefined);
     setWarnings([]);
+    setOlderCursor(undefined);
     void read();
     return () => { generation.current += 1; };
   }, [id]);
-  async function read() {
+  async function read(cursor?: string) {
     const current = ++generation.current;
     setLoading(true);
     setError(undefined);
     try {
-      const row = await catalogRequest<{ turns: Turn[]; warnings?:Array<{code:string;count:number}> }>(
+      const row = await catalogRequest<{ turns: Turn[]; page?:{hasMore:boolean;nextCursor?:string}; warnings?:Array<{code:string;count:number}> }>(
         `/v1/sessions/${id}/read`,
         "POST",
-        { turnLimit: 5, includeOutputs: false, maxOutputCharsPerItem: 2000 },
+        { turnLimit: 5, includeOutputs: false, maxOutputCharsPerItem: 2000, ...(cursor ? {cursor} : {}) },
       );
-      if (current === generation.current) { setTurns(row.turns); setWarnings(row.warnings ?? []); }
+      if (current === generation.current) {
+        setTurns(previous => cursor ? [...row.turns, ...(previous ?? [])] : row.turns);
+        setWarnings(row.warnings ?? []);
+        setOlderCursor(row.page?.hasMore ? row.page.nextCursor : undefined);
+      }
     } catch (reason) {
       if (current === generation.current) setError(String(reason));
     } finally {
@@ -61,6 +67,7 @@ export function SessionPreview({ id }: { id: string }) {
       )}
       {turns && (
         <div className="flex flex-col gap-4">
+          {olderCursor && <Button variant="ghost" disabled={loading} onClick={() => void read(olderCursor)}>Load earlier messages</Button>}
           {turns.flatMap((turn, turnIndex) =>
             turn.items
               .filter(
