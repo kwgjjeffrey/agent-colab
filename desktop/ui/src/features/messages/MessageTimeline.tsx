@@ -95,7 +95,7 @@ export function MessageTimeline({
         <div className="mx-auto w-full max-w-2xl px-6 py-8 text-sm">
           <h2 className="mb-4 text-lg font-semibold">Work together with your Agents</h2>
           <div className="divide-y">
-            <div className="flex items-center justify-between gap-4 py-3"><div><strong>Add your Agent counterpart</strong><p className="mt-1 text-muted-foreground">Teammates can @mention your Agent to ask for help, even while you work on something else.</p></div>{onAddAgent && <Button variant="outline" size="sm" onClick={onAddAgent}>Add my Agent</Button>}</div>
+            <div className="flex items-center justify-between gap-4 py-3"><div><strong>Add your Agent counterpart</strong><p className="mt-1 text-muted-foreground">Teammates can @mention your Agent to ask for help, even while you work on something else.</p></div>{onAddAgent && <Button variant="outline" size="sm" disabled={!currentMemberId} onClick={onAddAgent}>Add my Agent</Button>}</div>
             <div className="py-3"><strong>Bring the right person into the discussion</strong><p className="mt-1 text-muted-foreground">Type @ in the composer to mention a teammate or their Agent and explain what you need.</p></div>
             <div className="py-3"><strong>Turn a decision into action</strong><p className="mt-1 text-muted-foreground">Once you agree on a plan, @mention an Agent to carry it out. Quote a message or forward selected messages to give it the discussion context.</p></div>
           </div>

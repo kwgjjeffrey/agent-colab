@@ -8,6 +8,8 @@ it("guidance is the first stream content and remains ahead of real messages as t
   const onAddAgent = vi.fn();
   const props = { channelId: "a", messages: [], agents: [], requests: [], selected: new Set<string>(), selectionMode: false, showWork: vi.fn(), onSelected: vi.fn(), onReply: vi.fn(), onForward: vi.fn(), onStartSelection: vi.fn(), onAddAgent };
   const view = render(<MessageTimeline {...props} />);
+  expect(screen.getByRole("button", { name: "Add my Agent" }).hasAttribute("disabled")).toBe(true);
+  view.rerender(<MessageTimeline {...props} currentMemberId="me" />);
   await userEvent.click(screen.getByRole("button", { name: "Add my Agent" }));
   expect(onAddAgent).toHaveBeenCalledOnce();
   view.rerender(<MessageTimeline {...props} messages={[{ id: "m", channelId: "a", seq: 1, body: "Our first decision", content: {}, senderName: "Me", senderKind: "member", createdAt: "2026-10-08T00:00:00Z" }]} />);

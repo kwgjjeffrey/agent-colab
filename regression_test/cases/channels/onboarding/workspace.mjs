@@ -8,7 +8,7 @@ export async function run(ctx){
  await openTab(ctx,'Skills');const button=ctx.page.getByRole('button',{name:'Share skill',exact:true});const box=await button.boundingBox();const size=await ctx.page.evaluate(()=>({width:innerWidth,tabBottom:document.querySelector('[role=tablist]').getBoundingClientRect().bottom}));
  ctx.assert('Skill action has a right gutter',size.width-box.x-box.width>=16,true);ctx.assert('Skill action has a top gutter',box.y-size.tabBottom>=16,true);
  let navigations=0;const onNavigation=frame=>{if(frame===ctx.page.mainFrame())navigations++;};ctx.page.on('framenavigated',onNavigation);
- try{for(let i=0;i<3;i++){const checked=ctx.page.waitForResponse(r=>new URL(r.url()).pathname==='/ui.json');await ctx.page.evaluate(()=>window.dispatchEvent(new Event('focus')));await checked;}ctx.assert('Repeated focus never reloads unchanged GUI',navigations,0);}finally{ctx.page.off('framenavigated',onNavigation);}
+ try{for(let i=0;i<3;i++){const checked=ctx.page.waitForResponse(r=>new URL(r.url()).pathname==='/ui.json');await ctx.page.evaluate(()=>window.dispatchEvent(new Event('focus')));await (await checked).finished();await ctx.page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));}ctx.assert('Repeated focus never reloads unchanged GUI',navigations,0);}finally{ctx.page.off('framenavigated',onNavigation);}
  await ctx.page.reload();await ctx.page.getByRole('tab',{name:'Skills',exact:true}).waitFor();ctx.assert('Cold renderer restores Skills tab',await ctx.page.getByRole('tab',{name:'Skills',exact:true}).getAttribute('aria-selected'),'true');
  ctx.assert('Cold renderer restores the selected Channel',await ctx.page.getByRole('heading',{name:channel.name,exact:true}).isVisible(),true);
  try{
