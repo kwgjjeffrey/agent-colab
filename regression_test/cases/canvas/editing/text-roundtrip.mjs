@@ -25,8 +25,7 @@ export const META = {
   "locks": [
     "read:client.primary",
     "read:channel.shared",
-    "write:canvas.collection",
-    "write:browser.navigation"
+    "write:canvas.collection"
   ]
 };
 

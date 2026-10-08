@@ -24,8 +24,7 @@ export const META = {
   "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source 00bdef68bcbb: Actual GUI rename preserves Channel UUID; finally restores original name.",
   "locks": [
     "read:client.primary",
-    "write:channel.shared",
-    "read:browser.navigation"
+    "write:channel.shared"
   ]
 };
 

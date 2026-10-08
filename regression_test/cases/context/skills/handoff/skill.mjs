@@ -26,8 +26,7 @@ export const META = {
     "read:client.primary",
     "read:channel.shared",
     "read:skill.fixture",
-    "read:skill.installation",
-    "read:browser.navigation"
+    "read:skill.installation"
   ]
 };
 

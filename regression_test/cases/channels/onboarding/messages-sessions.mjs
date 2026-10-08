@@ -21,8 +21,7 @@ export const META={
   "locks": [
     "read:client.primary",
     "read:channel.shared",
-    "read:session.fixture",
-    "write:browser.navigation"
+    "read:session.fixture"
   ]
 };
 export const REQUIREMENTS={channel:{permission:'read'},parameters:{keys:['disposable','sessionSourcePath']}};

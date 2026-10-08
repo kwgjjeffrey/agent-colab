@@ -27,8 +27,7 @@ export const META = {
     "read:channel.shared",
     "write:client.owner",
     "write:transport.owner",
-    "write:canvas.collection",
-    "write:browser.navigation"
+    "write:canvas.collection"
   ]
 };
 

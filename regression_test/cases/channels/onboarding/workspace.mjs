@@ -22,8 +22,7 @@ export const META={
   "locks": [
     "read:client.primary",
     "write:channel.shared",
-    "write:native.focus",
-    "write:browser.navigation"
+    "write:native.focus"
   ]
 };
 export const REQUIREMENTS={channel:{permission:'read'},parameters:{keys:['disposable']}};

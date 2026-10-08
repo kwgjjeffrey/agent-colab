@@ -22,8 +22,7 @@ export const META={
   "effects": "read-only",
   "locks": [
     "read:client.primary",
-    "read:channel.shared",
-    "read:browser.navigation"
+    "read:channel.shared"
   ],
   "cost": "normal",
   "statusReason": "Reviewed Round 20261008T025951Z-a7143d75: four navigation assertions passed including exactly one current Channel matching header; native GUI 106 screenshots verify white marker and outline following selection."

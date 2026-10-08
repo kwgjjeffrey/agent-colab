@@ -24,8 +24,7 @@ export const META = {
   "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source bf7c1e294ad4: Actual GUI decodes image pixels, preserves text, exposes unsupported/malformed fallbacks; independent share cleaned.",
   "locks": [
     "read:client.primary",
-    "read:channel.shared",
-    "read:browser.navigation"
+    "read:channel.shared"
   ]
 };
 

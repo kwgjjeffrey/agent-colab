@@ -30,8 +30,7 @@ export const META = {
     "read:client.owner",
     "read:client.receiver",
     "read:skill.fixture",
-    "read:skill.installation",
-    "read:browser.navigation"
+    "read:skill.installation"
   ]
 };
 

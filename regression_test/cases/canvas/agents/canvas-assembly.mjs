@@ -31,8 +31,7 @@ export const META = {
     "write:runtime.bound",
     "read:agent.blueprint",
     "write:canvas.collection",
-    "read:client.owner",
-    "read:browser.navigation"
+    "read:client.owner"
   ]
 };
 

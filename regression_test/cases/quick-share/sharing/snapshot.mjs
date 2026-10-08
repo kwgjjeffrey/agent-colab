@@ -31,8 +31,7 @@ export const META = {
     "write:files.fixture",
     "write:session.fixture",
     "write:skill.installation",
-    "read:client.owner",
-    "read:browser.navigation"
+    "read:client.owner"
   ]
 };
 

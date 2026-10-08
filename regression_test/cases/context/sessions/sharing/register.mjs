@@ -27,8 +27,7 @@ export const META = {
     "read:channel.shared",
     "write:client.member",
     "write:membership.fixture",
-    "read:session.fixture",
-    "read:browser.navigation"
+    "read:session.fixture"
   ]
 };
 

@@ -24,8 +24,7 @@ export const META = {
   "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source b1a4accc27bc: Actual GUI quote retains trigger and resource identity; exact committed reply survives reload.",
   "locks": [
     "read:client.primary",
-    "read:channel.shared",
-    "write:browser.navigation"
+    "read:channel.shared"
   ]
 };
 

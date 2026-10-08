@@ -27,8 +27,7 @@ export const META = {
     "read:channel.shared",
     "write:client.receiver",
     "write:transport.receiver",
-    "write:native.focus",
-    "read:browser.navigation"
+    "write:native.focus"
   ]
 };
 

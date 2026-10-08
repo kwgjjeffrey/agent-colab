@@ -14,8 +14,7 @@ export const META = {
   "locks": [
     "read:client.primary",
     "read:channel.shared",
-    "read:session.fixture",
-    "read:browser.navigation"
+    "read:session.fixture"
   ],
   "cost": "normal",
   "requires": [

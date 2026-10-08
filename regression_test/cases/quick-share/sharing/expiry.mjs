@@ -25,8 +25,7 @@ export const META = {
   "locks": [
     "read:client.primary",
     "read:channel.shared",
-    "read:client.member",
-    "read:browser.navigation"
+    "read:client.member"
   ]
 };
 

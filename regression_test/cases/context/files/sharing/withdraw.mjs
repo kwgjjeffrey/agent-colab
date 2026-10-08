@@ -28,8 +28,7 @@ export const META = {
     "read:channel.shared",
     "read:client.owner",
     "read:client.receiver",
-    "read:files.fixture",
-    "read:browser.navigation"
+    "read:files.fixture"
   ]
 };
 

@@ -30,8 +30,7 @@ export const META = {
     "write:membership.fixture",
     "write:runtime.bound",
     "write:agent.blueprint",
-    "read:client.owner",
-    "read:browser.navigation"
+    "read:client.owner"
   ]
 };
 

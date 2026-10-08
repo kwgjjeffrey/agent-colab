@@ -28,8 +28,7 @@ export const META = {
     "read:channel.shared",
     "write:runtime.bound",
     "read:agent.blueprint",
-    "read:client.owner",
-    "read:browser.navigation"
+    "read:client.owner"
   ]
 };
 

@@ -25,8 +25,7 @@ export const META = {
     "read:channel.shared",
     "write:client.owner",
     "write:runtime.bound",
-    "write:skill.installation",
-    "read:browser.navigation"
+    "write:skill.installation"
   ]
 };
 
