@@ -1,11 +1,11 @@
-export const USECASE={name:'Messages and Sessions guides lead to real actions and retire naturally',description:'Create a run-owned empty Channel. Its Messages guide opens the Agent manager. Send case-owned conversation turns through the real composer and verify the guide scrolls above the viewport inside the same timeline. Verify all Session guides on the empty page. Register an owned synthetic Session through Local Core, use the real chooser and Copy prompt for review, and reload to check completion persists without hiding handoff guidance. Withdraw the test Session in finally; retain the unique Channel and ordinary test message as evidence.'};
+export const USECASE={name:'Messages and Sessions guides lead to real actions and retire naturally',description:'Create a run-owned empty Channel. Its Messages guide opens the Agent manager. Send case-owned conversation turns through the real composer and verify the guide scrolls above the viewport inside the same timeline. Verify all Session guides on the empty page. Register an owned synthetic Session through Local Core, reload, and verify all onboarding disappears while the actual Session remains visible. Withdraw the test Session in finally; retain the unique Channel and ordinary test message as evidence.'};
 export const META={
   "id": "channels.onboarding.messages-sessions",
   "module": "channels/onboarding",
   "surface": "gui",
   "priority": "critical",
   "origin": "requirement",
-  "status": "active",
+  "status": "trial",
   "effects": "isolated-write",
   "cost": "normal",
   "requires": [
@@ -17,7 +17,7 @@ export const META={
   ],
   "suite": "business",
   "testLevel": "end-to-end",
-  "statusReason": "Reviewed final Round 20261008T022600Z-2a527af2: real Agent manager, seven committed conversation turns pushing the entire guide out of the viewport, owned synthetic Session publication, reader/review prompt clipboard delivery, persisted guide completion and independent remaining handoff, withdrawal/Canvas cleanup readback; 33 assertions and screenshots checked."
+  "statusReason": "Updated for Sessions empty-only guidance and explicit selected Channel semantics; pending verification of the new behavior."
 };
 export const REQUIREMENTS={channel:{permission:'read'},parameters:{keys:['disposable','sessionSourcePath']}};
 import {core,parameter,disposable,eventually} from '../../../support/client.mjs';
@@ -42,11 +42,9 @@ export async function run(ctx){
  await ctx.page.getByRole('tab',{name:'Sessions',exact:true}).click();for(const text of ['Share the work behind your answer','Let another Agent pick up the work','Review a decision or summarize progress'])ctx.assert('Empty Sessions explains '+text,await ctx.page.getByText(text,{exact:true}).isVisible(),true);
  share=await core(ctx,'POST','/v1/channels/'+channel.id+'/sessions/share',{sourcePath:parameter(ctx,'sessionSourcePath'),sourceAdapter:'codex-jsonl-v1',name:'Onboarding owned Session '+ctx.runId});
  await eventually(ctx,'Owned Session has a committed snapshot',()=>core(ctx,'GET','/v1/channels/'+channel.id+'/sessions'),rows=>rows.some(x=>x.id===share.id&&x.currentSnapshotId));
- await ctx.page.reload();await ctx.page.getByRole('tab',{name:'Sessions',exact:true}).waitFor();await ctx.page.getByText('Review a decision or summarize progress',{exact:true}).locator('xpath=ancestor::div[button]').getByRole('button',{name:'Try',exact:true}).click();
- await ctx.page.getByRole('dialog',{name:'Choose a shared session',exact:true}).getByRole('button').filter({hasText:share.name}).click();
- const prompt=ctx.page.getByRole('dialog').locator('pre');const text=await prompt.innerText();ctx.assert('Guide uses actual Session reader',text.includes('colab-session-reader')&&text.includes(encodeURIComponent(share.name)),true);ctx.assert('Review supplies the actual task',text.includes('Review the decisions in this session'),true);
- await ctx.page.getByRole('button',{name:'Copy prompt',exact:true}).click();await ctx.page.getByText('Review a decision or summarize progress',{exact:true}).waitFor({state:'hidden'});
- await ctx.page.reload();await ctx.page.getByRole('tab',{name:'Sessions',exact:true}).waitFor();ctx.assert('Delivered review guide remains hidden',await ctx.page.getByText('Review a decision or summarize progress',{exact:true}).count(),0);ctx.assert('Undone handoff guide remains',await ctx.page.getByText('Let another Agent pick up the work',{exact:true}).isVisible(),true);
- await ctx.screenshot('Session guide completion persisted');
+ await ctx.page.reload();await ctx.page.getByRole('tab',{name:'Sessions',exact:true}).waitFor();
+ for(const text of ['Share the work behind your answer','Let another Agent pick up the work','Review a decision or summarize progress'])ctx.assert('Populated Sessions hides '+text,await ctx.page.getByText(text,{exact:true}).count(),0);
+ await ctx.page.getByText(share.name,{exact:true}).waitFor();
+ await ctx.screenshot('Populated Sessions has no onboarding');
  }finally{if(share){await core(ctx,'DELETE','/v1/sessions/'+share.id);await eventually(ctx,'Owned Session withdrawn',()=>core(ctx,'GET','/v1/channels/'+channel.id+'/sessions'),rows=>!rows.some(x=>x.id===share.id));}for(const doc of await core(ctx,'GET','/v1/channels/'+channel.id+'/canvases'))await core(ctx,'DELETE','/v1/canvases/'+doc.id);ctx.assert('Owned welcome cleanup committed',(await core(ctx,'GET','/v1/channels/'+channel.id+'/canvases')).length,0);}
 }

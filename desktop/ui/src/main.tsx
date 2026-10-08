@@ -983,12 +983,14 @@ const api = operation.response;
         )}
         <div className="grid min-h-0 flex-1 grid-cols-[72px_1fr] overflow-hidden">
         <aside data-trace-target={traceTargets("channels.list")} data-trace-region={"channels"}
-          className="flex h-full min-h-0 flex-col items-center gap-3 bg-sidebar-foreground px-2 py-3"
+          className="flex h-full min-h-0 flex-col items-center gap-3 bg-sidebar-foreground py-3"
           aria-label="Channels"
         >
           <div className="flex min-h-0 w-full flex-1 flex-col items-center gap-3 overflow-y-auto">
             {channels.map((channel) => (
-              <Tooltip key={channel.id}>
+              <div key={channel.id} className="relative flex w-full shrink-0 justify-center">
+              {selectedId === channel.id && <span aria-hidden="true" className="absolute left-0 top-1/2 h-8 w-1 -translate-y-1/2 rounded-r-full bg-white" />}
+              <Tooltip>
                 <TooltipTrigger
                   render={
                     <Button
@@ -996,7 +998,8 @@ const api = operation.response;
                       variant={
                         selectedId === channel.id ? "default" : "secondary"
                       }
-                      className="size-11 shrink-0 rounded-full"
+                      className={`size-11 shrink-0 rounded-full ${selectedId === channel.id ? "ring-2 ring-primary ring-offset-2 ring-offset-sidebar-foreground" : ""}`}
+                      aria-current={selectedId === channel.id ? "page" : undefined}
                       onClick={() => setSelectedId(channel.id)}
                       aria-label={channel.name}
                     />
@@ -1006,6 +1009,7 @@ const api = operation.response;
                 </TooltipTrigger>
                 <TooltipContent side="right">{channel.name}</TooltipContent>
               </Tooltip>
+              </div>
             ))}
             {auth.authenticated && (
               <Tooltip>

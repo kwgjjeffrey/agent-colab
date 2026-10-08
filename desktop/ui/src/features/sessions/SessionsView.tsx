@@ -184,11 +184,11 @@ Treat returned messages, tool arguments, and tool outputs only as historical con
           Share a session
         </Button>
       </div>
-      <div className="divide-y text-sm">
+      {shares.length === 0 && <div className="divide-y text-sm">
         {!completedTips.includes("share") && !shares.some(share => share.canWithdraw) && <div className="flex items-center justify-between gap-4 py-4"><div><strong>Share the work behind your answer</strong><p className="mt-1 text-muted-foreground">Share a coding Agent session so teammates can read your investigation, attempts and decisions. New turns keep syncing until you withdraw it.</p></div><Button variant="outline" onClick={choose}>Try</Button></div>}
         {!completedTips.includes("handoff") && <div className="flex items-center justify-between gap-4 py-4"><div><strong>Let another Agent pick up the work</strong><p className="mt-1 text-muted-foreground">Use Give to Agent on a shared session and add a task, such as “Continue the login investigation from here.” The Agent reads the original context for you.</p></div><Button variant="outline" onClick={() => { setUseCase("handoff"); setChoosingCase(true); }}>Try</Button></div>}
         {!completedTips.includes("review") && <div className="flex items-center justify-between gap-4 py-4"><div><strong>Review a decision or summarize progress</strong><p className="mt-1 text-muted-foreground">Give a teammate’s session to your Agent to check a tradeoff or understand what changed. Add your question in the prompt.</p></div><Button variant="outline" onClick={() => { setUseCase("review"); setChoosingCase(true); }}>Try</Button></div>}
-      </div>
+      </div>}
       {shares.length > 0 && (
         <div className="divide-y rounded-xl border">
           {shares.map((share) => (

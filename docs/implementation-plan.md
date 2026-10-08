@@ -1,5 +1,9 @@
 # Colab 实现计划
 
+### 2026-10-08 Sessions empty guidance and Channel selection
+
+Sessions guidance is restricted to an empty list. The selected Channel has a flush left white marker, lime outline and aria-current=page, keeping the icon and existing rail spacing. GUI-only 0.1.106-dev / promotion 0.1.158-dev. Verification pending.
+
 ### 2026-10-08 regression workflow efficiency
 
 Audited the Agent Colab routine-optimization trajectory: the 34.4-minute release turn included build/deploy/publication/installation; its first nine-case regression took 147.6 seconds. Repeated script repairs (invalid PNG, composer completion/whitespace, hover controls, guide container bounds) accounted for much of regression rework. No evidence supported deleting those relevant cases as unnecessary corner cases.

@@ -114,7 +114,7 @@ Session、Files 中由成员分享的根对象、Skill，都是 Shared Item 的�
 
 ### 4.2 应用级结构
 
-- **Channel rail**：采用 Discord server 式的纵向图标列表；选择、创建 Channel；
+- **Channel rail**：采用 Discord server 式的纵向图标列表；选择、创建 Channel；当前 Channel 以左侧白色竖条和图标外高亮描边标识，同时设置 aria-current，不能依赖会被图片遮住的按钮底色。
 - **Channel header**：显示 Channel 身份，并提供不依赖具体对象的“让 Agent 干活”；
 - **顶部对象导航**：Sessions、Files、Skills、Settings；
 - **Content workspace**：当前区域的清单、树、预览和对象操作。
@@ -224,3 +224,5 @@ Canvas Agent dispatch remains observable in the Agent identity card. For the cur
 Canvas uses a centered document column with symmetric horizontal gutters. It has no permanent toolbar: hovering a top-level paragraph exposes a compact block handle whose menu applies text, Heading 1–3, list, quote, or code styles. These actions produce ordinary collaborative editor transactions and do not introduce a second document protocol.
 
 Updater state belongs to the backend operation, not the browser's button state. Settings opening and focus restore the active operation; a collapsed Updates section still shows progress and disables competing actions. Repeated update requests attach to the existing operation. Mac OS-lock ownership determines running; a stale transfer without a lock is interrupted, and an activated Core different from the resident executable offers Restart. A terminal download record alone does not mean installation has ended.
+
+Sessions 的 onboarding 仅用于空列表；已有任意 Session 时隐藏整块引导，让实际内容占据页面。Messages 的引导仍按既定规则位于消息流开始处，随对话增长自然滚出视口。
