@@ -241,6 +241,8 @@ export function CatalogWorkspace({
               variant={selected?.id === item.id ? "secondary" : "ghost"}
               className="min-w-0 flex-1 justify-start"
               title={item.name}
+              data-item-id={item.id}
+              data-item-kind={item.kind}
               onClick={() => select(item)}
             >
               <Icon data-icon="inline-start" />

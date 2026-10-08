@@ -15,6 +15,16 @@ vi.mock("@/api/request-activity", () => ({
 }));
 
 describe("Catalog workspace", () => {
+  it("returns a nested asset to its containing catalog", async () => {
+    const parent = {id:"parent",kind:"catalog",name:"Design",parentId:null,updatedAt:"today"};
+    const asset = {id:"asset",kind:"session",name:"Research",parentId:"parent",updatedAt:"today"};
+    vi.stubGlobal("fetch", vi.fn(async (path:string) => new Response(JSON.stringify(path.endsWith("/trail") ? [parent,asset] : path.includes("parentId") ? [asset] : [parent]), {status:200,headers:{"content-type":"application/json"}})));
+    const onSelect=vi.fn();
+    render(<CatalogWorkspace channelId="channel" channelName="Team" view="sessions" focus={{id:"asset",kind:"session"}} onSelect={onSelect} onAdd={vi.fn()}>Session detail</CatalogWorkspace>);
+    await screen.findByRole("heading",{name:"Research"});
+    fireEvent.click(screen.getByRole("button",{name:"Back to containing catalog"}));
+    expect(onSelect).toHaveBeenCalledWith(parent);
+  });
   afterEach(() => {
     cleanup();
     vi.unstubAllGlobals();

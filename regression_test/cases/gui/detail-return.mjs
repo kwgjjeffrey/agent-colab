@@ -13,7 +13,7 @@ export async function run(ctx) {
   for(const kind of ['files','session','skill','canvas']) {
     const target = rows.find(item=>item.kind===kind);
     if(!target) ctx.block(`Missing root ${kind} fixture`);
-    await ctx.page.getByRole('button',{name:target.name,exact:true}).click();
+    await ctx.page.locator(`[data-item-id="${target.id}"][data-item-kind="${kind}"]`).click();
     await ctx.page.getByRole('heading',{name:target.name,exact:true}).waitFor();
     if(kind==='files') {
       await ctx.page.getByRole('tree',{name:target.name+' files',exact:true}).waitFor();
