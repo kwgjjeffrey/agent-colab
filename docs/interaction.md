@@ -1,5 +1,13 @@
 # Colab 交互设计
 
+## 2026-10-09 Detail return repair
+
+Files preview stays inside the item detail panel, never as a fixed full-window
+overlay. Channel header, directory and item actions remain reachable. Every
+asset detail has a shared Back entrance to its containing Catalog, or Add for
+root items; breadcrumb navigation remains available. Late Files metadata opens
+the requested detail without toggling it closed on repeated focus.
+
 ## 2026-10-08 Catalog workspace (replaces tabs)
 
 Keep Channel identity (double-click to edit), member AvatarGroup and Quick Share

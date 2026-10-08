@@ -1,5 +1,19 @@
 # 技术验证计划
 
+### 2026-10-09 Detail navigation repair
+
+GUI 119 production build and four workspace component tests passed, including
+nested Session returning to its Catalog. Trace Run `20261008T173113Z-1cf09b20`
+preserves the initial script failure from ambiguous fixture names. Repair Round
+`20261008T173257Z-7470a8a0` uses exact item IDs and passed six assertions against
+real Core/Server fixtures: Files preview does not intercept directory navigation,
+and Files/Session/Skill/Canvas each return to usable Add. This addresses the
+regression missed by the original Catalog create/rename case. GUI-only promotion
+171 is published with full public verification: 1735541 bytes, SHA-256
+`ed7f09eaf317199c6360c6d592c014a9344c2344183e984d7d4c98f537d3f429`.
+Core 95 / Skill 55 / Electron 23 remain unchanged. Native installation acceptance
+is in progress, not yet claimed by these automated results.
+
 ### 2026-10-08 Catalog workspace — partial validation
 
 Four Explorer contract tests passed: encoded path segments, invalid paths, nested
