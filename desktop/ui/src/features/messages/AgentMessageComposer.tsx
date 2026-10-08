@@ -247,7 +247,7 @@ export function AgentMessageComposer({
   return (
     <form
       onSubmit={submit}
-      className="relative shrink-0 border-t bg-background px-4 py-2"
+      className="relative shrink-0 border-t bg-muted px-4 py-3"
     >
       {suggestion && (
         <div className="absolute bottom-full left-4 z-20 mb-2 max-h-80 w-80 overflow-y-auto rounded-lg border bg-popover p-1 text-popover-foreground shadow-lg">
@@ -293,7 +293,7 @@ export function AgentMessageComposer({
         </div>
       )}
       <div className="flex items-end gap-3">
-        <div className="min-h-12 min-w-0 flex-1 rounded-lg border bg-muted px-3 py-3 focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/20">
+        <div className="min-h-12 min-w-0 flex-1 px-1 py-3">
           <EditorContent editor={editor} />
         </div>
         <Button

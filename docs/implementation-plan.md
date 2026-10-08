@@ -1,5 +1,9 @@
 # Colab 实现计划
 
+### 2026-10-08 full-width Messages composer surface
+
+Moved the muted background to the entire bottom composer, including Send and reply context; removed the nested input border/rounding. Placeholder retained. GUI-only 0.1.105-dev / promotion 0.1.157-dev. Build and installed visual check pending.
+
 ### 2026-10-08 Messages composer visibility
 
 Added the real Tiptap Placeholder extension, explanatory empty-composer copy, pale muted background, border and focus treatment. Published and normally installed GUI-only artifact 0.1.104-dev / promotion 0.1.156-dev; native placeholder/typing/clearing and double-client message regression passed. All other component versions unchanged.
