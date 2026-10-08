@@ -27,6 +27,7 @@ export type AgentWorkRequest = {
   id: string;
   state: string;
   targetName: string;
+  summary?: string;
 };
 type WorkDetails = {
   requestId: string;
@@ -153,6 +154,11 @@ export function AgentWorkDrawer({
           </DrawerClose>
         </DrawerHeader>
         <ScrollArea className="min-h-0 flex-1 px-4 pb-4">
+          {entries.length === 0 && request?.summary && (
+            <div className="mb-4">
+              <WorkMarkdown text={request.summary} />
+            </div>
+          )}
           {error ? (
             <p className="text-sm text-destructive">{error}</p>
           ) : !details ? (

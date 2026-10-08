@@ -3,6 +3,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { AgentWorkDrawer } from "./AgentWorkDrawer";
+import { messageRequest } from "@/features/messages/api";
 vi.mock("@/features/messages/api", () => ({
   messageRequest: vi.fn(async () => ({
     requestId: "task",
@@ -55,6 +56,12 @@ vi.mock("@/features/messages/api", () => ({
   })),
 }));
 afterEach(cleanup);
+it("shows the recorded task summary even when older work events are absent", async () => {
+  vi.mocked(messageRequest).mockResolvedValueOnce({requestId:"old",state:"succeeded",targetName:"Agent",events:[]});
+  render(<AgentWorkDrawer open request={{id:"old",state:"succeeded",targetName:"Agent",summary:"Actual historical task instruction"}} onOpenChange={vi.fn()}/>);
+  expect(await screen.findByText("Actual historical task instruction")).toBeTruthy();
+  expect(await screen.findByText(/no captured transcript/)).toBeTruthy();
+});
 it("renders conversation text, hides protocol noise, and collapses tool inputs/outputs by default", async () => {
   render(
     <AgentWorkDrawer
