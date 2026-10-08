@@ -24,7 +24,7 @@ describe("Catalog workspace", () => {
     render(<CatalogWorkspace channelId="channel" channelName="Team" view="sessions" focus={{id:"asset",kind:"session"}} onSelect={onSelect} onAdd={vi.fn()}>Session detail</CatalogWorkspace>);
     await screen.findByRole("link",{name:"Research"});
     expect(screen.queryByRole("button",{name:/Back/})).toBeNull();
-    fireEvent.click(within(screen.getByRole("navigation",{name:"breadcrumb"})).getByRole("button",{name:"Design",exact:true}));
+    fireEvent.click(within(screen.getByRole("navigation",{name:"breadcrumb"})).getByRole("button",{name:"Design"}));
     expect(onSelect).toHaveBeenCalledWith(parent);
   });
   afterEach(() => {
