@@ -3,7 +3,7 @@ const channelKey = "colab:last-channel";
 const tabKey = (id?: string) => `colab:channel-tab:${id}`;
 function savedTab(id?: string) {
   const value = localStorage.getItem(tabKey(id));
-  return value && ["home", "messages", "sessions", "files", "skills", "canvas", "settings"].includes(value) ? value : "home";
+  return value && ["home", "messages", "sessions", "files", "skills", "canvas"].includes(value) ? value : "home";
 }
 export function useWorkspaceNavigation() {
   const [navigation, setNavigation] = useState(() => {

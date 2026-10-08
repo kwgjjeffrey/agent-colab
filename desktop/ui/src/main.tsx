@@ -6,7 +6,9 @@ import { FormEvent, StrictMode, useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { useGuiVersion } from "@/features/updates/useGuiVersion";
 import { useWorkspaceNavigation } from "@/features/channels/useWorkspaceNavigation";
-import { ChannelIcon, ChannelIconPicker } from "@/features/channels/ChannelIcon";
+import { ChannelHeading } from "@/features/channels/ChannelHeading";
+import { ChannelIcon } from "@/features/channels/ChannelIcon";
+import { ChannelSettingsContent } from "@/features/channels/ChannelSettingsContent";
 import {
   CheckIcon,
   ChevronLeftIcon,
@@ -185,6 +187,9 @@ function App() {
   const [error, setError] = useState<string>();
   const [notice, setNotice] = useState<string>();
   const [members, setMembers] = useState<Member[]>([]);
+  const [channelDialog, setChannelDialog] = useState<"identity" | "members">();
+  const activeChannelId = useRef(selectedId);
+  activeChannelId.current = selectedId;
   const [channelInviteBusy, setChannelInviteBusy] = useState(false);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [organizations, setOrganizations] = useState<Organization[]>([]);
@@ -561,6 +566,13 @@ const api = operation.response;
     }, 3000);
     return () => window.clearInterval(timer);
   }, [selectedId]);
+  useEffect(() => {
+    setMembers([]);
+    setChannelDialog(undefined);
+    if (selectedId && auth.authenticated) {
+      void loadMembers().catch((reason) => setError(readableError(reason)));
+    }
+  }, [selectedId, auth.user?.id]);
 
   async function signIn(loginHint?: string) {
 return runOperation("auth.sign-in", async (operation) => {
@@ -778,7 +790,8 @@ return runOperation("members.list", async (operation) => {
 const api = operation.response;
 
     if (!selectedId) return;
-    setMembers(await (await api(`/v1/channels/${selectedId}/members`)).json());
+    const result: Member[] = await (await api(`/v1/channels/${selectedId}/members`)).json();
+    if (activeChannelId.current === selectedId) setMembers(result);
 
 }, {parent:parent?.operation});
 }
@@ -921,6 +934,7 @@ const api = operation.response;
         }),
       });
       await refreshChannels(operation);
+      setChannelDialog(undefined);
     } catch (reason) { operation.fail();
       setError(String(reason));
     } finally {
@@ -1112,8 +1126,7 @@ const api = operation.response;
           ) : selected ? (
             <ChannelContextProvider key={selected.id} channelId={selected.id} navigate={resource => { setContextFocus({ ...resource }); setWorkspaceTab(resource.kind === "session" ? "sessions" : resource.kind === "message" ? "messages" : resource.kind); }}><Tabs value={workspaceTab} onValueChange={setWorkspaceTab} className="flex min-h-0 flex-1 flex-col gap-0">
               <div className="flex shrink-0 items-center gap-3 px-8 pt-5 pb-3">
-                <Avatar size="lg"><ChannelIcon icon={selected.icon} name={selected.name} /></Avatar>
-                <h1 className="min-w-0 truncate text-xl font-semibold">{selected.name}</h1>
+                <ChannelHeading channel={selected} members={members} onEdit={()=>setChannelDialog("identity")} onMembers={()=>setChannelDialog("members")} />
                 {agentActivity&&<span role="status" className="min-w-0 flex-1 truncate text-sm text-muted-foreground">{agentActivity}</span>}
                 {!agentActivity&&<span className="flex-1"/>}
                 <QuickShareControl
@@ -1133,7 +1146,6 @@ const api = operation.response;
                   <TabsTrigger value="files">Files</TabsTrigger>
                   <TabsTrigger value="skills">Skills</TabsTrigger>
                   <TabsTrigger value="canvas">Canvas</TabsTrigger>
-                  <TabsTrigger value="settings">Settings</TabsTrigger>
                 </TabsList>
               </div>
               <TabsContent value="home" className="min-h-0 flex-1 overflow-auto"><ChannelHome key={`${selected.id}:${activeHomeTip ?? "idle"}`} accountId={auth.user?.id ?? ""} busyTip={homeTryBusy} defaultAgent={installation?.defaultAgent ?? "codex"} installedAgents={installation?.targets ?? {}} onTry={id => void tryHomeCase(id)} /></TabsContent>
@@ -1182,20 +1194,12 @@ const api = operation.response;
               <TabsContent data-trace-region={"canvas"} value="canvas" className="min-h-0 flex-1 overflow-hidden">
                 <CanvasView focusId={contextFocus?.kind === "canvas" ? contextFocus.id : undefined} channelId={selected.id} channelName={selected.name} defaultAgent={installation?.defaultAgent ?? "codex"} installedAgents={installation?.targets ?? {}} />
               </TabsContent>
-              <TabsContent data-trace-target={traceTargets("members.list")} data-trace-region={"channel-settings"} value="settings" onFocus={() => void loadMembers()}>
-                <ChannelSettings
-                  channel={selected}
-                  members={members}
-                  busy={busy}
-                  onSave={saveChannel}
-                  onAdd={addMember}
-                  onLoad={() => void loadMembers()}
-                  onRole={changeRole}
-                  onRemove={removeMember}
-                  onInvite={() => void inviteToChannel()}
-                  inviteBusy={channelInviteBusy}
-                />
-              </TabsContent>
+              <Dialog open={Boolean(channelDialog)} onOpenChange={open=>{if(!open)setChannelDialog(undefined);}}>
+                <DialogContent data-trace-region="channel-settings" className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
+                  <DialogHeader><DialogTitle>{channelDialog==="members"?"Members":"Edit Channel"}</DialogTitle></DialogHeader>
+                  {channelDialog && <ChannelSettingsContent key={`${selected.id}:${channelDialog}`} mode={channelDialog} channel={selected} members={members} busy={busy} onSave={saveChannel} onAdd={addMember} onLoad={()=>void loadMembers().catch(reason=>setError(String(reason)))} onRole={changeRole} onRemove={removeMember} onInvite={()=>void inviteToChannel()} inviteBusy={channelInviteBusy} />}
+                </DialogContent>
+              </Dialog>
             </Tabs></ChannelContextProvider>
           ) : (
             <ContextEmpty
@@ -1329,199 +1333,6 @@ function ContextEmpty({
       </EmptyHeader>
       {action}
     </Empty>
-  );
-}
-function ChannelSettings({
-  channel,
-  members,
-  busy,
-  onSave,
-  onAdd,
-  onLoad,
-  onRole,
-  onRemove,
-  onInvite,
-  inviteBusy,
-}: {
-  channel: Channel;
-  members: Member[];
-  busy: boolean;
-  onSave: (e: FormEvent<HTMLFormElement>) => void;
-  onAdd: (e: FormEvent<HTMLFormElement>) => void;
-  onLoad: () => void;
-  onRole: (m: Member, r: string) => void;
-  onRemove: (m: Member) => void;
-  onInvite: () => void;
-  inviteBusy: boolean;
-}) {
-  const [people, setPeople] = useState<OrganizationPerson[]>([]);
-  const [iconPreparing, setIconPreparing] = useState(false);
-  useEffect(onLoad, [channel.id]);
-  async function searchPeople(query: string) {
-return runOperation("members.search", async (operation) => {
-const trackedFetch = operation.fetch;
-
-    if (!query.trim()) {
-      setPeople([]);
-      return;
-    }
-    try {
-      const response = await trackedFetch(
-        `/v1/channels/${channel.id}/organization/people?q=${encodeURIComponent(query)}`,
-      );
-      if (response.ok) setPeople(await response.json());
-    } catch {
-      /* Search is progressive enhancement. */
-    }
-
-});
-}
-  const canManage = channel.role === "owner" || channel.role === "admin";
-  return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-10 py-6">
-      <section className="flex flex-col gap-4">
-        <div>
-          <h2 className="text-lg font-semibold">Channel identity</h2>
-          <p className="text-sm text-muted-foreground">
-            Name and compact icon shown in the Channel rail.
-          </p>
-        </div>
-        <form data-trace-target={traceTargets("channels.update")} onSubmit={onSave}>
-          <FieldGroup>
-            <div className="grid grid-cols-[minmax(0,1fr)_220px] gap-4">
-              <Field>
-                <FieldLabel>Name</FieldLabel>
-                <Input
-                  name="name"
-                  defaultValue={channel.name}
-                  disabled={!canManage}
-                />
-              </Field>
-              <Field>
-                <FieldLabel>Icon</FieldLabel>
-                <ChannelIconPicker key={channel.id} icon={channel.icon} name={channel.name} disabled={!canManage} onPreparing={setIconPreparing} />
-              </Field>
-            </div>
-            {canManage && (
-              <Button type="submit" disabled={busy || iconPreparing} className="w-fit">
-                Save changes
-              </Button>
-            )}
-          </FieldGroup>
-        </form>
-      </section>
-      <section className="flex flex-col gap-4">
-        <div>
-          <h2 className="text-lg font-semibold">Members</h2>
-          <p className="text-sm text-muted-foreground">
-            Search this Organization or enter an email to invite someone into
-            the Organization and Channel.
-          </p>
-        </div>
-        {canManage && <Button variant="outline" className="w-fit" disabled={busy || inviteBusy} onClick={onInvite}>{inviteBusy ? "Creating invitation…" : "Invite via Agent"}</Button>}
-        {canManage && (
-          <form data-trace-target={traceTargets("members.add", "members.search")} onSubmit={onAdd}>
-            <FieldGroup>
-              <div className="flex items-end gap-3">
-                <Field className="flex-1">
-                  <FieldLabel>Person or email</FieldLabel>
-                  <Input
-                    name="email"
-                    type="email"
-                    list={`organization-people-${channel.id}`}
-                    required
-                    placeholder="name@company.com"
-                    onChange={(event) =>
-                      void searchPeople(event.currentTarget.value)
-                    }
-                  />
-                  <datalist id={`organization-people-${channel.id}`}>
-                    {people.map((person) => (
-                      <option key={person.userId} value={person.email}>
-                        {person.displayName ?? person.email}
-                      </option>
-                    ))}
-                  </datalist>
-                </Field>
-                <Field className="w-32">
-                  <FieldLabel>Role</FieldLabel>
-                  <Select name="role" defaultValue="member">
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectGroup>
-                        <SelectItem value="member">Member</SelectItem>
-                        <SelectItem value="admin">Admin</SelectItem>
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
-                </Field>
-                <Button type="submit" disabled={busy}>
-                  {busy ? "Adding…" : "Add member"}
-                </Button>
-              </div>
-            </FieldGroup>
-          </form>
-        )}
-        <div className="divide-y rounded-xl border">
-          {members.map((member) => (
-            <div
-              key={member.memberId ?? member.email}
-              className="flex items-center gap-3 p-3"
-            >
-              <Avatar>
-                <AvatarImage src={member.avatarUrl} />
-                <AvatarFallback>
-                  {initials(member.displayName ?? member.email)}
-                </AvatarFallback>
-              </Avatar>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium">
-                  {member.displayName ?? member.email}
-                </p>
-                {!isDeviceEmail(member.email) && <p className="truncate text-xs text-muted-foreground">
-                  {member.email}
-                </p>}
-              </div>
-              {member.status === "pending" && (
-                <Badge variant="outline">Invitation pending</Badge>
-              )}
-              {channel.role === "owner" &&
-              member.role !== "owner" &&
-              member.memberId ? (
-                <Select
-                  value={member.role}
-                  onValueChange={(value) => onRole(member, value as string)}
-                >
-                  <SelectTrigger data-trace-target={traceTargets("members.role")} size="sm">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      <SelectItem value="member">Member</SelectItem>
-                      <SelectItem value="admin">Admin</SelectItem>
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-              ) : (
-                <Badge variant="secondary">{member.role}</Badge>
-              )}
-              {channel.role === "owner" && member.role !== "owner" && (
-                <Button data-trace-target={traceTargets("members.remove")}
-                  size="icon-sm"
-                  variant="ghost"
-                  aria-label={`Remove ${member.email}`}
-                  onClick={() => onRemove(member)}
-                >
-                  <Trash2Icon />
-                </Button>
-              )}
-            </div>
-          ))}
-        </div>
-      </section>
-    </div>
   );
 }
 function initials(name: string) {
