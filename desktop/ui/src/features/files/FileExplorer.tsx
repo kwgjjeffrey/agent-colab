@@ -2,7 +2,6 @@ import { traceTargets } from "@/api/trace-locators";
 import { useEffect, useMemo, useState } from "react";
 import { FileIcon, FolderIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Breadcrumb, BreadcrumbItem, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { FilePreview } from "@/features/files/FilePreview";
 
@@ -16,17 +15,21 @@ export function FileExplorer({ shareId, shareName, entries }: Props) {
   const [selectedPath, setSelectedPath] = useState(firstFile?.path);
   useEffect(() => { setSelectedPath(firstFile?.path); }, [shareId, firstFile?.path]);
   const selected = entries.find((entry) => entry.path === selectedPath);
-  const segments = selectedPath?.split("/") ?? [];
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent("colab:preview-path", {detail:{id:shareId,path:selectedPath}}));
+    return () => { window.dispatchEvent(new CustomEvent("colab:preview-path", {detail:{id:shareId,path:undefined}})); };
+  }, [shareId, selectedPath]);
+  useEffect(() => {
+    const navigate = (event:Event) => {
+      const value=(event as CustomEvent<{id:string;path:string}>).detail;
+      if(value.id===shareId) setSelectedPath(entries.find(entry=>entry.kind==="file" && (!value.path || entry.path.startsWith(value.path+"/")))?.path);
+    };
+    window.addEventListener("colab:preview-navigate",navigate);
+    return ()=>window.removeEventListener("colab:preview-navigate",navigate);
+  },[shareId,entries]);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-background" data-trace-region="files-detail">
-      <header className="flex h-14 shrink-0 items-center gap-3 border-b px-4">
-        <Breadcrumb>
-          <BreadcrumbList>
-            {segments.map((segment, index) => <span className="contents" key={`${segment}-${index}`}>{index > 0 && <BreadcrumbSeparator />}<BreadcrumbItem><BreadcrumbPage>{segment}</BreadcrumbPage></BreadcrumbItem></span>)}
-          </BreadcrumbList>
-        </Breadcrumb>
-      </header>
       <div className="grid min-h-0 flex-1 grid-cols-[minmax(220px,280px)_minmax(0,1fr)]">
         <ScrollArea className="border-r bg-muted/20">
           <div className="p-2" role="tree" aria-label={`${shareName} files`}>

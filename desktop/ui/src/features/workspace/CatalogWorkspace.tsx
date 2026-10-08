@@ -100,6 +100,12 @@ export function CatalogWorkspace({
   const [name, setName] = useState("");
   const [moving, setMoving] = useState(false);
   const [focusedTrail, setFocusedTrail] = useState<CatalogItem[]>([]);
+  const [previewPath, setPreviewPath] = useState<{id:string;path?:string}>();
+  useEffect(() => {
+    const update=(event:Event)=>setPreviewPath((event as CustomEvent<{id:string;path?:string}>).detail);
+    window.addEventListener("colab:preview-path",update);
+    return ()=>window.removeEventListener("colab:preview-path",update);
+  },[]);
   const [trailRevision, setTrailRevision] = useState(0);
   useEffect(() => {
     const refresh = () => setTrailRevision(value => value + 1);
@@ -340,7 +346,8 @@ export function CatalogWorkspace({
                     </Fragment>
                   ))}
                   <BreadcrumbSeparator />
-                  <BreadcrumbItem><BreadcrumbPage title={selected.name} className="truncate max-w-80">{selected.name}</BreadcrumbPage></BreadcrumbItem>
+                  <BreadcrumbItem>{previewPath?.id===selected.id && previewPath.path ? <BreadcrumbLink render={<button type="button" onClick={()=>window.dispatchEvent(new CustomEvent("colab:preview-navigate",{detail:{id:selected.id,path:""}}))} />}>{selected.name}</BreadcrumbLink> : <BreadcrumbPage title={selected.name} className="truncate max-w-80">{selected.name}</BreadcrumbPage>}</BreadcrumbItem>
+                  {previewPath?.id===selected.id && previewPath.path?.split("/").map((part,index,parts)=><Fragment key={index}><BreadcrumbSeparator/><BreadcrumbItem>{index===parts.length-1 ? <BreadcrumbPage>{part}</BreadcrumbPage> : <BreadcrumbLink render={<button type="button" onClick={()=>window.dispatchEvent(new CustomEvent("colab:preview-navigate",{detail:{id:selected.id,path:parts.slice(0,index+1).join("/")}}))} />}>{part}</BreadcrumbLink>}</BreadcrumbItem></Fragment>)}
                 </BreadcrumbList>
               </Breadcrumb>
             </div>
