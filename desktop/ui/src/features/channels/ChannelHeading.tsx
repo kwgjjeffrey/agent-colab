@@ -1,4 +1,4 @@
-import { PencilIcon, UsersIcon } from "lucide-react";
+import { UsersIcon } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage, AvatarGroup, AvatarGroupCount } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -10,13 +10,14 @@ export function ChannelHeading({ channel, members, onEdit, onMembers }: {
   onEdit: () => void; onMembers: () => void;
 }) {
   const joined = members.filter(member => member.status === "joined");
+  const canEdit = channel.role === "owner" || channel.role === "admin";
   return <div className="group/channel-heading flex min-w-0 items-center gap-3">
     <Avatar size="lg"><ChannelIcon icon={channel.icon} name={channel.name} /></Avatar>
-    <h1 className="min-w-0 truncate text-xl font-semibold" title={channel.name}>{channel.name}</h1>
-    {(channel.role === "owner" || channel.role === "admin") && <Tooltip>
-      <TooltipTrigger render={<Button size="icon-sm" variant="ghost" aria-label="Edit Channel" className="opacity-0 group-hover/channel-heading:opacity-100 group-focus-within/channel-heading:opacity-100 focus-visible:opacity-100" onClick={onEdit} />}><PencilIcon /></TooltipTrigger>
-      <TooltipContent>Edit Channel</TooltipContent>
-    </Tooltip>}
+    <h1 className="min-w-0 truncate text-xl font-semibold" title={channel.name}
+      tabIndex={canEdit ? 0 : undefined}
+      onDoubleClick={canEdit ? onEdit : undefined}
+      onKeyDown={canEdit ? event => { if (event.key === "Enter") { event.preventDefault(); onEdit(); } } : undefined}
+    >{channel.name}</h1>
     <Tooltip>
       <TooltipTrigger render={<Button variant="ghost" className="h-auto shrink-0 p-1" aria-label="Channel members" onClick={onMembers} />}>
         <AvatarGroup>
