@@ -1,5 +1,23 @@
 # Colab 实现计划
 
+### 2026-10-09 Preview/actions hardening — candidate, verification in progress
+
+Rollback checkpoint `d752304`. GUI 123 makes Give to Agent the solid primary,
+registers other real actions into one shadcn More menu, removes catalog folder
+icons, uses a distinct paired-conversation Session icon, defaults Channel clicks
+to Home, and supports native Canvas/Catalog double-click rename. Single-file
+shares omit the secondary tree; Canvas sync state is a compact footer. Session
+preview reads five recent turns and collapses tool records. Task selection binds
+the exact request and waits for real provider events. Core 97 preserves published
+Session reads after original-source removal and durably retries request-bound
+provider transcript delivery with the owning account credential.
+
+Tracing adds `workspace.mutate` and `sessions.preview` scopes and updates directory
+locators, removing obsolete Tab entry metadata. Regression helpers and affected
+cases migrate to mixed-item selection, Add/Quick Share cascade, inline rename and
+More actions. Registry check validates 133 operations; functional evidence and
+pending migration scope are recorded in validation-plan.md. Not yet published.
+
 ### 2026-10-09 Home / Add / catalog drag refinement — verified and released
 
 Rollback checkpoint `66a795a`. Home is navigation; Add is a shadcn menu with
@@ -969,3 +987,11 @@ Implemented global account display-name editing and Google linking for existing 
 - Session selection reads actual structured messages; damaged UTF-8 records are
   isolated with explicit warnings and immutable source preservation.
 - Candidate GUI 120 / Core 96 / promotion 172; release acceptance pending.
+# Workspace detail repair and IA regression audit (2026-10-09)
+
+Rollback checkpoint: `d752304`. In progress; not released or accepted yet.
+
+1. Unify primary handoff and secondary menus, Catalog/Session icons, explicit Channel Home selection and inline native-item rename.
+2. Compact Canvas status, eliminate single-file nested navigation, repair bounded Session and request-scoped task previews using real content.
+3. Audit operation registry, GUI locators and impacted regression assertions; run affected end-to-end cases and retain failures/evidence.
+4. Publish only changed artifacts, verify actual App update, then record results and documentation boundaries.

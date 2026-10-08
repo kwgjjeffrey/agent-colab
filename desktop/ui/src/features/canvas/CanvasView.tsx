@@ -447,8 +447,8 @@ return runOperation("canvas.title", async (operation) => {
 }
   return (
     <section data-trace-target={traceTargets("canvas.edit", "canvas.reconcile", "canvas.participants", "canvas.agent.requests")} className="flex h-full min-h-0 flex-col">
-      <header className="flex h-12 shrink-0 items-center gap-3 px-5">
-        <div className="flex min-w-0 flex-1 items-center gap-2">
+      <header className={embedded ? "order-last flex h-6 shrink-0 items-center gap-3 px-5" : "flex h-12 shrink-0 items-center gap-3 px-5"}>
+        <div className={embedded ? "flex min-w-0 flex-1 items-center justify-end gap-2" : "flex min-w-0 flex-1 items-center gap-2"}>
           {editingTitle ? (
             <Input
               className="h-8 max-w-sm"
@@ -486,7 +486,7 @@ return runOperation("canvas.title", async (operation) => {
                   : "Synced"}
           </span>
         </div>
-        <WorkspaceActions>{embedded&&<Button size="sm" variant="ghost" onClick={()=>setEditingTitle(true)}>Rename</Button>}<Button data-trace-target={traceTargets("canvas.handoff")} size="sm" variant="outline" onClick={onGive}>
+        <WorkspaceActions primary><Button data-trace-target={traceTargets("canvas.handoff")} size="sm" onClick={onGive}>
           <SparklesIcon data-icon="inline-start" />
           Give to Agent
         </Button></WorkspaceActions>
@@ -624,7 +624,7 @@ function LoadedCanvasEditor({
       editorProps: {
         attributes: {
           class:
-            "canvas-editor-content mx-auto min-h-full w-full max-w-4xl px-12 py-8 outline-none",
+            "canvas-editor-content mx-auto min-h-full w-full max-w-4xl px-12 py-3 outline-none",
         },
       },
       onUpdate: ({ editor }) => {

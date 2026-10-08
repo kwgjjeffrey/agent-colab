@@ -38,10 +38,23 @@ pub(super) struct CodexSubmission {
 }
 
 impl CodexSubmission {
-    pub async fn finish(self) -> std::io::Result<Vec<Value>> {
+    pub async fn finish(self) -> (std::io::Result<()>, Vec<Value>) {
         let Self { completion, events, .. } = self;
-        let event_collector = tokio::task::spawn_blocking(move || events.into_iter().collect::<Vec<_>>());
-        tokio::task::spawn_blocking(move || {
+        let finished = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let stop = finished.clone();
+        let event_collector = tokio::task::spawn_blocking(move || {
+            let mut captured=Vec::new();
+            loop {
+                match events.recv_timeout(Duration::from_secs(1)) {
+                    Ok(event)=>captured.push(event),
+                    Err(mpsc::RecvTimeoutError::Disconnected)=>break,
+                    Err(mpsc::RecvTimeoutError::Timeout) if stop.load(std::sync::atomic::Ordering::Acquire)=>break,
+                    Err(mpsc::RecvTimeoutError::Timeout)=>{},
+                }
+            }
+            captured
+        });
+        let completion_result = tokio::task::spawn_blocking(move || {
             completion
                 .recv_timeout(EXECUTION_LIMIT)
                 .map_err(|error| {
@@ -51,8 +64,14 @@ impl CodexSubmission {
                 })?
         })
         .await
-        .map_err(|error| io_error(format!("Codex completion waiter failed: {error}")))??;
-        event_collector.await.map_err(|error| io_error(format!("Codex event collector failed: {error}")))
+        .map_err(|error| io_error(format!("Codex completion waiter failed: {error}")))
+        .and_then(|result| result);
+        finished.store(true, std::sync::atomic::Ordering::Release);
+        // A failed turn still has real work/error events that the user needs to inspect.
+        match event_collector.await {
+            Ok(events) => (completion_result, events),
+            Err(error) => (Err(io_error(format!("Codex event collector failed: {error}"))), Vec::new()),
+        }
     }
 }
 
@@ -552,6 +571,19 @@ fn io_error(message: impl Into<String>) -> std::io::Error {
 
 #[cfg(test)]
 mod tests {
+    #[tokio::test]
+    async fn failed_turn_preserves_its_work_events() {
+        let (completion_tx, completion)=std::sync::mpsc::channel();
+        let (events_tx, events)=std::sync::mpsc::channel();
+        events_tx.send(serde_json::json!({"method":"error","params":{"message":"actual provider failure"}})).unwrap();
+        completion_tx.send(Err(std::io::Error::other("provider failed"))).unwrap();
+        drop(events_tx);
+        let submission=super::CodexSubmission{thread_id:"owned-test".into(),completion,events};
+        let (outcome, events)=submission.finish().await;
+        assert!(outcome.is_err());
+        assert_eq!(events.len(),1);
+        assert_eq!(events[0]["params"]["message"],"actual provider failure");
+    }
     use super::{
         HashMap, PendingJob, ThreadState, io_error, is_active_writer, is_missing_thread,
         record_turn_completed, record_turn_started,

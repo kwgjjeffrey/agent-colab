@@ -551,7 +551,13 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
     let Some((path, offset, mut parent)) = source else {
         return Ok(());
     };
-    let length = fs::metadata(&path).map_err(LocalError::internal)?.len() as i64;
+    let length = match fs::metadata(&path) {
+        Ok(metadata) => metadata.len() as i64,
+        // The immutable published snapshot remains readable after its source is moved/deleted.
+        // Do not turn a missing local contribution path into a failed consumer read.
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(()),
+        Err(error) => return Err(LocalError::internal(error)),
+    };
     let reset_chain = length < offset;
     let start = if reset_chain { 0 } else { offset };
     if length == start {

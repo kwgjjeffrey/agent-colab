@@ -38,6 +38,7 @@ mod codex_runtime;
 mod collaboration;
 mod files;
 mod messaging;
+mod work_events;
 mod activity;
 mod sessions;
 mod skills;
@@ -325,6 +326,11 @@ impl AppState {
         }
         let store =
             rusqlite::Connection::open(database_path.as_ref()).context("open local SQLite")?;
+        store.execute_batch("create table if not exists agent_work_outbox(user_id text not null,request_id text not null,payload text not null,primary key(user_id,request_id));").context("migrate request-bound work event outbox")?;
+        for (column, definition) in [("attempt_count", "integer not null default 0"), ("next_attempt_at", "integer not null default 0")] {
+            let exists=store.prepare("pragma table_info(agent_work_outbox)")?.query_map([],|row|row.get::<_,String>(1))?.filter_map(Result::ok).any(|name|name==column);
+            if !exists {store.execute(&format!("alter table agent_work_outbox add column {column} {definition}"),[])?;}
+        }
         #[cfg(unix)]
         fs::set_permissions(database_path.as_ref(), fs::Permissions::from_mode(0o600))
             .context("protect local SQLite")?;
@@ -523,6 +529,7 @@ impl AppState {
     /// overflow. Sources are rediscovered periodically so newly shared paths and account switches
     /// do not require restarting Local Core.
     pub fn start_file_sync(&self) {
+        work_events::start(self);
         files::start_file_sync(self);
         sessions::start_session_sync(self);
         skills::start_skill_sync(self);
@@ -823,7 +830,8 @@ pub fn router(state: AppState, security: LocalSecurity) -> Router {
                     "https://tauri.localhost".parse().unwrap(),
                 ])
                 .allow_methods(tower_http::cors::Any)
-                .allow_headers(tower_http::cors::Any),
+                .allow_headers(tower_http::cors::Any)
+                .expose_headers([axum::http::HeaderName::from_static("x-colab-source-kind")]),
         )
         .layer(middleware::from_fn_with_state(
             security,

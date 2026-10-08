@@ -4,7 +4,7 @@ spec=importlib.util.spec_from_file_location('prepare',pathlib.Path(__file__).wit
 kind,op=sys.argv[1:3];case=sys.argv[3] if len(sys.argv)>3 else ''
 if kind in ['network','realtime']:
  client='owner' if kind=='network' else 'receiver';state=p.FIX/client/'fault-mode'
- state.write_text(('publication-off' if 'files.recovery.retry' in case else 'off') if op=='disconnect' and kind=='network' else 'realtime-off' if op=='disconnect' else 'on')
+ state.write_text(('work-events-off' if 'work-events-retry' in case else 'publication-off' if 'files.recovery.retry' in case else 'off') if op=='disconnect' and kind=='network' else 'realtime-off' if op=='disconnect' else 'on')
 elif kind in ['core','runtime']:
  import subprocess
  root=p.FIX/'owner';d=root/'discovery.json';domain='gui/'+str(os.getuid());label=domain+'/personal.colab.regression.owner'

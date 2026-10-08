@@ -30,6 +30,16 @@ Build only the artifact that changed with `packaging/build-local-artifacts.sh --
 
 Do not add placeholder UI actions or fake success states. A visible action must call a real use case and expose progress, success, and failure. Prefer established libraries over custom protocol, archive, cryptography, OAuth, component, or email implementations.
 
+The Channel workspace owns one mixed catalog tree and one breadcrumb/action header.
+Asset previews render the selected asset, never an embedded legacy collection page.
+Give to Agent is the primary action; secondary actions belong in More. Native
+Canvas/Catalog rename is available by sidebar double-click. Only shared directories
+need an internal file tree; a single file renders directly. Session preview is a
+bounded recent-turn sample with collapsed tool records, not a full transcript fetch.
+GUI regression Channel clicks must be scoped to the Channels rail (the breadcrumb
+contains the same name). Verify GUI and Core artifact versions and actor alignment
+before interpreting regression results.
+
 Large modules must be split by owned capability. Comments should explain invariants, security boundaries, recovery behavior, and non-obvious protocol decisions; do not narrate straightforward syntax.
 
 For end-to-end validation, start at regression_test/README.md (concrete commands, scope selection and fixture reuse), then regression_test/AGENTS.md. Choose cases for the changed capability; installation/login belong to release acceptance.

@@ -93,20 +93,44 @@ export function AgentWorkDrawer({
   useEffect(() => {
     if (!open || !request) return;
     let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let attempts = 0;
     setDetails(undefined);
     setError(undefined);
-    void runOperation("agents.work.read", async (operation) => {
-      try { const value=await operation.message<WorkDetails>(`/v1/agent-requests/${request.id}/events`); if (cancelled) operation.cancel(); else setDetails(value); }
-      catch(reason) { operation.fail(); if (!cancelled) setError(String(reason)); }
-    });
+    const read = () =>
+      void runOperation("agents.work.read", async (operation) => {
+        try {
+          const value = await operation.message<WorkDetails>(
+            `/v1/agent-requests/${request.id}/events`,
+          );
+          if (cancelled) operation.cancel();
+          else {
+            setDetails(value);
+            if (
+              (activeStates.has(value.state) || value.events.length === 0) &&
+              attempts++ < 15
+            )
+              timer = setTimeout(read, 2000);
+          }
+        } catch (reason) {
+          operation.fail();
+          if (!cancelled) setError(String(reason));
+        }
+      });
+    read();
     return () => {
       cancelled = true;
+      clearTimeout(timer);
     };
   }, [open, request?.id, request?.state]);
   const entries = workTranscript(details?.events ?? []);
   return (
     <Drawer open={open} onOpenChange={onOpenChange} swipeDirection="right">
-      <DrawerContent data-trace-region={"agent-work"} data-trace-target={traceTargets("agents.work.read")} className="data-[swipe-axis=x]:w-[min(42rem,95vw)] data-[swipe-axis=x]:sm:[--drawer-content-width:42rem]">
+      <DrawerContent
+        data-trace-region={"agent-work"}
+        data-trace-target={traceTargets("agents.work.read")}
+        className="data-[swipe-axis=x]:w-[min(42rem,95vw)] data-[swipe-axis=x]:sm:[--drawer-content-width:42rem]"
+      >
         <DrawerHeader className="relative gap-2 pb-4 pr-12">
           <DrawerTitle className="text-lg">
             {request?.targetName ?? "Agent"} ·{" "}
@@ -139,7 +163,7 @@ export function AgentWorkDrawer({
             <p className="text-sm text-muted-foreground">
               {activeStates.has(details.state)
                 ? "The command is accepted. Detailed events appear when the turn finishes."
-                : "No provider events were captured for this older command."}
+                : "The task has finished. Waiting for its recorded work; if none appears, this task has no captured transcript."}
             </p>
           ) : (
             <div className="flex flex-col gap-5" data-testid="work-transcript">

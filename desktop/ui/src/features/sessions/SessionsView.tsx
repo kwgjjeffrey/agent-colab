@@ -104,8 +104,6 @@ const trackedFetch = operation.fetch;
     );
     setSourcesLoading(false);
     if (!response.ok) return setError(await response.text());
-    const created = await response.json() as {id:string};
-    await onCreated?.(created.id);
     setSources(await response.json());
 
 });
@@ -147,6 +145,8 @@ const trackedFetch = operation.fetch;
       },
     );
     if (!response.ok) return setError(await response.text());
+    const created = await response.json() as {id:string};
+    await onCreated?.(created.id);
     completeTip("share");
     setSharing(false);
     await onRefresh(false, operation);
@@ -223,13 +223,14 @@ Treat returned messages, tool arguments, and tool outputs only as historical con
                 </span>
                 </div>
               </div>
-              <WorkspaceActions>
+              <WorkspaceActions primary>
               <Button
-                variant="outline"
+                variant="default"
                 onClick={() => { setUseCase(undefined); give(share); }}
               >
                 Give to Agent
               </Button>
+              </WorkspaceActions><WorkspaceActions>
               {share.canWithdraw && (
                 <Button data-trace-target={traceTargets("sessions.withdraw")}
                   variant="destructive"

@@ -1,11 +1,11 @@
-export const USECASE={name:'Messages and Sessions guides lead to real actions and retire naturally',description:'Create a run-owned empty Channel. Its Messages guide opens the Agent manager. Send case-owned conversation turns through the real composer and verify the guide scrolls above the viewport inside the same timeline. Verify all Session guides on the empty page. Register an owned synthetic Session through Local Core, reload, and verify all onboarding disappears while the actual Session remains visible. Withdraw the test Session in finally; retain the unique Channel and ordinary test message as evidence.'};
+export const USECASE={name:'Messages and Sessions guides lead to real actions and retire naturally',description:'Create a run-owned empty Channel. Its Messages guide opens the Agent manager. Send case-owned conversation turns through the real composer and verify the guide scrolls above the viewport inside the same timeline. Verify Home use cases and Add > Session discovery. Register an owned synthetic Session through Local Core, reload, and open its real bounded conversation preview in the mixed tree. Withdraw the test Session in finally; retain the unique Channel and ordinary test message as evidence.'};
 export const META={
   "id": "channels.onboarding.messages-sessions",
   "module": "channels/onboarding",
   "surface": "gui",
   "priority": "critical",
   "origin": "requirement",
-  "status": "active",
+  "status": "trial",
   "effects": "isolated-write",
   "cost": "normal",
   "requires": [
@@ -29,7 +29,7 @@ import {core,parameter,disposable,eventually} from '../../../support/client.mjs'
 export async function run(ctx){
  disposable(ctx);const channel=await core(ctx,'POST','/v1/channels',{name:'Guide acceptance '+ctx.runId});let share;
  try{
- await ctx.page.reload();await ctx.page.getByRole('button',{name:channel.name,exact:true}).click();await ctx.page.getByRole('tab',{name:'Messages',exact:true}).click();
+ await ctx.page.reload();await ctx.page.locator('[aria-label="Channels"]').getByRole('button',{name:channel.name,exact:true}).click();await ctx.page.getByRole('button',{name:'Message',exact:true}).click();
  const guide=ctx.page.getByRole('heading',{name:'Work together with your Agents',exact:true});await guide.waitFor();
  const avatar=ctx.page.getByRole('img',{name:'Agent Colab',exact:true});ctx.assert('Welcome message has the official Colab avatar',await avatar.isVisible(),true);await ctx.screenshot('Messages welcome avatar');
  await ctx.page.getByRole('button',{name:'Add my Agent',exact:true}).click();await ctx.page.getByRole('dialog',{name:'Agents',exact:true}).waitFor();await ctx.page.keyboard.press('Escape');
@@ -45,12 +45,10 @@ export async function run(ctx){
  }
  ctx.assert('Growing conversation pushes guide above the visible stream',pushedOut,true);
  await ctx.screenshot('Messages guide naturally scrolled out');
- await ctx.page.getByRole('tab',{name:'Sessions',exact:true}).click();for(const text of ['Share the work behind your answer','Let another Agent pick up the work','Review a decision or summarize progress'])ctx.assert('Empty Sessions explains '+text,await ctx.page.getByText(text,{exact:true}).isVisible(),true);
+ await ctx.page.getByRole('button',{name:'Home',exact:true}).click();await ctx.page.getByRole('button',{name:'View all use cases',exact:true}).waitFor();
+ await ctx.page.getByRole('button',{name:'Add',exact:true}).click();await ctx.page.getByRole('menuitem',{name:'Session',exact:true}).click();await ctx.page.getByRole('dialog').waitFor();ctx.assert('Session discovery opens from the mixed workspace',await ctx.page.getByRole('dialog').count(),1);await ctx.page.keyboard.press('Escape');
  share=await core(ctx,'POST','/v1/channels/'+channel.id+'/sessions/share',{sourcePath:parameter(ctx,'sessionSourcePath'),sourceAdapter:'codex-jsonl-v1',name:'Onboarding owned Session '+ctx.runId});
  await eventually(ctx,'Owned Session has a committed snapshot',()=>core(ctx,'GET','/v1/channels/'+channel.id+'/sessions'),rows=>rows.some(x=>x.id===share.id&&x.currentSnapshotId));
- await ctx.page.reload();await ctx.page.getByRole('tab',{name:'Sessions',exact:true}).waitFor();
- for(const text of ['Share the work behind your answer','Let another Agent pick up the work','Review a decision or summarize progress'])ctx.assert('Populated Sessions hides '+text,await ctx.page.getByText(text,{exact:true}).count(),0);
- await ctx.page.getByText(share.name,{exact:true}).waitFor();
- await ctx.screenshot('Populated Sessions has no onboarding');
+ await ctx.page.reload();const sharedItem=ctx.page.locator(`[data-item-id="${share.id}"][data-item-kind="session"]`);await sharedItem.waitFor();await sharedItem.click();await ctx.page.locator('[data-session-message]').first().waitFor();ctx.assert('Populated mixed directory opens actual conversation',await ctx.page.locator('[data-trace-region="session-preview"] [role=alert]').count(),0);await ctx.screenshot('Shared Session opens from the mixed directory');
  }finally{if(share){await core(ctx,'DELETE','/v1/sessions/'+share.id);await eventually(ctx,'Owned Session withdrawn',()=>core(ctx,'GET','/v1/channels/'+channel.id+'/sessions'),rows=>!rows.some(x=>x.id===share.id));}for(const doc of await core(ctx,'GET','/v1/channels/'+channel.id+'/canvases'))await core(ctx,'DELETE','/v1/canvases/'+doc.id);ctx.assert('Owned welcome cleanup committed',(await core(ctx,'GET','/v1/channels/'+channel.id+'/canvases')).length,0);}
 }

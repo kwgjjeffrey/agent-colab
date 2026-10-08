@@ -99,6 +99,7 @@ export function FilesView({
   useEffect(() => { const row = shares.find(row => row.id === focusId); if (row) void browse(row, true); }, [focusId, focusAvailable]);
   const [openShare, setOpenShare] = useState<string>();
   const [entries, setEntries] = useState<LocalFileEntry[]>([]);
+  const [sourceKind, setSourceKind] = useState<string>();
   const [agentPrompt, setAgentPrompt] = useState<{ id: string; ref: string; shareName: string }>();
   const [browseError, setBrowseError] = useState<string>();
   const [inspection, setInspection] = useState<SourceInspection>();
@@ -123,6 +124,7 @@ const trackedFetch = operation.fetch;
       );
       if (!response.ok) return setBrowseError(await response.text());
       setEntries(await response.json());
+      setSourceKind(response.headers.get("x-colab-source-kind") ?? undefined);
       setOpenShare(local.id);
       // Consumption is cache-first. Refresh runs in the background and never blocks browsing.
       if (!share.canWithdraw && share.localPath) void onEnsureLocal(share);
@@ -259,9 +261,11 @@ const trackedFetch = operation.fetch;
   };
 
   const browsedShare = shares.find((share) => share.id === openShare && (!focusId || share.id === focusId));
+  const focusedShare = shares.find(share => share.id === focusId);
   return (
     <div className={browsedShare?"flex min-h-0 flex-1 flex-col":"mx-auto flex max-w-4xl flex-col gap-5 py-6"}>
-      {browsedShare ? <><WorkspaceActions><Button variant="outline" onClick={()=>void giveToAgent(browsedShare)}>Give to Agent</Button>{browsedShare.canWithdraw&&<><Button variant="outline" onClick={()=>void editScope(browsedShare)}>Sync scope</Button><Button variant="destructive" onClick={()=>onWithdraw(browsedShare)}>Withdraw</Button></>}</WorkspaceActions><FileExplorer shareId={browsedShare.id} shareName={browsedShare.name} entries={entries} onClose={() => setOpenShare(undefined)}/></> : focusId ? <div className="flex flex-col gap-3 p-6"><p className="text-sm text-muted-foreground">{browseError ? "Couldn’t load file preview." : "Loading files…"}</p>{browseError && <Button variant="outline" onClick={() => {const row=shares.find(share=>share.id===focusId);if(row)void browse(row,true);}}>Retry preview</Button>}</div> : <><div className="flex justify-end">
+      {focusedShare?.syncState === "failed" && <WorkspaceActions><Button data-trace-target={traceTargets("files.retry")} disabled={busy} onClick={()=>onRetry(focusedShare)}>Retry</Button></WorkspaceActions>}
+      {browsedShare ? <><WorkspaceActions primary><Button data-trace-target={traceTargets("files.handoff")} onClick={()=>void giveToAgent(browsedShare)}>Give to Agent</Button></WorkspaceActions><WorkspaceActions>{browsedShare.canWithdraw&&<><Button variant="ghost" onClick={()=>void editScope(browsedShare)}>Sync scope</Button><Button variant="destructive" onClick={()=>onWithdraw(browsedShare)}>Withdraw</Button></>}</WorkspaceActions><FileExplorer shareId={browsedShare.id} shareName={browsedShare.name} entries={entries} sourceKind={sourceKind} onClose={() => setOpenShare(undefined)}/></> : focusId ? <div className="flex flex-col gap-3 p-6"><p className="text-sm text-muted-foreground">{browseError ? "Couldn’t load file preview." : "Loading files…"}</p>{browseError && <Button variant="outline" onClick={() => {const row=shares.find(share=>share.id===focusId);if(row)void browse(row,true);}}>Retry preview</Button>}</div> : <><div className="flex justify-end">
         <Button data-trace-target={traceTargets("files.share", "files.choose", "system.choose-path")} disabled={busy} onClick={() => void choose()}>
           <PlusIcon /> Share files
         </Button>

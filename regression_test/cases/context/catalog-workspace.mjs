@@ -19,10 +19,11 @@ export async function run(ctx){
   const moved=(await cli(ctx,'colab-explorer',['move','--ref',before.explorerRef,'--parent',rootRef])).data;
   ctx.assert('Move preserves consumer identity',moved.stableRef,shared.stableRef);
   const after=await cli(ctx,'colab-session-reader',['read','--ref',shared.stableRef,'--turn-limit','5']);ctx.assert('Old consumer reference still reads after moving',Array.isArray(after.data.turns),true);
-  await ctx.page.getByRole('button',{name:channel.name,exact:true}).click();await ctx.page.getByRole('button',{name:'Home',exact:true}).click();
+  await ctx.page.locator('[aria-label="Channels"]').getByRole('button',{name:channel.name,exact:true}).click();await ctx.page.getByRole('button',{name:'Home',exact:true}).click();
   ctx.assert('No type tabs remain',await ctx.page.getByRole('tab').count(),0);
   ctx.assert('Channel member entrance is retained',await ctx.page.getByRole('button',{name:'Channel members',exact:true}).count(),1);
   await ctx.page.getByRole('button',{name:'Add',exact:true}).click();
+  await ctx.page.getByRole('menuitem',{name:'Quick Share',exact:true}).waitFor();
   ctx.assert('Quick Share entrance is retained in Add',await ctx.page.getByRole('menuitem',{name:'Quick Share',exact:true}).count(),1);
   await ctx.page.keyboard.press('Escape');
   await ctx.page.getByRole('heading',{name:channel.name,exact:true}).dblclick();
@@ -33,7 +34,9 @@ export async function run(ctx){
   await ctx.page.getByRole('dialog').waitFor();
   ctx.assert('Channel AvatarGroup still opens the member Dialog',await ctx.page.getByRole('dialog').count(),1);
   await ctx.page.keyboard.press('Escape');
-  await ctx.page.getByRole('button',{name,exact:true}).click();await ctx.page.getByRole('button',{name:'Rename',exact:true}).click();const dialog=ctx.page.getByRole('dialog');await dialog.getByLabel('Name',{exact:true}).fill(name+' renamed');await dialog.getByRole('button',{name:'Save',exact:true}).click();
+  await ctx.page.getByRole('button',{name,exact:true}).dblclick();
+  const nameInput=ctx.page.getByRole('textbox',{name:'Item name',exact:true});
+  await nameInput.fill(name+' renamed');await nameInput.press('Enter');
   await eventually(ctx,'GUI rename persisted through Core and Server',()=>core(ctx,'GET','/v1/channels/'+channel.id+'/catalog-items?limit=200'),rows=>rows.some(item=>item.name===name+' renamed'));
   await ctx.page.reload();await ctx.page.locator('nav[aria-label="breadcrumb"]').getByText(name+' renamed',{exact:true}).waitFor();await ctx.screenshot('Catalog tree with persistent Channel header and breadcrumb');
  }finally{

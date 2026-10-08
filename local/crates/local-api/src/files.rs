@@ -1053,7 +1053,7 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
 pub(super) async fn list_local_file_tree(
     State(state): State<AppState>,
     AxumPath(share_id): AxumPath<String>,
-) -> Result<Json<Vec<LocalFileEntry>>, LocalError> {
+) -> Result<(HeaderMap, Json<Vec<LocalFileEntry>>), LocalError> {
 colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.files.list-local-file-tree", async {
 
     let root = local_file_root(&state, &share_id).await?;
@@ -1077,7 +1077,17 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
     } else {
         collect_entries(&root, &root, &mut entries)?;
     }
-    Ok(Json(entries))
+    let mut headers = HeaderMap::new();
+    // Consumer materializations are always directories, even for a single-file source.
+    // Only the registered contributor source can authoritatively describe its original kind.
+    let user = current_user_id(&state).await?;
+    let owned: bool = state.inner.store.lock().await.query_row(
+        "select exists(select 1 from local_file_sources where share_id=?1 and user_id=?2)",
+        [&share_id, &user], |row| row.get(0)).map_err(LocalError::internal)?;
+    if owned {
+        headers.insert("x-colab-source-kind", axum::http::HeaderValue::from_static(if root.is_file() { "file" } else { "directory" }));
+    }
+    Ok((headers, Json(entries)))
 
 }).await
 }

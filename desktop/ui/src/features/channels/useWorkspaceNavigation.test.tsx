@@ -3,6 +3,16 @@ import { act, renderHook, cleanup } from "@testing-library/react";
 import { afterEach, expect, it } from "vitest";
 import { useWorkspaceNavigation } from "./useWorkspaceNavigation";
 afterEach(() => { cleanup(); localStorage.clear(); });
+it("an explicit Channel click atomically opens Home without a restored item", () => {
+  localStorage.setItem("colab:channel-item:b", JSON.stringify({id:"old",kind:"canvas",name:"Old"}));
+  localStorage.setItem("colab:channel-tab:b", "canvas");
+  const view=renderHook(useWorkspaceNavigation);
+  act(()=>view.result.current.openChannelHome("b"));
+  expect(view.result.current.selectedId).toBe("b");
+  expect(view.result.current.workspaceTab).toBe("home");
+  expect(view.result.current.workspaceItem).toBeUndefined();
+  expect(localStorage.getItem("colab:channel-item:b")).toBeNull();
+});
 it("restores each Channel's tab on switching and after a cold renderer restart", () => {
   const view = renderHook(useWorkspaceNavigation);
   act(() => { view.result.current.setSelectedId("a"); view.result.current.setWorkspaceTab("canvas"); });

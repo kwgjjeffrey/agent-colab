@@ -62,6 +62,7 @@ export function AgentIdentityCard({
         {requests.map((request, index) => (
           <Button
             key={request.id}
+            data-request-id={request.id}
             variant="secondary"
             size="sm"
             className="h-auto justify-start px-3 py-2"

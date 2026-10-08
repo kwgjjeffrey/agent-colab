@@ -1,5 +1,46 @@
 # 技术验证计划
 
+### 2026-10-09 Detail actions and IA regression migration — in progress
+
+Candidate GUI 123 / Core 97; not published. GUI type check and 108 component
+tests passed. Core Session projection tests (8) and Codex queue/capture tests (3)
+passed, including retaining real failed-turn events. These are not E2E evidence.
+Rollback checkpoint: `d752304`.
+
+Real Trace runs preserve failures: `20261008T201940Z-b5d8b1fa` initially used
+the daily 122 GUI accidentally; switched regression GUI to the dedicated owner
+proxy 53482 and explicit owned discovery. `20261008T202344Z-f00da3a6` passed drag
+and detail return, but its original detail assertion did not await Canvas正文.
+`20261008T202900Z-8300866d` passed mixed Catalog CLI/GUI identity, nesting, move,
+cycle/non-empty rejection, inline rename persistence and retained Channel controls.
+`20261008T203125Z-ad9fc541` passed stricter four-asset detail acceptance: real
+Canvas editor, Session text, SKILL.md, Files tree, filled primary handoff,
+More-menu Move, breadcrumb return.
+Run `20261008T204255Z-d6d75a03` passed four real cases: Canvas inline rename/body
+persistence, actual file previews, missing-original-source Session snapshot
+preview, and exact task request/work-event transcript after reload.
+Run `20261008T205339Z-c3048d29` passed updated four-asset navigation (including
+Channel click default Home) and interrupted-publication file Retry from More.
+Canvas Move persisted correctly but receiver selection and cleanup exposed stale
+test assumptions; repair rounds are retained. Broad IA migration and work-event
+network retry remain pending; no full-suite/release claim.
+
+Run `20261008T205848Z-27c8683e` passes seven migrated cases: Messages/Session
+onboarding, welcome Canvas, Files sync scope/withdraw, Session registration and
+Skill registration/withdraw. Workspace onboarding was excluded with an honest
+"Case changed after planning" error, then passed in `20261008T210244Z-827e2fb2`,
+along with Catalog workspace and strict detail return. Canvas Move receiver
+selectors are being repaired separately, not counted green yet.
+
+Dedicated owner tracing was disabled and is now explicitly enabled. Registry
+check validates 133 operations. Actual backend traces
+`bf6bc28cae1061451d4de9453435fc39` (workspace.mutate) and
+`841a5f2a88b139ffa66ec0414f5fc8dc` (sessions.preview) both have successful GUI
+roots with `result.state_committed` and causally parented Core/Server requests.
+Removed 64 obsolete Tab locator entries; legacy standalone Canvas create/title/move
+operations retain their IDs but are labeled legacy rather than presented as the
+current mixed-workspace entry points. Bounded trace samples are not population SLOs.
+
 ### 2026-10-09 Actual asset previews — candidate validation
 
 Trace Run `20261008T182031Z-7615ccd9` passed the scoped real Core/Server

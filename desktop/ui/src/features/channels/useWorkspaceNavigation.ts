@@ -33,5 +33,11 @@ export function useWorkspaceNavigation() {
   function setWorkspaceItem(item:WorkspaceItem|undefined) {
     setNavigation(current=>{if(current.channelId){if(item)localStorage.setItem(itemKey(current.channelId),JSON.stringify(item));else localStorage.removeItem(itemKey(current.channelId));}return {...current,item};});
   }
-  return { selectedId: navigation.channelId, workspaceTab: navigation.tab, workspaceItem:navigation.item, setSelectedId, setWorkspaceTab, setWorkspaceItem };
+  function openChannelHome(channelId:string) {
+    localStorage.setItem(channelKey, channelId);
+    localStorage.setItem(tabKey(channelId), "home");
+    localStorage.removeItem(itemKey(channelId));
+    setNavigation({channelId, tab:"home", item:undefined});
+  }
+  return { selectedId: navigation.channelId, workspaceTab: navigation.tab, workspaceItem:navigation.item, setSelectedId, setWorkspaceTab, setWorkspaceItem, openChannelHome };
 }

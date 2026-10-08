@@ -11,11 +11,27 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CatalogWorkspace } from "./CatalogWorkspace";
 vi.mock("@/api/request-activity", () => ({
-  trackedFetch: (...args: unknown[]) =>
-    fetch(...(args as Parameters<typeof fetch>)),
+  trackedFetch: (input: RequestInfo | URL, init?: RequestInit) => fetch(input, init),
 }));
 
 describe("Catalog workspace", () => {
+  it("renames native Canvas through the existing name contract and cancels Escape without saving", async () => {
+    const doc={id:"doc",kind:"canvas",name:"Plan",parentId:null,updatedAt:"today"};
+    const fetcher=vi.fn(async (_path:string,init?:RequestInit)=>new Response(JSON.stringify(init?.method==="PATCH"?doc:[doc]),{status:200}));
+    vi.stubGlobal("fetch",fetcher);
+    render(<CatalogWorkspace channelId="channel" channelName="Team" view="home" onSelect={vi.fn()} onAdd={vi.fn()}>Home</CatalogWorkspace>);
+    fireEvent.doubleClick(await screen.findByRole("button",{name:"Plan"}));
+    fireEvent.change(screen.getByRole("textbox",{name:"Item name"}),{target:{value:"Renamed"}});
+    fireEvent.keyDown(screen.getByRole("textbox",{name:"Item name"}),{key:"Enter"});
+    await waitFor(()=>expect(fetcher).toHaveBeenCalledWith("/v1/canvases/doc",expect.objectContaining({method:"PATCH",body:JSON.stringify({name:"Renamed"})})));
+    await waitFor(()=>expect(screen.queryByRole("textbox",{name:"Item name"})).toBeNull());
+    const count=fetcher.mock.calls.filter(([,init])=>init?.method==="PATCH").length;
+    fireEvent.doubleClick(screen.getByRole("button",{name:"Plan"}));
+    fireEvent.change(screen.getByRole("textbox",{name:"Item name"}),{target:{value:"Cancelled"}});
+    fireEvent.keyDown(screen.getByRole("textbox",{name:"Item name"}),{key:"Escape"});
+    expect(screen.queryByRole("textbox",{name:"Item name"})).toBeNull();
+    expect(fetcher.mock.calls.filter(([,init])=>init?.method==="PATCH")).toHaveLength(count);
+  });
   it("returns a nested asset to its containing catalog", async () => {
     const parent = {id:"parent",kind:"catalog",name:"Design",parentId:null,updatedAt:"today"};
     const asset = {id:"asset",kind:"session",name:"Research",parentId:"parent",updatedAt:"today"};

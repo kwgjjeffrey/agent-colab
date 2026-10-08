@@ -180,7 +180,7 @@ function App() {
   const [initialLoading, setInitialLoading] = useState(true);
   const [workspaceLoadError, setWorkspaceLoadError] = useState<string>();
   const [channels, setChannels] = useState<Channel[]>([]);
-  const { selectedId, setSelectedId, workspaceTab, setWorkspaceTab, workspaceItem, setWorkspaceItem } = useWorkspaceNavigation();
+  const { selectedId, setSelectedId, workspaceTab, setWorkspaceTab, workspaceItem, setWorkspaceItem, openChannelHome } = useWorkspaceNavigation();
   const [contextFocus, setContextFocus] = useState<ContextResource>();
   const [busy, setBusy] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
@@ -1062,7 +1062,7 @@ const api = operation.response;
                       }
                       className={`size-11 shrink-0 rounded-full ${selectedId === channel.id ? "ring-2 ring-primary ring-offset-2 ring-offset-sidebar-foreground" : ""}`}
                       aria-current={selectedId === channel.id ? "page" : undefined}
-                      onClick={() => setSelectedId(channel.id)}
+                      onClick={() => { setContextFocus(undefined); openChannelHome(channel.id); }}
                       aria-label={channel.name}
                     />
                   }

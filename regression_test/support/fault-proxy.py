@@ -12,7 +12,7 @@ class Handler(socketserver.BaseRequestHandler):
    path=raw.split(b' ',2)[1].decode();websocket=b'upgrade: websocket' in raw.lower();publication=any(x in path for x in ['/sync-','/file-revisions','/git-objects','/session-segments']) or '/files/' in path and '/revisions' in path
    def blocked():
     mode=state.read_text().strip() if state.exists() else 'on'
-    return mode=='off' or mode=='publication-off' and publication or mode=='realtime-off' and websocket
+    return mode=='off' or mode=='publication-off' and publication or mode=='work-events-off' and '/agent-requests/' in path and path.endswith('/events') and raw.startswith(b'POST ') or mode=='realtime-off' and websocket
    if blocked():return
    up=socket.create_connection((host,port),timeout=10)
    if not websocket:

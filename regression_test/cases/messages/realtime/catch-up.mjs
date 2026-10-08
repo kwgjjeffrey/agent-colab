@@ -9,7 +9,7 @@ export const META = {
   "surface": "gui",
   "priority": "critical",
   "origin": "requirement",
-  "status": "active",
+  "status": "trial",
   "effects": "isolated-write",
   "cost": "normal",
   "requires": [
@@ -37,5 +37,5 @@ import {secondary,control,seed} from "../../../support/controls.mjs";
 
 export const REQUIREMENTS={"channel": {"permission": "read"}, "parameters": {"keys": ["isolationConfirmed", "realtimeControl", "secondClientBaseUrl"]}};
 export async function run(ctx){
-const c=resource(ctx,'channel');const receiver=await secondary(ctx);try{await receiver.getByRole('button',{name:c.name,exact:true}).click();await receiver.getByRole('tab',{name:'Messages',exact:true}).click();await control(ctx,'realtimeControl','disconnect');const sent=[];try{for(let i=0;i<3;i++)sent.push(await seed(ctx,'MISSED_'+i+'_'+ctx.runId));}finally{await control(ctx,'realtimeControl','connect');}await receiver.bringToFront();for(const message of sent){await receiver.locator('#message-'+message.id).waitFor();ctx.assert('Missed message is reconciled exactly once',await receiver.locator('#message-'+message.id).count(),1);}}finally{await receiver.close();}
+const c=resource(ctx,'channel');const receiver=await secondary(ctx);try{await receiver.getByRole('button',{name:c.name,exact:true}).click();await receiver.getByRole('button',{name:'Message',exact:true}).click();await control(ctx,'realtimeControl','disconnect');const sent=[];try{for(let i=0;i<3;i++)sent.push(await seed(ctx,'MISSED_'+i+'_'+ctx.runId));}finally{await control(ctx,'realtimeControl','connect');}await receiver.bringToFront();for(const message of sent){await receiver.locator('#message-'+message.id).waitFor();ctx.assert('Missed message is reconciled exactly once',await receiver.locator('#message-'+message.id).count(),1);}}finally{await receiver.close();}
 }

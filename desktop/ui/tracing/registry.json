@@ -3,15 +3,70 @@
   "unit": "desktop-ui",
   "operations": [
     {
+      "id": "workspace.mutate",
+      "description": "Persist native rename, catalog creation/removal and mixed-item placement from the unified workspace",
+      "owner": "desktop-ui",
+      "status": "candidate",
+      "entry": {
+        "kind": "gui",
+        "page": "channel.workspace",
+        "target": "workspace.mutate",
+        "selector": "[data-trace-target~=\"workspace.mutate\"]",
+        "locator": {
+          "region": "catalog-items",
+          "steps": [],
+          "kind": "region",
+          "unavailable": "Select a native item or its More menu; mutations require ownership and a valid destination"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/ui/src/features/workspace/CatalogWorkspace.tsx",
+        "function": "mutate",
+        "object": "CatalogWorkspace"
+      }
+    },
+    {
+      "id": "sessions.preview",
+      "description": "Open a selected Session and render five recent turns; execution details remain collapsed",
+      "owner": "desktop-ui",
+      "status": "candidate",
+      "entry": {
+        "kind": "gui",
+        "page": "channel.workspace",
+        "target": "sessions.preview",
+        "selector": "[data-trace-target~=\"sessions.preview\"]",
+        "locator": {
+          "region": "session-preview",
+          "steps": [],
+          "kind": "region",
+          "unavailable": "Select a Session in the Channel directory"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/ui/src/features/sessions/SessionPreview.tsx",
+        "function": "read",
+        "object": "SessionPreview"
+      }
+    },
+    {
       "id": "messages.send",
       "description": "在 Colab Channel 发送消息，提交成功后将消息展示在终端界面；不包括被提及 Agent 的执行与回复",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
         "kind": "gui",
-        "page": "channel.messages",
+        "page": "channel.workspace",
         "target": "messages.send",
-        "tab": "Messages",
         "selector": "[data-trace-target~=\"messages.send\"]",
         "locator": {
           "region": "messages",
@@ -623,9 +678,8 @@
       "status": "instrumented",
       "entry": {
         "kind": "gui",
-        "page": "channel.settings",
+        "page": "channel.workspace",
         "target": "members.list",
-        "tab": "Settings",
         "selector": "[data-trace-target~=\"members.list\"]",
         "locator": {
           "region": "channel-settings",
@@ -651,9 +705,8 @@
       "status": "instrumented",
       "entry": {
         "kind": "gui",
-        "page": "channel.files",
+        "page": "channel.workspace",
         "target": "files.list",
-        "tab": "Files",
         "selector": "[data-trace-target~=\"files.list\"]",
         "locator": {
           "region": "files",
@@ -679,9 +732,8 @@
       "status": "instrumented",
       "entry": {
         "kind": "gui",
-        "page": "channel.sessions",
+        "page": "channel.workspace",
         "target": "sessions.list",
-        "tab": "Sessions",
         "selector": "[data-trace-target~=\"sessions.list\"]",
         "locator": {
           "region": "sessions",
@@ -707,9 +759,8 @@
       "status": "instrumented",
       "entry": {
         "kind": "gui",
-        "page": "channel.sessions",
+        "page": "channel.workspace",
         "target": "sessions.withdraw",
-        "tab": "Sessions",
         "selector": "[data-trace-target~=\"sessions.withdraw\"]",
         "locator": {
           "region": "sessions",
@@ -736,9 +787,8 @@
       "status": "instrumented",
       "entry": {
         "kind": "gui",
-        "page": "channel.files",
+        "page": "channel.workspace",
         "target": "files.share",
-        "tab": "Files",
         "selector": "[data-trace-target~=\"files.share\"]",
         "locator": {
           "region": "files",
@@ -765,9 +815,8 @@
       "status": "instrumented",
       "entry": {
         "kind": "gui",
-        "page": "channel.files",
+        "page": "channel.workspace",
         "target": "files.materialize",
-        "tab": "Files",
         "selector": "[data-trace-target~=\"files.materialize\"]",
         "locator": {
           "region": "files",
@@ -794,9 +843,8 @@
       "status": "instrumented",
       "entry": {
         "kind": "gui",
-        "page": "channel.files",
+        "page": "channel.workspace",
         "target": "files.withdraw",
-        "tab": "Files",
         "selector": "[data-trace-target~=\"files.withdraw\"]",
         "locator": {
           "region": "files",
@@ -823,9 +871,8 @@
       "status": "instrumented",
       "entry": {
         "kind": "gui",
-        "page": "channel.files",
+        "page": "channel.workspace",
         "target": "files.retry",
-        "tab": "Files",
         "selector": "[data-trace-target~=\"files.retry\"]",
         "locator": {
           "region": "files",
@@ -852,9 +899,8 @@
       "status": "instrumented",
       "entry": {
         "kind": "gui",
-        "page": "channel.settings",
+        "page": "channel.workspace",
         "target": "channels.update",
-        "tab": "Settings",
         "selector": "[data-trace-target~=\"channels.update\"] button[type=\"submit\"]",
         "locator": {
           "region": "channel-settings",
@@ -881,9 +927,8 @@
       "status": "instrumented",
       "entry": {
         "kind": "gui",
-        "page": "channel.settings",
+        "page": "channel.workspace",
         "target": "members.add",
-        "tab": "Settings",
         "selector": "[data-trace-target~=\"members.add\"]",
         "locator": {
           "region": "channel-settings",
@@ -910,9 +955,8 @@
       "status": "instrumented",
       "entry": {
         "kind": "gui",
-        "page": "channel.settings",
+        "page": "channel.workspace",
         "target": "members.role",
-        "tab": "Settings",
         "selector": "[data-trace-target~=\"members.role\"]",
         "locator": {
           "region": "channel-settings",
@@ -939,9 +983,8 @@
       "status": "instrumented",
       "entry": {
         "kind": "gui",
-        "page": "channel.settings",
+        "page": "channel.workspace",
         "target": "members.remove",
-        "tab": "Settings",
         "selector": "[data-trace-target~=\"members.remove\"]",
         "locator": {
           "region": "channel-settings",
@@ -968,9 +1011,8 @@
       "status": "instrumented",
       "entry": {
         "kind": "gui",
-        "page": "channel.settings",
+        "page": "channel.workspace",
         "target": "members.search",
-        "tab": "Settings",
         "selector": "[data-trace-target~=\"members.search\"]",
         "locator": {
           "region": "channel-settings",
@@ -992,17 +1034,16 @@
     },
     {
       "id": "files.browse",
-      "description": "打开共享 Files 目录树",
+      "description": "Open a shared Files item in the unified workspace",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
         "kind": "gui",
-        "page": "channel.files",
+        "page": "channel.workspace",
         "target": "files.browse",
-        "tab": "Files",
         "selector": "[data-trace-target~=\"files.browse\"]",
         "locator": {
-          "region": "files",
+          "region": "catalog-items",
           "steps": [],
           "kind": "control",
           "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
@@ -1026,9 +1067,8 @@
       "status": "instrumented",
       "entry": {
         "kind": "gui",
-        "page": "channel.files",
+        "page": "channel.workspace",
         "target": "files.handoff",
-        "tab": "Files",
         "selector": "[data-trace-target~=\"files.handoff\"]",
         "locator": {
           "region": "files",
@@ -1055,9 +1095,8 @@
       "status": "instrumented",
       "entry": {
         "kind": "gui",
-        "page": "channel.files",
+        "page": "channel.workspace",
         "target": "files.inspect",
-        "tab": "Files",
         "selector": "[data-trace-target~=\"files.inspect\"]",
         "locator": {
           "region": "files",
@@ -1084,9 +1123,8 @@
       "status": "instrumented",
       "entry": {
         "kind": "gui",
-        "page": "channel.files",
+        "page": "channel.workspace",
         "target": "files.scope.read",
-        "tab": "Files",
         "selector": "[data-trace-target~=\"files.scope.read\"]",
         "locator": {
           "region": "files",
@@ -1113,9 +1151,8 @@
       "status": "instrumented",
       "entry": {
         "kind": "gui",
-        "page": "channel.files",
+        "page": "channel.workspace",
         "target": "files.scope.commit",
-        "tab": "Files",
         "selector": "[data-trace-target~=\"files.scope.commit\"]",
         "locator": {
           "region": "files",
@@ -1142,9 +1179,8 @@
       "status": "instrumented",
       "entry": {
         "kind": "gui",
-        "page": "channel.sessions",
+        "page": "channel.workspace",
         "target": "sessions.sources",
-        "tab": "Sessions",
         "selector": "[data-trace-target~=\"sessions.sources\"]",
         "locator": {
           "region": "sessions",
@@ -1171,9 +1207,8 @@
       "status": "instrumented",
       "entry": {
         "kind": "gui",
-        "page": "channel.sessions",
+        "page": "channel.workspace",
         "target": "sessions.share",
-        "tab": "Sessions",
         "selector": "[data-trace-target~=\"sessions.share\"]",
         "locator": {
           "region": "sessions",
@@ -1200,9 +1235,8 @@
       "status": "instrumented",
       "entry": {
         "kind": "gui",
-        "page": "channel.skills",
+        "page": "channel.workspace",
         "target": "skills.list",
-        "tab": "Skills",
         "selector": "[data-trace-target~=\"skills.list\"]",
         "locator": {
           "region": "skills",
@@ -1228,9 +1262,8 @@
       "status": "instrumented",
       "entry": {
         "kind": "gui",
-        "page": "channel.skills",
+        "page": "channel.workspace",
         "target": "skills.sources",
-        "tab": "Skills",
         "selector": "[data-trace-target~=\"skills.sources\"]",
         "locator": {
           "region": "skills",
@@ -1257,9 +1290,8 @@
       "status": "instrumented",
       "entry": {
         "kind": "gui",
-        "page": "channel.skills",
+        "page": "channel.workspace",
         "target": "skills.share",
-        "tab": "Skills",
         "selector": "[data-trace-target~=\"skills.share\"]",
         "locator": {
           "region": "skills",
@@ -1286,9 +1318,8 @@
       "status": "instrumented",
       "entry": {
         "kind": "gui",
-        "page": "channel.skills",
+        "page": "channel.workspace",
         "target": "skills.installation",
-        "tab": "Skills",
         "selector": "[data-trace-target~=\"skills.installation\"]",
         "locator": {
           "region": "skills",
@@ -1315,9 +1346,8 @@
       "status": "instrumented",
       "entry": {
         "kind": "gui",
-        "page": "channel.skills",
+        "page": "channel.workspace",
         "target": "skills.withdraw",
-        "tab": "Skills",
         "selector": "[data-trace-target~=\"skills.withdraw\"]",
         "locator": {
           "region": "skills",
@@ -1339,20 +1369,19 @@
     },
     {
       "id": "canvas.create",
-      "description": "创建 Canvas 文档或文件夹并显示新条目",
+      "description": "创建 Canvas 文档或文件夹并显示新条目 [Legacy standalone Canvas collection; mixed workspace mutations use workspace.mutate]",
       "owner": "desktop-ui",
-      "status": "instrumented",
+      "status": "legacy",
       "entry": {
         "kind": "gui",
-        "page": "channel.canvas",
+        "page": "channel.workspace",
         "target": "canvas.create",
-        "tab": "Canvas",
         "selector": "[data-trace-target~=\"canvas.create\"]",
         "locator": {
-          "region": "canvas-tree",
+          "region": "catalog-items",
           "steps": [],
           "kind": "control",
-          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+          "unavailable": "Legacy standalone collection only; use workspace.mutate for mixed directory create, rename and placement"
         }
       },
       "completion": {
@@ -1373,12 +1402,11 @@
       "status": "instrumented",
       "entry": {
         "kind": "gui",
-        "page": "channel.canvas",
+        "page": "channel.workspace",
         "target": "canvas.rename",
-        "tab": "Canvas",
         "selector": "[data-trace-target~=\"canvas.rename\"]",
         "locator": {
-          "region": "canvas-tree",
+          "region": "catalog-items",
           "steps": [],
           "kind": "control",
           "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
@@ -1397,17 +1425,16 @@
     },
     {
       "id": "canvas.list",
-      "description": "打开 Canvas 页并读取文档和文件夹",
+      "description": "Select a Canvas item and load its actual document",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
         "kind": "gui",
-        "page": "channel.canvas",
+        "page": "channel.workspace",
         "target": "canvas.list",
-        "tab": "Canvas",
         "selector": "[data-trace-target~=\"canvas.list\"]",
         "locator": {
-          "region": "canvas-tree",
+          "region": "catalog-items",
           "steps": [],
           "kind": "region"
         }
@@ -1425,20 +1452,19 @@
     },
     {
       "id": "canvas.title",
-      "description": "保存当前 Canvas 文档标题",
+      "description": "保存当前 Canvas 文档标题 [Legacy standalone Canvas collection; mixed workspace mutations use workspace.mutate]",
       "owner": "desktop-ui",
-      "status": "instrumented",
+      "status": "legacy",
       "entry": {
         "kind": "gui",
-        "page": "channel.canvas",
+        "page": "channel.workspace",
         "target": "canvas.title",
-        "tab": "Canvas",
         "selector": "[data-trace-target~=\"canvas.title\"]",
         "locator": {
           "region": "canvas",
           "steps": [],
           "kind": "control",
-          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+          "unavailable": "Legacy standalone collection only; use workspace.mutate for mixed directory create, rename and placement"
         }
       },
       "completion": {
@@ -1459,9 +1485,8 @@
       "status": "instrumented",
       "entry": {
         "kind": "gui",
-        "page": "channel.canvas",
+        "page": "channel.workspace",
         "target": "canvas.agent.prepare",
-        "tab": "Canvas",
         "selector": "[data-trace-target~=\"canvas.agent.prepare\"]",
         "locator": {
           "region": "canvas",
@@ -1488,9 +1513,8 @@
       "status": "instrumented",
       "entry": {
         "kind": "gui",
-        "page": "channel.messages",
+        "page": "channel.workspace",
         "target": "messages.participants",
-        "tab": "Messages",
         "selector": "[data-trace-target~=\"messages.participants\"]",
         "locator": {
           "region": "participants",
@@ -1516,9 +1540,8 @@
       "status": "instrumented",
       "entry": {
         "kind": "gui",
-        "page": "channel.messages",
+        "page": "channel.workspace",
         "target": "messages.list",
-        "tab": "Messages",
         "selector": "[data-trace-target~=\"messages.list\"]",
         "locator": {
           "region": "messages",
@@ -1544,9 +1567,8 @@
       "status": "instrumented",
       "entry": {
         "kind": "gui",
-        "page": "channel.messages",
+        "page": "channel.workspace",
         "target": "agents.list",
-        "tab": "Messages",
         "selector": "[data-trace-target~=\"agents.list\"]",
         "locator": {
           "region": "participants",
@@ -1572,9 +1594,8 @@
       "status": "instrumented",
       "entry": {
         "kind": "gui",
-        "page": "channel.messages",
+        "page": "channel.workspace",
         "target": "agents.runtimes",
-        "tab": "Messages",
         "selector": "[data-trace-target~=\"agents.runtimes\"]",
         "locator": {
           "region": "agents-manager",
@@ -1606,9 +1627,8 @@
       "status": "instrumented",
       "entry": {
         "kind": "gui",
-        "page": "channel.messages",
+        "page": "channel.workspace",
         "target": "agents.requests",
-        "tab": "Messages",
         "selector": "[data-trace-target~=\"agents.requests\"]",
         "locator": {
           "region": "participants",
@@ -1634,9 +1654,8 @@
       "status": "instrumented",
       "entry": {
         "kind": "gui",
-        "page": "channel.messages",
+        "page": "channel.workspace",
         "target": "agents.forward",
-        "tab": "Messages",
         "selector": "[data-trace-target~=\"agents.forward\"]",
         "locator": {
           "region": "messages",
@@ -1663,9 +1682,8 @@
       "status": "instrumented",
       "entry": {
         "kind": "gui",
-        "page": "channel.messages",
+        "page": "channel.workspace",
         "target": "messages.member.add",
-        "tab": "Messages",
         "selector": "[data-trace-target~=\"messages.member.add\"]",
         "locator": {
           "region": "messages",
@@ -1692,9 +1710,8 @@
       "status": "instrumented",
       "entry": {
         "kind": "gui",
-        "page": "channel.messages",
+        "page": "channel.workspace",
         "target": "agents.manager",
-        "tab": "Messages",
         "selector": "[data-trace-target~=\"agents.manager\"]",
         "locator": {
           "region": "messages",
@@ -1721,9 +1738,8 @@
       "status": "instrumented",
       "entry": {
         "kind": "gui",
-        "page": "channel.messages",
+        "page": "channel.workspace",
         "target": "agents.save",
-        "tab": "Messages",
         "selector": "[data-trace-target~=\"agents.save\"] button[type=\"submit\"]",
         "locator": {
           "region": "agents-manager",
@@ -1755,9 +1771,8 @@
       "status": "instrumented",
       "entry": {
         "kind": "gui",
-        "page": "channel.messages",
+        "page": "channel.workspace",
         "target": "agents.select",
-        "tab": "Messages",
         "selector": "[data-trace-target~=\"agents.select\"]",
         "locator": {
           "region": "agents-manager",
@@ -1789,9 +1804,8 @@
       "status": "instrumented",
       "entry": {
         "kind": "gui",
-        "page": "channel.messages",
+        "page": "channel.workspace",
         "target": "agents.remove",
-        "tab": "Messages",
         "selector": "[data-trace-target~=\"agents.remove\"]",
         "locator": {
           "region": "agents-manager",
@@ -2053,9 +2067,8 @@
       "status": "instrumented",
       "entry": {
         "kind": "gui",
-        "page": "channel.canvas",
+        "page": "channel.workspace",
         "target": "canvas.participants",
-        "tab": "Canvas",
         "selector": "[data-trace-target~=\"canvas.participants\"]",
         "locator": {
           "region": "canvas",
@@ -2081,12 +2094,11 @@
       "status": "instrumented",
       "entry": {
         "kind": "gui",
-        "page": "channel.canvas",
+        "page": "channel.workspace",
         "target": "canvas.tree.rename",
-        "tab": "Canvas",
         "selector": "[data-trace-target~=\"canvas.tree.rename\"]",
         "locator": {
-          "region": "canvas-tree",
+          "region": "catalog-items",
           "steps": [],
           "kind": "control",
           "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
@@ -2110,9 +2122,8 @@
       "status": "instrumented",
       "entry": {
         "kind": "gui",
-        "page": "channel.canvas",
+        "page": "channel.workspace",
         "target": "canvas.agent.requests",
-        "tab": "Canvas",
         "selector": "[data-trace-target~=\"canvas.agent.requests\"]",
         "locator": {
           "region": "canvas",
@@ -2138,9 +2149,8 @@
       "status": "instrumented",
       "entry": {
         "kind": "gui",
-        "page": "channel.canvas",
+        "page": "channel.workspace",
         "target": "canvas.reconcile",
-        "tab": "Canvas",
         "selector": "[data-trace-target~=\"canvas.reconcile\"]",
         "locator": {
           "region": "canvas",
@@ -2166,9 +2176,8 @@
       "status": "instrumented",
       "entry": {
         "kind": "gui",
-        "page": "channel.canvas",
+        "page": "channel.workspace",
         "target": "canvas.edit",
-        "tab": "Canvas",
         "selector": "[data-trace-target~=\"canvas.edit\"]",
         "locator": {
           "region": "canvas",
@@ -2195,9 +2204,8 @@
       "status": "instrumented",
       "entry": {
         "kind": "gui",
-        "page": "channel.canvas",
+        "page": "channel.workspace",
         "target": "canvas.agent.send",
-        "tab": "Canvas",
         "selector": "[data-trace-target~=\"canvas.agent.send\"]",
         "locator": {
           "region": "canvas",
@@ -2224,9 +2232,8 @@
       "status": "instrumented",
       "entry": {
         "kind": "gui",
-        "page": "channel.messages",
+        "page": "channel.workspace",
         "target": "context.people",
-        "tab": "Messages",
         "selector": "[data-trace-target~=\"context.people\"]",
         "locator": {
           "region": "messages",
@@ -2252,9 +2259,8 @@
       "status": "instrumented",
       "entry": {
         "kind": "gui",
-        "page": "channel.messages",
+        "page": "channel.workspace",
         "target": "context.resources",
-        "tab": "Messages",
         "selector": "[data-trace-target~=\"context.resources\"]",
         "locator": {
           "region": "messages",
@@ -2280,9 +2286,8 @@
       "status": "instrumented",
       "entry": {
         "kind": "gui",
-        "page": "channel.messages",
+        "page": "channel.workspace",
         "target": "context.lookup",
-        "tab": "Messages",
         "selector": "[data-trace-target~=\"context.lookup\"]",
         "locator": {
           "region": "messages",
@@ -2309,9 +2314,8 @@
       "status": "instrumented",
       "entry": {
         "kind": "gui",
-        "page": "channel.messages",
+        "page": "channel.workspace",
         "target": "context.forward",
-        "tab": "Messages",
         "selector": "[data-trace-target~=\"context.forward\"]",
         "locator": {
           "region": "messages",
@@ -2338,9 +2342,8 @@
       "status": "instrumented",
       "entry": {
         "kind": "gui",
-        "page": "channel.files",
+        "page": "channel.workspace",
         "target": "files.preview",
-        "tab": "Files",
         "selector": "[data-trace-target~=\"files.preview\"]",
         "locator": {
           "region": "file-preview",
@@ -2395,9 +2398,8 @@
       "status": "instrumented",
       "entry": {
         "kind": "gui",
-        "page": "channel.files",
+        "page": "channel.workspace",
         "target": "system.choose-path",
-        "tab": "Files",
         "selector": "[data-trace-target~=\"system.choose-path\"]",
         "locator": {
           "region": "files",
@@ -2487,9 +2489,8 @@
       "status": "instrumented",
       "entry": {
         "kind": "gui",
-        "page": "channel.files",
+        "page": "channel.workspace",
         "target": "files.choose",
-        "tab": "Files",
         "selector": "[data-trace-target~=\"files.choose\"]",
         "locator": {
           "region": "files",
@@ -2516,9 +2517,8 @@
       "status": "instrumented",
       "entry": {
         "kind": "gui",
-        "page": "channel.files",
+        "page": "channel.workspace",
         "target": "files.preview.native",
-        "tab": "Files",
         "selector": "[data-trace-target~=\"files.preview.native\"]",
         "locator": {
           "region": "file-preview",
@@ -2545,9 +2545,8 @@
       "status": "instrumented",
       "entry": {
         "kind": "gui",
-        "page": "channel.messages",
+        "page": "channel.workspace",
         "target": "agents.work.read",
-        "tab": "Messages",
         "selector": "[data-trace-target~=\"agents.work.read\"]",
         "locator": {
           "region": "agent-work",
@@ -2574,9 +2573,8 @@
       "status": "instrumented",
       "entry": {
         "kind": "gui",
-        "page": "channel.messages",
+        "page": "channel.workspace",
         "target": "members.identity.requests",
-        "tab": "Messages",
         "selector": "[data-trace-target~=\"members.identity.requests\"]",
         "locator": {
           "region": "messages",
@@ -2603,9 +2601,8 @@
       "status": "instrumented",
       "entry": {
         "kind": "gui",
-        "page": "channel.messages",
+        "page": "channel.workspace",
         "target": "context.preview",
-        "tab": "Messages",
         "selector": "[data-trace-target~=\"context.preview\"]",
         "locator": {
           "region": "messages",
@@ -2627,20 +2624,19 @@
     },
     {
       "id": "canvas.move",
-      "description": "在文档树中移动 Canvas 文档或调整排序",
+      "description": "在文档树中移动 Canvas 文档或调整排序 [Legacy standalone Canvas collection; mixed workspace mutations use workspace.mutate]",
       "owner": "desktop-ui",
-      "status": "instrumented",
+      "status": "legacy",
       "entry": {
         "kind": "gui",
-        "page": "channel.canvas",
+        "page": "channel.workspace",
         "target": "canvas.move",
-        "tab": "Canvas",
         "selector": "[data-trace-target~=\"canvas.move\"]",
         "locator": {
-          "region": "canvas-tree",
+          "region": "catalog-items",
           "steps": [],
           "kind": "control",
-          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+          "unavailable": "Legacy standalone collection only; use workspace.mutate for mixed directory create, rename and placement"
         }
       },
       "completion": {
@@ -2661,12 +2657,11 @@
       "status": "instrumented",
       "entry": {
         "kind": "gui",
-        "page": "channel.canvas",
+        "page": "channel.workspace",
         "target": "canvas.remove",
-        "tab": "Canvas",
         "selector": "[data-trace-target~=\"canvas.remove\"]",
         "locator": {
-          "region": "canvas-tree",
+          "region": "catalog-items",
           "steps": [],
           "kind": "control",
           "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
@@ -2765,9 +2760,8 @@
       "status": "instrumented",
       "entry": {
         "kind": "gui",
-        "page": "channel.canvas",
+        "page": "channel.workspace",
         "target": "canvas.handoff",
-        "tab": "Canvas",
         "selector": "[data-trace-target~=\"canvas.handoff\"]",
         "locator": {
           "region": "canvas",
@@ -2794,9 +2788,8 @@
       "status": "instrumented",
       "entry": {
         "kind": "gui",
-        "page": "channel.messages",
+        "page": "channel.workspace",
         "target": "messages.focus",
-        "tab": "Messages",
         "selector": "[data-trace-target~=\"messages.focus\"]",
         "locator": {
           "region": "messages",
@@ -2823,9 +2816,8 @@
       "status": "instrumented",
       "entry": {
         "kind": "gui",
-        "page": "channel.messages",
+        "page": "channel.workspace",
         "target": "agents.identity.requests",
-        "tab": "Messages",
         "selector": "[data-trace-target~=\"agents.identity.requests\"]",
         "locator": {
           "region": "messages",

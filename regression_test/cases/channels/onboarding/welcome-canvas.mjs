@@ -5,7 +5,7 @@ export const META={
   "surface": "gui",
   "priority": "critical",
   "origin": "requirement",
-  "status": "active",
+  "status": "trial",
   "effects": "isolated-write",
   "cost": "normal",
   "requires": [
@@ -37,16 +37,16 @@ export async function run(ctx){
  const projection=await core(ctx,'GET','/v1/canvases/'+doc.id+'/document');
  for(const text of ['Write together','Turn a plan into work','Project brief:','Investigation notes:','Decision record:','Team handoff:'])ctx.assert('Guide contains '+text,projection.content.includes(text),true);
  try{
- await ctx.page.getByRole('tab',{name:'Canvas',exact:true}).click();
+ await ctx.page.locator(`[data-item-id="${doc.id}"][data-item-kind="canvas"]`).click();
  const editor=ctx.page.locator('[contenteditable="true"]');await editor.waitFor();
  await editor.fill('Owned welcome edit '+ctx.runId);
  await eventually(ctx,'Editor changes are durable',()=>core(ctx,'GET','/v1/canvases/'+doc.id+'/document'),x=>x.content.includes('Owned welcome edit '+ctx.runId));
  await ctx.screenshot('Welcome Canvas edited in real GUI');
- await ctx.page.getByRole('button',{name:'Delete Welcome to Canvas',exact:true}).click();
+ await ctx.page.getByRole('button',{name:'More item actions',exact:true}).click();await ctx.page.getByRole('menuitem',{name:'Delete',exact:true}).click();
  await ctx.page.getByRole('alertdialog').getByRole('button',{name:'Delete document',exact:true}).click();
  await eventually(ctx,'Deleted welcome absent',()=>core(ctx,'GET','/v1/channels/'+channel.id+'/canvases'),x=>x.length===0);
- await ctx.page.reload();await ctx.page.getByRole('tab',{name:'Canvas',exact:true}).waitFor();
- ctx.assert('Reload keeps Canvas tab',await ctx.page.getByRole('tab',{name:'Canvas',exact:true}).getAttribute('aria-selected'),'true');
+ await ctx.page.reload();await ctx.page.getByRole('button',{name:'Home',exact:true}).waitFor();
+ ctx.assert('Deleted document is absent from the directory',await ctx.page.locator(`[data-item-id="${doc.id}"]`).count(),0);
  ctx.assert('Deleted welcome never reappears',(await core(ctx,'GET','/v1/channels/'+channel.id+'/canvases')).length,0);
  }finally{const remaining=await core(ctx,'GET','/v1/channels/'+channel.id+'/canvases');for(const row of remaining)await core(ctx,'DELETE','/v1/canvases/'+row.id);}
 }

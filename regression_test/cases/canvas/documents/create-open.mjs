@@ -9,7 +9,7 @@ export const META = {
   "surface": "gui",
   "priority": "critical",
   "origin": "requirement",
-  "status": "active",
+  "status": "trial",
   "effects": "isolated-write",
   "cost": "normal",
   "requires": [
@@ -33,4 +33,17 @@ import {openTab} from "../../../support/gui.mjs";
 import {parameter,resource,core,disposable,eventually} from "../../../support/client.mjs";
 import {createDocument,deleteDocument} from "../../../support/canvas.mjs";
 export const REQUIREMENTS={"channel": {"permission": "read"}};
-export async function run(ctx){const doc=await createDocument(ctx);try{const title=doc.title+' renamed',marker='REOPEN_'+ctx.runId;await ctx.page.getByRole('heading',{name:doc.title,exact:true}).dblclick();const input=ctx.page.locator('section header input');await input.fill(title);await input.press('Enter');const editor=ctx.page.locator('[contenteditable="true"]');await editor.fill(marker);await eventually(ctx,'Edited title and body are durable',()=>core(ctx,'GET','/v1/canvases/'+doc.id+'/document'),v=>v.content.includes(marker));const rows=await core(ctx,'GET','/v1/channels/'+resource(ctx,'channel').id+'/canvases');ctx.assert('Edited title belongs to the created document',rows.find(x=>x.id===doc.id)?.title,title);await ctx.page.getByRole('tab',{name:'Messages',exact:true}).click();await ctx.page.getByRole('tab',{name:'Canvas',exact:true}).click();await ctx.page.locator('[data-trace-region="canvas-tree"]').getByText(title,{exact:true}).click();await ctx.page.getByRole('heading',{name:title,exact:true}).waitFor();await editor.waitFor();ctx.assert('Reopened editor contains the persisted document body',(await editor.innerText()).includes(marker),true);}finally{await deleteDocument(ctx,doc);}}
+export async function run(ctx){
+ const doc=await createDocument(ctx);
+ try{
+  const title=doc.title+' renamed',marker='REOPEN_'+ctx.runId;
+  const item=()=>ctx.page.locator(`[data-item-id="${doc.id}"][data-item-kind="canvas"]`);
+  await item().dblclick();const input=ctx.page.getByRole('textbox',{name:'Item name',exact:true});await input.fill(title);await input.press('Enter');
+  const editor=ctx.page.locator('[contenteditable="true"]');await editor.fill(marker);
+  await eventually(ctx,'Edited title and body are durable',()=>core(ctx,'GET','/v1/canvases/'+doc.id+'/document'),v=>v.content.includes(marker));
+  const rows=await eventually(ctx,'Inline rename persists on the actual document',()=>core(ctx,'GET','/v1/channels/'+resource(ctx,'channel').id+'/canvases'),rows=>rows.find(x=>x.id===doc.id)?.title===title);ctx.assert('Edited title belongs to the created document',rows.find(x=>x.id===doc.id)?.title,title);
+  await ctx.page.getByRole('button',{name:'Message',exact:true}).click();await item().click();
+  await ctx.page.locator('nav[aria-label="breadcrumb"]').getByText(title,{exact:true}).waitFor();await editor.waitFor();
+  ctx.assert('Reopened editor contains the persisted document body',(await editor.innerText()).includes(marker),true);
+ }finally{await deleteDocument(ctx,doc);}
+}

@@ -34,7 +34,7 @@ export async function run(ctx){
  try{
   a=await core(ctx,'POST',route+'/catalogs',{name:'Drag A '+ctx.runId});
   b=await core(ctx,'POST',route+'/catalogs',{name:'Drag B '+ctx.runId});
-  await ctx.page.getByRole('button',{name:channel.name,exact:true}).click();
+  await ctx.page.locator('[aria-label="Channels"]').getByRole('button',{name:channel.name,exact:true}).click();
   await ctx.page.getByRole('button',{name:'Home',exact:true}).click();
   await ctx.page.getByRole('button',{name:'Add',exact:true}).click();
   await ctx.page.getByRole('menuitem',{name:'Catalog',exact:true}).waitFor();

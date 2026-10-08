@@ -4,6 +4,14 @@
 
 Read only the affected cases; reuse the already bound Channel, Session and Skill fixtures. From the repository root:
 
+When testing the dedicated owner candidate, set `COLAB_DISCOVERY_FILE` to
+`regression_test/.fixtures/clients/owner/discovery.json` (absolute path) for both
+plan and run. The configured GUI proxy and CLI must resolve the same authenticated
+Core; do not combine daily CLI state with a candidate GUI. Check both artifact
+versions before a run. Channel-rail selectors must be scoped to `Channels`, since
+the same name is also a breadcrumb button. `openTab` is a compatibility helper
+name only: it now selects Home/Message; asset cases select exact mixed-item IDs.
+
 ```sh
 sh ~/.codex/skills/trace/setup/run.sh regression_test/cli.mjs cases --modules messages/timeline
 sh ~/.codex/skills/trace/setup/run.sh regression_test/cli.mjs plan --environment local --modules messages/timeline --selectedOnly true --concurrency 2

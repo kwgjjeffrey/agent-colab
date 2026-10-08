@@ -679,12 +679,9 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
     }
     // Provider output remains in its native Codex thread. The Agent decides what belongs in the
     // Channel and publishes only that material through the request-scoped Skill command.
-    let events = submission.finish().await.map_err(LocalError::internal)?;
-    if let Ok(token) = access_token_for_user(&state, user_id).await {
-        // Work-detail persistence is observability, not delivery. A temporary diagnostics upload
-        // failure must not turn a successfully completed provider turn into a failed user request.
-        let _ = state.inner.http.post(format!("{}/v1/agent-requests/{}/events",state.inner.server_url,value.get("id").and_then(|v|v.as_str()).unwrap_or_default())).bearer_auth(token).json(&serde_json::json!({"events":events.into_iter().take(2000).collect::<Vec<_>>() })).send().await;
-    }
+    let (completion, events) = submission.finish().await;
+    super::work_events::persist(&state, user_id, value.get("id").and_then(|v|v.as_str()).unwrap_or_default(), events).await?;
+    completion.map_err(LocalError::internal)?;
     Ok(())
 
 }).await

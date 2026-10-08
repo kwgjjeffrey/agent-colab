@@ -1,5 +1,5 @@
 import manifest from "material-icon-theme/dist/material-icons.json";
-import { FolderIcon, FolderSyncIcon, NotebookIcon, SparklesIcon, FileTextIcon } from "lucide-react";
+import { FolderIcon, FolderSyncIcon, MessagesSquareIcon, SparklesIcon, FileTextIcon } from "lucide-react";
 
 const icons = import.meta.glob<string>("/node_modules/material-icon-theme/icons/*.svg", { eager: true, query: "?url", import: "default" });
 export function IdeFileIcon({name,className="size-4 shrink-0"}:{name:string;className?:string}) {
@@ -12,6 +12,6 @@ export function IdeFileIcon({name,className="size-4 shrink-0"}:{name:string;clas
 }
 export function ItemIcon({kind,name}:{kind:string;name:string}) {
   if(kind==="files" && name.includes(".")) return <IdeFileIcon name={name}/>;
-  const Icon=kind==="catalog"?FolderIcon:kind==="files"?FolderSyncIcon:kind==="session"?NotebookIcon:kind==="skill"?SparklesIcon:FileTextIcon;
+  const Icon=kind==="catalog"?FolderIcon:kind==="files"?FolderSyncIcon:kind==="session"?MessagesSquareIcon:kind==="skill"?SparklesIcon:FileTextIcon;
   return <Icon aria-hidden="true" className={`size-4 shrink-0 item-icon-${kind}`} />;
 }

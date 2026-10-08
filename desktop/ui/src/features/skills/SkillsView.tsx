@@ -222,7 +222,7 @@ const trackedFetch = operation.fetch;
               <div className="flex min-w-0 items-center gap-3">
                 <Avatar className="size-9"><AvatarImage src={share.contributorAvatarUrl} /><AvatarFallback>{initials(share.contributorName)}</AvatarFallback></Avatar>
                 <div className="min-w-0 flex-1"><span className="text-xs text-muted-foreground">{share.contributorName}{share.canWithdraw ? " (me)" : ""}</span></div>
-                <WorkspaceActions><Button variant="outline" onClick={() => setAgentPrompt({ share, rows: installations[share.id] ?? [] })}>Give to Agent</Button>
+                <WorkspaceActions primary><Button onClick={() => setAgentPrompt({ share, rows: installations[share.id] ?? [] })}>Give to Agent</Button></WorkspaceActions><WorkspaceActions>
                 {share.canWithdraw && <Button data-trace-target={traceTargets("skills.withdraw")} variant="destructive" disabled={working === share.id} onClick={() => void withdraw(share)}>Withdraw</Button>}</WorkspaceActions>
               </div>
               {preview !== undefined ? <article data-trace-region="skill-preview">{share.description && <p className="text-sm text-muted-foreground">{share.description}</p>}<PreviewMarkdown>{preview.replace(/^---\r?\n[\s\S]*?\r?\n---(?:\r?\n|$)/, "")}</PreviewMarkdown></article> : !error && <p className="text-muted-foreground">Loading Skill preview…</p>}

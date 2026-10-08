@@ -7,8 +7,9 @@ export const REQUIREMENTS = {channel:{permission:'read'}};
 import {core,resource} from '../../support/client.mjs';
 export async function run(ctx) {
   const channel = resource(ctx,'channel');
-  await ctx.page.getByRole('button',{name:channel.name,exact:true}).click();
-  await ctx.page.getByRole('button',{name:'Home',exact:true}).click();
+  await ctx.page.locator('[aria-label="Channels"]').getByRole('button',{name:channel.name,exact:true}).click();
+  await ctx.page.getByRole('heading',{name:'Your team is about to work at agentic velocity',exact:true}).waitFor();
+  ctx.assert('Clicking Channel opens Home without another navigation click',await ctx.page.getByRole('button',{name:'Home',exact:true}).isVisible(),true);
   const rows = await core(ctx,'GET',`/v1/channels/${channel.id}/catalog-items?limit=200`);
   for(const kind of ['files','session','skill','canvas']) {
     const target = rows.find(item=>item.kind===kind);
@@ -16,6 +17,17 @@ export async function run(ctx) {
     await ctx.page.locator(`[data-item-id="${target.id}"][data-item-kind="${kind}"]`).click();
     const breadcrumb=ctx.page.locator('section > div nav[aria-label="breadcrumb"]').first();
     await breadcrumb.getByText(target.name,{exact:true}).waitFor();
+    if(kind==='canvas') {
+      const editor=ctx.page.locator('[contenteditable="true"]');
+      await editor.waitFor();
+      ctx.assert('Canvas renders its editor, not a collection placeholder',await ctx.page.getByText('Select a document',{exact:true}).count(),0);
+    }
+    const primary=ctx.page.getByRole('button',{name:'Give to Agent',exact:true});
+    await primary.waitFor();
+    ctx.assert(kind+' exposes a filled primary handoff',(await primary.getAttribute('class')).split(/\s+/).includes('bg-primary'),true);
+    await ctx.page.getByRole('button',{name:'More item actions',exact:true}).click();
+    await ctx.page.getByRole('menuitem',{name:'Move',exact:true}).waitFor();
+    await ctx.page.keyboard.press('Escape');
     ctx.assert(kind+' has no redundant Back control',await ctx.page.getByRole('button',{name:/^Back/}).count(),0);
     if(kind==='files') {
       await ctx.page.getByRole('tree',{name:target.name+' files',exact:true}).waitFor();
