@@ -25,7 +25,8 @@ export function AccountProfile({ profile, onSaved, onLinkGoogle, linking, onDism
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
-  useEffect(() => { setName(profile?.displayName ?? ""); setError(""); setSaved(false); }, [profile?.id, profile?.displayName]);
+  // Account changes reset the form; its own successful save must retain the confirmation.
+  useEffect(() => { setName(profile?.displayName ?? ""); setError(""); setSaved(false); }, [profile?.id]);
   async function save(event: React.FormEvent) {
     event.preventDefault(); setSaving(true); setError(""); setSaved(false);
     try {
