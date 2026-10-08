@@ -3,11 +3,15 @@
 ### 2026-10-08 Catalog workspace — in progress
 
 Rollback checkpoint: `2b96f07`. Mixed catalog discovery and placement persistence,
-same-Channel parent constraints, and Core proxy routes are implemented but not
-deployed. Existing Canvas directories retain IDs. Browser remains legacy without
+same-Channel parent constraints, and Core proxy routes are implemented. Server
+0.1.1 is deployed with readiness verified; client promotion is still pending.
+Existing Canvas directories retain IDs. Browser remains legacy without
 changed semantics; new `colab-explorer open` discovers direct children and returns
-placement-independent consumer references. Catalog mutations, GUI integration,
-Agent documentation integration, and end-to-end/release acceptance remain pending.
+placement-independent consumer references. Catalog mutations, mixed-tree GUI and
+Agent documentation are implemented. The persistent Channel header (icon/name,
+double-click editing, member AvatarGroup, Quick Share) remains above the tree.
+Canvas deletion is retained in the detail actions. End-to-end GUI acceptance,
+affected regression navigation migration and client release acceptance remain pending.
 
 ### 2026-10-08 Messages welcome identity
 

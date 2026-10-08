@@ -3,10 +3,18 @@
 ### 2026-10-08 Catalog workspace — partial validation
 
 Four Explorer contract tests passed: encoded path segments, invalid paths, nested
-resolution/stable consumer identity, and direct-child pagination. Server Cargo
-check passed. These are not end-to-end evidence. Migration execution, permissions,
-concurrent cycle rejection, old-reference consumption, GUI flows and published
-artifact acceptance remain pending; no production migration or release occurred.
+resolution/stable consumer identity, and direct-child pagination. Server/Core Cargo
+checks and 100 GUI component tests passed. A real isolated PostgreSQL contract
+test passed for identity, same-Channel parents, cycles and non-empty deletion.
+Server 0.1.1 is deployed and ready. Candidate Core 95 / GUI 118 / Skill 55 are
+built, but stable client promotion has not occurred. The scoped Trace run
+`20261008T131448Z-574c9cdf` preserves preflight timeout and script-repair rounds.
+Real Explorer create/nest/share/move and old Session consumer references passed
+in a later round; GUI execution required correcting the case surface from
+integration to gui. This is not yet a green whole-case acceptance. Six focused
+workspace/Canvas component tests and production build passed after restoring
+Canvas delete actions and refreshing trails after placement changes. Channel
+header editing/member/Quick Share checks are explicitly included in the GUI case.
 
 ### 2026-10-08 Messages welcome identity
 

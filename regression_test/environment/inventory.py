@@ -8,7 +8,7 @@ def read_route(route):
     # excluding an entire selection; authorization and binding errors are never retried.
     for attempt in range(3):
         try:
-            return request('GET',route,timeout=4)
+            return request('GET',route,timeout=8)
         except Exception as error:
             if attempt==2 or not (re.search(r'HTTP (502|503|504)',str(error)) or isinstance(error,TimeoutError)):
                 raise

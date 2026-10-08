@@ -98,6 +98,12 @@ export function CatalogWorkspace({
   const [name, setName] = useState("");
   const [moving, setMoving] = useState(false);
   const [focusedTrail, setFocusedTrail] = useState<CatalogItem[]>([]);
+  const [trailRevision, setTrailRevision] = useState(0);
+  useEffect(() => {
+    const refresh = () => setTrailRevision(value => value + 1);
+    window.addEventListener("colab:catalog-changed", refresh);
+    return () => window.removeEventListener("colab:catalog-changed", refresh);
+  }, []);
   async function load(parent?: string) {
     const result: CatalogItem[] = [];
     let offset = 0;
@@ -134,7 +140,7 @@ export function CatalogWorkspace({
         }
       })
       .catch((reason) => setError(String(reason)));
-  }, [channelId, focus?.id, focus?.kind]);
+  }, [channelId, focus?.id, focus?.kind, trailRevision]);
   useEffect(() => {
     const listener = (event: Event) => {
       const detail = (

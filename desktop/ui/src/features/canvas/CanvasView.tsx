@@ -36,6 +36,7 @@ import {
 import { ContextIcon } from "@/features/context/ContextIcon";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { trackedFetch } from "@/api/request-activity";
 import { accountRealtime } from "@/api/realtime";
 import {
@@ -109,6 +110,8 @@ export function CanvasView({
 }: Props) {
   const context = useChannelContext();
   const [promptResources, setPromptResources] = useState<ContextResource[]>([]);
+  const [deleting, setDeleting] = useState<CanvasDocument>();
+  const [removing, setRemoving] = useState(false);
   const [items, setItems] = useState<CanvasDocument[]>([]),
     [folders, setFolders] = useState<CanvasFolder[]>([]),
     [selected, setSelected] = useState<string>(),
@@ -221,6 +224,7 @@ ${readInstructions(promptResources, agent)}`;
         onError={setError}
       />}
       <main className="min-w-0 flex-1">
+        {embedded && current && <WorkspaceActions><Button variant="ghost" size="sm" data-trace-target={traceTargets("canvas.remove")} onClick={() => setDeleting(current)}>Delete</Button></WorkspaceActions>}
         {current ? (
           <CanvasEditor
             embedded={embedded}
@@ -257,6 +261,18 @@ const canvasJson=operation.json;
           </div>
         )}
       </main>
+      <AlertDialog open={Boolean(deleting)} onOpenChange={open => { if (!open && !removing) setDeleting(undefined); }}>
+        <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Delete “{deleting?.title}”?</AlertDialogTitle><AlertDialogDescription>This removes the document from the Channel. The stored history is retained for recovery.</AlertDialogDescription></AlertDialogHeader>
+          <AlertDialogFooter><AlertDialogCancel disabled={removing}>Cancel</AlertDialogCancel><AlertDialogAction variant="destructive" disabled={removing} onClick={event => {
+            event.preventDefault(); if (!deleting) return; setRemoving(true);
+            void runOperation("canvas.remove", async operation => {
+              await operation.response(`/v1/canvases/${deleting.id}`, {method:"DELETE"});
+              setDeleting(undefined); await load(operation);
+              window.dispatchEvent(new Event("colab:catalog-changed"));
+            }).catch(reason => setError(String(reason))).finally(() => setRemoving(false));
+          }}>{removing ? "Deleting…" : "Delete document"}</AlertDialogAction></AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <AgentPromptDialog
         onForward={() => {
           const row = context?.resources.find(
