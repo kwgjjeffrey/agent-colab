@@ -15,7 +15,7 @@ Use explicit IDs for a smaller fix. `suite=business` selects ordinary behavior; 
 
 The scheduler overlaps only reviewed `parallelSafe` cases, at most two here. Existing GUI profile is an exclusive resource. Unreviewed/mutating cases remain exclusive; network, account and process controls never overlap shared readers. Do not infer independence from `effects=read-only`: cached Session offline reading now correctly declares an isolated write.
 
-Read fixtures are supplied by ignored `environment/environment.local.yaml` and resolved by `environment/adapter.mjs`. Do not run preparation on every test or replace valid resource bindings just to create a new Run. Prepare only a missing/stale fixture, then update its binding; creation/empty-state/withdrawal cases still own fresh targets. Read tests must not mutate or withdraw common fixtures.
+Read fixtures are supplied by ignored `environment/environment.local.yaml` and resolved by `environment/adapter.mjs`. Read scripts consume the bound Channel/Session/Skill IDs and expected contents. Preparation validates existing bindings and repairs missing/stale data, so ordinary readers naturally reuse prepared data. Scenarios needing fresh data prepare and bind their own targets; creation/empty-state/withdrawal cases retain that independent setup.
 
 
 The runner is the separately installed Trace skill (`~/.codex/skills/trace/SKILL.md`). This repository owns cases, environment bindings and evidence; it does not vendor the runner. Read [AGENTS.md](AGENTS.md) and [environment/README.md](environment/README.md) before choosing cases. Run from the repository root.
