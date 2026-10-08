@@ -20,7 +20,7 @@ export async function run(ctx){
  ctx.assert('Uploaded icon is stored',uploaded.find(x=>x.id===channel.id).icon.startsWith('data:image/png;'),true);
  await form.getByRole('button',{name:'Generate icon',exact:true}).click();await form.getByRole('button',{name:'Save changes',exact:true}).click();
  const generated=await eventually(ctx,'Generated icon saved as SVG image',()=>core(ctx,'GET','/v1/channels'),rows=>rows.find(x=>x.id===channel.id)?.icon?.startsWith('data:image/svg+xml;'));
- const source=generated.find(x=>x.id===channel.id).icon;ctx.assert('Header renders the persisted icon',await ctx.page.locator('img').evaluateAll((rows,src)=>rows.some(x=>x.getAttribute('src')===src),source),true);
+ const source=generated.find(x=>x.id===channel.id).icon;const headerImage=ctx.page.getByRole('heading',{name:channel.name,exact:true}).locator('..').locator('img');await eventually(ctx,'Header shows the persisted icon',()=>headerImage.getAttribute('src'),src=>src===source);ctx.assert('Header image decodes',await headerImage.evaluate(img=>img.complete&&img.naturalWidth>0),true);ctx.assert('Rail uses the persisted image',await ctx.page.getByRole('button',{name:channel.name,exact:true}).locator('img').getAttribute('src'),source);
  await ctx.screenshot('Image identity and generated icon');
- }finally{await core(ctx,'PATCH','/v1/channels/'+channel.id,{name:original.name,icon:original.icon});}
+ }finally{await core(ctx,'PATCH','/v1/channels/'+channel.id,{name:original.name,icon:original.icon});await eventually(ctx,'Original Channel identity restored',()=>core(ctx,'GET','/v1/channels'),rows=>rows.some(x=>x.id===channel.id&&x.name===original.name&&x.icon===original.icon));}
 }

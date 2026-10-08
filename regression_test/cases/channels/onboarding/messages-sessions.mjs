@@ -11,10 +11,12 @@ export async function run(ctx){
  let pushedOut=false;
  for(let turn=0;turn<16&&!pushedOut;turn++){
  const body='ONBOARDING_MESSAGE_'+ctx.runId+' turn '+turn+' '+('Owned discussion context. '.repeat(24));
+ await ctx.page.waitForFunction(()=>!document.querySelector('[contenteditable="true"]')?.textContent);
  const committed=ctx.page.waitForResponse(r=>r.request().method()==='POST'&&new URL(r.url()).pathname==='/v1/channels/'+channel.id+'/messages');
- await ctx.page.locator('[contenteditable="true"]').fill(body);await ctx.page.locator('[contenteditable="true"]').press('Enter');const response=await committed;ctx.assert('Composer commits conversation turn '+turn,response.ok(),true);const message=await response.json();
+ await ctx.page.locator('[contenteditable="true"]').fill(body);await ctx.page.getByRole('button',{name:'Send message',exact:true}).click();const response=await committed;ctx.assert('Composer commits conversation turn '+turn,response.ok(),true);const message=await response.json();ctx.assert('Conversation turn preserves its input',message.body,body.trim());
  await ctx.page.locator('#message-'+message.id).waitFor();
- const a=await guide.boundingBox();const b=await guide.locator('xpath=ancestor::div[contains(@class,"overflow-y-auto")]').boundingBox();pushedOut=a.y+a.height<=b.y;
+ await ctx.page.waitForFunction(()=>!document.querySelector('[contenteditable="true"]')?.textContent);
+ const a=await guide.locator('..').boundingBox();const b=await guide.locator('xpath=ancestor::div[contains(@class,"overflow-y-auto")]').boundingBox();pushedOut=a.y+a.height<=b.y;
  }
  ctx.assert('Growing conversation pushes guide above the visible stream',pushedOut,true);
  await ctx.screenshot('Messages guide naturally scrolled out');
@@ -27,5 +29,5 @@ export async function run(ctx){
  await ctx.page.getByRole('button',{name:'Copy prompt',exact:true}).click();await ctx.page.getByText('Review a decision or summarize progress',{exact:true}).waitFor({state:'hidden'});
  await ctx.page.reload();await ctx.page.getByRole('tab',{name:'Sessions',exact:true}).waitFor();ctx.assert('Delivered review guide remains hidden',await ctx.page.getByText('Review a decision or summarize progress',{exact:true}).count(),0);ctx.assert('Undone handoff guide remains',await ctx.page.getByText('Let another Agent pick up the work',{exact:true}).isVisible(),true);
  await ctx.screenshot('Session guide completion persisted');
- }finally{if(share)await core(ctx,'DELETE','/v1/sessions/'+share.id);for(const doc of await core(ctx,'GET','/v1/channels/'+channel.id+'/canvases'))await core(ctx,'DELETE','/v1/canvases/'+doc.id);}
+ }finally{if(share){await core(ctx,'DELETE','/v1/sessions/'+share.id);await eventually(ctx,'Owned Session withdrawn',()=>core(ctx,'GET','/v1/channels/'+channel.id+'/sessions'),rows=>!rows.some(x=>x.id===share.id));}for(const doc of await core(ctx,'GET','/v1/channels/'+channel.id+'/canvases'))await core(ctx,'DELETE','/v1/canvases/'+doc.id);ctx.assert('Owned welcome cleanup committed',(await core(ctx,'GET','/v1/channels/'+channel.id+'/canvases')).length,0);}
 }
