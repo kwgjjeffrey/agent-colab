@@ -18,3 +18,21 @@ environment:
   adapter: environment/adapter.mjs
   profiles:
     local: environment/environment.local.yaml
+
+# Reuse the project's registered operation roots and the installed Trace query layer.
+telemetry:
+  queryConfigParameter: traceQueryConfig
+  queryConfigEnvironment: TRACE_CONFIG
+  commandTraceparentEnvironment: COLAB_TRACEPARENT
+  commandPathPrefix: skills/colab/bin/
+  waitMs: 20000
+  # Source CLI tests consume the same packaged OTel dependencies as the installed Skill.
+  commandEnvironmentParameters:
+    PYTHONPATH: tracePythonDependencyPath
+  operationAttribute: colab.operation
+  phaseAttribute: colab.phase
+  outcomeAttribute: colab.outcome
+  originAttribute: colab.origin
+  originValues:
+    gui: gui
+    command: skill
