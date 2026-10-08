@@ -232,6 +232,6 @@ Updater state belongs to the backend operation, not the browser's button state. 
 Sessions 的 onboarding 仅用于空列表；已有任意 Session 时隐藏整块引导，让实际内容占据页面。Messages 的引导仍按既定规则位于消息流开始处，随对话增长自然滚出视口。
 # Compact Channel management
 
-Workspace tabs are ordered Home, Messages, Canvas, Sessions, Files, Skills. Subtle category backgrounds group Home (lime), collaboration (Messages/Canvas, blue), context (Sessions/Files, amber), capability (Skills, purple). Existing active underline and typography remain unchanged.
+Workspace tabs are ordered Home, Messages, Canvas, Sessions, Files, Skills. Each tab has its own rounded background with an equal gap from its neighbors. Category colors are Home (lime), collaboration (Messages/Canvas, blue), context (Sessions/Files, amber), capability (Skills, purple); same category never means a merged background. Existing active underline and typography remain unchanged.
 
 Channel identity is edited by double-clicking the Channel name (owner/admin only; keyboard focus + Enter is equivalent). No pencil icon occupies the header. A compact dialog contains only Name and Icon. The adjacent shadcn AvatarGroup opens a separate Members dialog with the existing invitation and membership actions. Channel management no longer occupies a Settings tab; account settings remain in the bottom-left global Settings entry.

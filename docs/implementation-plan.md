@@ -893,6 +893,8 @@ Complete and published as GUI `0.1.107-dev` / Skill `0.1.54-dev`, promotion `0.1
 Implemented Settings Members invitation entry, single-command prompt, signed bootstrap invitation argument, and thin join CLI using existing device authentication and invite acceptance. Existing Server 24-hour TTL/ordinary-member/revoke implementation is reused; Server and Shell are unchanged. Focused Python/GUI contract tests and UI build passed. Real distinct-member regression and publication acceptance are in progress; see validation plan for final evidence.
 # 2026-10-08 account and Channel settings
 
+Tab spacing correction: each tab owns an independent background, including same-category neighbors; all adjacent gaps are 8px. Order, colors and interaction remain unchanged.
+
 Reordered the existing six tabs and added semantic category-background tokens; no panels, routes or actions changed. GUI115/promotion167 only; latest unrelated committed GUI114 work retained.
 
 Header refinement: removed the pencil entry; owner/admin double-click the Channel name to open the unchanged identity dialog. Keyboard Enter on the focused title also opens it. Existing rename/workspace regression scripts now use double-click.
