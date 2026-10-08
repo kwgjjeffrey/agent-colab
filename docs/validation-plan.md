@@ -25,6 +25,23 @@ header's actual edit/member Dialogs plus Quick Share entrance. Screenshot was
 reviewed. Case-owned Session/Catalog cleanup passed. This does not qualify the
 remaining affected asset workflows or claim stable client publication.
 
+Stable promotion `0.1.170-dev` is now published through the canonical R2
+publisher. Full public size/SHA-256 verification passed for Core 95
+(`ba3103ac4def64b3af366d56df52f886de67c192e9939a7ea869f87c985691fe`,
+44896434 bytes), GUI 118
+(`f29026705bd5637a15f076739a13ae9daec8713f18da8d79f10af41a237c7283`,
+1735254 bytes), and Skill 55
+(`f3fde2b2aabcf9bed7a2380b35c67bc7791d960e5e145f2f91acdb736d5b60a9`,
+1725279 bytes). Electron remains 23. Updated the installed macOS application
+through Settings → Check updates → Update, not by replacing its files manually.
+Installation receipt reports promotion 170 and all intended component versions;
+the active GUI `/ui.json` reports 118 and Core's active directory resolves to 95.
+Native acceptance confirms the app reloads into Add/Message/mixed-tree navigation,
+retains Channel name/member/Quick Share and title bar, and Add displays the real
+Catalog/Canvas/Session/Files/Skill creation entrances plus use cases/activity.
+Packaged Skill Explorer discovery also returned successfully. Broader existing
+navigation-case migration/tracing impact audit remains open, not silently green.
+
 ### 2026-10-08 Messages welcome identity
 
 Messages onboarding now appears as an Agent Colab welcome message with the official website SVG avatar and author label, aligned with message rows. GUI 0.1.117-dev / promotion 0.1.169-dev published and normally installed; actual /ui.json verified 117. Production TypeScript/build passed. Public readback verified 918576 bytes / SHA-256 `51a0f75e080b6248d13b1f52176cb2da362fa28f1bc3bf2c2e1f00925af6701a`. Native Messages screenshot confirms the official avatar and author label. End-to-end Round `20261008T093357Z-d573f343` passed 33 assertions, including visible avatar, the entire welcome row scrolling away, populated Sessions hiding guides and owned cleanup.

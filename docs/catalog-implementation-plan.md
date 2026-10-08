@@ -7,16 +7,18 @@ Rollback baseline: `2b96f07`. Work in the primary checkout; preserve old referen
 1. **Implemented; PostgreSQL contract verified — shared catalog domain.** Reuse existing Canvas directories as
    mixed catalogs without changing IDs. Root assets retain their existing state.
    Enforce same-Channel parents, cycle rejection and non-destructive deletion.
-2. **Implemented; end-to-end pending — Agent interface.** Legacy Browser remains unchanged. Explorer
+2. **Implemented; scoped end-to-end passed — Agent interface.** Legacy Browser remains unchanged. Explorer
    lists direct children with bounded pagination, resolves paths and manages
    catalogs/placement. Return stable consumer references independently of paths.
-3. **Implemented; visual/end-to-end pending — GUI workspace.** Replace tabs with Add, Message and mixed tree.
+3. **Implemented; scoped GUI acceptance passed — GUI workspace.** Replace tabs with Add, Message and mixed tree.
    Add retains Home use cases/activity plus actual creation/share controls.
    Reuse existing asset consumers and editor; name/trail left, actions right.
 4. **Pending — impact/acceptance.** Update affected navigation helpers and cases;
    test persistence, authorization, cycle/deletion, legacy consumption and GUI
    workflows. Apply efficient tracing updates inline; broad registry audit later.
-5. **Documentation updated; release pending.** Update AGENTS.md, product/interaction/
+5. **Published; macOS installation and native acceptance passed.** Stable promotion 0.1.170-dev
+   contains Core 95, GUI 118 and Skill 55; Electron remains 23. All changed
+   artifacts passed public size/hash readback. Update AGENTS.md, product/interaction/
    technical/Agent interface, installed Skill instructions and live results.
    Commit, build only changed independent units, deploy/publish and verify actual
    installed clients. No completion claim based on compilation alone.
