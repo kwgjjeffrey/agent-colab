@@ -1,5 +1,9 @@
 # 技术验证计划
 
+### 2026-10-08 Messages welcome identity
+
+Messages onboarding now appears as an Agent Colab welcome message with the official website SVG avatar and author label, aligned with message rows. GUI 117 / promotion 169; verification pending.
+
 ### 2026-10-08 Give to Agent query surface
 
 Shared handoff dialog now uses a 12px label/input gap, muted filled textarea and a subtle single focus border without the heavy outer ring. GUI 0.1.114-dev / promotion 0.1.166-dev published and normally installed; actual /ui.json verified 114. TypeScript and production build passed. Public readback verified 918053 bytes / SHA-256 `0568ef2a849a57d83bf77c4bac16b3283fdcebe401a02ce3309f13e57292355d`. Native acceptance of the same Files dialog confirms the larger label gap, filled input and subtle focused border. Trace Round `20261008T091918Z-d5e5cd42` passed both Files/Session handoff cases and all 11 assertions. No frontend unit suite was run for this presentation change.

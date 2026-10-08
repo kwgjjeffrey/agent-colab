@@ -31,6 +31,7 @@ export async function run(ctx){
  try{
  await ctx.page.reload();await ctx.page.getByRole('button',{name:channel.name,exact:true}).click();await ctx.page.getByRole('tab',{name:'Messages',exact:true}).click();
  const guide=ctx.page.getByRole('heading',{name:'Work together with your Agents',exact:true});await guide.waitFor();
+ const avatar=ctx.page.getByRole('img',{name:'Agent Colab',exact:true});ctx.assert('Welcome message has the official Colab avatar',await avatar.isVisible(),true);await ctx.screenshot('Messages welcome avatar');
  await ctx.page.getByRole('button',{name:'Add my Agent',exact:true}).click();await ctx.page.getByRole('dialog',{name:'Agents',exact:true}).waitFor();await ctx.page.keyboard.press('Escape');
  let pushedOut=false;
  for(let turn=0;turn<16&&!pushedOut;turn++){
@@ -40,7 +41,7 @@ export async function run(ctx){
  await ctx.page.locator('[contenteditable="true"]').fill(body);await ctx.page.getByRole('button',{name:'Send message',exact:true}).click();const response=await committed;ctx.assert('Composer commits conversation turn '+turn,response.ok(),true);const message=await response.json();ctx.assert('Conversation turn preserves its input',message.body,body.trim());
  await ctx.page.locator('#message-'+message.id).waitFor();
  await ctx.page.waitForFunction(()=>!document.querySelector('[contenteditable="true"]')?.textContent);
- const a=await guide.locator('..').boundingBox();const b=await guide.locator('xpath=ancestor::div[contains(@class,"overflow-y-auto")]').boundingBox();pushedOut=a.y+a.height<=b.y;
+ const a=await guide.locator('../..').boundingBox();const b=await guide.locator('xpath=ancestor::div[contains(@class,"overflow-y-auto")]').boundingBox();pushedOut=a.y+a.height<=b.y;
  }
  ctx.assert('Growing conversation pushes guide above the visible stream',pushedOut,true);
  await ctx.screenshot('Messages guide naturally scrolled out');

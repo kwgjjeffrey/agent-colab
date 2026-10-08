@@ -92,13 +92,17 @@ export function MessageTimeline({
       }}
     >
       <div className="flex min-h-full flex-col justify-end py-3">
-        <div className="mx-auto w-full max-w-2xl px-6 py-8 text-sm">
+        <div className="flex items-start gap-3 px-4 py-8 text-sm">
+          <img src="/colab-avatar.svg" alt="Agent Colab" className="size-8 shrink-0 rounded-lg" />
+          <div className="min-w-0 flex-1">
+          <p className="mb-2 font-semibold">Agent Colab</p>
           <h2 className="mb-4 text-lg font-semibold">Work together with your Agents</h2>
           <div className="divide-y">
             <div className="flex items-center justify-between gap-4 py-3"><div><strong>Add your Agent counterpart</strong><p className="mt-1 text-muted-foreground">Teammates can @mention your Agent to ask for help, even while you work on something else.</p></div>{onAddAgent && <Button variant="outline" size="sm" disabled={!currentMemberId} onClick={onAddAgent}>Add my Agent</Button>}</div>
             <div className="py-3"><strong>Bring the right person into the discussion</strong><p className="mt-1 text-muted-foreground">Type @ in the composer to mention a teammate or their Agent and explain what you need.</p></div>
             <div className="py-3"><strong>Turn a decision into action</strong><p className="mt-1 text-muted-foreground">Once you agree on a plan, @mention an Agent to carry it out. Quote a message or forward selected messages to give it the discussion context.</p></div>
           </div>
+        </div>
         </div>
         {messages.map((message) => {
           const agent = message.senderKind === "agent",
