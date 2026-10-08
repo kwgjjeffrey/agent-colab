@@ -7,3 +7,5 @@ Each .mjs case exports literal USECASE {name,description} and META. Start from c
 For systematic discovery, follow GUI/command entries through their business outcomes, write cases and Module paths as you read, then consolidate the hierarchy. Re-read only unresolved behavior. Describe purpose, preconditions, actions and observable expected results. Distinguish implemented contracts from roadmap proposals.
 
 Use the installed Trace skill's regression_test/cases/SKILL.md to author cases, execution/SKILL.md to implement scripts and record_store/SKILL.md to analyze results. Preview plan before run. Use real isolated fixtures for writes; metadata never creates isolation or authorization. Keep credentials outside tracked files. Do not add arbitrary latency thresholds without a baseline.
+
+Routine changes start with README.md and filtered cases --modules/--meta; do not dump the whole catalog. Reuse bound read fixtures. Use --concurrency 2 only with reviewed parallelSafe cases; unannotated cases remain exclusive. A transport-offline case changes shared state even when its business action is a read.

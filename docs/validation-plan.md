@@ -1,5 +1,13 @@
 # 技术验证计划
 
+### 2026-10-08 regression workflow efficiency
+
+Audited the Agent Colab routine-optimization trajectory: the 34.4-minute release turn included build/deploy/publication/installation; its first nine-case regression took 147.6 seconds. Repeated script repairs (invalid PNG, composer completion/whitespace, hover controls, guide container bounds) accounted for much of regression rework. No evidence supported deleting those relevant cases as unnecessary corner cases.
+
+Root AGENTS now routes to the project quickstart before regression. Filtered discovery, selected-only plans, scoped repair rounds, business/release suite selection and reusable environment read fixtures are documented. Eight inspected readers opt into the separately installed skill's bounded concurrency; common GUI profile remains exclusive. Session offline reading is correctly classified isolated-write; unreviewed and state-changing tests stay exclusive. Environment resolution skips unrelated Agent probes when selected cases do not request them.
+
+Verified real read fixtures, without creating Channels: Run 20261008T024734Z-22e0d43a (concurrency 2) passed all five selected cases in 12.48 s; sequential comparison 20261008T024811Z-ea790861 passed the same five in 17.21 s. Timings are illustrative local measurements, not a performance SLO or full-suite acceptance. The Trace source passed 48 contract tests, typecheck and UI build; its managed local installation was updated. Existing historical results are preserved.
+
 ### 2026-10-08 full-width Messages composer surface
 
 Moved the muted background to the entire bottom composer, including Send and reply context; removed the nested input border/rounding. Placeholder retained. GUI-only 0.1.105-dev / promotion 0.1.157-dev. TypeScript / production build passed. Published and normally installed; actual GUI metadata matches 105. Native screenshot confirms continuous gray background across the whole composer, including Send, with no nested input card and the placeholder retained. Public readback verified 914181 bytes / SHA-256 `cc741b94fab811a54426c93806387bfac086899620b3b366b27fdd37a20f1e0a`. This two-class presentation adjustment has native visual acceptance; message behavior is unchanged from the separately recorded GUI 104 passing regression.
@@ -317,7 +325,7 @@ Server 0.1.127-dev 已部署，公网 ready=ok；recent/quoted 消息标题与�
 
 - [x] `skills/trace` 新通用 Skill：任务指令与开发 AGENTS.md 分离；init/generate/check/operations/locate/source/executions/performance/trace/app/mcp 脚手架。init 可植入注册目录、OTel JS adapter、校准 adapter 与配置示例。安装副本在 ~/.codex/skills/trace，Codex stdio MCP trace 已注册。
 - [x] `tracing/registry.yaml` 四入口为唯一维护源，包含 description、entry、completion、owner、source；生成 GUI TS 与 Skill JSON snapshots，digest stale 检查覆盖各目标。移除旧手工 operations.json 与 trial entries.json；trial 清单动态派生。
-- [x] GUI messages.send 与控件绑定消费生成定义；Skill browser.open 消费 snapshot source/description 对应定义。trace.entry.id 经批准的 baggage 跨 Rust Core/Server HTTP 边界传播，传输 span 记录代码路径；intake 白名单保留新增字段。代码通过 GUI 47 tests/build、Skill 29 tests、Rust observability tests/check。
+- [x] GUI messages.send 与控件绑定消费生成定义；Skill browser.open 消费 snapshot source/description 对应定义。trace.entry.id 经批准的 baggage 跨 Rust Core/Server HTTP 边界传播，传输 span 记录代码路径；intake 白名单保留新增字段。代码通过 GUI 48 tests/build、Skill 29 tests、Rust observability tests/check。
 - [x] CLI 与 MCP 使用同一 dispatch；真实 stdio Client 验证 catalog 相同、MCP App HTML resource/mime/meta 有效；通用模块 3 tests（含 clock 过期/非对称样本与 registry 漂移/路径约束）。Skill validator 通过。
 - [x] Browser fallback http://127.0.0.1:53481 展示同源清单。查询生产 browser.open `1bf8cec6f3f3fbc46a4a35ff743c0fa5` 并展开 7 spans / 3 services，Grafana 深链接已生成；从清单定位试验 GUI Files 并高亮真实 Share files 成功。
 - [ ] MCP host 内实际 iframe 渲染尚未验证（本轮用协议测试与普通浏览器 fallback）；GUI locator 仍是 .trial adapter；查询是独立本地工具读取私有 Grafana 配置，尚未实现 Colab Core→Server 查询代理。
@@ -557,3 +565,5 @@ Core 0.1.93-dev fixes direct Skill consumption's missing discovery metadata and 
 Manual Retry script now acquires its control before reconnect/automatic retry. Skill withdrawal uses a unique round-owned source name and failure cleanup. Retry and Quick Share scripts are qualified active after reviewed real execution. Continuous Files publication passed on the current resident runtime; its old timeout did not reproduce and no watcher product change is claimed.
 
 Validation: Core library tests 27 passed / 1 opt-in ignored; GUI TypeScript/build passed; Skill Tool tests 2 passed; installer unhealthy-candidate probe rejected; the six scoped cases passed. Local artifacts activated for daily/owned clients; no public release channel promoted.
+
+Planning now deduplicates identical read-only preflight requirements within its snapshot and caps distinct probes at four; execution deliberately rechecks each case. Contract validation covers both behaviors.

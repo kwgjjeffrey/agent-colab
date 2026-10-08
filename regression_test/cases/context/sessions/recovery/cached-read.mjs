@@ -10,7 +10,7 @@ export const META = {
   "priority": "normal",
   "origin": "requirement",
   "status": "active",
-  "effects": "read-only",
+  "effects": "isolated-write",
   "cost": "normal",
   "requires": [],
   "affectedPaths": [

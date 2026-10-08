@@ -11,6 +11,8 @@ export const META = {
   "origin": "requirement",
   "status": "active",
   "effects": "read-only",
+  "parallelSafe": true,
+  "locks": [],
   "cost": "normal",
   "requires": [
     "local-core"

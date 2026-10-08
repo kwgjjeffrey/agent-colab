@@ -1,5 +1,23 @@
 # Run Colab end-to-end regression
 
+## Routine changes: start here
+
+Read only the affected cases; reuse the already bound Channel, Session and Skill fixtures. From the repository root:
+
+```sh
+sh ~/.codex/skills/trace/setup/run.sh regression_test/cli.mjs cases --modules messages/timeline
+sh ~/.codex/skills/trace/setup/run.sh regression_test/cli.mjs plan --environment local --modules messages/timeline --selectedOnly true --concurrency 2
+sh ~/.codex/skills/trace/setup/run.sh regression_test/cli.mjs run --environment local --modules messages/timeline --selectedOnly true --concurrency 2
+sh ~/.codex/skills/trace/setup/run.sh regression_test/cli.mjs record --id RUN_ID --latest --problems
+```
+
+Use explicit IDs for a smaller fix. `suite=business` selects ordinary behavior; `suite=release` is installation/update/login acceptance, run when those boundaries change. `testLevel=contract` avoids unnecessary browser journeys for protocol/security contracts; it does not make them disposable. Keep critical authorization/security cases when their implementation changes. Repair a failed script or feature with `--runId RUN_ID` and only affected IDs, rather than rerunning green unrelated cases.
+
+The scheduler overlaps only reviewed `parallelSafe` cases, at most two here. Existing GUI profile is an exclusive resource. Unreviewed/mutating cases remain exclusive; network, account and process controls never overlap shared readers. Do not infer independence from `effects=read-only`: cached Session offline reading now correctly declares an isolated write.
+
+Read fixtures are supplied by ignored `environment/environment.local.yaml` and resolved by `environment/adapter.mjs`. Do not run preparation on every test or replace valid resource bindings just to create a new Run. Prepare only a missing/stale fixture, then update its binding; creation/empty-state/withdrawal cases still own fresh targets. Read tests must not mutate or withdraw common fixtures.
+
+
 The runner is the separately installed Trace skill (`~/.codex/skills/trace/SKILL.md`). This repository owns cases, environment bindings and evidence; it does not vendor the runner. Read [AGENTS.md](AGENTS.md) and [environment/README.md](environment/README.md) before choosing cases. Run from the repository root.
 
 ```sh

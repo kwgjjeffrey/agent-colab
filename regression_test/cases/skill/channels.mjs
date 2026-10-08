@@ -20,6 +20,8 @@ export const META={
     "skills/colab"
   ],
   "effects": "read-only",
+  "parallelSafe": true,
+  "locks": [],
   "cost": "fast",
   "statusReason": "Round 7 20261007T121017Z-7da12c1e: real CLI output uses public Channel ref/name contract, verified bound Channel and successful exit."
 };

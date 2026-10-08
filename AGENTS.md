@@ -20,12 +20,14 @@ Do not add placeholder UI actions or fake success states. A visible action must 
 
 Large modules must be split by owned capability. Comments should explain invariants, security boundaries, recovery behavior, and non-obvious protocol decisions; do not narrate straightforward syntax.
 
+For end-to-end validation, start at regression_test/README.md (concrete commands, scope selection and fixture reuse), then regression_test/AGENTS.md. Choose cases for the changed capability; installation/login belong to release acceptance.
+
 Engineering tracing uses the separate Trace skill, not the Agent Colab Skill. This repository owns operation registries and project adapters; generic tooling stays in the separately installed skill. Follow the managed dependency instructions below.
 
 <!-- trace-skill:start -->
-## Trace skill dependency
+## Agent Dev Suite dependency
 
-This project uses the separately installed Trace skill for instrumentation, trace analysis and regression tests. It is not vendored or Git-tracked here.
+This project uses the separately installed Agent Dev Suite for instrumentation, trace analysis and regression tests. It is not vendored or Git-tracked here.
 
 If unavailable, install the whole skill:
 
@@ -35,5 +37,5 @@ curl -fsSL https://raw.githubusercontent.com/kwgjjeffrey/trace/main/setup/instal
 
 The installer verifies the release and prepares private runtime dependencies. Default installation: ~/.codex/skills/trace; set TRACE_INSTALL_DIR for another agent host. Read the installed SKILL.md, then load only instrumentation/, analysis/ or regression_test/ instructions needed for the task. Use setup/run.sh when Node is not on PATH.
 
-Project registries, adapters and cases stay in this repository; tokens and personal destinations stay in ignored or external private configuration. No configured destination means tracing stays disabled. Discover the project's actual registry paths; do not assume the skill installation owns project data.
+Project registries, adapters and cases stay in this repository; tokens and personal destinations stay in ignored or external private configuration. No configured destination means tracing stays disabled. Before regression work, read the project regression instructions at regression_test/AGENTS.md and README.md if present. Start with filtered cases and plan for the changed capability; do not dump the full catalog or run every case for a small change. Discover the project's actual registry paths; do not assume the skill installation owns project data.
 <!-- trace-skill:end -->

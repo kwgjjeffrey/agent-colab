@@ -20,6 +20,8 @@ export const META={
     "desktop/ui"
   ],
   "effects": "read-only",
+  "parallelSafe": true,
+  "locks": [],
   "cost": "normal",
   "statusReason": "Reviewed real actions, exact observed assertions and resource cleanup in Round 6 (20261007T115742Z-bfdf7648); corrected behavior verified."
 };
