@@ -326,8 +326,8 @@ export function CatalogWorkspace({
       </aside>
       <section className="flex min-h-0 min-w-0 flex-1 flex-col">
         {selected && (
-          <div className="flex shrink-0 items-center justify-between gap-3 border-b px-6 py-3">
-            <div className="min-w-0 flex-1 overflow-hidden">
+          <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b px-6 py-3">
+            <div className="min-w-0 flex-1 basis-full overflow-hidden md:basis-0">
               <Breadcrumb>
                 <BreadcrumbList className="flex-nowrap whitespace-nowrap">
                   <BreadcrumbItem>

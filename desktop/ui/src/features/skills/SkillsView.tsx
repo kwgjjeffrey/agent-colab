@@ -212,7 +212,7 @@ const trackedFetch = operation.fetch;
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-5 px-4 py-6">
       {!focusId && <div className="flex justify-end"><Button data-trace-target={traceTargets("skills.share", "skills.sources")} onClick={() => setShowShare(true)}><PlusIcon />Share skill</Button></div>}
-      {shares.length === 0 ? (
+      {shares.length === 0 && focusId ? <p className="text-sm text-muted-foreground">Loading Skill preview…</p> : shares.length === 0 ? (
         <Empty><EmptyHeader><EmptyTitle>No shared skills yet</EmptyTitle><EmptyDescription>Share a recently changed Agent Skill or choose its source folder.</EmptyDescription></EmptyHeader></Empty>
       ) : (
         <div className="flex flex-col gap-4">
