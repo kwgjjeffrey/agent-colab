@@ -230,3 +230,6 @@ Canvas uses a centered document column with symmetric horizontal gutters. It has
 Updater state belongs to the backend operation, not the browser's button state. Settings opening and focus restore the active operation; a collapsed Updates section still shows progress and disables competing actions. Repeated update requests attach to the existing operation. Mac OS-lock ownership determines running; a stale transfer without a lock is interrupted, and an activated Core different from the resident executable offers Restart. A terminal download record alone does not mean installation has ended.
 
 Sessions 的 onboarding 仅用于空列表；已有任意 Session 时隐藏整块引导，让实际内容占据页面。Messages 的引导仍按既定规则位于消息流开始处，随对话增长自然滚出视口。
+# Compact Channel management
+
+Channel identity is edited from a hover/focus-visible pencil beside the Channel name. A compact dialog contains only Name and Icon. The adjacent shadcn AvatarGroup opens a separate Members dialog with the existing invitation and membership actions. Channel management no longer occupies a Settings tab; account settings remain in the bottom-left global Settings entry.

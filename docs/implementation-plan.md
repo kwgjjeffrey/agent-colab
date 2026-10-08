@@ -887,3 +887,6 @@ Run 20261008T072409Z-72bdda43, final Round 20261008T072817Z-90bc1801: GUI naviga
 Complete and published as GUI `0.1.107-dev` / Skill `0.1.54-dev`, promotion `0.1.159-dev`. Public invitation bootstrap, fresh device registration/join, installed native invitation Dialog/revoke, and reviewed distinct-member Trace regression passed. Detailed boundaries and release evidence are in validation-plan.md.
 
 Implemented Settings Members invitation entry, single-command prompt, signed bootstrap invitation argument, and thin join CLI using existing device authentication and invite acceptance. Existing Server 24-hour TTL/ordinary-member/revoke implementation is reused; Server and Shell are unchanged. Focused Python/GUI contract tests and UI build passed. Real distinct-member regression and publication acceptance are in progress; see validation plan for final evidence.
+# 2026-10-08 account and Channel settings
+
+Implemented global account display-name editing and Google linking for existing and device-created accounts. Device registration retains a visible placeholder name; `nameCustomized` records explicit confirmation independently, so the setup Badge is not suppressed by the placeholder. No mandatory name gate was added. Channel identity and members now use independent header-triggered dialogs, reusing shadcn AvatarGroup and existing authorized mutations.
