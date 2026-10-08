@@ -1,5 +1,14 @@
 # Colab 实现计划
 
+### 2026-10-09 Asset detail navigation repair
+
+Removed the legacy full-window Files overlay, kept the preview inside the detail
+panel, added a shared parent-Catalog/root-Add return entrance and repaired late
+Files focus loading. GUI-only 119 / promotion 171 is published and normally
+installed. Four detail types pass real scoped return acceptance; native Doc1.docx
+return/reopen and direct Message navigation passed. The earlier Catalog acceptance
+did not cover this flow and must not be represented as comprehensive acceptance.
+
 ### 2026-10-08 Catalog workspace — in progress
 
 Rollback checkpoint: `2b96f07`. Mixed catalog discovery and placement persistence,

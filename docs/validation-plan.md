@@ -11,8 +11,11 @@ and Files/Session/Skill/Canvas each return to usable Add. This addresses the
 regression missed by the original Catalog create/rename case. GUI-only promotion
 171 is published with full public verification: 1735541 bytes, SHA-256
 `ed7f09eaf317199c6360c6d592c014a9344c2344183e984d7d4c98f537d3f429`.
-Core 95 / Skill 55 / Electron 23 remain unchanged. Native installation acceptance
-is in progress, not yet claimed by these automated results.
+Core 95 / Skill 55 / Electron 23 remain unchanged. Normal App update installed
+promotion 171; active `/ui.json` reports GUI 119. Native acceptance on the user's
+existing second Channel proves Doc1.docx detail → Back → Add → same detail,
+then direct Message selection from that preview. The directory and Channel
+header remain reachable. No asset was modified or withdrawn.
 
 ### 2026-10-08 Catalog workspace — partial validation
 
