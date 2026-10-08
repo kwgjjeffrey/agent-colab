@@ -522,6 +522,7 @@ const messageRequest = operation.message;
     <div className="grid h-full min-h-0 grid-cols-[minmax(0,1fr)_20rem] overflow-hidden">
       <section data-trace-target={traceTargets("messages.list", "messages.focus")} className="flex min-h-0 min-w-0 flex-col">
         <MessageTimeline
+          onAddAgent={() => { if (me) void openManager("channel").catch(reason => onError(String(reason))); }}
           focusId={focusId}
           channelId={channelId}
           messages={messages}

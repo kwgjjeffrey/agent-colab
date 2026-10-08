@@ -270,3 +270,52 @@ impl Database {
         Ok(Some(row))
     }
 }
+
+// Seed once in the Channel transaction, including device-created personal Channels.
+// Archived/deleted welcome documents are never re-created by reads or reconnects.
+pub(crate) async fn seed_welcome_canvas(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>, channel: Uuid, member: Uuid,
+) -> anyhow::Result<()> {
+    let id = Uuid::new_v4();
+    let update = include_bytes!("../assets/welcome-canvas.yjs");
+    sqlx::query("insert into canvases(id,channel_id,title,created_by_member_id) values($1,$2,'Welcome to Canvas',$3)")
+        .bind(id).bind(channel).bind(member).execute(&mut **tx).await?;
+    sqlx::query("insert into canvas_updates(canvas_id,server_seq,client_update_id,actor_member_id,update_bytes,byte_size) values($1,1,$2,$3,$4,$5)")
+        .bind(id).bind(Uuid::new_v4()).bind(member).bind(update.as_slice()).bind(update.len() as i32).execute(&mut **tx).await?;
+    Ok(())
+}
+
+#[cfg(test)]
+mod welcome_tests {
+    use super::*;
+    #[tokio::test]
+    #[ignore = "requires isolated COLAB_CANVAS_TEST_DATABASE_URL"]
+    async fn welcome_canvas_is_durable_authorized_and_stays_deleted() {
+        let url = std::env::var("COLAB_CANVAS_TEST_DATABASE_URL").unwrap();
+        assert!(url.contains("127.0.0.1") && url.contains("test"));
+        let db = Database::connect(&url, 3).await.unwrap();
+        let user = Uuid::new_v4();
+        let outsider = Uuid::new_v4();
+        for id in [user, outsider] {
+            sqlx::query("insert into users(id,email,display_name) values($1,$2,'Welcome test')")
+                .bind(id).bind(format!("{id}@example.test")).execute(&db.pool).await.unwrap();
+        }
+        let org = db.create_organization(user, "Welcome test").await.unwrap();
+        let channel = db.create_channel(user, org.id, "Welcome test", None).await.unwrap();
+        let documents = db.list_canvases(user, channel.id).await.unwrap().unwrap();
+        assert_eq!(documents.len(), 1);
+        let document = &documents[0];
+        assert_eq!(document.title, "Welcome to Canvas");
+        assert_eq!(document.last_server_seq, 1);
+        assert_eq!(document.created_by_member_id, org.member_id);
+        assert!(db.list_canvases(outsider, channel.id).await.unwrap().is_none());
+        let updates = db.canvas_updates_after(user, document.id, 0, 100).await.unwrap().unwrap();
+        assert_eq!(updates.len(), 1);
+        assert_eq!(updates[0].update_bytes, include_bytes!("../assets/welcome-canvas.yjs"));
+        assert!(db.archive_canvas(user, document.id).await.unwrap());
+        assert!(db.list_canvases(user, channel.id).await.unwrap().unwrap().is_empty());
+        drop(db);
+        let reopened = Database::connect(&url, 3).await.unwrap();
+        assert!(reopened.list_canvases(user, channel.id).await.unwrap().unwrap().is_empty());
+    }
+}

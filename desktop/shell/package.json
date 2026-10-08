@@ -1,6 +1,6 @@
 {
   "name": "@colab/electron-shell",
-  "version": "0.1.22-dev",
+  "version": "0.1.23-dev",
   "license": "Apache-2.0",
   "private": true,
   "main": "electron/main.cjs",

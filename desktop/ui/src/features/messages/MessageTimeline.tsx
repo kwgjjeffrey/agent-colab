@@ -32,7 +32,9 @@ export function MessageTimeline({
   onForward,
   onCopy,
   onStartSelection,
+  onAddAgent,
 }: {
+  onAddAgent?: () => void;
   focusId?: string;
   channelId: string;
   messages: ChannelMessage[];
@@ -50,7 +52,8 @@ export function MessageTimeline({
   onStartSelection: (message: ChannelMessage) => void;
 }) {
   const viewport = useRef<HTMLDivElement>(null),
-    restored = useRef(false);
+    restored = useRef(false),
+    atBottom = useRef(true);
   useLayoutEffect(() => {
     const element = viewport.current;
     if (!element || restored.current) return;
@@ -58,37 +61,45 @@ export function MessageTimeline({
       `agent-colab:messages-scroll:${channelId}`,
     );
     element.scrollTop = saved === null ? element.scrollHeight : Number(saved);
+    atBottom.current = element.scrollHeight - element.scrollTop - element.clientHeight < 48;
     restored.current = true;
   }, [channelId, messages.length]);
   useLayoutEffect(() => {
     restored.current = false;
   }, [channelId]);
   useLayoutEffect(() => {
+    if (viewport.current && atBottom.current && !focusId) viewport.current.scrollTop = viewport.current.scrollHeight;
+  }, [messages.length, focusId]);
+  useLayoutEffect(() => {
     if (focusId)
       document
         .getElementById(`message-${focusId}`)
         ?.scrollIntoView({ block: "center" });
   }, [focusId, messages]);
-  if (!messages.length)
-    return (
-      <div className="grid h-full place-items-center text-sm text-muted-foreground">
-        No messages yet. Start the conversation.
-      </div>
-    );
   const owners = new Map(agents.map((agent) => [agent.name, agent.ownerName])),
     messageById = new Map(messages.map((message) => [message.id, message]));
   return (
     <div
       ref={viewport}
       className="min-h-0 flex-1 overflow-y-auto"
-      onScroll={(event) =>
+      onScroll={(event) => {
+        const element = event.currentTarget;
+        atBottom.current = element.scrollHeight - element.scrollTop - element.clientHeight < 48;
         sessionStorage.setItem(
           `agent-colab:messages-scroll:${channelId}`,
           String(event.currentTarget.scrollTop),
-        )
-      }
+        );
+      }}
     >
-      <div className="flex flex-col py-3">
+      <div className="flex min-h-full flex-col justify-end py-3">
+        <div className="mx-auto w-full max-w-2xl px-6 py-8 text-sm">
+          <h2 className="mb-4 text-lg font-semibold">Work together with your Agents</h2>
+          <div className="divide-y">
+            <div className="flex items-center justify-between gap-4 py-3"><div><strong>Add your Agent counterpart</strong><p className="mt-1 text-muted-foreground">Teammates can @mention your Agent to ask for help, even while you work on something else.</p></div>{onAddAgent && <Button variant="outline" size="sm" onClick={onAddAgent}>Add my Agent</Button>}</div>
+            <div className="py-3"><strong>Bring the right person into the discussion</strong><p className="mt-1 text-muted-foreground">Type @ in the composer to mention a teammate or their Agent and explain what you need.</p></div>
+            <div className="py-3"><strong>Turn a decision into action</strong><p className="mt-1 text-muted-foreground">Once you agree on a plan, @mention an Agent to carry it out. Quote a message or forward selected messages to give it the discussion context.</p></div>
+          </div>
+        </div>
         {messages.map((message) => {
           const agent = message.senderKind === "agent",
             mine = !agent && message.senderName === currentUserName,

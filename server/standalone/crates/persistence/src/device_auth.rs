@@ -76,6 +76,12 @@ mod tests {
             "replayed proof"
         );
         let user = accounts[0].id;
+        let channels = db.list_channels(user, user).await.unwrap().unwrap();
+        assert_eq!(channels.len(), 1);
+        let documents = db.list_canvases(user, channels[0].id).await.unwrap().unwrap();
+        assert_eq!(documents.len(), 1);
+        assert_eq!(documents[0].title, "Welcome to Canvas");
+        assert_eq!(documents[0].last_server_seq, 1);
         let concurrent = Ed25519KeyPair::from_pkcs8(
             Ed25519KeyPair::generate_pkcs8(&SystemRandom::new())
                 .unwrap()
@@ -392,6 +398,7 @@ impl Database {
             sqlx::query("insert into organization_members(id,organization_id,user_id,role) values($1,$2,$2,'owner')").bind(member_id).bind(user_id).execute(&mut *tx).await?;
             sqlx::query("insert into channels(id,organization_id,name,created_by_member_id) values($1,$2,'My workspace',$3)").bind(channel_id).bind(user_id).bind(member_id).execute(&mut *tx).await?;
             sqlx::query("insert into channel_members(channel_id,organization_id,organization_member_id,role) values($1,$2,$3,'owner')").bind(channel_id).bind(user_id).bind(member_id).execute(&mut *tx).await?;
+            super::canvas::seed_welcome_canvas(&mut tx, channel_id, member_id).await?;
             sqlx::query("insert into account_devices(user_id,device_id) values($1,$2)")
                 .bind(user_id)
                 .bind(device_id)

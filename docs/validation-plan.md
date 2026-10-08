@@ -1,5 +1,15 @@
 # 技术验证计划
 
+### 2026-10-08 workspace continuity and feature onboarding
+
+Installed root-cause evidence: current GUI ui.json reports 0.1.101-dev while its actual assets/index JS contains 0.1.100-dev, so the old package-version focus comparison reloads on every return. New build embeds the owning GUI VERSION directly.
+
+Verified: 93 frontend tests across 35 files, including navigation restoration, focus reload suppression/single-flight, Messages guidance within the same scrolling stream, and Session guidance completion only after actual clipboard delivery. GUI TypeScript/Vite production build passed. Electron window lifecycle test verifies macOS close/activation retains one window and one loadURL; both Shell tests and syntax checks passed. Canvas codec 12 tests passed including welcome fixture hydration and incremental Agent edit. Server cargo check passed. A fresh, isolated local PostgreSQL exercised ordinary Channel welcome persistence/authorization/archive/reopen and the existing device-account lifecycle extended with the personal Channel welcome assertion; both targeted tests passed.
+
+Canonical component-only builds completed: GUI 0.1.102-dev ZIP SHA-256 `f2b12e58f00190416513d5f58122eff4a637a8c23596d9a5d4fba35a64dfdf8d`; packaged ui.json matches the embedded VERSION and stale 0.1.100/101 constants are absent. Electron 0.1.23-dev macOS arm64 App/ZIP/DMG built, ad-hoc codesign verification passed; DMG SHA-256 `9b5ca63f0c637acebd8a0eada08559774d7d16afe2f94249455373e940ab8a9c`. Core and Skill were not rebuilt. These are local development artifacts, not public publication or notarized production installers.
+
+Native visual acceptance was not completed: cua.getState timed out twice before returning app/browser inventory. These unit/component/database checks are not a Trace end-to-end run. No published or installed acceptance is claimed.
+
 ### 2026-10-07 Existing Claude Code history acceptance
 
 Installed Skill/Core discovered real local Claude source catalog 08855b0f4dd0858e70a2b62f (2516616a-f12e-4b9e-9a05-0e8f01a5a1c3.jsonl), shared it through the existing regression Channel, then read latest user turn and previous user turn using the returned snapshot cursor. All commands returned ok:true without launching or authenticating Claude Code. Test share CC history acceptance 2026-10-07 was withdrawn; original history unchanged. This validates discovery/share/snapshot/read/pagination, not complete assistant/tool projection fidelity or a second-device consumer. Existing first-user-text default title limitation also applies to Claude sources.

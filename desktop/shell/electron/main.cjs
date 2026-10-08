@@ -8,6 +8,7 @@ const { ensureWindowsInstallation } = require('./windows-bootstrap.cjs')
 const { ensureMacInstallation } = require('./mac-bootstrap.cjs')
 
 let window
+let quitting = false
 let pendingDeepLinks = []
 const applicationRoot = process.platform === 'win32'
   ? path.join(process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local'), 'AgentColab')
@@ -80,17 +81,22 @@ async function createWindow() {
   // Electron is only a native bookmark for the independently installed Local
   // Core. Local Core owns the active GUI resources, so browser and App users
   // always see the same independently updatable GUI build.
-  await window.loadURL(process.env.COLAB_UI_DEV_URL || await localGuiUrl())
   window.once('ready-to-show', () => window.show())
+  // Closing a macOS window keeps its renderer and workspace alive until Quit.
+  window.on('close', event => {
+    if (process.platform === 'darwin' && !quitting) { event.preventDefault(); window.hide() }
+  })
+  window.on('closed', () => { window = undefined })
   window.webContents.on('did-finish-load', () => {
     if (pendingDeepLinks.length) window.webContents.send('host:deep-link', pendingDeepLinks.splice(0))
   })
+  await window.loadURL(process.env.COLAB_UI_DEV_URL || await localGuiUrl())
 }
 
 app.on('open-url', (event, url) => {
   event.preventDefault()
   if (!url.startsWith('colab://')) return
-  if (window) window.webContents.send('host:deep-link', [url]); else pendingDeepLinks.push(url)
+  if (window && !window.isDestroyed()) { window.show(); window.focus(); window.webContents.send('host:deep-link', [url]) } else pendingDeepLinks.push(url)
 })
 async function reportStartupFailure(error) {
   await logFailure(error)
@@ -123,7 +129,11 @@ app.whenReady()
   })
   .catch(reportStartupFailure)
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit() })
-app.on('activate', () => { if (!window) createWindow() })
+app.on('before-quit', () => { quitting = true })
+app.on('activate', () => {
+  if (window && !window.isDestroyed()) { window.show(); window.focus() }
+  else void createWindow().catch(reportStartupFailure)
+})
 
 ipcMain.handle('host:open-external', (_event, url) => shell.openExternal(url))
 ipcMain.handle('host:choose-path', async (_event, options) => {

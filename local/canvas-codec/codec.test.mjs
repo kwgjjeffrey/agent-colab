@@ -40,3 +40,17 @@ test('incremental update converges with unrelated remote edit',()=>{
  Y.applyUpdate(a,Buffer.from(out.update,'base64'));Y.applyUpdate(a,remote);Y.applyUpdate(b,Buffer.from(out.update,'base64'));Y.applyUpdate(b,Buffer.from(out.update,'base64'));
  const na=yXmlFragmentToProseMirrorRootNode(a.getXmlFragment('default'),schema),nb=yXmlFragmentToProseMirrorRootNode(b.getXmlFragment('default'),schema);assert(na.eq(nb));assert.equal(na.firstChild.textContent,'Remote Heading 1');assert.equal(na.child(2).textContent,'Response');
 });
+
+test('Server welcome fixture hydrates the real editor and remains editable through the Agent codec',async()=>{
+ const {readFileSync}=await import('node:fs');
+ const bytes=readFileSync(new URL('../../server/standalone/crates/persistence/assets/welcome-canvas.yjs',import.meta.url));
+ const doc=new Y.Doc();Y.applyUpdate(doc,bytes);
+ const node=yXmlFragmentToProseMirrorRootNode(doc.getXmlFragment('default'),schema);
+ const content=render(node);
+ assert(content.includes('# Welcome to Canvas'));
+ assert(content.includes('Adding a mention alone does not start work.'));
+ assert(content.includes('Project brief:'));
+ const result=run({state:Buffer.from(bytes).toString('base64'),operation:'patch',old:'## Typical uses',new:'## Our team’s uses'});
+ Y.applyUpdate(doc,Buffer.from(result.update,'base64'));
+ assert(render(yXmlFragmentToProseMirrorRootNode(doc.getXmlFragment('default'),schema)).includes('## Our team’s uses'));
+});

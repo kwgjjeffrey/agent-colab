@@ -51,6 +51,7 @@ type Props = {
   promptFor: (agent: AgentTarget) => string;
   onClose: () => void;
   onError: (message: string) => void;
+  onDelivered?: () => void;
   onForward?: (query: string) => void;
   sendTraceTarget?: string;
   onSend?: (query: string) => Promise<void>;
@@ -72,6 +73,7 @@ export function AgentPromptDialog({
   onForward,
   onSend,
   sendTraceTarget,
+  onDelivered,
 }: Props) {
   const [query, setQuery] = useState("");
   const [sending, setSending] = useState(false);
@@ -91,6 +93,7 @@ const trackedFetch = operation.fetch;
       await navigator.clipboard.writeText(content);
       const response = await trackedFetch(`/v1/system/agents/${agent}/open`, { method: "POST" });
       if (!response.ok) throw new Error(await response.text());
+      onDelivered?.();
       onClose();
     } catch (reason) { operation.fail();
       reportError(String(reason));
@@ -101,7 +104,7 @@ const trackedFetch = operation.fetch;
 
   async function copyPrompt() {
     return runOperation("prompt.copy", async (operation) => {
-      try { const content = completePrompt(defaultAgent); operation.prompt(content, "context.handoff", defaultAgent); await navigator.clipboard.writeText(content); onClose(); }
+      try { const content = completePrompt(defaultAgent); operation.prompt(content, "context.handoff", defaultAgent); await navigator.clipboard.writeText(content); onDelivered?.(); onClose(); }
       catch (reason) { operation.fail(); reportError(String(reason)); }
     });
   }

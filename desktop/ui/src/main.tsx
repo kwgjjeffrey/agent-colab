@@ -4,7 +4,9 @@ import { initializeTelemetry } from "@/api/telemetry";
 void initializeTelemetry();
 import { FormEvent, StrictMode, useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
-import packageMetadata from "../package.json";
+import { useGuiVersion } from "@/features/updates/useGuiVersion";
+import { useWorkspaceNavigation } from "@/features/channels/useWorkspaceNavigation";
+import { ChannelIcon, ChannelIconPicker } from "@/features/channels/ChannelIcon";
 import {
   CheckIcon,
   ChevronLeftIcon,
@@ -174,7 +176,7 @@ function App() {
   const [initialLoading, setInitialLoading] = useState(true);
   const [workspaceLoadError, setWorkspaceLoadError] = useState<string>();
   const [channels, setChannels] = useState<Channel[]>([]);
-  const [selectedId, setSelectedId] = useState<string>();
+  const { selectedId, setSelectedId, workspaceTab, setWorkspaceTab } = useWorkspaceNavigation();
   const [contextFocus, setContextFocus] = useState<ContextResource>();
   const [busy, setBusy] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
@@ -191,7 +193,6 @@ function App() {
   const [installationMessage, setInstallationMessage] = useState<InstallationMessage>();
   const [installationMutationBusy, setInstallationMutationBusy] = useState(false);
   const [agentSettingsOpenToken, setAgentSettingsOpenToken] = useState(0);
-  const [workspaceTab, setWorkspaceTab] = useState<string | number>("home");
   const [deviceAccounts, setDeviceAccounts] = useState<Array<{ id: string; displayName?: string; avatarUrl?: string }>>([]);
   const [quickShareRequest, setQuickShareRequest] = useState<{ kind: "session"; token: number }>();
   const [activeHomeTip, setActiveHomeTip] = useState<string>();
@@ -483,29 +484,7 @@ const api = operation.response;
     const timer = window.setInterval(() => void refreshAuth(), 1000);
     return () => window.clearInterval(timer);
   }, [authResolved, deviceAccounts.length]);
-  useEffect(() => {
-    // GUI resources are independently replaceable while Electron keeps running.
-    // Compare this bundle's embedded version with the active ui.json whenever the
-    // window regains focus, then reload only when Local Core has switched roots.
-    async function reloadIfGuiChanged() {return runOperation("system.gui-version", async (operation)=>{
-const fetch=operation.fetch;
-
-      try {
-        const response = await fetch(`/ui.json?checkedAt=${Date.now()}`, { cache: "no-store" });
-        if (!response.ok) return;
-        const active = await response.json() as { version?: string };
-        if (active.version && active.version !== packageMetadata.version) window.location.reload();
-      } catch {
-        /* Local Core can be restarting during an artifact update. */
-      }
-
-});}
-    const onFocus = () => void reloadIfGuiChanged();
-    window.addEventListener("focus", onFocus);
-    return () => {
-      window.removeEventListener("focus", onFocus);
-    };
-  }, []);
+  useGuiVersion(__COLAB_UI_VERSION__);
   useEffect(() => {
     host.markUiReady();
     const unlisten = host.onDeepLink(async (urls) => {
@@ -1023,7 +1002,7 @@ const api = operation.response;
                     />
                   }
                 >
-                  {channel.icon ?? initials(channel.name)}
+                  <ChannelIcon icon={channel.icon} name={channel.name} />
                 </TooltipTrigger>
                 <TooltipContent side="right">{channel.name}</TooltipContent>
               </Tooltip>
@@ -1102,7 +1081,7 @@ const api = operation.response;
           ) : selected ? (
             <ChannelContextProvider key={selected.id} channelId={selected.id} navigate={resource => { setContextFocus({ ...resource }); setWorkspaceTab(resource.kind === "session" ? "sessions" : resource.kind === "message" ? "messages" : resource.kind); }}><Tabs value={workspaceTab} onValueChange={setWorkspaceTab} className="flex min-h-0 flex-1 flex-col gap-0">
               <div className="flex shrink-0 items-center gap-3 px-8 pt-5 pb-3">
-                <Avatar size="lg"><AvatarFallback>{selected.icon ?? initials(selected.name)}</AvatarFallback></Avatar>
+                <Avatar size="lg"><ChannelIcon icon={selected.icon} name={selected.name} /></Avatar>
                 <h1 className="min-w-0 truncate text-xl font-semibold">{selected.name}</h1>
                 {agentActivity&&<span role="status" className="min-w-0 flex-1 truncate text-sm text-muted-foreground">{agentActivity}</span>}
                 {!agentActivity&&<span className="flex-1"/>}
@@ -1339,6 +1318,7 @@ function ChannelSettings({
   onRemove: (m: Member) => void;
 }) {
   const [people, setPeople] = useState<OrganizationPerson[]>([]);
+  const [iconPreparing, setIconPreparing] = useState(false);
   useEffect(onLoad, [channel.id]);
   async function searchPeople(query: string) {
 return runOperation("members.search", async (operation) => {
@@ -1371,7 +1351,7 @@ const trackedFetch = operation.fetch;
         </div>
         <form data-trace-target={traceTargets("channels.update")} onSubmit={onSave}>
           <FieldGroup>
-            <div className="grid grid-cols-[1fr_120px] gap-4">
+            <div className="grid grid-cols-[minmax(0,1fr)_220px] gap-4">
               <Field>
                 <FieldLabel>Name</FieldLabel>
                 <Input
@@ -1382,16 +1362,11 @@ const trackedFetch = operation.fetch;
               </Field>
               <Field>
                 <FieldLabel>Icon</FieldLabel>
-                <Input
-                  name="icon"
-                  defaultValue={channel.icon ?? ""}
-                  maxLength={3}
-                  disabled={!canManage}
-                />
+                <ChannelIconPicker key={channel.id} icon={channel.icon} name={channel.name} disabled={!canManage} onPreparing={setIconPreparing} />
               </Field>
             </div>
             {canManage && (
-              <Button type="submit" disabled={busy} className="w-fit">
+              <Button type="submit" disabled={busy || iconPreparing} className="w-fit">
                 Save changes
               </Button>
             )}

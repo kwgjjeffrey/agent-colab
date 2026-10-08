@@ -511,6 +511,7 @@ impl Database {
         .execute(&mut *tx)
         .await
         .context("create owner membership")?;
+        canvas::seed_welcome_canvas(&mut tx, id, member_id).await?;
         tx.commit().await.context("commit channel transaction")?;
         Ok(channel)
     }
