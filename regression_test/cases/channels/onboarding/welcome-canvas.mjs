@@ -20,7 +20,7 @@ export async function run(ctx){
  await eventually(ctx,'Editor changes are durable',()=>core(ctx,'GET','/v1/canvases/'+doc.id+'/document'),x=>x.content.includes('Owned welcome edit '+ctx.runId));
  await ctx.screenshot('Welcome Canvas edited in real GUI');
  await ctx.page.getByRole('button',{name:'Delete Welcome to Canvas',exact:true}).click();
- await ctx.page.getByRole('alertdialog').getByRole('button',{name:'Delete',exact:true}).click();
+ await ctx.page.getByRole('alertdialog').getByRole('button',{name:'Delete document',exact:true}).click();
  await eventually(ctx,'Deleted welcome absent',()=>core(ctx,'GET','/v1/channels/'+channel.id+'/canvases'),x=>x.length===0);
  await ctx.page.reload();await ctx.page.getByRole('tab',{name:'Canvas',exact:true}).waitFor();
  ctx.assert('Reload keeps Canvas tab',await ctx.page.getByRole('tab',{name:'Canvas',exact:true}).getAttribute('aria-selected'),'true');

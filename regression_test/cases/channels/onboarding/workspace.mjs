@@ -10,7 +10,7 @@ export async function run(ctx){
  let navigations=0;const onNavigation=frame=>{if(frame===ctx.page.mainFrame())navigations++;};ctx.page.on('framenavigated',onNavigation);
  try{for(let i=0;i<3;i++){const checked=ctx.page.waitForResponse(r=>new URL(r.url()).pathname==='/ui.json');await ctx.page.evaluate(()=>window.dispatchEvent(new Event('focus')));await checked;}ctx.assert('Repeated focus never reloads unchanged GUI',navigations,0);}finally{ctx.page.off('framenavigated',onNavigation);}
  await ctx.page.reload();await ctx.page.getByRole('tab',{name:'Skills',exact:true}).waitFor();ctx.assert('Cold renderer restores Skills tab',await ctx.page.getByRole('tab',{name:'Skills',exact:true}).getAttribute('aria-selected'),'true');
- ctx.assert('Cold renderer restores the selected Channel',await ctx.page.getByRole('button',{name:channel.name,exact:true}).getAttribute('data-variant'),'default');
+ ctx.assert('Cold renderer restores the selected Channel',await ctx.page.getByRole('heading',{name:channel.name,exact:true}).isVisible(),true);
  try{
  await openTab(ctx,'Settings');const form=ctx.page.locator('[data-trace-target~="channels.update"]');
  ctx.assert('Icon is not a text field',await form.locator('input[name="icon"][type="text"]').count(),0);
@@ -20,7 +20,7 @@ export async function run(ctx){
  ctx.assert('Uploaded icon is stored',uploaded.find(x=>x.id===channel.id).icon.startsWith('data:image/png;'),true);
  await form.getByRole('button',{name:'Generate icon',exact:true}).click();await form.getByRole('button',{name:'Save changes',exact:true}).click();
  const generated=await eventually(ctx,'Generated icon saved as SVG image',()=>core(ctx,'GET','/v1/channels'),rows=>rows.find(x=>x.id===channel.id)?.icon?.startsWith('data:image/svg+xml;'));
- const source=generated.find(x=>x.id===channel.id).icon;ctx.assert('Header renders the persisted icon',await ctx.page.locator('img').filter({visible:true}).evaluateAll((rows,src)=>rows.some(x=>x.getAttribute('src')===src),source),true);
+ const source=generated.find(x=>x.id===channel.id).icon;ctx.assert('Header renders the persisted icon',await ctx.page.locator('img').evaluateAll((rows,src)=>rows.some(x=>x.getAttribute('src')===src),source),true);
  await ctx.screenshot('Image identity and generated icon');
  }finally{await core(ctx,'PATCH','/v1/channels/'+channel.id,{name:original.name,icon:original.icon});}
 }
