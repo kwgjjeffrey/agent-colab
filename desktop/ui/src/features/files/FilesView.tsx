@@ -95,7 +95,8 @@ export function FilesView({
 }: Props) {
   const context = useChannelContext();
   useEffect(()=>{if(shareOpenToken){void choose();onShareOpenConsumed?.();}},[shareOpenToken]);
-  useEffect(() => { const row = shares.find(row => row.id === focusId); if (row) void browse(row); }, [focusId]);
+  const focusAvailable = shares.some(row => row.id === focusId);
+  useEffect(() => { const row = shares.find(row => row.id === focusId); if (row) void browse(row, true); }, [focusId, focusAvailable]);
   const [openShare, setOpenShare] = useState<string>();
   const [entries, setEntries] = useState<LocalFileEntry[]>([]);
   const [agentPrompt, setAgentPrompt] = useState<{ id: string; ref: string; shareName: string }>();
@@ -109,11 +110,11 @@ export function FilesView({
     return share.localPath ? share : await onEnsureLocal(share);
   }
 
-  async function browse(share: FileShare) {
+  async function browse(share: FileShare, forceOpen = false) {
 return runOperation("files.browse", async (operation) => {
 const trackedFetch = operation.fetch;
 
-    if (openShare === share.id) return setOpenShare(undefined);
+    if (!forceOpen && openShare === share.id) return setOpenShare(undefined);
     setBrowseError(undefined);
     try {
       const local = await localShare(share);

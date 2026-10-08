@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useState, type ReactNode } from "react";
 import {
   FolderIcon,
+  ArrowLeftIcon,
   ChevronRightIcon,
   PlusIcon,
   MessageSquareIcon,
@@ -315,6 +316,10 @@ export function CatalogWorkspace({
         <ScrollArea className="min-h-0 flex-1">{rows()}</ScrollArea>
       </aside>
       <section className="flex min-w-0 flex-1 flex-col">
+        {focus && view !== "home" && view !== "messages" && <Button size="sm" variant="ghost" className="shrink-0 self-start m-2" aria-label="Back to containing catalog" onClick={() => {
+          const parent = focusedTrail.length > 1 ? focusedTrail.at(-2) : undefined;
+          if (parent) select(parent); else { setSelectedCatalog(undefined); onSelect("add"); }
+        }}><ArrowLeftIcon data-icon="inline-start" />Back</Button>}
         {selected && (
           <div className="flex shrink-0 items-center justify-between gap-3 border-b px-6 py-3">
             <div className="min-w-0">

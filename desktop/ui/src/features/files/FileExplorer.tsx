@@ -18,7 +18,7 @@ export function FileExplorer({ shareId, shareName, entries, onClose }: Props) {
   const segments = selectedPath?.split("/") ?? [];
 
   return (
-    <div className="fixed inset-0 flex flex-col bg-background">
+    <div className="flex min-h-0 flex-1 flex-col bg-background" data-trace-region="files-detail">
       <header className="flex h-14 shrink-0 items-center gap-3 border-b px-4">
         <Button variant="ghost" size="icon" aria-label="Back to shared files" onClick={onClose}><ArrowLeftIcon /></Button>
         <Breadcrumb>

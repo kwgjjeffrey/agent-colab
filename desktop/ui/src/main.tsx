@@ -1182,7 +1182,7 @@ const api = operation.response;
                   onWithdraw={withdrawSession}
                 />
               </TabsContent>
-              <TabsContent data-trace-target={traceTargets("files.list")} data-trace-region={"files"} value="files">
+              <TabsContent data-trace-target={traceTargets("files.list")} data-trace-region={"files"} value="files" className="flex min-h-0 flex-1 flex-col overflow-hidden">
                 <FilesView
                   shareOpenToken={shareFilesToken}
                   onShareOpenConsumed={()=>setShareFilesToken(0)}
