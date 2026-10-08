@@ -1,6 +1,7 @@
 import { useEffect,useRef,useState,type ReactNode } from "react";
 import { draggable,dropTargetForElements } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
 import { combine } from "@atlaskit/pragmatic-drag-and-drop/combine";
+import { autoScrollForElements } from "@atlaskit/pragmatic-drag-and-drop-auto-scroll/element";
 import type { CatalogItem } from "./CatalogWorkspace";
 
 export type DropPosition="before"|"after"|"inside";
@@ -19,7 +20,9 @@ export function CatalogDragTarget({item,channelId,disabled,children,onDrop}:{ite
       onDragLeave:()=>setPosition(undefined),
       onDrop:({source,self,location})=>{setPosition(undefined);if(location.current.dropTargets[0]?.element===element)onDrop(source.data.item as CatalogItem,self.data.position as DropPosition);},
     });
-    return combine(target,item?draggable({element,canDrag:()=>!disabled&&item.canMove!==false,getInitialData:()=>({item,channelId})}):()=>{});
+    const viewport=element.closest('[data-slot="scroll-area-viewport"]');
+    return combine(target,item?draggable({element,canDrag:()=>!disabled&&item.canMove!==false,getInitialData:()=>({item,channelId})}):()=>{},
+      !item&&viewport?autoScrollForElements({element:viewport,canScroll:({source})=>source.data.channelId===channelId,getAllowedAxis:()=>"vertical"}):()=>{});
   },[item,channelId,disabled,onDrop]);
   return <div ref={ref} data-drop-position={position} className="catalog-drop-target relative min-w-0">{children}</div>;
 }
