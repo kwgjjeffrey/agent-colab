@@ -695,3 +695,22 @@ Compact Channel E2E Run 20261008T083723Z-1179256b first round exercised both dia
   absence of redundant controls and breadcrumb navigation, not merely exitability.
 - Added structured user-message rendering and damaged-record preservation tests.
 - Candidate and installed acceptance pending; previous results do not validate this change.
+# 2026-10-09 Home / Add / drag refinement
+
+- GUI 122 TypeScript/Vite build and four Catalog workspace component tests pass.
+- Isolated PostgreSQL catalog test passes: persisted before-anchor ordering,
+  invalid destination-anchor rollback, cross-Channel denial, cycles and nonempty
+  deletion constraints. Migration 0040 deployed with Server source bf495f1;
+  readiness succeeded at /health/ready (plain /health is not an endpoint).
+- Trace Run 20261008T185809Z-472a7906: gui.details.return passed. Drag Round 1
+  failed to initiate native drag; Round 2 exercised actual parent/root movement
+  then exposed duplicate stale tree loads. Those loads are invalidated. Round 3
+  20261008T190154Z-05efed4b passes real pointer drag into Catalog, back to root,
+  before ordering, reload persistence, Quick Share cascade and dialog lifetime.
+  Owned empty Catalogs were removed; historical failures remain recorded.
+- GUI 122 / promotion 174 published through canonical R2 full size/hash readback:
+  4,610,439 bytes, SHA-256
+  9aae76d5bb272da61d83a4949ec837bc0abe4bc0c6aa3bcdfea2d166019862eb.
+  Core 96 / Skill 55 / Shell 23 unchanged. Native App update verification pending.
+- No new performance budget is claimed. Icon and DnD libraries are reused;
+  broader trace-catalog restructuring is separate from this product correction.

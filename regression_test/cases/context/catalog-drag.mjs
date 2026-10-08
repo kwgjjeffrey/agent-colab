@@ -1,5 +1,28 @@
 export const USECASE={name:'Drag catalog items into folders, reorder, and return to root',description:'Create two disposable Catalogs through Local Core; use real pointer drag on GUI rows, verify persisted parent and sibling order through Core and after reload. Home remains navigation, Add opens item choices and Quick Share cascade. Remove only owned empty Catalogs in finally.'};
-export const META={id:'context.catalog.drag',module:'context/catalog',surface:'gui',priority:'critical',origin:'requirement',status:'trial',effects:'isolated-write',cost:'normal',requires:['local-core'],affectedPaths:['desktop/ui/src/features/workspace','server/standalone/crates/persistence/src/catalog.rs'],suite:'business',testLevel:'end-to-end',locks:['read:client.primary','write:channel.shared']};
+export const META={
+  "id": "context.catalog.drag",
+  "module": "context/catalog",
+  "surface": "gui",
+  "priority": "critical",
+  "origin": "requirement",
+  "status": "active",
+  "effects": "isolated-write",
+  "cost": "normal",
+  "requires": [
+    "local-core"
+  ],
+  "affectedPaths": [
+    "desktop/ui/src/features/workspace",
+    "server/standalone/crates/persistence/src/catalog.rs"
+  ],
+  "suite": "business",
+  "testLevel": "end-to-end",
+  "locks": [
+    "read:client.primary",
+    "write:channel.shared"
+  ],
+  "statusReason": "Reviewed Run 20261008T185809Z-472a7906 Round 3 20261008T190154Z-05efed4b: real pointer drag, Core/Server parent and order readback, reload persistence, Quick Share dialog survival and owned-catalog cleanup passed. Original drag-script and stale-load findings retained."
+};
 export const REQUIREMENTS={channel:{permission:'read'},parameters:{keys:['disposable']}};
 import {core,resource,disposable,eventually} from '../../support/client.mjs';
 async function drag(page,source,target,position=0.5){
