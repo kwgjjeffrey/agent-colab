@@ -1,5 +1,25 @@
 export const USECASE={name:'Focus preserves the workspace and Channel Settings uses real images',description:'Use a disposable Channel. Select Skills and observe true action gutters. Trigger repeated window focus, count main-frame navigations, then reload and verify saved tab and Channel. Upload a case-owned PNG and generate a local icon through Settings, save and read each image back through Local Core. Restore the original name/icon in finally.'};
-export const META={id:'channels.onboarding.workspace',module:'channels/onboarding',surface:'gui',priority:'critical',origin:'bug',status:'trial',effects:'isolated-write',cost:'normal',requires:['local-core'],affectedPaths:['desktop/ui/src/main.tsx','desktop/ui/src/features/channels','desktop/ui/src/features/skills'],suite:'business',testLevel:'end-to-end'};
+export const META={
+  "id": "channels.onboarding.workspace",
+  "module": "channels/onboarding",
+  "surface": "gui",
+  "priority": "critical",
+  "origin": "bug",
+  "status": "active",
+  "effects": "isolated-write",
+  "cost": "normal",
+  "requires": [
+    "local-core"
+  ],
+  "affectedPaths": [
+    "desktop/ui/src/main.tsx",
+    "desktop/ui/src/features/channels",
+    "desktop/ui/src/features/skills"
+  ],
+  "suite": "business",
+  "testLevel": "end-to-end",
+  "statusReason": "Reviewed final Round 20261008T022600Z-2a527af2: actual Skills gutters, three completed focus checks without navigation, cold Channel/tab restoration, valid image upload, SVG generation and decoded header/rail images, finally readback of restored identity; 20 assertions and screenshot checked."
+};
 export const REQUIREMENTS={channel:{permission:'read'},parameters:{keys:['disposable']}};
 import {core,resource,disposable,eventually} from '../../../support/client.mjs';
 import {openTab} from '../../../support/gui.mjs';

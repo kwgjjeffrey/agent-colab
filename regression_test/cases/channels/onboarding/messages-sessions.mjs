@@ -1,5 +1,24 @@
 export const USECASE={name:'Messages and Sessions guides lead to real actions and retire naturally',description:'Create a run-owned empty Channel. Its Messages guide opens the Agent manager. Send case-owned conversation turns through the real composer and verify the guide scrolls above the viewport inside the same timeline. Verify all Session guides on the empty page. Register an owned synthetic Session through Local Core, use the real chooser and Copy prompt for review, and reload to check completion persists without hiding handoff guidance. Withdraw the test Session in finally; retain the unique Channel and ordinary test message as evidence.'};
-export const META={id:'channels.onboarding.messages-sessions',module:'channels/onboarding',surface:'gui',priority:'critical',origin:'requirement',status:'trial',effects:'isolated-write',cost:'normal',requires:['local-core'],affectedPaths:['desktop/ui/src/features/messages','desktop/ui/src/features/sessions'],suite:'business',testLevel:'end-to-end'};
+export const META={
+  "id": "channels.onboarding.messages-sessions",
+  "module": "channels/onboarding",
+  "surface": "gui",
+  "priority": "critical",
+  "origin": "requirement",
+  "status": "active",
+  "effects": "isolated-write",
+  "cost": "normal",
+  "requires": [
+    "local-core"
+  ],
+  "affectedPaths": [
+    "desktop/ui/src/features/messages",
+    "desktop/ui/src/features/sessions"
+  ],
+  "suite": "business",
+  "testLevel": "end-to-end",
+  "statusReason": "Reviewed final Round 20261008T022600Z-2a527af2: real Agent manager, seven committed conversation turns pushing the entire guide out of the viewport, owned synthetic Session publication, reader/review prompt clipboard delivery, persisted guide completion and independent remaining handoff, withdrawal/Canvas cleanup readback; 33 assertions and screenshots checked."
+};
 export const REQUIREMENTS={channel:{permission:'read'},parameters:{keys:['disposable','sessionSourcePath']}};
 import {core,parameter,disposable,eventually} from '../../../support/client.mjs';
 export async function run(ctx){

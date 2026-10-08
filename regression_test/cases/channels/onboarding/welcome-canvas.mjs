@@ -1,5 +1,24 @@
 export const USECASE={name:'Every new Channel starts with an editable, deletable Canvas guide',description:'Create one run-owned Channel through the real GUI. Read its default welcome document through Local Core, edit through the real editor, then delete through the tree. Reload and verify deletion persists. The unique Channel is retained as regression evidence; no existing user document is modified.'};
-export const META={id:'channels.onboarding.welcome-canvas',module:'channels/onboarding',surface:'gui',priority:'critical',origin:'requirement',status:'trial',effects:'isolated-write',cost:'normal',requires:['local-core'],affectedPaths:['desktop/ui/src/features/canvas','server/standalone/crates/persistence'],suite:'business',testLevel:'end-to-end'};
+export const META={
+  "id": "channels.onboarding.welcome-canvas",
+  "module": "channels/onboarding",
+  "surface": "gui",
+  "priority": "critical",
+  "origin": "requirement",
+  "status": "active",
+  "effects": "isolated-write",
+  "cost": "normal",
+  "requires": [
+    "local-core"
+  ],
+  "affectedPaths": [
+    "desktop/ui/src/features/canvas",
+    "server/standalone/crates/persistence"
+  ],
+  "suite": "business",
+  "testLevel": "end-to-end",
+  "statusReason": "Reviewed final Round 20261008T022600Z-2a527af2: real GUI Channel creation, one durable guide with use cases, editor persistence, archive and reload absence, and owned cleanup; screenshot and 19 assertions checked."
+};
 export const REQUIREMENTS={channel:{permission:'read'},parameters:{keys:['disposable']}};
 import {core,disposable,eventually} from '../../../support/client.mjs';
 export async function run(ctx){
