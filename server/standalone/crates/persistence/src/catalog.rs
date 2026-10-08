@@ -33,6 +33,10 @@ mod tests {
         assert!(db.catalog_children(outsider,a.id,None,0,100).await.unwrap().is_none());
         assert!(!db.delete_empty_catalog(owner,a.id,root.id).await.unwrap());
         let document=db.create_canvas(owner,a.id,"Stable document",None).await.unwrap().unwrap();
+        assert!(db.position_catalog_item(owner,a.id,"canvas",document.id,None,Some(("catalog".into(),root.id))).await.unwrap());
+        assert_eq!(db.catalog_children(owner,a.id,None,0,100).await.unwrap().unwrap()[0].id,document.id);
+        assert!(!db.position_catalog_item(owner,a.id,"canvas",document.id,None,Some(("catalog".into(),child.id))).await.unwrap());
+        assert_eq!(db.catalog_children(owner,a.id,None,0,100).await.unwrap().unwrap()[0].id,document.id);
         assert!(db.place_catalog_item(owner,a.id,"canvas",document.id,Some(child.id)).await.unwrap());
         let rows=db.catalog_children(owner,a.id,Some(child.id),0,100).await.unwrap().unwrap();
         assert_eq!(rows[0].id,document.id);
@@ -86,15 +90,15 @@ impl Database {
         }
         let rows = sqlx::query_as(
             "select id,kind,name,parent_id,updated_at::text updated_at,can_move from (
-                select id,'catalog'::text kind,name,parent_folder_id parent_id,updated_at,true can_move
+                select id,'catalog'::text kind,name,parent_folder_id parent_id,updated_at,true can_move,catalog_position
                 from canvas_folders where channel_id=$1 and parent_folder_id is not distinct from $2
                 union all
-                select id,kind,name,catalog_id parent_id,updated_at,contributor_member_id=$5
+                select id,kind,name,catalog_id parent_id,updated_at,contributor_member_id=$5,catalog_position
                 from channel_shares where channel_id=$1 and catalog_id is not distinct from $2 and state='active'
                 union all
-                select id,'canvas'::text kind,title name,folder_id parent_id,updated_at,true
+                select id,'canvas'::text kind,title name,folder_id parent_id,updated_at,true,catalog_position
                 from canvases where channel_id=$1 and folder_id is not distinct from $2 and archived_at is null
-            ) items order by (kind='catalog') desc,lower(name),id limit $3 offset $4"
+            ) items order by catalog_position,(kind='catalog') desc,lower(name),id limit $3 offset $4"
         ).bind(channel).bind(parent).bind(limit.clamp(1, 200)).bind(offset.max(0)).bind(member)
             .fetch_all(&self.pool).await?;
         Ok(Some(rows))
@@ -102,6 +106,12 @@ impl Database {
 
     pub async fn place_catalog_item(
         &self, user: Uuid, channel: Uuid, kind: &str, item: Uuid, parent: Option<Uuid>,
+    ) -> anyhow::Result<bool> {
+        self.position_catalog_item(user,channel,kind,item,parent,None).await
+    }
+
+    pub async fn position_catalog_item(
+        &self, user: Uuid, channel: Uuid, kind: &str, item: Uuid, parent: Option<Uuid>, before: Option<(String,Uuid)>,
     ) -> anyhow::Result<bool> {
         let Some((member, _)) = self.channel_actor(user, channel).await? else { return Ok(false); };
         let mut tx = self.pool.begin().await?;
@@ -132,7 +142,35 @@ impl Database {
                 .bind(item).bind(channel).bind(parent).bind(member).bind(kind).execute(&mut *tx).await?.rows_affected(),
             _ => return Ok(false),
         };
+        if affected != 1 { return Ok(false); }
+        // Resolve the anchor within the destination transaction. A stale or foreign
+        // anchor rejects the entire move, rather than silently changing its meaning.
+        let mut siblings: Vec<(Uuid,String)> = sqlx::query_as("select id,kind from (
+            select id,'catalog'::text kind,name,catalog_position from canvas_folders where channel_id=$1 and parent_folder_id is not distinct from $2
+            union all select id,kind,name,catalog_position from channel_shares where channel_id=$1 and catalog_id is not distinct from $2 and state='active'
+            union all select id,'canvas'::text,title,catalog_position from canvases where channel_id=$1 and folder_id is not distinct from $2 and archived_at is null
+        ) items order by catalog_position,(kind='catalog') desc,lower(name),id")
+            .bind(channel).bind(parent).fetch_all(&mut *tx).await?;
+        siblings.retain(|(id,k)| *id!=item || k!=kind);
+        let index=if let Some((anchor_kind,anchor_id))=before {
+            let Some(index)=siblings.iter().position(|(id,k)| *id==anchor_id && *k==anchor_kind) else { return Ok(false); };
+            index
+        } else { siblings.len() };
+        siblings.insert(index,(item,kind.to_owned()));
+        // Three bulk updates keep the Channel lock short even for a large catalog.
+        for (table,types) in [("canvas_folders",vec!["catalog"]),("canvases",vec!["canvas"]),("channel_shares",vec!["files","session","skill"])] {
+            let rows:Vec<_>=siblings.iter().enumerate().filter(|(_,(_,k))|types.contains(&k.as_str())).collect();
+            let ids:Vec<Uuid>=rows.iter().map(|(_, (id,_))|*id).collect();
+            let positions:Vec<i64>=rows.iter().map(|(i,_)|(*i+1) as i64).collect();
+            let query=match table {
+                "canvas_folders"=>"update canvas_folders t set catalog_position=v.position from unnest($1::uuid[],$2::bigint[]) as v(id,position) where t.id=v.id and t.channel_id=$3",
+                "canvases"=>"update canvases t set catalog_position=v.position from unnest($1::uuid[],$2::bigint[]) as v(id,position) where t.id=v.id and t.channel_id=$3",
+                _=>"update channel_shares t set catalog_position=v.position from unnest($1::uuid[],$2::bigint[]) as v(id,position) where t.id=v.id and t.channel_id=$3",
+            };
+            sqlx::query(query)
+                .bind(ids).bind(positions).bind(channel).execute(&mut *tx).await?;
+        }
         tx.commit().await?;
-        Ok(affected == 1)
+        Ok(true)
     }
 }

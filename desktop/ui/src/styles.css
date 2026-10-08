@@ -236,3 +236,13 @@ button:not(:disabled), a[href], [role="button"]:not([aria-disabled="true"]), [ro
   color: var(--muted-foreground);
   pointer-events: none;
 }
+.item-icon-catalog { color: #d99b28; }
+.item-icon-files { color: #3489bd; }
+.item-icon-session { color: #32a18a; }
+.item-icon-skill { color: #9464db; }
+.item-icon-canvas { color: #e07849; }
+.catalog-drop-target[data-drop-position="inside"] { background: var(--accent); border-radius: 6px; box-shadow: inset 0 0 0 1px var(--primary); }
+.catalog-drop-target[data-drop-position="before"]::before,
+.catalog-drop-target[data-drop-position="after"]::after { content: ""; position: absolute; left: 0; right: 0; height: 2px; background: var(--primary); z-index: 1; }
+.catalog-drop-target[data-drop-position="before"]::before { top: 0; }
+.catalog-drop-target[data-drop-position="after"]::after { bottom: 0; }

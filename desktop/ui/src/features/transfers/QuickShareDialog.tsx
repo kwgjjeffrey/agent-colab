@@ -7,7 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent } from "@/components/ui/dropdown-menu";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -20,7 +20,7 @@ type SessionSource = Source & { id: string; codingAgent: string; threadId: strin
 type SkillSource = { sourceId: string; sourcePath: string; name: string; discoveredTargets: string[] };
 type TransferAccess = { displayName?: string; avatarUrl?: string; firstAccessedAt: string; lastAccessedAt: string; accessCount: number };
 type ManagedTransfer = { transferId: string; capability: string; state: "ready" | "revoked" | "expired"; expiresAt: string; createdAt: string; itemKind: ShareKind; itemName: string; accesses: TransferAccess[] };
-type Props = { defaultAgent: AgentTarget; installedAgents: Record<string, { installed: boolean }>; onChoose: (directory?: boolean) => Promise<string | null>; request?: { kind: ShareKind; token: number }; onRequestConsumed?: () => void; onCreated?: () => void };
+type Props = { submenu?: boolean; defaultAgent: AgentTarget; installedAgents: Record<string, { installed: boolean }>; onChoose: (directory?: boolean) => Promise<string | null>; request?: { kind: ShareKind; token: number }; onRequestConsumed?: () => void; onCreated?: () => void };
 
 const agentRoots: Record<AgentTarget, string> = { codex: "~/.agents", claude: "~/.claude", myflicker: "~/.myflicker" };
 function basename(path: string) { return path.replace(/[\\/]+$/, "").split(/[\\/]/).pop() || "Shared context"; }
@@ -28,7 +28,10 @@ function initials(value?: string) { return value?.trim().slice(0, 1).toUpperCase
 
 /** Selection immediately creates one fixed snapshot. The result is a durable management surface,
  * not a final confirmation whose dismissal could hide a live share. */
-export function QuickShareControl({ defaultAgent, installedAgents, onChoose, request, onRequestConsumed, onCreated }: Props) {
+export function QuickShareControl({ submenu=false, defaultAgent, installedAgents, onChoose, request, onRequestConsumed, onCreated }: Props) {
+  const MenuRoot = submenu ? DropdownMenuSub : DropdownMenu;
+  const MenuTrigger = submenu ? DropdownMenuSubTrigger : DropdownMenuTrigger;
+  const MenuContent = submenu ? DropdownMenuSubContent : DropdownMenuContent;
   const [open, setOpen] = useState(false);
   const [kind, setKind] = useState<ShareKind>();
   const [manage, setManage] = useState(false);
@@ -127,13 +130,13 @@ const trackedFetch = operation.fetch;
   async function copyPrompt() { return runOperation("transfers.prompt.copy", async (operation) => { if (!selected) { operation.cancel(); return; } try { const content=prompt(selected); operation.prompt(content,"transfer.handoff",defaultAgent); await navigator.clipboard.writeText(content); } catch (reason) { operation.fail(); setError(`Could not copy the prompt: ${String(reason)}`); } }); }
 
   return <>
-    <DropdownMenu><DropdownMenuTrigger data-trace-nav={"quick-share"} data-trace-target={traceTargets("transfers.create", "transfers.sources")} render={<Button data-trace-nav={"quick-share"} data-trace-target={traceTargets("transfers.create", "transfers.sources")} variant="outline" />}><Share2Icon data-icon="inline-start" />Quick Share</DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-52"><DropdownMenuGroup>
+    <MenuRoot><MenuTrigger data-trace-nav={"quick-share"} data-trace-target={traceTargets("transfers.create", "transfers.sources")} render={submenu ? undefined : <Button data-trace-nav={"quick-share"} data-trace-target={traceTargets("transfers.create", "transfers.sources")} variant="outline" />}><Share2Icon data-icon="inline-start" />Quick Share</MenuTrigger>
+      <MenuContent className="w-52"><DropdownMenuGroup>
         <DropdownMenuItem onClick={() => start("session")}><MessageSquareIcon />Share a Session</DropdownMenuItem>
         <DropdownMenuItem onClick={() => start("files")}><FileIcon />Share Files</DropdownMenuItem>
         <DropdownMenuItem onClick={() => start("skill")}><SparklesIcon />Share a Skill</DropdownMenuItem>
-      </DropdownMenuGroup><DropdownMenuSeparator /><DropdownMenuGroup><DropdownMenuItem data-trace-nav={"transfers.manage"} data-trace-target={traceTargets("transfers.list")} onClick={openManager}><HistoryIcon />Manage shared items</DropdownMenuItem></DropdownMenuGroup></DropdownMenuContent>
-    </DropdownMenu>
+      </DropdownMenuGroup><DropdownMenuSeparator /><DropdownMenuGroup><DropdownMenuItem data-trace-nav={"transfers.manage"} data-trace-target={traceTargets("transfers.list")} onClick={openManager}><HistoryIcon />Manage shared items</DropdownMenuItem></DropdownMenuGroup></MenuContent>
+    </MenuRoot>
     <Dialog open={open} onOpenChange={(next) => { if (!next) close(); }}><DialogContent data-trace-region={"transfers"} className="flex max-h-[min(760px,calc(100vh-2rem))] min-w-0 flex-col overflow-hidden sm:max-w-2xl">
       <DialogHeader className="min-w-0"><DialogTitle className="truncate">{selected ? selected.itemName : manage ? "Manage Quick Shares" : `Share ${kind === "files" ? "Files" : kind === "session" ? "a Session" : "a Skill"}`}</DialogTitle><DialogDescription>{selected ? "This fixed snapshot already exists. Copy its prompt, change its expiry, or revoke access." : manage ? "Review, reopen, and revoke Quick Shares created on this device." : "Choose one item. Selecting it immediately creates a share with a 24-hour expiry."}</DialogDescription></DialogHeader>
       {selected ? <>

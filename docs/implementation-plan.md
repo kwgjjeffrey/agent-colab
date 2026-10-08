@@ -1,5 +1,16 @@
 # Colab 实现计划
 
+### 2026-10-09 Home / Add / catalog drag refinement — in progress
+
+Rollback checkpoint `66a795a`. Home is navigation; Add is a shadcn menu with
+item creation and Quick Share cascade. Removed duplicate Home creation actions
+and header Quick Share. Catalog chevron spacing is reduced. File icons use the
+VS Code Material Icon Theme; Catalog and shared-file collection icons differ.
+Pragmatic Drag and Drop connects before/after/inside/root placement to Server.
+Migration 0040 adds sibling positions, with Channel-locked atomic parent/order
+updates and destination-anchor validation. PostgreSQL contract test passed;
+GUI 122 / promotion 174 and Server deployment acceptance are pending.
+
 ### 2026-10-09 Actual asset previews — in progress
 
 Replace embedded collection remnants with actual Session conversation, SKILL.md,

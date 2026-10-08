@@ -8,7 +8,7 @@ import {core,resource} from '../../support/client.mjs';
 export async function run(ctx) {
   const channel = resource(ctx,'channel');
   await ctx.page.getByRole('button',{name:channel.name,exact:true}).click();
-  await ctx.page.getByRole('button',{name:'Add',exact:true}).click();
+  await ctx.page.getByRole('button',{name:'Home',exact:true}).click();
   const rows = await core(ctx,'GET',`/v1/channels/${channel.id}/catalog-items?limit=200`);
   for(const kind of ['files','session','skill','canvas']) {
     const target = rows.find(item=>item.kind===kind);
@@ -19,10 +19,9 @@ export async function run(ctx) {
     ctx.assert(kind+' has no redundant Back control',await ctx.page.getByRole('button',{name:/^Back/}).count(),0);
     if(kind==='files') {
       await ctx.page.getByRole('tree',{name:target.name+' files',exact:true}).waitFor();
-      const nav=ctx.page.getByRole('button',{name:'Add',exact:true});
+      const nav=ctx.page.getByRole('button',{name:'Home',exact:true});
       await nav.click({trial:true});
       ctx.assert('File preview does not intercept workspace navigation',await nav.isVisible(),true);
-      await ctx.page.getByRole('button',{name:'Quick Share',exact:true}).click({trial:true});
     }
     if(kind==='skill') {
       await ctx.page.locator('[data-trace-region="skill-preview"]').waitFor();
@@ -38,7 +37,7 @@ export async function run(ctx) {
     await ctx.screenshot(kind+' actual preview and unified trail');
     await breadcrumb.getByRole('button',{name:channel.name,exact:true}).click();
     await ctx.page.getByRole('heading',{name:'Your team is about to work at agentic velocity',exact:true}).waitFor();
-    ctx.assert(kind+' returns to a usable Add page',await ctx.page.getByRole('button',{name:'Catalog',exact:true}).isVisible(),true);
+    ctx.assert(kind+' returns to a usable Home page',await ctx.page.getByRole('button',{name:'Add',exact:true}).isVisible(),true);
   }
   await ctx.screenshot('Asset return navigation retains Channel header and directory');
 }

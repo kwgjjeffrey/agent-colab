@@ -857,3 +857,14 @@ and protocol-only events do not render as conversation; classification never sea
 for substrings such as “command” or “tool”.
 
 Agent thread bindings remain long-lived per `(Channel, blueprint)`, while observability is scoped to one durable `agent_request`. Local Core pairs the provider's FIFO `turn/started` event with the accepted request, captures only that turn's app-server notifications, and uploads the bounded event list after completion. Server stores the list under the request id; Channel members can read it, while only the Agent owner's authenticated runtime can write it. Failure to upload diagnostics never changes a successfully completed command into a failed request. The GUI therefore opens one task in a Drawer instead of exposing unrelated history from the reusable provider session; tool-like events are collapsed by default.
+### Catalog sibling ordering (2026-10-09)
+
+`catalog_position` belongs to canvas_folders, canvases and channel_shares.
+Placement accepts optional `before: {kind,itemId}` in addition to parentId.
+Parent validation, cycle checks, owner checks and sibling renumbering occur in
+one Channel-locked PostgreSQL transaction. The anchor must be a direct child of
+the destination; stale/foreign anchors roll back the entire operation. Three
+bulk updates preserve stable item identities and consumer references. Without
+an anchor, placement appends. Discovery sorts by persisted position, then the
+legacy catalog/name/id order for untouched records. Core remains the proxy;
+GUI does not call Server directly.

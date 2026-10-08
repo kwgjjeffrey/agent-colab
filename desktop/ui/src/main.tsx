@@ -1151,17 +1151,16 @@ const api = operation.response;
                 <ChannelHeading channel={selected} members={members} onEdit={()=>setChannelDialog("identity")} onMembers={()=>setChannelDialog("members")} />
                 {agentActivity&&<span role="status" className="min-w-0 flex-1 truncate text-sm text-muted-foreground">{agentActivity}</span>}
                 {!agentActivity&&<span className="flex-1"/>}
-                <QuickShareControl
+              </div>
+              <CatalogWorkspace key={selected.id} quickShare={<QuickShareControl submenu
                   defaultAgent={installation?.defaultAgent ?? "codex"}
                   installedAgents={installation?.targets ?? {}}
                   onChoose={chooseFiles}
                   request={quickShareRequest}
                   onRequestConsumed={() => setQuickShareRequest(undefined)}
                   onCreated={() => { if (auth.user && activeHomeTip) completeHomeTip(auth.user.id, activeHomeTip); setActiveHomeTip(undefined); }}
-                />
-              </div>
-              <CatalogWorkspace key={selected.id} channelId={selected.id} channelName={selected.name} view={workspaceTab} focus={workspaceItem ?? contextFocus} onAdd={(kind,parent)=>void addWorkspaceItem(kind,parent)} onSelect={item=>{if(item==="add"||item==="message"){setWorkspaceItem(undefined);setContextFocus(undefined);setWorkspaceTab(item==="add"?"home":"messages");}else{setWorkspaceItem(item);if(item.kind!=="catalog"&&item.kind!=="skill")setContextFocus({kind:item.kind,id:item.id,name:item.name,channelId:selected.id});else setContextFocus(undefined);setWorkspaceTab(item.kind==="catalog"?"catalog":item.kind==="session"?"sessions":item.kind==="skill"?"skills":item.kind);}}}>
-              <TabsContent value="home" className="min-h-0 flex-1 overflow-auto"><div className="flex flex-wrap gap-2 px-6 pt-5">{(["catalog","canvas","session","files","skill"] as AddKind[]).map(kind=><Button key={kind} variant="outline" onClick={()=>void addWorkspaceItem(kind)}>{kind==="catalog"?"Catalog":kind==="canvas"?"Canvas":kind==="session"?"Session":kind==="files"?"Files":"Skill"}</Button>)}</div><ChannelHome key={`${selected.id}:${activeHomeTip ?? "idle"}`} accountId={auth.user?.id ?? ""} busyTip={homeTryBusy} defaultAgent={installation?.defaultAgent ?? "codex"} installedAgents={installation?.targets ?? {}} onTry={id => void tryHomeCase(id)} /></TabsContent>
+                />} channelId={selected.id} channelName={selected.name} view={workspaceTab} focus={workspaceItem ?? contextFocus} onAdd={(kind,parent)=>void addWorkspaceItem(kind,parent)} onSelect={item=>{if(item==="add"||item==="message"){setWorkspaceItem(undefined);setContextFocus(undefined);setWorkspaceTab(item==="add"?"home":"messages");}else{setWorkspaceItem(item);if(item.kind!=="catalog"&&item.kind!=="skill")setContextFocus({kind:item.kind,id:item.id,name:item.name,channelId:selected.id});else setContextFocus(undefined);setWorkspaceTab(item.kind==="catalog"?"catalog":item.kind==="session"?"sessions":item.kind==="skill"?"skills":item.kind);}}}>
+              <TabsContent value="home" className="min-h-0 flex-1 overflow-auto"><ChannelHome key={`${selected.id}:${activeHomeTip ?? "idle"}`} accountId={auth.user?.id ?? ""} busyTip={homeTryBusy} defaultAgent={installation?.defaultAgent ?? "codex"} installedAgents={installation?.targets ?? {}} onTry={id => void tryHomeCase(id)} /></TabsContent>
               <TabsContent data-trace-target={traceTargets("context.people", "context.resources")} data-trace-region={"messages"} value="messages" className="min-h-0 flex-1 overflow-hidden">
                 <MessagesView focusId={contextFocus?.kind === "message" ? contextFocus.id : undefined} channelId={selected.id} channelName={selected.name} settingsOpenToken={agentSettingsOpenToken} onSettingsOpenConsumed={()=>setAgentSettingsOpenToken(0)} defaultAgent={installation?.defaultAgent ?? "codex"} installedAgents={installation?.targets ?? {}} onError={setError} onNotice={setNotice} onActivityChange={setAgentActivity}/>
               </TabsContent>

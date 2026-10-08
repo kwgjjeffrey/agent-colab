@@ -264,3 +264,13 @@ Sessions 的 onboarding 仅用于空列表；已有任意 Session 时隐藏整�
 Workspace tabs are ordered Home, Messages, Canvas, Sessions, Files, Skills. Each tab has its own rounded background with an equal gap from its neighbors. Category colors are Home (lime), collaboration (Messages/Canvas, blue), context (Sessions/Files, amber), capability (Skills, purple); same category never means a merged background. Existing active underline and typography remain unchanged.
 
 Channel identity is edited by double-clicking the Channel name (owner/admin only; keyboard focus + Enter is equivalent). No pencil icon occupies the header. A compact dialog contains only Name and Icon. The adjacent shadcn AvatarGroup opens a separate Members dialog with the existing invitation and membership actions. Channel management no longer occupies a Settings tab; account settings remain in the bottom-left global Settings entry.
+### Catalog navigation refinement (2026-10-09)
+
+Home opens the overview and use cases. Add opens a shadcn item-type menu; Quick
+Share is a submenu, not a permanent Channel-header action. Catalog hover Add
+creates directly in that Catalog. Dragging a row to a Catalog center reparents
+it; upper/lower edges insert before/after; tree whitespace moves to root. The
+destination highlights before commit, and failures remain visible. Existing
+Move dialog remains the keyboard-accessible alternative. Catalog uses a gold
+folder; shared Files use a distinct blue synced-files symbol or native IDE file
+icon. Content file icons follow Material Icon Theme filename/extension mappings.

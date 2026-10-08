@@ -1,6 +1,7 @@
 import { traceTargets } from "@/api/trace-locators";
 import { useEffect, useMemo, useState } from "react";
-import { FileIcon, FolderIcon } from "lucide-react";
+import { FolderIcon } from "lucide-react";
+import { IdeFileIcon } from "@/features/workspace/ItemIcon";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { FilePreview } from "@/features/files/FilePreview";
@@ -42,7 +43,7 @@ export function FileExplorer({ shareId, shareName, entries }: Props) {
                 disabled={entry.kind === "directory"}
                 onClick={() => entry.kind === "file" && setSelectedPath(entry.path)}
               >
-                {entry.kind === "directory" ? <FolderIcon data-icon="inline-start" /> : <FileIcon data-icon="inline-start" />}
+                {entry.kind === "directory" ? <FolderIcon data-icon="inline-start" className="item-icon-files" /> : <IdeFileIcon name={entry.name} />}
                 <span className="truncate">{entry.name}</span>
               </Button>
             ))}

@@ -8,6 +8,7 @@ import {
   NotebookIcon,
   SparklesIcon,
   FileTextIcon,
+  HouseIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -18,6 +19,7 @@ import {
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import {
   Breadcrumb,
@@ -37,6 +39,8 @@ import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { cn } from "cn";
 import { trackedFetch } from "@/api/request-activity";
+import { ItemIcon } from "./ItemIcon";
+import { CatalogDragTarget,type DropPosition } from "./CatalogDragTarget";
 
 export type CatalogItem = {
   id: string;
@@ -77,6 +81,7 @@ type Props = {
   onSelect: (item: CatalogItem | "add" | "message") => void;
   onAdd: (kind: AddKind, parentId?: string) => void;
   children: ReactNode;
+  quickShare?: ReactNode;
 };
 export function CatalogWorkspace({
   channelId,
@@ -86,6 +91,7 @@ export function CatalogWorkspace({
   onSelect,
   onAdd,
   children,
+  quickShare,
 }: Props) {
   const [branches, setBranches] = useState<Record<string, CatalogItem[]>>({});
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
@@ -218,13 +224,24 @@ export function CatalogWorkspace({
       setWorking(false);
     }
   }
+  async function drop(source:CatalogItem,target:CatalogItem|undefined,position:DropPosition) {
+    const parentId=position==="inside"?target?.id??null:target?.parentId??null;
+    const siblings=branches[parentId??"root"]??[];
+    let before=position==="before"?target:undefined;
+    if(position==="after"&&target){const index=siblings.findIndex(row=>row.id===target.id);before=siblings.slice(index+1).find(row=>row.id!==source.id);}
+    try {
+      await mutate(()=>catalogRequest(`/v1/channels/${channelId}/catalog-items/position`,"PATCH",{kind:source.kind,itemId:source.id,parentId,before:before?{kind:before.kind,itemId:before.id}:undefined}));
+      if(parentId){setExpanded(current=>({...current,[parentId]:true}));await load(parentId);}
+      await load(source.parentId??undefined);await load(parentId??undefined);
+    }catch{/* mutate exposes the authoritative failure; no optimistic success. */}
+  }
   function rows(parent?: string, depth = 0): ReactNode {
     if (depth > 64) return null;
     return (branches[parent ?? "root"] ?? []).map((item) => {
-      const Icon = kinds.find((row) => row.kind === item.kind)!.icon;
       return (
         <Collapsible key={item.id} open={Boolean(expanded[item.id])}>
-          <div className="group flex min-w-0 items-center gap-1">
+          <CatalogDragTarget item={item} channelId={channelId} disabled={working} onDrop={(source,position)=>void drop(source,item,position)}>
+          <div className="group flex min-w-0 items-center gap-0">
             {item.kind === "catalog" && (
               <Button
                 variant="ghost"
@@ -246,13 +263,13 @@ export function CatalogWorkspace({
             )}
             <Button
               variant={selected?.id === item.id ? "secondary" : "ghost"}
-              className="min-w-0 flex-1 justify-start"
+              className={cn("min-w-0 flex-1 justify-start",item.kind==="catalog"&&"pl-1")}
               title={item.name}
               data-item-id={item.id}
               data-item-kind={item.kind}
               onClick={() => select(item)}
             >
-              <Icon data-icon="inline-start" />
+              <ItemIcon kind={item.kind} name={item.name}/>
               <span className="truncate">{item.name}</span>
             </Button>
             {item.kind === "catalog" && (
@@ -285,6 +302,7 @@ export function CatalogWorkspace({
               </DropdownMenu>
             )}
           </div>
+          </CatalogDragTarget>
           {item.kind === "catalog" && (
             <CollapsibleContent>
               <div className="ml-4">{rows(item.id, depth + 1)}</div>
@@ -308,9 +326,16 @@ export function CatalogWorkspace({
             onSelect("add");
           }}
         >
-          <PlusIcon data-icon="inline-start" />
-          Add
+          <HouseIcon data-icon="inline-start" />
+          Home
         </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger render={<Button variant="ghost" className="justify-start"/>}><PlusIcon/>Add</DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-52">
+            <DropdownMenuGroup>{kinds.map(({kind,label})=><DropdownMenuItem key={kind} onClick={()=>add(kind)}><ItemIcon kind={kind} name={label}/>{label}</DropdownMenuItem>)}</DropdownMenuGroup>
+            <DropdownMenuSeparator/>{quickShare}
+          </DropdownMenuContent>
+        </DropdownMenu>
         <Button
           variant={view === "messages" ? "secondary" : "ghost"}
           className="justify-start"
@@ -322,7 +347,7 @@ export function CatalogWorkspace({
           <MessageSquareIcon data-icon="inline-start" />
           Message
         </Button>
-        <ScrollArea className="min-h-0 flex-1">{rows()}</ScrollArea>
+        <ScrollArea className="min-h-0 flex-1"><CatalogDragTarget channelId={channelId} disabled={working} onDrop={source=>void drop(source,undefined,"inside")}><div className="min-h-[calc(100vh-240px)] pb-16">{rows()}</div></CatalogDragTarget></ScrollArea>
       </aside>
       <section className="flex min-h-0 min-w-0 flex-1 flex-col">
         {selected && (

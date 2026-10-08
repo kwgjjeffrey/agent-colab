@@ -77,6 +77,9 @@ describe("Catalog workspace", () => {
     );
     await screen.findByRole("button", { name: "Investigation" });
     expect(screen.queryAllByRole("tab").length).toBe(0);
+    fireEvent.click(screen.getByRole("button",{name:"Home"}));
+    expect(onSelect).toHaveBeenCalledWith("add");
+    expect(screen.getByRole("button",{name:"Add"}).getAttribute("aria-haspopup")).toBe("menu");
     fireEvent.click(
       screen.getByRole("button", { name: "Message" }),
     );

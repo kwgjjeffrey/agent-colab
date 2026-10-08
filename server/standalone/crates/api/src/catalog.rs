@@ -5,7 +5,10 @@ use super::*;
 struct Children { parent_id: Option<uuid::Uuid>, offset: Option<i64>, limit: Option<i64> }
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
-struct Placement { kind: String, item_id: uuid::Uuid, parent_id: Option<uuid::Uuid> }
+struct Placement { kind: String, item_id: uuid::Uuid, parent_id: Option<uuid::Uuid>, before: Option<Anchor> }
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct Anchor { kind:String, item_id:uuid::Uuid }
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct Create { name: String, parent_id: Option<uuid::Uuid> }
@@ -68,7 +71,7 @@ async fn place(State(state): State<AppState>, headers: HeaderMap,
     Path(channel): Path<uuid::Uuid>, Json(body): Json<Placement>,
 ) -> Result<StatusCode, ApiError> {
     let user = authenticated_user(&state, &headers).await?;
-    let moved = state.database.place_catalog_item(user, channel, &body.kind, body.item_id, body.parent_id).await
+    let moved = state.database.position_catalog_item(user, channel, &body.kind, body.item_id, body.parent_id, body.before.map(|anchor|(anchor.kind,anchor.item_id))).await
         .map_err(|_| ApiError::internal("catalog_move_failed"))?;
     if !moved { return Err(ApiError::bad_request("catalog_move_rejected")); }
     Ok(StatusCode::NO_CONTENT)
