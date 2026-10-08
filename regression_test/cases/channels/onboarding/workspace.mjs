@@ -14,7 +14,7 @@ export async function run(ctx){
  try{
  await openTab(ctx,'Settings');const form=ctx.page.locator('[data-trace-target~="channels.update"]');
  ctx.assert('Icon is not a text field',await form.locator('input[name="icon"][type="text"]').count(),0);
- await form.getByLabel('Channel icon image',{exact:true}).setInputFiles({name:'owned-icon.png',mimeType:'image/png',buffer:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j9i8AAAAASUVORK5CYII=','base64')});
+ await form.getByLabel('Channel icon image',{exact:true}).setInputFiles({name:'owned-icon.png',mimeType:'image/png',buffer:Buffer.from(await ctx.page.evaluate(()=>{const canvas=document.createElement('canvas');canvas.width=canvas.height=32;const context=canvas.getContext('2d');context.fillStyle='#247ba0';context.fillRect(0,0,32,32);return canvas.toDataURL('image/png').split(',')[1];}),'base64')});
  await form.getByRole('button',{name:'Save changes',exact:true}).click();
  const uploaded=await eventually(ctx,'Uploaded icon stored as an image',()=>core(ctx,'GET','/v1/channels'),rows=>rows.find(x=>x.id===channel.id)?.icon?.startsWith('data:image/png;'));
  ctx.assert('Uploaded icon is stored',uploaded.find(x=>x.id===channel.id).icon.startsWith('data:image/png;'),true);
