@@ -1,4 +1,4 @@
-# Colab Explorer (in development)
+# Colab Explorer
 
 `colab-explorer` owns mixed-tree discovery. `colab-browser` is legacy and retains
 its existing flat references and operations.
@@ -14,5 +14,12 @@ placement-independent `stableRef`. Pass stableRef to the existing Session Reader
 Files Browser use, Skill Tool, or Canvas tools. Relocation does not change this
 consumer identity. Old readable references retain legacy resolver behavior.
 
-Catalog mutations and sharing destinations remain pending. This interface is not
-yet published or end-to-end accepted.
+`explorerRef` is `colab://resource/<channel-id>/<kind>/<item-id>` and is accepted by
+Explorer even after relocation. Catalog stableRef uses this form. Asset stableRef
+remains compatible with its legacy consumer, not a new content protocol.
+
+Commands: create-catalog --parent REF --name NAME; rename-catalog --ref REF --name
+NAME; remove-catalog --ref REF (empty only); move --ref REF --parent REF; share
+--parent REF --item-type files|session|skill --source SOURCE [--name NAME]. They
+return short committed receipts. Shared asset movement requires its contributor;
+Catalog/Canvas organization follows existing Channel-member editing permissions.

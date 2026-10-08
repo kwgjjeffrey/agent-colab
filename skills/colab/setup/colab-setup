@@ -340,7 +340,7 @@ def main():
         except BlockingIOError: raise RuntimeError("another Agent Colab update is already running")
     receipt=ROOT/"installation.json"
     def target_status(path):
-        required=(path/"SKILL.md",path/"agents/openai.yaml",path/"bin/colab-open",path/"bin/colab-browser",path/"bin/colab-messages",path/"bin/colab-session-reader",path/"bin/colab-skill-tool",path/"bin/colab-transfer")
+        required=(path/"SKILL.md",path/"agents/openai.yaml",path/"bin/colab-open",path/"bin/colab-browser",path/"bin/colab-explorer",path/"bin/colab-messages",path/"bin/colab-session-reader",path/"bin/colab-skill-tool",path/"bin/colab-transfer")
         return {"installed":all(item.exists() for item in required),"path":str(path)}
     def component_status(current, manifest=None):
         # Old receipts had one release-wide version. Keep that as a migration fallback only;

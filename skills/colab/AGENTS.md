@@ -1,5 +1,11 @@
 # Colab Skill
 
+`colab-explorer` owns mixed-tree discovery, Catalog CRUD, placement and directory-
+targeted sharing. Keep legacy Browser inputs/outputs and flat resolution compatible.
+Explorer location paths are not consumer identities: explorerRef targets Explorer;
+stableRef feeds existing type-specific consumers. Catalogs have no body. Resolve
+within the selected account/Organization; refuse ambiguous or cross-Channel moves.
+
 Agent stdout is a task-oriented projection, not a dump of an internal API response. Each operation
 must allow-list the fields needed to select a resource, perform the next tool call, consume content,
 or understand success/failure. IDs are retained only when another supported operation needs them.

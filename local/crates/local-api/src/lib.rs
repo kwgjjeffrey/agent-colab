@@ -668,6 +668,9 @@ pub fn router(state: AppState, security: LocalSecurity) -> Router {
         .route("/v1/messages/stream", get(messaging::stream))
         .route("/v1/channels/{channel}/catalog-items", get(catalog::children))
         .route("/v1/channels/{channel}/catalog-items/position", patch(catalog::place))
+        .route("/v1/channels/{channel}/catalog-items/{kind}/{item}/trail", get(catalog::trail))
+        .route("/v1/channels/{channel}/catalogs", axum::routing::post(catalog::create))
+        .route("/v1/channels/{channel}/catalogs/{catalog}", patch(catalog::rename).delete(catalog::remove))
         .route(
             "/v1/channels/{channel_id}/canvases",
             get(canvas::list_canvases).post(canvas::create_canvas),

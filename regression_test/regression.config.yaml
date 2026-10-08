@@ -3,13 +3,13 @@ caseDirectories:
   - cases
 regressionDirectory: .runs
 baseUrl: http://127.0.0.1:53480/embed
-readySelector: '[role="tab"]:has-text("Messages")'
+readySelector: '[aria-label="Channel items"]'
 browser:
   mode: device
   profileDir: /Users/yuzhiyuan/.local/share/trace/browser-profiles/colab-regression-trial
 targets:
   channel.rail: '[aria-label="Channels"]'
-  messages.tab: '[role="tab"]:has-text("Messages")'
+  messages.tab: '[aria-label="Channel items"] button:has-text("Message")'
 prerequisites:
   local-core: true
 

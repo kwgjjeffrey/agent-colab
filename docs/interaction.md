@@ -1,5 +1,16 @@
 # Colab 交互设计
 
+## 2026-10-08 Catalog workspace (replaces tabs)
+
+Keep Channel identity (double-click to edit), member AvatarGroup and Quick Share
+above the workspace. Its left pane contains Add, Message and mixed assets; folders
+expand lazily and scroll independently. Catalog hover Add opens the standard item
+menu; direct Add-page buttons open existing selectors or a name Dialog. Name and
+breadcrumb sit above the detail/preview; existing asset operations render into its
+right-hand action area. Moving uses a Catalog destination Dialog; non-empty removal
+is rejected without deleting assets. Session preview loads a bounded recent page
+only after an explicit Preview action, not merely from discovery.
+
 Global Settings → Account settings lets every signed-in account edit its display name and inspect/link Google. It is independent of Channel Settings and onboarding. Device-only accounts explain device creation and automatic login; internal @device.invalid email is hidden from member/account lists. A small Settings notification Badge guides device-created accounts to choose a name and optionally link Google. Google reminders can be dismissed per account/device; the action remains available. Existing Google accounts are not marked incomplete. Explicitly chosen names survive future Google logins; existing Google identities still select their existing accounts rather than merging.
 
 Channel Settings → Members 增加 Invite via Agent（owner/admin）。按需创建现有 24 小时普通成员邀请，标准 Dialog 提供单条 macOS bootstrap 命令的提示词、复制和撤销；不自动分享资料。命令补齐签名安装、Core 服务与设备账号准备，加入后定位 Channel Home。多账号未选择时必须由用户选择。

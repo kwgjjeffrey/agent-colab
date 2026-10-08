@@ -1,5 +1,17 @@
 # Agent Colab engineering guide
 
+The Channel workspace uses a mixed Catalog tree, not type tabs. Preserve the
+persistent Channel header (identity editing, members, Quick Share), fixed Add and
+Message entries, and stable asset IDs. Add retains Home use cases/activity plus
+creation entrances. Catalog placement is Server-owned and must reject cross-Channel
+parents, cycles and destructive non-empty deletion. Existing Canvas folders retain
+their IDs/storage names for compatibility; never implement a second folder model.
+`colab-explorer` is the new mixed-tree Agent interface. `colab-browser` remains
+legacy with unchanged flat-reference semantics; do not reinterpret old handoffs.
+Readable location refs and stable identity/consumer refs are distinct. Moving or
+renaming an item must not change its identity or break UUID-based consumption.
+See `docs/catalog-implementation-plan.md` for scope and acceptance status.
+
 Read `docs/product.md`, `docs/interaction.md`, `docs/technical-design.md`, and `docs/agent-interface.md` before changing product behavior or boundaries. `docs/implementation-plan.md` and `docs/validation-plan.md` are live status documents and must be updated with verified results.
 
 Read `docs/canvas-technical-design.md` before changing Canvas. Canvas durable mutations use HTTP through Local Core; Canvas and Conversation invalidations share the one account realtime WebSocket. Local Core owns the Yrs replica, projection codec, durable outbox, retry, and ordered repair. Agent tools receive a Markdown/TXT projection and must never expose CRDT internals. The current Canvas implementation and validation scope is macOS first.

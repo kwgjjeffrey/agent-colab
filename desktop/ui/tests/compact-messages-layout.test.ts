@@ -36,7 +36,10 @@ describe("compact Discord-style Messages layout", () => {
 
   it("keeps Channel identity and Quick Share in one compact header row", () => {
     expect(shell).toContain('className="flex shrink-0 items-center gap-3 px-8 pt-5 pb-3"');
-    expect(shell).toContain('className="flex items-center border-b px-8"');
+    expect(shell).toContain('<ChannelHeading channel={selected}');
+    expect(shell).toContain('<QuickShareControl');
+    expect(shell).toContain('<CatalogWorkspace');
+    expect(shell).not.toContain('<TabsList');
   });
 
   it("does not reserve a permanent titlebar status strip", () => {

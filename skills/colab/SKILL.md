@@ -27,6 +27,22 @@ the updater; it is not the business-tool output contract.
 
 ## Operations
 
+- Discover the mixed tree: `bin/colab-explorer open --ref 'colab://'` or
+  `open --ref 'colab://channel/<channel>/<catalog...>' [--offset N] [--limit N]`.
+  Catalogs return direct children; continue with `page.nextOffset`. Assets return
+  metadata, not bodies. Use `explorerRef` for stable Explorer targeting and
+  `stableRef` with the existing Session Reader, Files use, Skill Tool or Canvas.
+- Create a Catalog: `bin/colab-explorer create-catalog --parent '<ref>' --name '<name>'`.
+- Rename or remove an empty Catalog: `bin/colab-explorer rename-catalog --ref '<ref>' --name '<name>'`
+  or `remove-catalog --ref '<ref>'`. Non-empty removal is refused.
+- Move an item: `bin/colab-explorer move --ref '<ref>' --parent '<channel-or-catalog-ref>'`.
+- Share into a Catalog: `bin/colab-explorer share --parent '<ref>' --item-type files|session|skill --source '<source>' [--name '<name>']`.
+  Discover sources with the existing tools below. If registration succeeds but
+  placement fails, the error identifies the existing asset at root; move it rather
+  than sharing it again.
+- Browser is legacy, retained for old flat references, management and Files use.
+  Do not pass hierarchical Explorer paths to legacy consumers; use stableRef.
+
 - Open the Agent Colab GUI: `bin/colab-open`.
 - Join a Channel invitation: `bin/colab-join --invitation '<token>'`. It preserves the selected account, uses device registration/login only when signed out, and opens the joined Channel. Multiple unselected accounts require a user choice. Invitation receipts never echo the token. Before installation, use the invitation's single bootstrap command; it prepares the signed client artifacts and service before invoking this entry.
 - Receive a one-time context handoff without joining a Channel: `bin/colab-transfer receive --capability 'agent-colab-transfer://…'`. The command downloads the fixed snapshot and returns each item's local path (and the Files tree) ready for native tools.

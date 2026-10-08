@@ -1,4 +1,5 @@
 import { traceTargets } from "@/api/trace-locators";
+import { WorkspaceActions } from "@/features/workspace/WorkspaceActions";
 import { runOperation } from "@/api/operation-runner";
 import { useEffect, useMemo, useState } from "react";
 import { PlusIcon, SearchIcon } from "lucide-react";
@@ -51,6 +52,10 @@ type Installation = {
 };
 
 type Props = {
+  focusId?: string;
+  shareOpenToken?: number;
+  onShareOpenConsumed?: () => void;
+  onCreated?: (id:string) => Promise<void>;
   channelId: string;
   channelName: string;
   busy: boolean;
@@ -70,11 +75,12 @@ function initials(name: string) {
 }
 
 /** Shared Skills owns discovery and installation presentation; all mutations go through Local Core. */
-export function SkillsView({ channelId, channelName, busy, defaultAgent, installedAgents, onChoose }: Props) {
+export function SkillsView({ focusId, shareOpenToken, onShareOpenConsumed, onCreated, channelId, channelName, busy, defaultAgent, installedAgents, onChoose }: Props) {
   const [shares, setShares] = useState<SkillShare[]>([]);
   const [sources, setSources] = useState<SkillSource[]>([]);
   const [installations, setInstallations] = useState<Record<string, Installation[]>>({});
   const [showShare, setShowShare] = useState(false);
+  useEffect(()=>{if(shareOpenToken){setShowShare(true);onShareOpenConsumed?.();}},[shareOpenToken]);
   const [query, setQuery] = useState("");
   const [working, setWorking] = useState<string>();
   const [error, setError] = useState<string>();
@@ -89,7 +95,7 @@ return runOperation("skills.list", async (operation) => {
     if (!response.ok) throw new Error(await response.text());
     const next = await response.json() as SkillShare[];
     setShares(next);
-    const states = await Promise.all(next.map(async (share) => {
+    const states = await Promise.all(next.filter(share=>share.id===focusId).map(async (share) => {
       const result = await request(`/v1/skills/${share.id}/installations`);
       return [share.id, result.ok ? await result.json() as Installation[] : []] as const;
     }));
@@ -114,7 +120,7 @@ const trackedFetch = operation.fetch;
     void loadShares().catch((reason) => setError(String(reason)));
     const timer = window.setInterval(() => void loadShares(true).catch(() => undefined), 3_000);
     return () => window.clearInterval(timer);
-  }, [channelId]);
+  }, [channelId,focusId]);
 
   useEffect(() => {
     if (!showShare) return;
@@ -132,6 +138,8 @@ const trackedFetch = operation.fetch;
         method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(source),
       });
       if (!response.ok) throw new Error(await response.text());
+      const created = await response.json() as {id:string};
+      await onCreated?.(created.id);
       setShowShare(false); setQuery(""); await loadShares();
     } catch (reason) { operation.fail(); setError(String(reason)); }
     finally { setWorking(undefined); }
@@ -196,13 +204,13 @@ const trackedFetch = operation.fetch;
         <Empty><EmptyHeader><EmptyTitle>No shared skills yet</EmptyTitle><EmptyDescription>Share a recently changed Agent Skill or choose its source folder.</EmptyDescription></EmptyHeader></Empty>
       ) : (
         <div className="overflow-hidden rounded-xl border">
-          {shares.map((share) => (
+          {shares.filter(share=>share.id===focusId).map((share) => (
             <div key={share.id} className="group grid gap-3 border-b p-4 text-sm last:border-b-0">
               <div className="flex min-w-0 items-center gap-3">
                 <Avatar className="size-9"><AvatarImage src={share.contributorAvatarUrl} /><AvatarFallback>{initials(share.contributorName)}</AvatarFallback></Avatar>
                 <div className="min-w-0 flex-1"><strong className="block truncate">{share.name}</strong><span className="text-sm text-muted-foreground">{share.contributorName}{share.canWithdraw ? " (me)" : ""}{share.description ? ` · ${share.description}` : ""}</span></div>
-                <Button variant="outline" className="opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100" onClick={() => setAgentPrompt({ share, rows: installations[share.id] ?? [] })}>Give to Agent</Button>
-                {share.canWithdraw && <Button data-trace-target={traceTargets("skills.withdraw")} variant="destructive" disabled={working === share.id} onClick={() => void withdraw(share)}>Withdraw</Button>}
+                <WorkspaceActions><Button variant="outline" onClick={() => setAgentPrompt({ share, rows: installations[share.id] ?? [] })}>Give to Agent</Button>
+                {share.canWithdraw && <Button data-trace-target={traceTargets("skills.withdraw")} variant="destructive" disabled={working === share.id} onClick={() => void withdraw(share)}>Withdraw</Button>}</WorkspaceActions>
               </div>
               <div className="flex flex-wrap gap-2 pl-12">
                 {targets.map((target) => {

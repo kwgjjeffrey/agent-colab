@@ -1,4 +1,5 @@
 import { traceTargets } from "@/api/trace-locators";
+import { WorkspaceActions } from "@/features/workspace/WorkspaceActions";
 import { useAgentResultObservation } from "@/api/agent-result-observation";
 import { beginOperation } from "@/api/telemetry";
 import { operations } from "@/api/trace-operations";
@@ -58,6 +59,7 @@ type CanvasUpdate = {
   update: string;
 };
 type Props = {
+  embedded?: boolean;
   focusId?: string;
   channelId: string;
   channelName: string;
@@ -98,6 +100,7 @@ function shellQuote(value: string) {
 }
 
 export function CanvasView({
+  embedded,
   focusId,
   channelId,
   channelName,
@@ -207,7 +210,7 @@ ${readInstructions(promptResources, agent)}`;
   }
   return (
     <div className="flex h-full min-h-0">
-      <CanvasResourceTree
+      {!embedded && <CanvasResourceTree
         channelId={channelId}
         documents={items}
         folders={folders}
@@ -216,10 +219,11 @@ ${readInstructions(promptResources, agent)}`;
         onSelect={setSelected}
         onChanged={load}
         onError={setError}
-      />
+      />}
       <main className="min-w-0 flex-1">
         {current ? (
           <CanvasEditor
+            embedded={embedded}
             key={current.id}
             channelId={channelId}
             canvasId={current.id}
@@ -285,6 +289,7 @@ const canvasJson=operation.json;
 
 const REMOTE = Symbol("colab-canvas-remote");
 function CanvasEditor({
+  embedded,
   channelId,
   canvasId,
   title,
@@ -296,6 +301,7 @@ function CanvasEditor({
   onRename,
   onGive,
 }: {
+  embedded?: boolean;
   channelId: string;
   canvasId: string;
   title: string;
@@ -445,6 +451,7 @@ return runOperation("canvas.title", async (operation) => {
             />
           ) : (
             <h2 data-trace-target={traceTargets("canvas.title")}
+              hidden={embedded}
               className="truncate font-medium"
               onDoubleClick={() => setEditingTitle(true)}
             >
@@ -463,10 +470,10 @@ return runOperation("canvas.title", async (operation) => {
                   : "Synced"}
           </span>
         </div>
-        <Button data-trace-target={traceTargets("canvas.handoff")} size="sm" variant="outline" onClick={onGive}>
+        <WorkspaceActions>{embedded&&<Button size="sm" variant="ghost" onClick={()=>setEditingTitle(true)}>Rename</Button>}<Button data-trace-target={traceTargets("canvas.handoff")} size="sm" variant="outline" onClick={onGive}>
           <SparklesIcon data-icon="inline-start" />
           Give to Agent
-        </Button>
+        </Button></WorkspaceActions>
       </header>
       <div className="min-h-0 flex-1 overflow-auto">
         {ready ? (

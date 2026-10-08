@@ -6,7 +6,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "lib"))
 from local_api import DEFAULT_CORE, LocalApiError
 from output import success, failure
-from explorer import open_ref
+from explorer import open_ref, create_catalog, mutate_catalog, move, share
 
 
 def main():
@@ -17,8 +17,29 @@ def main():
     opening.add_argument("--ref", required=True)
     opening.add_argument("--offset", type=int, default=0)
     opening.add_argument("--limit", type=int, default=100)
+    create = commands.add_parser("create-catalog")
+    create.add_argument("--parent", required=True)
+    create.add_argument("--name", required=True)
+    rename = commands.add_parser("rename-catalog")
+    rename.add_argument("--ref", required=True)
+    rename.add_argument("--name", required=True)
+    remove = commands.add_parser("remove-catalog", help="Remove an empty Catalog only")
+    remove.add_argument("--ref", required=True)
+    moving = commands.add_parser("move")
+    moving.add_argument("--ref", required=True)
+    moving.add_argument("--parent", required=True)
+    sharing = commands.add_parser("share", help="Register a source into a Channel or Catalog")
+    sharing.add_argument("--parent", required=True)
+    sharing.add_argument("--item-type", required=True, choices=["files","session","skill"])
+    sharing.add_argument("--source", required=True)
+    sharing.add_argument("--name")
     args = parser.parse_args()
     try:
+        if args.operation == "create-catalog": return success(create_catalog(args.core, args.parent, args.name))
+        if args.operation == "rename-catalog": return success(mutate_catalog(args.core, args.ref, args.name))
+        if args.operation == "remove-catalog": return success(mutate_catalog(args.core, args.ref, remove=True))
+        if args.operation == "move": return success(move(args.core, args.ref, args.parent))
+        if args.operation == "share": return success(share(args.core, args.parent, args.item_type, args.source, args.name))
         if args.offset < 0 or not 1 <= args.limit <= 199:
             raise ValueError("offset must be nonnegative; limit must be 1–199")
         result = open_ref(args.core, args.ref, args.offset, args.limit)

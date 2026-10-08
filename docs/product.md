@@ -1,5 +1,15 @@
 # Colab 产品定义草案
 
+## 2026-10-08 Catalog workspace (supersedes type-tab navigation below)
+
+Channel identity, members and Quick Share remain in the persistent header.
+The workspace has fixed Add and Message entries followed by a mixed Catalog tree.
+Catalog is a nestable item, independent of asset type; existing assets stay at
+root and existing Canvas folders retain their identity. Add retains Home use cases
+and Recent activity, with actual creation/share entrances. Message remains the one
+Channel conversation, not a movable asset. Asset details share a name/trail header
+and right-aligned operations; previews retain their type-specific behavior.
+
 状态：讨论中  
 阶段：产品定位、场景与用法  
 暂不覆盖：交互设计、技术选型、系统架构

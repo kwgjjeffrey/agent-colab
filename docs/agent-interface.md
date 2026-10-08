@@ -1,5 +1,18 @@
 # Agent 脚手架与接口设计
 
+## Explorer interface (2026-10-08)
+
+Browser is legacy and retains its existing flat-reference protocol. New
+`colab-explorer open --ref colab://channel/<channel>/<catalog...>` returns direct
+children or one asset's metadata. Follow `page.nextOffset` using `--offset`.
+Location `ref` is readable; stable `explorerRef` is
+`colab://resource/<channel-id>/<kind>/<item-id>`. Catalog stableRef is that identity;
+asset stableRef is accepted by its existing consumer (Browser use, Session Reader,
+Skill Tool, Canvas). Moving/renaming does not change identity. No content is read
+by discovery. create-catalog/rename-catalog/remove-catalog/move/share expose the
+same Server-owned capabilities as GUI. A share placement failure explicitly reports
+the asset already registered at root; retry placement rather than re-registering.
+
 Local Core GET/PATCH /v1/auth/profile provides the current account profile and display-name update, without returning credentials. Google linkage remains the existing browser OAuth flow. Account/profile settings are global, not Channel membership mutations.
 
 Channel invitation: `colab-install --with-app --invitation TOKEN` prepares existing signed artifacts/service, then invokes packaged `bin/colab-join`. The join entry preserves an authenticated account, otherwise calls Local Core device start; ambiguous accounts fail with `account_selection_required` before joining. It accepts through Local Core and returns only `joined` and Channel identity. `colab-open --channel ID` uses a bootstrap-preserved fragment to locate Channel Home. Invitation capabilities must not appear in ordinary receipts or regression evidence.

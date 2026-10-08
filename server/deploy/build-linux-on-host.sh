@@ -4,7 +4,7 @@ deploy_dir="$(cd "$(dirname "$0")" && pwd)"
 repo_root="$(cd "$deploy_dir/../.." && pwd)"
 source "$deploy_dir/lib.sh"
 
-version=${COLAB_SERVER_VERSION:-$(tr -d '[:space:]' < "$repo_root/VERSION")}
+version=${COLAB_SERVER_VERSION:-$(tr -d '[:space:]' < "$repo_root/server/standalone/VERSION")}
 source_revision=$(git -C "$repo_root" rev-parse HEAD)
 if [[ -n "$(git -C "$repo_root" status --porcelain -- server/standalone observability/rust)" ]]; then
   echo "Commit Server and tracing source before building a deployment artifact." >&2

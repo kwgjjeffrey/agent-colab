@@ -54,7 +54,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { CatalogWorkspace, catalogRequest, type AddKind } from "@/features/workspace/CatalogWorkspace";
 import { FilesView, type FileShare } from "@/features/files/FilesView";
 import type { AgentTarget } from "@/features/agent/AgentPromptDialog";
 import { SessionsView, type SessionShare } from "@/features/sessions/SessionsView";
@@ -179,7 +180,7 @@ function App() {
   const [initialLoading, setInitialLoading] = useState(true);
   const [workspaceLoadError, setWorkspaceLoadError] = useState<string>();
   const [channels, setChannels] = useState<Channel[]>([]);
-  const { selectedId, setSelectedId, workspaceTab, setWorkspaceTab } = useWorkspaceNavigation();
+  const { selectedId, setSelectedId, workspaceTab, setWorkspaceTab, workspaceItem, setWorkspaceItem } = useWorkspaceNavigation();
   const [contextFocus, setContextFocus] = useState<ContextResource>();
   const [busy, setBusy] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
@@ -206,6 +207,23 @@ function App() {
   const [sessionInvite, setSessionInvite] = useState<SessionInvite>();
   const [homeTryBusy, setHomeTryBusy] = useState<string>();
   const [shareSessionToken, setShareSessionToken] = useState(0);
+  const [shareSkillToken, setShareSkillToken] = useState(0);
+  const [shareFilesToken, setShareFilesToken] = useState(0);
+  const [catalogDestination, setCatalogDestination] = useState<string>();
+  useEffect(()=>{if(workspaceItem&&["canvas","session","files"].includes(workspaceItem.kind)&&selectedId)setContextFocus({...workspaceItem,kind:workspaceItem.kind as "canvas",channelId:selectedId});},[selectedId,workspaceItem?.id]);
+  async function addWorkspaceItem(kind: AddKind, parentId?: string) {
+    setCatalogDestination(parentId);
+    if(kind==="catalog"||kind==="canvas"){window.dispatchEvent(new CustomEvent("colab:catalog-add",{detail:{kind,parentId}}));return;}
+    setWorkspaceItem(undefined);
+    if(kind === "session") {setContextFocus(undefined);setWorkspaceTab("sessions");setShareSessionToken(Date.now());}
+    if(kind === "files") {setContextFocus(undefined);setWorkspaceTab("files");setShareFilesToken(Date.now());}
+    if(kind === "skill") {setContextFocus(undefined);setWorkspaceTab("skills");setShareSkillToken(Date.now());}
+  }
+  async function placedShare(kind: string, id: string) {
+    if(catalogDestination && selectedId) await catalogRequest(`/v1/channels/${selectedId}/catalog-items/position`,"PATCH",{kind,itemId:id,parentId:catalogDestination});
+    if(selectedId){const trail=await catalogRequest<Array<{id:string;kind:string;name:string}>>(`/v1/channels/${selectedId}/catalog-items/${kind}/${id}/trail`);const item=trail.at(-1);if(item){setWorkspaceItem(item);if(kind!=="skill")setContextFocus({...item,kind:kind as "session",channelId:selectedId});setWorkspaceTab(kind==="session"?"sessions":kind==="skill"?"skills":kind);}}
+    window.dispatchEvent(new Event("colab:catalog-changed"));
+  }
   const loginReady = useRef(false);
   const bootstrapping = useRef(false);
   const acceptingInvite = useRef(false);
@@ -858,11 +876,13 @@ const api = operation.response;
     setError(undefined);
     setNotice(undefined);
     try {
-      await api(`/v1/channels/${selectedId}/files/share`, {
+      const sharedResponse = await api(`/v1/channels/${selectedId}/files/share`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ localPath: path, syncExcludes }),
       });
+      const created = await sharedResponse.json() as {id:string};
+      await placedShare("files",created.id);
       await loadFileShares(false, operation);
       setNotice(
         "Files shared with this Channel. Future changes sync automatically.",
@@ -1126,7 +1146,7 @@ const api = operation.response;
               action={<Button onClick={() => { setInitialLoading(true); setWorkspaceLoadError(undefined); void refreshOrganizations().then(() => refreshChannels()).catch((reason) => setWorkspaceLoadError(readableError(reason))).finally(() => setInitialLoading(false)); }}>Retry</Button>}
             />
           ) : selected ? (
-            <ChannelContextProvider key={selected.id} channelId={selected.id} navigate={resource => { setContextFocus({ ...resource }); setWorkspaceTab(resource.kind === "session" ? "sessions" : resource.kind === "message" ? "messages" : resource.kind); }}><Tabs value={workspaceTab} onValueChange={setWorkspaceTab} className="flex min-h-0 flex-1 flex-col gap-0">
+            <ChannelContextProvider key={selected.id} channelId={selected.id} navigate={resource => { setWorkspaceItem(resource.kind==="message"?undefined:resource);setContextFocus({ ...resource }); setWorkspaceTab(resource.kind === "session" ? "sessions" : resource.kind === "message" ? "messages" : resource.kind); }}><Tabs value={workspaceTab} onValueChange={setWorkspaceTab} className="flex min-h-0 flex-1 flex-col gap-0">
               <div className="flex shrink-0 items-center gap-3 px-8 pt-5 pb-3">
                 <ChannelHeading channel={selected} members={members} onEdit={()=>setChannelDialog("identity")} onMembers={()=>setChannelDialog("members")} />
                 {agentActivity&&<span role="status" className="min-w-0 flex-1 truncate text-sm text-muted-foreground">{agentActivity}</span>}
@@ -1140,44 +1160,21 @@ const api = operation.response;
                   onCreated={() => { if (auth.user && activeHomeTip) completeHomeTip(auth.user.id, activeHomeTip); setActiveHomeTip(undefined); }}
                 />
               </div>
-              <div className="flex items-center border-b px-8">
-                <TabsList variant="line" className="gap-2">
-                  <div className="flex h-full rounded-md bg-nav-home">
-                  <TabsTrigger value="home">Home</TabsTrigger>
-                  </div>
-                  <div className="flex h-full gap-2">
-                  <div className="flex h-full rounded-md bg-nav-collaboration">
-                  <TabsTrigger value="messages">Messages</TabsTrigger>
-                  </div>
-                  <div className="flex h-full rounded-md bg-nav-collaboration">
-                  <TabsTrigger value="canvas">Canvas</TabsTrigger>
-                  </div>
-                  </div>
-                  <div className="flex h-full gap-2">
-                  <div className="flex h-full rounded-md bg-nav-context">
-                  <TabsTrigger value="sessions">Sessions</TabsTrigger>
-                  </div>
-                  <div className="flex h-full rounded-md bg-nav-context">
-                  <TabsTrigger value="files">Files</TabsTrigger>
-                  </div>
-                  </div>
-                  <div className="flex h-full rounded-md bg-nav-capability">
-                  <TabsTrigger value="skills">Skills</TabsTrigger>
-                  </div>
-                </TabsList>
-              </div>
-              <TabsContent value="home" className="min-h-0 flex-1 overflow-auto"><ChannelHome key={`${selected.id}:${activeHomeTip ?? "idle"}`} accountId={auth.user?.id ?? ""} busyTip={homeTryBusy} defaultAgent={installation?.defaultAgent ?? "codex"} installedAgents={installation?.targets ?? {}} onTry={id => void tryHomeCase(id)} /></TabsContent>
+              <CatalogWorkspace key={selected.id} channelId={selected.id} channelName={selected.name} view={workspaceTab} focus={workspaceItem ?? contextFocus} onAdd={(kind,parent)=>void addWorkspaceItem(kind,parent)} onSelect={item=>{if(item==="add"||item==="message"){setWorkspaceItem(undefined);setContextFocus(undefined);setWorkspaceTab(item==="add"?"home":"messages");}else{setWorkspaceItem(item);if(item.kind!=="catalog"&&item.kind!=="skill")setContextFocus({kind:item.kind,id:item.id,name:item.name,channelId:selected.id});else setContextFocus(undefined);setWorkspaceTab(item.kind==="catalog"?"catalog":item.kind==="session"?"sessions":item.kind==="skill"?"skills":item.kind);}}}>
+              <TabsContent value="home" className="min-h-0 flex-1 overflow-auto"><div className="flex flex-wrap gap-2 px-6 pt-5">{(["catalog","canvas","session","files","skill"] as AddKind[]).map(kind=><Button key={kind} variant="outline" onClick={()=>void addWorkspaceItem(kind)}>{kind==="catalog"?"Catalog":kind==="canvas"?"Canvas":kind==="session"?"Session":kind==="files"?"Files":"Skill"}</Button>)}</div><ChannelHome key={`${selected.id}:${activeHomeTip ?? "idle"}`} accountId={auth.user?.id ?? ""} busyTip={homeTryBusy} defaultAgent={installation?.defaultAgent ?? "codex"} installedAgents={installation?.targets ?? {}} onTry={id => void tryHomeCase(id)} /></TabsContent>
               <TabsContent data-trace-target={traceTargets("context.people", "context.resources")} data-trace-region={"messages"} value="messages" className="min-h-0 flex-1 overflow-hidden">
                 <MessagesView focusId={contextFocus?.kind === "message" ? contextFocus.id : undefined} channelId={selected.id} channelName={selected.name} settingsOpenToken={agentSettingsOpenToken} onSettingsOpenConsumed={()=>setAgentSettingsOpenToken(0)} defaultAgent={installation?.defaultAgent ?? "codex"} installedAgents={installation?.targets ?? {}} onError={setError} onNotice={setNotice} onActivityChange={setAgentActivity}/>
               </TabsContent>
               <TabsContent data-trace-target={traceTargets("sessions.list")} data-trace-region={"sessions"} value="sessions">
                 <SessionsView
+                  embedded
+                  onCreated={id=>placedShare("session",id)}
                   shareOpenToken={shareSessionToken}
                   onShareOpenConsumed={()=>setShareSessionToken(0)}
                   focusId={contextFocus?.kind === "session" ? contextFocus.id : undefined}
                   channelId={selected.id}
                   channelName={selected.name}
-                  shares={sessionShares}
+                  shares={contextFocus?.kind==="session"?sessionShares.filter(row=>row.id===contextFocus.id):[]}
                   busy={busy}
                   defaultAgent={installation?.defaultAgent ?? "codex"}
                   installedAgents={installation?.targets ?? {}}
@@ -1187,8 +1184,10 @@ const api = operation.response;
               </TabsContent>
               <TabsContent data-trace-target={traceTargets("files.list")} data-trace-region={"files"} value="files">
                 <FilesView
+                  shareOpenToken={shareFilesToken}
+                  onShareOpenConsumed={()=>setShareFilesToken(0)}
                   focusId={contextFocus?.kind === "files" ? contextFocus.id : undefined}
-                  shares={fileShares}
+                  shares={contextFocus?.kind==="files"?fileShares.filter(row=>row.id===contextFocus.id):[]}
                   busy={busy}
                   onChoose={chooseFiles}
                   onShare={shareFiles}
@@ -1201,6 +1200,10 @@ const api = operation.response;
               </TabsContent>
               <TabsContent data-trace-target={traceTargets("skills.list")} data-trace-region={"skills"} value="skills">
                 <SkillsView
+                  focusId={workspaceItem?.kind==="skill"?workspaceItem.id:undefined}
+                  shareOpenToken={shareSkillToken}
+                  onShareOpenConsumed={()=>setShareSkillToken(0)}
+                  onCreated={id=>placedShare("skill",id)}
                   channelId={selected.id}
                   channelName={selected.name}
                   busy={busy}
@@ -1210,8 +1213,9 @@ const api = operation.response;
                 />
               </TabsContent>
               <TabsContent data-trace-region={"canvas"} value="canvas" className="min-h-0 flex-1 overflow-hidden">
-                <CanvasView focusId={contextFocus?.kind === "canvas" ? contextFocus.id : undefined} channelId={selected.id} channelName={selected.name} defaultAgent={installation?.defaultAgent ?? "codex"} installedAgents={installation?.targets ?? {}} />
+                <CanvasView embedded focusId={contextFocus?.kind === "canvas" ? contextFocus.id : undefined} channelId={selected.id} channelName={selected.name} defaultAgent={installation?.defaultAgent ?? "codex"} installedAgents={installation?.targets ?? {}} />
               </TabsContent>
+              </CatalogWorkspace>
               <Dialog open={Boolean(channelDialog)} onOpenChange={open=>{if(!open)setChannelDialog(undefined);}}>
                 <DialogContent data-trace-region="channel-settings" className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
                   <DialogHeader><DialogTitle>{channelDialog==="members"?"Members":"Edit Channel"}</DialogTitle></DialogHeader>

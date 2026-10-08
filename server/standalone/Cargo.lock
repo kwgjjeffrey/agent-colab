@@ -256,7 +256,7 @@ dependencies = [
 
 [[package]]
 name = "colab-server"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "axum",
@@ -282,7 +282,7 @@ dependencies = [
 
 [[package]]
 name = "colab-server-auth"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "reqwest",
@@ -292,14 +292,14 @@ dependencies = [
 
 [[package]]
 name = "colab-server-domain"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "serde",
 ]
 
 [[package]]
 name = "colab-server-email"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -312,7 +312,7 @@ dependencies = [
 
 [[package]]
 name = "colab-server-persistence"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "base64 0.22.1",

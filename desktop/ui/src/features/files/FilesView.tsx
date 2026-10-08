@@ -1,4 +1,5 @@
 import { traceTargets } from "@/api/trace-locators";
+import { WorkspaceActions } from "@/features/workspace/WorkspaceActions";
 import { operations } from "@/api/trace-operations";
 import { runOperation, type OperationScope } from "@/api/operation-runner";
 import { useEffect, useState } from "react";
@@ -47,6 +48,8 @@ export type FileShare = {
 };
 
 type Props = {
+  shareOpenToken?: number;
+  onShareOpenConsumed?: () => void;
   focusId?: string;
   shares: FileShare[];
   busy: boolean;
@@ -77,6 +80,8 @@ type SourceInspection = {
 
 /** Files owns only presentation and local browsing; synchronization remains a Local Core use case. */
 export function FilesView({
+  shareOpenToken,
+  onShareOpenConsumed,
   focusId,
   shares,
   busy,
@@ -89,6 +94,7 @@ export function FilesView({
   installedAgents,
 }: Props) {
   const context = useChannelContext();
+  useEffect(()=>{if(shareOpenToken){void choose();onShareOpenConsumed?.();}},[shareOpenToken]);
   useEffect(() => { const row = shares.find(row => row.id === focusId); if (row) void browse(row); }, [focusId]);
   const [openShare, setOpenShare] = useState<string>();
   const [entries, setEntries] = useState<LocalFileEntry[]>([]);
@@ -252,13 +258,9 @@ const trackedFetch = operation.fetch;
   };
 
   const browsedShare = shares.find((share) => share.id === openShare);
-  if (browsedShare) {
-    return <FileExplorer shareId={browsedShare.id} shareName={browsedShare.name} entries={entries} onClose={() => setOpenShare(undefined)} />;
-  }
-
   return (
-    <div className="mx-auto flex max-w-4xl flex-col gap-5 py-6">
-      <div className="flex justify-end">
+    <div className={browsedShare?"flex min-h-0 flex-1 flex-col":"mx-auto flex max-w-4xl flex-col gap-5 py-6"}>
+      {browsedShare ? <><WorkspaceActions><Button variant="outline" onClick={()=>void giveToAgent(browsedShare)}>Give to Agent</Button>{browsedShare.canWithdraw&&<><Button variant="outline" onClick={()=>void editScope(browsedShare)}>Sync scope</Button><Button variant="destructive" onClick={()=>onWithdraw(browsedShare)}>Withdraw</Button></>}</WorkspaceActions><FileExplorer shareId={browsedShare.id} shareName={browsedShare.name} entries={entries} onClose={() => setOpenShare(undefined)}/></> : <><div className="flex justify-end">
         <Button data-trace-target={traceTargets("files.share", "files.choose", "system.choose-path")} disabled={busy} onClick={() => void choose()}>
           <PlusIcon /> Share files
         </Button>
@@ -325,6 +327,7 @@ const trackedFetch = operation.fetch;
           ))}
         </div>
       )}
+      </>}
       <AgentPromptDialog
         open={Boolean(agentPrompt)}
         title={`Give “${agentPrompt?.shareName ?? ""}” to Agent`}

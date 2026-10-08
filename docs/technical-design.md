@@ -1,5 +1,16 @@
 # Colab 技术设计
 
+## Catalog workspace migration (2026-10-08)
+
+Migration 0039 generalizes existing canvas_folders without renaming the physical
+table or changing IDs. channel_shares.catalog_id and canvases.folder_id reference
+same-Channel catalogs through composite foreign keys. Parent reparenting is
+serialized on the Channel row, rejects cycles, and preserves asset ownership.
+Non-empty deletion is prohibited; terminal withdrawn/archived records may detach
+without deleting their content. Discover direct children through Core→Server
+catalog-items with bounded pagination; trail is metadata-only ancestor discovery.
+Canvas durable/editor protocols are unchanged. GUI and Explorer share this domain.
+
 Account profile is Server-owned at GET/PATCH /v1/auth/profile, exposed through the same Local Core route. PATCH only accepts a trimmed 1–80-character displayName without control characters and derives account identity from authentication. users.display_name_customized preserves explicit names during provider login. GET returns authoritative googleLinked and nameCustomized; Core updates only the bound account session/cache under the account-switch lock. GUI loads this metadata on identity changes or account-settings entry, not on every auth heartbeat. No identity merge or credential protocol changes.
 
 Activity 对象一致性（2026-10-07）：分页结果追加 actorMemberId、targetBlueprintId，不从可编辑姓名反推身份。仅在选定页之后关联触发消息，返回 160 字符/40 节点/20 层深度上限的摘要；mention 保持 kind/id/label 原子身份，label 上限 160 字符。GUI 不为每条活动再取一次消息，不预取 Session/File/Canvas 正文或 task 日志。消息、Canvas 节点与 Activity 复用同一胶囊组件。
