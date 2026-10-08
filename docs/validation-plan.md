@@ -711,6 +711,8 @@ Compact Channel E2E Run 20261008T083723Z-1179256b first round exercised both dia
 - GUI 122 / promotion 174 published through canonical R2 full size/hash readback:
   4,610,439 bytes, SHA-256
   9aae76d5bb272da61d83a4949ec837bc0abe4bc0c6aa3bcdfea2d166019862eb.
-  Core 96 / Skill 55 / Shell 23 unchanged. Native App update verification pending.
+  Core 96 / Skill 55 / Shell 23 unchanged. Native App Check updates → Update
+  completed; /ui.json reports 0.1.122-dev. Native screenshot verifies Home and
+  direct Add menu, Quick Share cascade, colored assets and retained Channel header.
 - No new performance budget is claimed. Icon and DnD libraries are reused;
   broader trace-catalog restructuring is separate from this product correction.

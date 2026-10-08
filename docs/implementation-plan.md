@@ -1,6 +1,6 @@
 # Colab 实现计划
 
-### 2026-10-09 Home / Add / catalog drag refinement — in progress
+### 2026-10-09 Home / Add / catalog drag refinement — verified and released
 
 Rollback checkpoint `66a795a`. Home is navigation; Add is a shadcn menu with
 item creation and Quick Share cascade. Removed duplicate Home creation actions
@@ -9,7 +9,11 @@ VS Code Material Icon Theme; Catalog and shared-file collection icons differ.
 Pragmatic Drag and Drop connects before/after/inside/root placement to Server.
 Migration 0040 adds sibling positions, with Channel-locked atomic parent/order
 updates and destination-anchor validation. PostgreSQL contract test passed;
-GUI 122 / promotion 174 and Server deployment acceptance are pending.
+GUI 122 / promotion 174 published and installed through the native App's normal
+Check updates → Update flow. Server bf495f1 is deployed and ready. Trace Run
+20261008T185809Z-472a7906 Round 3 passes drag parent/root/order/reload and Quick
+Share dialog continuity; gui.details.return passes. Native App confirms Home,
+Add menu, colored icons and removed header Quick Share. Core/Skill/Shell unchanged.
 
 ### 2026-10-09 Actual asset previews — in progress
 
