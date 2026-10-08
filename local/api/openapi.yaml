@@ -3,6 +3,24 @@ info:
   title: Colab Local API
   version: 0.1.0
 paths:
+  /v1/skills/{shareId}/preview:
+    get:
+      operationId: previewLocalSkill
+      description: Authorize and materialize the shared Skill, then read its bounded UTF-8 SKILL.md. Does not install or execute the Skill.
+      parameters:
+        - { name: shareId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: Skill entry content
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [content]
+                properties:
+                  content: { type: string }
+        "400": { description: Unsafe path or entry larger than 1 MiB }
+        "403": { description: Current account has no access }
   /v1/auth/profile:
     get:
       operationId: getLocalAccountProfile

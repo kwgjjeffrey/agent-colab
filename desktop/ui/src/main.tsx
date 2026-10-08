@@ -1165,7 +1165,7 @@ const api = operation.response;
               <TabsContent data-trace-target={traceTargets("context.people", "context.resources")} data-trace-region={"messages"} value="messages" className="min-h-0 flex-1 overflow-hidden">
                 <MessagesView focusId={contextFocus?.kind === "message" ? contextFocus.id : undefined} channelId={selected.id} channelName={selected.name} settingsOpenToken={agentSettingsOpenToken} onSettingsOpenConsumed={()=>setAgentSettingsOpenToken(0)} defaultAgent={installation?.defaultAgent ?? "codex"} installedAgents={installation?.targets ?? {}} onError={setError} onNotice={setNotice} onActivityChange={setAgentActivity}/>
               </TabsContent>
-              <TabsContent data-trace-target={traceTargets("sessions.list")} data-trace-region={"sessions"} value="sessions">
+              <TabsContent data-trace-target={traceTargets("sessions.list")} data-trace-region={"sessions"} value="sessions" className="min-h-0 flex-1 overflow-y-auto">
                 <SessionsView
                   embedded
                   onCreated={id=>placedShare("session",id)}
@@ -1198,7 +1198,7 @@ const api = operation.response;
                   installedAgents={installation?.targets ?? {}}
                 />
               </TabsContent>
-              <TabsContent data-trace-target={traceTargets("skills.list")} data-trace-region={"skills"} value="skills">
+              <TabsContent data-trace-target={traceTargets("skills.list")} data-trace-region={"skills"} value="skills" className="min-h-0 flex-1 overflow-y-auto">
                 <SkillsView
                   focusId={workspaceItem?.kind==="skill"?workspaceItem.id:undefined}
                   shareOpenToken={shareSkillToken}

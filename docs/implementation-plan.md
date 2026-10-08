@@ -1,5 +1,14 @@
 # Colab 实现计划
 
+### 2026-10-09 Actual asset previews — in progress
+
+Replace embedded collection remnants with actual Session conversation, SKILL.md,
+and Files content. One inline breadcrumb owns navigation, including file paths;
+no redundant Back row, duplicate title or collection Share action. Session and
+Skill reading panels scroll independently and share Markdown typography.
+Candidate GUI 120 / Core 96 / promotion 172 is not yet published or installed.
+User requested prioritizing preview continuity over peripheral hardening.
+
 ### 2026-10-09 Asset detail navigation repair
 
 Removed the legacy full-window Files overlay, kept the preview inside the detail

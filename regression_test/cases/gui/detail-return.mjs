@@ -31,8 +31,8 @@ export async function run(ctx) {
     }
     if(kind==='session') {
       const preview=ctx.page.locator('[data-trace-region="session-preview"]');
-      await preview.locator('p.whitespace-pre-wrap').first().waitFor();
-      ctx.assert('Session preview contains real message content',(await preview.locator('p.whitespace-pre-wrap').first().innerText()).length>0,true);
+      await preview.locator('[data-session-message]').first().waitFor();
+      ctx.assert('Session preview contains real message content',(await preview.locator('[data-session-message]').first().innerText()).length>0,true);
       ctx.assert('Session preview has no read error',await preview.getByRole('alert').count(),0);
     }
     await ctx.screenshot(kind+' actual preview and unified trail');

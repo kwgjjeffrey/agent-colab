@@ -7,8 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { trackedFetch } from "@/api/request-activity";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import { PreviewMarkdown } from "@/features/workspace/PreviewMarkdown";
 import {
   Dialog,
   DialogContent,
@@ -225,7 +224,7 @@ const trackedFetch = operation.fetch;
                 <WorkspaceActions><Button variant="outline" onClick={() => setAgentPrompt({ share, rows: installations[share.id] ?? [] })}>Give to Agent</Button>
                 {share.canWithdraw && <Button data-trace-target={traceTargets("skills.withdraw")} variant="destructive" disabled={working === share.id} onClick={() => void withdraw(share)}>Withdraw</Button>}</WorkspaceActions>
               </div>
-              {preview !== undefined ? <article className="flex flex-col gap-3 leading-relaxed" data-trace-region="skill-preview"><ReactMarkdown remarkPlugins={[remarkGfm]}>{preview}</ReactMarkdown></article> : !error && <p className="text-muted-foreground">Loading Skill preview…</p>}
+              {preview !== undefined ? <article data-trace-region="skill-preview"><PreviewMarkdown>{preview}</PreviewMarkdown></article> : !error && <p className="text-muted-foreground">Loading Skill preview…</p>}
               <div className="flex flex-wrap gap-2 pl-12">
                 {targets.map((target) => {
                   const state = installations[share.id]?.find((item) => item.targetAgent === target.id)?.state ?? "not_installed";

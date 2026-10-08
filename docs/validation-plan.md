@@ -1,5 +1,12 @@
 # 技术验证计划
 
+### 2026-10-09 Actual asset previews — candidate validation
+
+Trace Run `20261008T175800Z-b7e764d9` passed the scoped real Core/Server
+four-asset preview and breadcrumb return case. Subsequent readability and
+scrolling changes still require packaged acceptance. Five focused GUI component
+tests passed. This is not release acceptance or a full regression-suite claim.
+
 ### 2026-10-09 Detail navigation repair
 
 GUI 119 production build and four workspace component tests passed, including

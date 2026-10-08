@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { catalogRequest } from "@/features/workspace/CatalogWorkspace";
+import { PreviewMarkdown } from "@/features/workspace/PreviewMarkdown";
 
 type Turn = {
   items: Array<{ type?: string; text?: string; content?: string | Array<{text?:string}> }>;
@@ -15,6 +16,7 @@ export function SessionPreview({ id }: { id: string }) {
   useEffect(() => {
     setTurns(undefined);
     setError(undefined);
+    setWarnings([]);
     void read();
     return () => { generation.current += 1; };
   }, [id]);
@@ -74,9 +76,11 @@ export function SessionPreview({ id }: { id: string }) {
                   <span className="text-xs text-muted-foreground">
                     {item.type === "userMessage" ? "User" : "Agent"}
                   </span>
-                  <p className="whitespace-pre-wrap break-words text-sm">
-                    {item.text ?? (typeof item.content === "string" ? item.content : item.content?.map(block=>block.text ?? "").join("\n"))}
-                  </p>
+                  <div data-session-message>
+                    <PreviewMarkdown>
+                    {item.text ?? (typeof item.content === "string" ? item.content : item.content?.map(block=>block.text ?? "").join("\n")) ?? ""}
+                    </PreviewMarkdown>
+                  </div>
                 </div>
               )),
           )}

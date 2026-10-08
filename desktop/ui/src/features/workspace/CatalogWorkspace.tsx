@@ -324,12 +324,12 @@ export function CatalogWorkspace({
         </Button>
         <ScrollArea className="min-h-0 flex-1">{rows()}</ScrollArea>
       </aside>
-      <section className="flex min-w-0 flex-1 flex-col">
+      <section className="flex min-h-0 min-w-0 flex-1 flex-col">
         {selected && (
           <div className="flex shrink-0 items-center justify-between gap-3 border-b px-6 py-3">
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1 overflow-hidden">
               <Breadcrumb>
-                <BreadcrumbList>
+                <BreadcrumbList className="flex-nowrap whitespace-nowrap">
                   <BreadcrumbItem>
                     <BreadcrumbLink render={<button type="button" onClick={() => { setSelectedCatalog(undefined); onSelect("add"); }} />}>
                       {channelName}

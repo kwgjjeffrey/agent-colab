@@ -7,8 +7,8 @@ Ancestors navigate; the current item is non-interactive. There is no standalone
 Back row or duplicate item heading. Selected Skill shows real SKILL.md without
 the collection Share button; installation remains available. Selected Session
 automatically reads a bounded page and shows contributor/provider/sync metadata,
-not a second listing card. Files has only its internal file path below the shared
-asset trail, without another collection Back button.
+not a second listing card. Files appends its internal file path to the same
+asset trail, without another breadcrumb strip or collection Back button.
 
 ## 2026-10-09 Detail return repair (superseded navigation by correction above)
 
