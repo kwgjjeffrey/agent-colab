@@ -1,5 +1,29 @@
 export const USECASE={name:'Preview a published Session after its original local source disappears',description:'Publish a case-owned Session, move its local source aside, then read the published snapshot through Local Core and the actual GUI. Verify recent conversation text and restore the source in finally. No unrelated transcript is touched.'};
-export const META={id:'context.sessions.reading.missing-source',module:'context/sessions/reading',surface:'gui',priority:'critical',origin:'bug',status:'trial',effects:'isolated-write',cost:'normal',requires:['local-core'],affectedPaths:['local/crates/local-api/src/sessions.rs','desktop/ui/src/features/sessions/SessionPreview.tsx'],suite:'business',testLevel:'end-to-end',locks:['read:client.primary','write:channel.shared']};
+export const META={
+  "id": "context.sessions.reading.missing-source",
+  "module": "context/sessions/reading",
+  "surface": "gui",
+  "priority": "critical",
+  "origin": "bug",
+  "status": "active",
+  "effects": "isolated-write",
+  "cost": "normal",
+  "requires": [
+    "local-core"
+  ],
+  "affectedPaths": [
+  "local/crates/local-api/src/sessions.rs",
+  "desktop/ui/src/features/sessions/SessionPreview.tsx",
+  "desktop/ui/src/features/workspace"
+],
+  "suite": "business",
+  "testLevel": "end-to-end",
+  "locks": [
+    "read:client.primary",
+    "write:channel.shared"
+  ],
+  "statusReason": "Reviewed October 9 IA migration: exact mixed-item GUI actions, real Core/Server readback, captured traces where enabled and owned cleanup verified; run evidence in docs/validation-plan.md."
+};
 export const REQUIREMENTS={channel:{permission:'read'},parameters:{keys:['disposable']}};
 import fs from 'node:fs/promises';
 import {core,resource,disposable,eventually} from '../../../../support/client.mjs';

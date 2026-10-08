@@ -9,19 +9,19 @@ export const META = {
   "surface": "gui",
   "priority": "normal",
   "origin": "requirement",
-  "status": "trial",
+  "status": "active",
   "effects": "isolated-write",
   "cost": "normal",
   "requires": [
     "local-core"
   ],
   "affectedPaths": [
-    "desktop/ui/src/features",
-    "skills/colab/bin"
-  ],
+  "desktop/ui/src/features",
+  "skills/colab/bin"
+],
   "suite": "business",
   "testLevel": "end-to-end",
-  "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source bf7c1e294ad4: Actual GUI decodes image pixels, preserves text, exposes unsupported/malformed fallbacks; independent share cleaned.",
+  "statusReason": "Reviewed October 9 IA migration: exact mixed-item GUI actions, real Core/Server readback, captured traces where enabled and owned cleanup verified; run evidence in docs/validation-plan.md.",
   "locks": [
     "read:client.primary",
     "read:channel.shared"

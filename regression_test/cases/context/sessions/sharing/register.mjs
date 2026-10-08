@@ -9,19 +9,19 @@ export const META = {
   "surface": "gui",
   "priority": "critical",
   "origin": "requirement",
-  "status": "trial",
+  "status": "active",
   "effects": "isolated-write",
   "cost": "normal",
   "requires": [
     "local-core"
   ],
   "affectedPaths": [
-    "desktop/ui/src/features",
-    "skills/colab/bin"
-  ],
+  "desktop/ui/src/features",
+  "skills/colab/bin"
+],
   "suite": "business",
   "testLevel": "end-to-end",
-  "statusReason": "Round 14 20261007T122531Z-50563101: GUI commit identity and published snapshot readiness, actual distinct member Session discovery/read, share and membership cleanup reviewed and passed.",
+  "statusReason": "Reviewed October 9 IA migration: exact mixed-item GUI actions, real Core/Server readback, captured traces where enabled and owned cleanup verified; run evidence in docs/validation-plan.md.",
   "locks": [
     "read:client.primary",
     "read:channel.shared",

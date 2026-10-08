@@ -12,6 +12,13 @@ versions before a run. Channel-rail selectors must be scoped to `Channels`, sinc
 the same name is also a breadcrumb button. `openTab` is a compatibility helper
 name only: it now selects Home/Message; asset cases select exact mixed-item IDs.
 
+Secondary/isolated GUI clients need Core's bootstrap-equivalent HttpOnly cookie,
+not only HTTP route headers: WebSocket handshakes do not use that route override.
+The fixture helper supplies it privately. Cases sharing localhost authentication
+must declare `write:browser.loopback-auth`; cookies are scoped by host, not port.
+Freeze case/helper/metadata edits before planning so execution source checks remain
+meaningful. A newer GUI with an older running Core is not a valid IA fixture.
+
 ```sh
 sh ~/.codex/skills/trace/setup/run.sh regression_test/cli.mjs cases --modules messages/timeline
 sh ~/.codex/skills/trace/setup/run.sh regression_test/cli.mjs plan --environment local --modules messages/timeline --selectedOnly true --concurrency 2

@@ -14,18 +14,20 @@ export const META = {
   "cost": "normal",
   "requires": [],
   "affectedPaths": [
-    "desktop/ui/src/main.tsx",
-    "local/src",
-    "server/standalone/src"
-  ],
+  "desktop/ui/src/main.tsx",
+  "local/src",
+  "server/standalone/src",
+  "desktop/ui/src/features/workspace"
+],
   "suite": "release",
   "testLevel": "end-to-end",
   "statusReason": "Reviewed real actions, exact observed assertions and resource cleanup in Round 6 (20261007T115742Z-bfdf7648); corrected behavior verified.",
   "locks": [
-    "read:client.primary",
-    "read:channel.shared",
-    "write:client.owner"
-  ]
+  "read:client.primary",
+  "read:channel.shared",
+  "write:client.owner",
+  "write:browser.loopback-auth"
+]
 };
 
 import fs from "node:fs/promises";import path from "node:path";

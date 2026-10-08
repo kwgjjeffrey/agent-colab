@@ -16,9 +16,10 @@ export const META = {
     "local-core"
   ],
   "affectedPaths": [
-    "desktop/ui/src/features/canvas",
-    "skills/colab/bin/colab-canvas"
-  ],
+  "desktop/ui/src/features/canvas",
+  "skills/colab/bin/colab-canvas",
+  "desktop/ui/src/features/workspace"
+],
   "suite": "business",
   "testLevel": "end-to-end",
   "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source f186aa3f2838: GUI deletes only owned target; server discovery confirms deletion and control document survives; control cleaned.",

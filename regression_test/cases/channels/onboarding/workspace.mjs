@@ -5,20 +5,21 @@ export const META={
   "surface": "gui",
   "priority": "critical",
   "origin": "bug",
-  "status": "trial",
+  "status": "active",
   "effects": "isolated-write",
   "cost": "normal",
   "requires": [
     "local-core"
   ],
   "affectedPaths": [
-    "desktop/ui/src/main.tsx",
-    "desktop/ui/src/features/channels",
-    "desktop/ui/src/features/skills"
-  ],
+  "desktop/ui/src/main.tsx",
+  "desktop/ui/src/features/channels",
+  "desktop/ui/src/features/skills",
+  "desktop/ui/src/features/workspace"
+],
   "suite": "business",
   "testLevel": "end-to-end",
-  "statusReason": "Reviewed final Round 20261008T022600Z-2a527af2: actual Skills gutters, three completed focus checks without navigation, cold Channel/tab restoration, valid image upload, SVG generation and decoded header/rail images, finally readback of restored identity; 20 assertions and screenshot checked.",
+  "statusReason": "Reviewed October 9 IA migration: exact mixed-item GUI actions, real Core/Server readback, captured traces where enabled and owned cleanup verified; run evidence in docs/validation-plan.md.",
   "locks": [
     "read:client.primary",
     "write:channel.shared",

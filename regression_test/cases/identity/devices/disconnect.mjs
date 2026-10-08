@@ -14,18 +14,20 @@ export const META = {
   "cost": "normal",
   "requires": [],
   "affectedPaths": [
-    "desktop/ui/src/main.tsx",
-    "local/src",
-    "server/standalone/src"
-  ],
+  "desktop/ui/src/main.tsx",
+  "local/src",
+  "server/standalone/src",
+  "desktop/ui/src/features/workspace"
+],
   "suite": "release",
   "testLevel": "end-to-end",
   "statusReason": "Reviewed Round 5 20261007T111006Z-bdad100c: real linked non-current device selected by ID, actual GUI unlink removes it, revoked client receives 401 and current device retains access. Fresh fixture availability is now checked before execution; an already revoked device is blocked, not a product failure.",
   "locks": [
-    "read:client.primary",
-    "read:channel.shared",
-    "write:client.owner"
-  ]
+  "read:client.primary",
+  "read:channel.shared",
+  "write:client.owner",
+  "write:browser.loopback-auth"
+]
 };
 
 import fs from "node:fs/promises";import path from "node:path";

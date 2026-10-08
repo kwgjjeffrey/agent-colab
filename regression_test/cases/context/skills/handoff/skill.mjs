@@ -16,9 +16,9 @@ export const META = {
     "local-core"
   ],
   "affectedPaths": [
-    "desktop/ui/src/features",
-    "skills/colab/bin"
-  ],
+  "desktop/ui/src/features",
+  "skills/colab/bin"
+],
   "suite": "business",
   "testLevel": "end-to-end",
   "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source 790ca74d0301: Actual selected Skill handoff matches current installation branch: managed path or idempotent ensure with exact resource.",

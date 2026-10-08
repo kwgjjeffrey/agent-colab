@@ -9,19 +9,19 @@ export const META = {
   "surface": "gui",
   "priority": "critical",
   "origin": "requirement",
-  "status": "trial",
+  "status": "active",
   "effects": "isolated-write",
   "cost": "normal",
   "requires": [
     "local-core"
   ],
   "affectedPaths": [
-    "desktop/ui/src/features",
-    "skills/colab/bin"
-  ],
+  "desktop/ui/src/features",
+  "skills/colab/bin"
+],
   "suite": "business",
   "testLevel": "end-to-end",
-  "statusReason": "Reviewed 20261007T111006Z-bdad100c, execution source 1837efa3c2bb: Actual GUI excludes dist; receiver bytes verify included file and absence of excluded file; independent share cleaned.",
+  "statusReason": "Reviewed October 9 IA migration: exact mixed-item GUI actions, real Core/Server readback, captured traces where enabled and owned cleanup verified; run evidence in docs/validation-plan.md.",
   "locks": [
     "read:client.primary",
     "read:channel.shared",

@@ -9,26 +9,28 @@ export const META = {
   "surface": "gui",
   "priority": "critical",
   "origin": "requirement",
-  "status": "trial",
+  "status": "active",
   "effects": "isolated-write",
   "cost": "normal",
   "requires": [
     "local-core"
   ],
   "affectedPaths": [
-    "desktop/ui/src/features/canvas",
-    "skills/colab/bin/colab-canvas"
-  ],
+  "desktop/ui/src/features/canvas",
+  "skills/colab/bin/colab-canvas",
+  "desktop/ui/src/features/workspace"
+],
   "suite": "business",
   "testLevel": "end-to-end",
-  "statusReason": "Reviewed 20261007T142528Z-f836461e: waits for real durable pending outbox before Core restart, reopens the offline GUI from account-scoped catalog/replica, confirms the exact edit survives, restores network and verifies Server synchronization. Cleanup restores network and deletes only its disposable document.",
+  "statusReason": "Reviewed repair Round 20261008T213053Z-c8eab8f0: real offline restart/outbox recovery and three-kind fixed Quick Share snapshots, exact assertions and restoration/cleanup passed.",
   "locks": [
-    "read:client.primary",
-    "read:channel.shared",
-    "write:client.owner",
-    "write:transport.owner",
-    "write:canvas.collection"
-  ]
+  "read:client.primary",
+  "read:channel.shared",
+  "write:client.owner",
+  "write:transport.owner",
+  "write:canvas.collection",
+  "write:browser.loopback-auth"
+]
 };
 
 import fs from "node:fs/promises";import path from "node:path";

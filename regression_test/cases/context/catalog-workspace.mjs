@@ -1,5 +1,30 @@
 export const USECASE={name:'Organize and consume mixed Catalog assets through Explorer and GUI',description:'In an explicitly disposable Channel, create a nested Catalog through the installed domain interfaces, share a known Session source into it, read via the stable consumer reference, reject a cycle and non-empty deletion, then move the Session to root and prove the same stable reference still reads. GUI must keep Channel header, Add/Message entries and tree, open the exact Catalog, rename through its real Dialog and persist after reload. Finally withdraw only this case-owned Session and remove its empty Catalogs.'};
-export const META={id:'context.catalog.workspace',module:'context/catalog',surface:'gui',priority:'critical',origin:'requirement',status:'trial',effects:'isolated-write',cost:'normal',requires:['local-core'],affectedPaths:['desktop/ui/src/features/workspace','local/crates/local-api/src/catalog.rs','server/standalone/crates/persistence/src/catalog.rs','skills/colab/lib/explorer.py'],suite:'business',testLevel:'end-to-end',locks:['read:client.primary','write:channel.shared']};
+export const META={
+  "id": "context.catalog.workspace",
+  "module": "context/catalog",
+  "surface": "gui",
+  "priority": "critical",
+  "origin": "requirement",
+  "status": "active",
+  "effects": "isolated-write",
+  "cost": "normal",
+  "requires": [
+    "local-core"
+  ],
+  "affectedPaths": [
+    "desktop/ui/src/features/workspace",
+    "local/crates/local-api/src/catalog.rs",
+    "server/standalone/crates/persistence/src/catalog.rs",
+    "skills/colab/lib/explorer.py"
+  ],
+  "suite": "business",
+  "testLevel": "end-to-end",
+  "locks": [
+    "read:client.primary",
+    "write:channel.shared"
+  ],
+  "statusReason": "Reviewed Run 20261008T215107Z-4fd8fd7c: real directory drag/placement, actual four-asset previews, breadcrumb continuity; workspace.mutate and sessions.preview provider-trace terminal budgets pass."
+};
 export const REQUIREMENTS={channel:{permission:'read'},parameters:{keys:['disposable','indexedSessionSourceId']}};
 import {core,cli,resource,parameter,disposable,channelRef,eventually} from '../../support/client.mjs';
 export async function run(ctx){
@@ -39,6 +64,7 @@ export async function run(ctx){
   await nameInput.fill(name+' renamed');await nameInput.press('Enter');
   await eventually(ctx,'GUI rename persisted through Core and Server',()=>core(ctx,'GET','/v1/channels/'+channel.id+'/catalog-items?limit=200'),rows=>rows.some(item=>item.name===name+' renamed'));
   await ctx.page.reload();await ctx.page.locator('nav[aria-label="breadcrumb"]').getByText(name+' renamed',{exact:true}).waitFor();await ctx.screenshot('Catalog tree with persistent Channel header and breadcrumb');
+  await ctx.performance('Native catalog mutation completes within the visible 30-second wait boundary',{entryId:'workspace.mutate',maximumMs:30000});
  }finally{
   if(shared){const id=shared.stableRef.split('/').at(-1);await core(ctx,'DELETE','/v1/sessions/'+id);}
   if(child)await cli(ctx,'colab-explorer',['remove-catalog','--ref',child.explorerRef]);

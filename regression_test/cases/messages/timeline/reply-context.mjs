@@ -16,9 +16,10 @@ export const META = {
     "local-core"
   ],
   "affectedPaths": [
-    "desktop/ui/src/features/messages",
-    "skills/colab/bin/colab-messages"
-  ],
+  "desktop/ui/src/features/messages",
+  "skills/colab/bin/colab-messages",
+  "desktop/ui/src/features/workspace"
+],
   "suite": "business",
   "testLevel": "end-to-end",
   "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source b1a4accc27bc: Actual GUI quote retains trigger and resource identity; exact committed reply survives reload.",

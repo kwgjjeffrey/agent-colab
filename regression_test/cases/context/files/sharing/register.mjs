@@ -16,9 +16,9 @@ export const META = {
     "local-core"
   ],
   "affectedPaths": [
-    "desktop/ui/src/features",
-    "skills/colab/bin"
-  ],
+  "desktop/ui/src/features",
+  "skills/colab/bin"
+],
   "suite": "business",
   "testLevel": "end-to-end",
   "statusReason": "Round 12 20261007T122018Z-9daf491a: actual GUI publication, distinct authenticated member materialization with exact bytes, source withdrawal and membership cleanup verified.",

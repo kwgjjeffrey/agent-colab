@@ -16,10 +16,11 @@ export const META = {
     "local-core"
   ],
   "affectedPaths": [
-    "desktop/ui/src/features/agent",
-    "server/standalone/src",
-    "local/src"
-  ],
+  "desktop/ui/src/features/agent",
+  "server/standalone/src",
+  "local/src",
+  "desktop/ui/src/features/workspace"
+],
   "suite": "business",
   "testLevel": "end-to-end",
   "statusReason": "20261007T123745Z-b3537470: actual GUI committed message includes repeated mention; exactly two independent requests and real Codex result replies succeed for both blueprints; temporary blueprint cleanup verified.",

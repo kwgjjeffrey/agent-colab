@@ -9,19 +9,19 @@ export const META = {
   "surface": "gui",
   "priority": "normal",
   "origin": "requirement",
-  "status": "trial",
+  "status": "active",
   "effects": "isolated-write",
   "cost": "normal",
   "requires": [
     "local-core"
   ],
   "affectedPaths": [
-    "desktop/ui/src/features",
-    "skills/colab/bin"
-  ],
+  "desktop/ui/src/features",
+  "skills/colab/bin"
+],
   "suite": "business",
   "testLevel": "end-to-end",
-  "statusReason": "Round 12 20261007T122018Z-9daf491a: GUI Skill sharing, real distinct member access to identical published root, source withdrawal and membership cleanup verified.",
+  "statusReason": "Reviewed October 9 IA migration: exact mixed-item GUI actions, real Core/Server readback, captured traces where enabled and owned cleanup verified; run evidence in docs/validation-plan.md.",
   "locks": [
     "read:client.primary",
     "read:channel.shared",

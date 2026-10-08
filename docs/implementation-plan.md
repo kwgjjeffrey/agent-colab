@@ -1,6 +1,6 @@
 # Colab 实现计划
 
-### 2026-10-09 Preview/actions hardening — released; expanded regression in progress
+### 2026-10-09 Preview/actions hardening — verified and released
 
 Rollback checkpoint `d752304`. GUI 123 makes Give to Agent the solid primary,
 registers other real actions into one shadcn More menu, removes catalog folder
@@ -22,6 +22,14 @@ Shell 23/Skill 55 and Windows Core retained). Normal App Check updates → Updat
 completed. Active daily GUI serves 123 and PID 79264 resolves Core 97 executable.
 Native acceptance confirms Channel Home, single-image direct preview, solid
 handoff/More, real historical Session text, and compact Canvas sync footer.
+
+Follow-up source `15bfbde` restores offline mixed-directory/trail discovery using
+the existing Core account cache; `f8ffdbf` adds real task-description fallback for
+historical tasks without events. Promotion 176 (GUI 124/Core 98) is published and
+normally installed, with verified public hashes. The expanded IA acceptance found
+and repaired offline discovery and receiver WebSocket test authentication; it did
+not change Server, Skill or Shell. See tracing-ia-migration.md and validation-plan.md
+for operation mapping, retained failure rounds, case qualification and native proof.
 
 ### 2026-10-09 Home / Add / catalog drag refinement — verified and released
 

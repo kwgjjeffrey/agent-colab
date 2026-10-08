@@ -21,9 +21,9 @@ export const META = {
     "local-core"
   ],
   "affectedPaths": [
-    "desktop/ui/src/features",
-    "skills/colab/bin"
-  ],
+  "desktop/ui/src/features",
+  "skills/colab/bin"
+],
   "suite": "business",
   "testLevel": "end-to-end",
   "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source e84dcb41f5a8: Actual Files row opens handoff containing the correct tool and exact resource reference; no business mutation."

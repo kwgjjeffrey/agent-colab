@@ -9,26 +9,28 @@ export const META = {
   "surface": "gui",
   "priority": "critical",
   "origin": "requirement",
-  "status": "trial",
+  "status": "active",
   "effects": "isolated-write",
   "cost": "normal",
   "requires": [
     "local-core"
   ],
   "affectedPaths": [
-    "desktop/ui/src/features/messages",
-    "skills/colab/bin/colab-messages"
-  ],
+  "desktop/ui/src/features/messages",
+  "skills/colab/bin/colab-messages",
+  "desktop/ui/src/features/workspace"
+],
   "suite": "business",
   "testLevel": "end-to-end",
-  "statusReason": "Reviewed 20261007T111006Z-bdad100c, execution source 9df918d6f62d: Owned receiver realtime interrupted; real committed messages all reconcile exactly once; transport restored and browser context closed.",
+  "statusReason": "Reviewed October 9 IA migration: exact mixed-item GUI actions, real Core/Server readback, captured traces where enabled and owned cleanup verified; run evidence in docs/validation-plan.md.",
   "locks": [
-    "read:client.primary",
-    "read:channel.shared",
-    "write:client.receiver",
-    "write:transport.receiver",
-    "write:native.focus"
-  ]
+  "read:client.primary",
+  "read:channel.shared",
+  "write:client.receiver",
+  "write:transport.receiver",
+  "write:native.focus",
+  "write:browser.loopback-auth"
+]
 };
 
 import fs from "node:fs/promises";import path from "node:path";

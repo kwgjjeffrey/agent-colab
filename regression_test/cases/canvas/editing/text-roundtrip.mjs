@@ -9,19 +9,20 @@ export const META = {
   "surface": "gui",
   "priority": "critical",
   "origin": "requirement",
-  "status": "trial",
+  "status": "active",
   "effects": "isolated-write",
   "cost": "normal",
   "requires": [
     "local-core"
   ],
   "affectedPaths": [
-    "desktop/ui/src/features/canvas",
-    "skills/colab/bin/colab-canvas"
-  ],
+  "desktop/ui/src/features/canvas",
+  "skills/colab/bin/colab-canvas",
+  "desktop/ui/src/features/workspace"
+],
   "suite": "business",
   "testLevel": "end-to-end",
-  "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source 8b0d64b658cf: Actual GUI heading/line edits read back through Markdown projection and survive reload; owned document removed.",
+  "statusReason": "Reviewed October 9 IA migration: exact mixed-item GUI actions, real Core/Server readback, captured traces where enabled and owned cleanup verified; run evidence in docs/validation-plan.md.",
   "locks": [
     "read:client.primary",
     "read:channel.shared",

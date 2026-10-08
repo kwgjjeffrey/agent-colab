@@ -16,9 +16,10 @@ export const META = {
     "local-core"
   ],
   "affectedPaths": [
-    "desktop/ui/src/main.tsx",
-    "skills/colab/bin/colab-browser"
-  ],
+  "desktop/ui/src/main.tsx",
+  "skills/colab/bin/colab-browser",
+  "desktop/ui/src/features/workspace"
+],
   "suite": "business",
   "testLevel": "end-to-end",
   "statusReason": "20261007T124601Z-dcff5e91: real GUI adds the distinct member, their authenticated client discovers the intended Channel, and actual member identity cleanup succeeds on confirmed Core 0.1.92.",

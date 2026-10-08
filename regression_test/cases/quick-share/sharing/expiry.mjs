@@ -9,19 +9,20 @@ export const META = {
   "surface": "gui",
   "priority": "normal",
   "origin": "requirement",
-  "status": "trial",
+  "status": "active",
   "effects": "isolated-write",
   "cost": "normal",
   "requires": [
     "local-core"
   ],
   "affectedPaths": [
-    "desktop/ui/src/features/transfers",
-    "skills/colab/bin/colab-transfer"
-  ],
+  "desktop/ui/src/features/transfers",
+  "skills/colab/bin/colab-transfer",
+  "desktop/ui/src/features/workspace"
+],
   "suite": "business",
   "testLevel": "end-to-end",
-  "statusReason": "20261007T124601Z-dcff5e91: GUI expiry update is persisted; actual unrelated actor lacks local management receipt and is denied with the supported 400 contract; capability is revoked in cleanup.",
+  "statusReason": "Reviewed October 9 IA migration: exact mixed-item GUI actions, real Core/Server readback, captured traces where enabled and owned cleanup verified; run evidence in docs/validation-plan.md.",
   "locks": [
     "read:client.primary",
     "read:channel.shared",

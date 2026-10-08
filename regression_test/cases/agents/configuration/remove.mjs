@@ -16,10 +16,11 @@ export const META = {
     "local-core"
   ],
   "affectedPaths": [
-    "desktop/ui/src/features/agent",
-    "server/standalone/src",
-    "local/src"
-  ],
+  "desktop/ui/src/features/agent",
+  "server/standalone/src",
+  "local/src",
+  "desktop/ui/src/features/workspace"
+],
   "suite": "business",
   "testLevel": "end-to-end",
   "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source f1126d6718a5: Real runtime executes and replies before GUI deselection/deletion; other Channel participation and retained history are checked, retired selection is denied.",

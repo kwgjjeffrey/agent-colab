@@ -16,10 +16,11 @@ export const META = {
     "local-core"
   ],
   "affectedPaths": [
-    "desktop/ui/src/features/agent",
-    "server/standalone/src",
-    "local/src"
-  ],
+  "desktop/ui/src/features/agent",
+  "server/standalone/src",
+  "local/src",
+  "desktop/ui/src/features/workspace"
+],
   "suite": "business",
   "testLevel": "end-to-end",
   "statusReason": "20261007T124601Z-dcff5e91 on confirmed Core 0.1.92: non-owner rejection, real owner reply execution, exact assembled prompt, preserved rejected request and policy/membership cleanup all verified.",

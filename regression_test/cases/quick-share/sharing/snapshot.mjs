@@ -9,19 +9,20 @@ export const META = {
   "surface": "gui",
   "priority": "critical",
   "origin": "requirement",
-  "status": "trial",
+  "status": "active",
   "effects": "isolated-write",
   "cost": "normal",
   "requires": [
     "local-core"
   ],
   "affectedPaths": [
-    "desktop/ui/src/features/transfers",
-    "skills/colab/bin/colab-transfer"
-  ],
+  "desktop/ui/src/features/transfers",
+  "skills/colab/bin/colab-transfer",
+  "desktop/ui/src/features/workspace"
+],
   "suite": "business",
   "testLevel": "end-to-end",
-  "statusReason": "Reviewed 20261007T141635Z-ef5ef721: GUI creates Files, real Agent Session, and owned Skill fixed shares; receiver preserves original content and excludes subsequent source changes for all three. Source bytes and transfer revocation cleanup verified. Prior empty-response error did not reproduce on current runtime.",
+  "statusReason": "Reviewed repair Round 20261008T213053Z-c8eab8f0: real offline restart/outbox recovery and three-kind fixed Quick Share snapshots, exact assertions and restoration/cleanup passed.",
   "locks": [
     "read:client.primary",
     "read:channel.shared",

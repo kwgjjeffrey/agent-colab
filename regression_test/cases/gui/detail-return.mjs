@@ -2,7 +2,31 @@ export const USECASE = {
   name: 'Every asset detail keeps workspace navigation and returns to its container',
   description: 'Open real Files, Session, Skill and Canvas fixtures from the mixed root tree. Assert real preview content, no redundant collection actions or Back controls, and return through the Channel breadcrumb. No business data is changed.'
 };
-export const META = {id:'gui.details.return',module:'gui/navigation',surface:'gui',priority:'critical',status:'trial',origin:'requirement',effects:'read-only',cost:'normal',requires:['local-core'],affectedPaths:['desktop/ui/src/features/workspace','desktop/ui/src/features/files','desktop/ui/src/main.tsx'],suite:'business',testLevel:'end-to-end',locks:['read:client.primary','read:channel.shared']};
+export const META = {
+  "id": "gui.details.return",
+  "module": "gui/navigation",
+  "surface": "gui",
+  "priority": "critical",
+  "status": "active",
+  "origin": "requirement",
+  "effects": "read-only",
+  "cost": "normal",
+  "requires": [
+    "local-core"
+  ],
+  "affectedPaths": [
+    "desktop/ui/src/features/workspace",
+    "desktop/ui/src/features/files",
+    "desktop/ui/src/main.tsx"
+  ],
+  "suite": "business",
+  "testLevel": "end-to-end",
+  "locks": [
+    "read:client.primary",
+    "read:channel.shared"
+  ],
+  "statusReason": "Reviewed Run 20261008T215107Z-4fd8fd7c: real directory drag/placement, actual four-asset previews, breadcrumb continuity; workspace.mutate and sessions.preview provider-trace terminal budgets pass."
+};
 export const REQUIREMENTS = {channel:{permission:'read'}};
 import {core,resource} from '../../support/client.mjs';
 export async function run(ctx) {
@@ -52,4 +76,5 @@ export async function run(ctx) {
     ctx.assert(kind+' returns to a usable Home page',await ctx.page.getByRole('button',{name:'Add',exact:true}).isVisible(),true);
   }
   await ctx.screenshot('Asset return navigation retains Channel header and directory');
+  await ctx.performance('Recent Session preview completes within the visible 30-second wait boundary',{entryId:'sessions.preview',maximumMs:30000});
 }

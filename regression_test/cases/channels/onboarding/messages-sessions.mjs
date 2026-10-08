@@ -5,19 +5,20 @@ export const META={
   "surface": "gui",
   "priority": "critical",
   "origin": "requirement",
-  "status": "trial",
+  "status": "active",
   "effects": "isolated-write",
   "cost": "normal",
   "requires": [
     "local-core"
   ],
   "affectedPaths": [
-    "desktop/ui/src/features/messages",
-    "desktop/ui/src/features/sessions"
-  ],
+  "desktop/ui/src/features/messages",
+  "desktop/ui/src/features/sessions",
+  "desktop/ui/src/features/workspace"
+],
   "suite": "business",
   "testLevel": "end-to-end",
-  "statusReason": "Reviewed Round 20261008T025951Z-a7143d75: empty guides, actual conversation scrolling, populated Session guide absence and owned share/Canvas cleanup passed; 32 assertions and screenshots reviewed.",
+  "statusReason": "Reviewed October 9 IA migration: exact mixed-item GUI actions, real Core/Server readback, captured traces where enabled and owned cleanup verified; run evidence in docs/validation-plan.md.",
   "locks": [
     "read:client.primary",
     "read:channel.shared",

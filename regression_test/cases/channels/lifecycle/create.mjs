@@ -9,7 +9,7 @@ export const META = {
   "surface": "gui",
   "priority": "critical",
   "origin": "requirement",
-  "status": "trial",
+  "status": "active",
   "effects": "isolated-write",
   "cost": "normal",
   "requires": [
@@ -17,11 +17,12 @@ export const META = {
   ],
   "affectedPaths": [
     "desktop/ui/src/main.tsx",
-    "skills/colab/bin/colab-browser"
+    "skills/colab/bin/colab-browser",
+    "desktop/ui/src/features/workspace"
   ],
   "suite": "business",
   "testLevel": "end-to-end",
-  "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source 2237fdc90a21: Actual GUI creates exactly one owned Channel, verifies creator role and usable navigation; uniquely named test Channel retained.",
+  "statusReason": "Reviewed October 9 real mixed-workspace Channel creation and authenticated two-client realtime message delivery; failure rounds and WebSocket fixture authentication repair retained.",
   "locks": [
     "read:client.primary",
     "read:channel.shared"

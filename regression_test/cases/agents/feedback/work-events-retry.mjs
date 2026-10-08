@@ -1,5 +1,32 @@
 export const USECASE={name:'Retry real provider work events after an upload outage',description:'Block only task-event uploads on the owned fault proxy, execute a real Agent task, prove its result finishes while events remain unavailable, restore uploads and verify the same request transcript appears in the GUI.'};
-export const META={id:'agents.feedback.work-events-retry',module:'agents/feedback',surface:'gui',priority:'critical',origin:'requirement',status:'trial',effects:'isolated-write',cost:'normal',requires:['local-core'],affectedPaths:['local/crates/local-api/src/work_events.rs','desktop/ui/src/features/agent/AgentWorkDrawer.tsx'],suite:'business',testLevel:'end-to-end',locks:['write:client.owner','write:transport.owner','write:runtime.bound','read:channel.shared','read:agent.blueprint']};
+export const META={
+  "id": "agents.feedback.work-events-retry",
+  "module": "agents/feedback",
+  "surface": "gui",
+  "priority": "critical",
+  "origin": "requirement",
+  "status": "active",
+  "effects": "isolated-write",
+  "cost": "normal",
+  "requires": [
+    "local-core"
+  ],
+  "affectedPaths": [
+  "local/crates/local-api/src/work_events.rs",
+  "desktop/ui/src/features/agent/AgentWorkDrawer.tsx",
+  "desktop/ui/src/features/workspace"
+],
+  "suite": "business",
+  "testLevel": "end-to-end",
+  "locks": [
+    "write:client.owner",
+    "write:transport.owner",
+    "write:runtime.bound",
+    "read:channel.shared",
+    "read:agent.blueprint"
+  ],
+  "statusReason": "Reviewed October 9 IA migration: exact mixed-item GUI actions, real Core/Server readback, captured traces where enabled and owned cleanup verified; run evidence in docs/validation-plan.md."
+};
 export const REQUIREMENTS={channel:{permission:'read'},agent:{state:'online',capability:'execute'},parameters:{keys:['isolationConfirmed','networkControl','isolatedCoreDiscoveryFile']}};
 import {core,eventually} from '../../../support/client.mjs';
 import {control} from '../../../support/controls.mjs';

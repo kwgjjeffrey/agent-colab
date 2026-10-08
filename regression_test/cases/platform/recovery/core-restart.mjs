@@ -9,22 +9,24 @@ export const META = {
   "surface": "gui",
   "priority": "normal",
   "origin": "requirement",
-  "status": "trial",
+  "status": "active",
   "effects": "isolated-write",
   "cost": "normal",
   "requires": [],
   "affectedPaths": [
-    "skills/colab/setup",
-    "desktop/ui/src/features/updates"
-  ],
+  "skills/colab/setup",
+  "desktop/ui/src/features/updates",
+  "desktop/ui/src/features/workspace"
+],
   "suite": "release",
   "testLevel": "end-to-end",
-  "statusReason": "Reviewed real actions, exact observed assertions and resource cleanup in Round 6 (20261007T115742Z-bfdf7648); corrected behavior verified.",
+  "statusReason": "Reviewed October 9 IA migration: exact mixed-item GUI actions, real Core/Server readback, captured traces where enabled and owned cleanup verified; run evidence in docs/validation-plan.md.",
   "locks": [
-    "read:client.primary",
-    "read:channel.shared",
-    "write:client.owner"
-  ]
+  "read:client.primary",
+  "read:channel.shared",
+  "write:client.owner",
+  "write:browser.loopback-auth"
+]
 };
 
 import fs from "node:fs/promises";import path from "node:path";

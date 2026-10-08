@@ -56,6 +56,14 @@ the owned receiver on Core 97 and rechecked Canvas Move. A fault proxy launched
 as a short-lived shell child exited; the explicit long-running test process now
 keeps that boundary alive. None of these failures is deleted or counted as green.
 
+HTTP route overrides alone do not authenticate browser WebSocket handshakes.
+Receiver/isolated GUI helpers now set Core's existing local HttpOnly cookie as
+bootstrap would, and affected cases serialize shared localhost browser auth.
+Offline Catalog children/trail use Core's existing account-scoped discovery cache,
+including invalidation on permission denial; no new cache protocol or GUI business
+logic was introduced. GUI metadata includes the workspace dependency so impact
+filters do not miss cases when their shared navigation changes.
+
 Exact verified runs and release acceptance live in validation-plan.md. Cases not
 re-executed in this scope retain trial status and historical evidence; this audit
 does not claim the entire repository test catalog passed.

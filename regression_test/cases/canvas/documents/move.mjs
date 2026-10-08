@@ -9,25 +9,27 @@ export const META = {
   "surface": "gui",
   "priority": "normal",
   "origin": "requirement",
-  "status": "trial",
+  "status": "active",
   "effects": "isolated-write",
   "cost": "normal",
   "requires": [
     "local-core"
   ],
   "affectedPaths": [
-    "desktop/ui/src/features/canvas",
-    "skills/colab/bin/colab-canvas"
-  ],
+  "desktop/ui/src/features/canvas",
+  "skills/colab/bin/colab-canvas",
+  "desktop/ui/src/features/workspace"
+],
   "suite": "business",
   "testLevel": "end-to-end",
-  "statusReason": "20261007T125006Z-6def5954: real GUI drag sends JSON PATCH, persisted parent and identity verified, independently authenticated receiver waits for and sees moved document, invalid parent rejected and temporary document deleted. Missing Content-Type product defect repaired and verified.",
+  "statusReason": "Reviewed October 9 IA migration: exact mixed-item GUI actions, real Core/Server readback, captured traces where enabled and owned cleanup verified; run evidence in docs/validation-plan.md.",
   "locks": [
-    "read:client.primary",
-    "read:channel.shared",
-    "read:client.receiver",
-    "write:canvas.collection"
-  ]
+  "read:client.primary",
+  "read:channel.shared",
+  "read:client.receiver",
+  "write:canvas.collection",
+  "write:browser.loopback-auth"
+]
 };
 
 import fs from "node:fs/promises";import path from "node:path";

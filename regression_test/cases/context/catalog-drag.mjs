@@ -21,7 +21,7 @@ export const META={
     "read:client.primary",
     "write:channel.shared"
   ],
-  "statusReason": "Reviewed Run 20261008T185809Z-472a7906 Round 3 20261008T190154Z-05efed4b: real pointer drag, Core/Server parent and order readback, reload persistence, Quick Share dialog survival and owned-catalog cleanup passed. Original drag-script and stale-load findings retained."
+  "statusReason": "Reviewed Run 20261008T215107Z-4fd8fd7c: real directory drag/placement, actual four-asset previews, breadcrumb continuity; workspace.mutate and sessions.preview provider-trace terminal budgets pass."
 };
 export const REQUIREMENTS={channel:{permission:'read'},parameters:{keys:['disposable']}};
 import {core,resource,disposable,eventually} from '../../support/client.mjs';

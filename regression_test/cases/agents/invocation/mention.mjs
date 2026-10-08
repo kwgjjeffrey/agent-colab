@@ -16,10 +16,11 @@ export const META = {
     "local-core"
   ],
   "affectedPaths": [
-    "desktop/ui/src/features/agent",
-    "server/standalone/src",
-    "local/src"
-  ],
+  "desktop/ui/src/features/agent",
+  "server/standalone/src",
+  "local/src",
+  "desktop/ui/src/features/workspace"
+],
   "suite": "business",
   "testLevel": "end-to-end",
   "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source b54f5dc4ec79: Actual GUI mention creates the intended request; real runtime success and request-linked reply are verified.",

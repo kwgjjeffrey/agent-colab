@@ -14,18 +14,20 @@ export const META = {
   "cost": "normal",
   "requires": [],
   "affectedPaths": [
-    "desktop/ui/src/main.tsx",
-    "local/src",
-    "server/standalone/src"
-  ],
+  "desktop/ui/src/main.tsx",
+  "local/src",
+  "server/standalone/src",
+  "desktop/ui/src/features/workspace"
+],
   "suite": "release",
   "testLevel": "end-to-end",
   "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source 78337451bcf8: Real isolated device chooser signs into expected identity and loads navigation; finally restores login. Does not qualify Google linking.",
   "locks": [
-    "read:client.primary",
-    "read:channel.shared",
-    "write:client.owner"
-  ]
+  "read:client.primary",
+  "read:channel.shared",
+  "write:client.owner",
+  "write:browser.loopback-auth"
+]
 };
 
 import fs from "node:fs/promises";import path from "node:path";

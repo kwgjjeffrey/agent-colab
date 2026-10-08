@@ -16,12 +16,13 @@ export const META = {
     "local-core"
   ],
   "affectedPaths": [
-    "desktop/ui/src/features/agent",
-    "server/standalone/src",
-    "local/src",
-    "desktop/ui/src/features/canvas",
-    "skills/colab/bin/colab-canvas"
-  ],
+  "desktop/ui/src/features/agent",
+  "server/standalone/src",
+  "local/src",
+  "desktop/ui/src/features/canvas",
+  "skills/colab/bin/colab-canvas",
+  "desktop/ui/src/features/workspace"
+],
   "suite": "business",
   "testLevel": "end-to-end",
   "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source 0d83e6bb0843: Real Canvas heading/mention prompt inspected; selected heading/reference checked; request is created and real runtime succeeds; owned document removed.",

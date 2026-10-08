@@ -16,9 +16,10 @@ export const META = {
     "local-core"
   ],
   "affectedPaths": [
-    "desktop/ui/src/main.tsx",
-    "skills/colab/bin/colab-browser"
-  ],
+  "desktop/ui/src/main.tsx",
+  "skills/colab/bin/colab-browser",
+  "desktop/ui/src/features/workspace"
+],
   "suite": "business",
   "testLevel": "end-to-end",
   "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source 977b3a48a440: GUI changes actual member role; distinct actor receives 403 for management and invitation; finally removes owned membership.",

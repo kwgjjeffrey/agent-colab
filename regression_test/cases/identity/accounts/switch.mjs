@@ -14,20 +14,22 @@ export const META = {
   "cost": "normal",
   "requires": [],
   "affectedPaths": [
-    "desktop/ui/src/main.tsx",
-    "local/src",
-    "server/standalone/src",
-    "desktop/ui/src/features/messages",
-    "skills/colab/bin/colab-messages"
-  ],
+  "desktop/ui/src/main.tsx",
+  "local/src",
+  "server/standalone/src",
+  "desktop/ui/src/features/messages",
+  "skills/colab/bin/colab-messages",
+  "desktop/ui/src/features/workspace"
+],
   "suite": "release",
   "testLevel": "end-to-end",
   "statusReason": "Reviewed 20261007T111006Z-bdad100c, execution source d76d74ae46aa: Two genuine saved identities; GUI switch, old Channel absence, reload persistence and finally original actor restoration verified.",
   "locks": [
-    "read:client.primary",
-    "read:channel.shared",
-    "write:client.owner"
-  ]
+  "read:client.primary",
+  "read:channel.shared",
+  "write:client.owner",
+  "write:browser.loopback-auth"
+]
 };
 
 import fs from "node:fs/promises";import path from "node:path";

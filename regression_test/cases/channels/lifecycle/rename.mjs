@@ -16,9 +16,10 @@ export const META = {
     "local-core"
   ],
   "affectedPaths": [
-    "desktop/ui/src/main.tsx",
-    "skills/colab/bin/colab-browser"
-  ],
+  "desktop/ui/src/main.tsx",
+  "skills/colab/bin/colab-browser",
+  "desktop/ui/src/features/workspace"
+],
   "suite": "business",
   "testLevel": "end-to-end",
   "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source 00bdef68bcbb: Actual GUI rename preserves Channel UUID; finally restores original name.",

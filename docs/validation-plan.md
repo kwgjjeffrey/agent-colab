@@ -1,6 +1,6 @@
 # 技术验证计划
 
-### 2026-10-09 Detail actions and IA regression migration — in progress
+### 2026-10-09 Detail actions and IA regression migration — verified and released
 
 GUI 123 / macOS Core 97 is published as promotion 175. GUI type check and 108 component
 tests passed. Core Session projection tests (8) and Codex queue/capture tests (3)
@@ -55,6 +55,43 @@ Channel click Home, direct image preview/no duplicate file tree, primary/More,
 actual formerly failing historical Session preview and Canvas正文/Synced footer.
 An initial Canvas transient offline fallback recovered on reopen; it is not
 represented as automatic retry acceptance.
+
+Expanded Run `20261008T212046Z-9440bbae` passed Canvas text roundtrip, two-client
+convergence, activity deep links, GUI navigation, message catch-up, Core restart
+and Quick Share expiry. It found a genuine IA regression: offline directory
+discovery did not reuse the existing account-scoped Core cache. Core 98 fixes
+Catalog children/trail via that cache, retaining its permission-denial invalidation.
+Repair Round `20261008T213053Z-c8eab8f0` passes Canvas offline edit → Core restart
+→ GUI reopen → recovered durable synchronization (16 assertions), and three-kind
+Quick Share snapshot isolation (72 assertions). The Skill-source helper now uses
+an existing owned regression source rather than trying to overwrite a protected
+locally modified installation.
+
+Run `20261008T213729Z-cdc0b590` passes Channel creation but exposed an unauthenticated
+receiver WebSocket: HTTP-only test routing did not provide Core's local cookie.
+The helper now supplies the existing bootstrap-equivalent HttpOnly cookie; cases
+sharing localhost browser auth declare an exclusive lock. Repair Round
+`20261008T214642Z-833bd212` passes message send/second-client delivery, missed-message
+catch-up and Canvas convergence. These earlier failures remain recorded.
+
+Promotion 176 is publicly verified and installed via normal App updates (GUI 124,
+macOS Core 98; Shell/Skill unchanged and Windows Core retained). Active daily GUI
+reports 124; PID 42579 resolves `versions/local-core/0.1.98-dev/colabd`. Native old
+task acceptance confirms the actual recorded description appears even when no
+provider transcript exists. GUI type check and 109 component tests pass. The
+asset/action changes use shadcn controls; no fabricated historical work is shown.
+
+GUI case affectedPaths now include the shared workspace where relevant, so future
+workspace changes select navigation-dependent cases. 28 reviewed cases have been
+qualified through the managed runner; other cases retain their prior maturity.
+This is scoped IA acceptance, not a claim that the full repository catalog ran.
+Run `20261008T215107Z-4fd8fd7c` passes catalog drag, Catalog workspace and four-asset
+preview/navigation again. New terminal-root gates for `workspace.mutate` and
+`sessions.preview` pass using provider traces and the visible 30-second wait
+boundary: single observed roots 472.30 ms and 1119.90 ms, respectively. These are
+individual registered entrance-to-return samples, not population percentiles.
+The already-active drag case also has fresh evidence; 29 distinct scoped cases
+were verified across the retained runs and repairs.
 
 ### 2026-10-09 Actual asset previews — candidate validation
 

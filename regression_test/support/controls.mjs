@@ -9,7 +9,11 @@ export async function control(ctx,resource,operation){
 }
 export async function isolated(ctx){if(ctx.parameters.isolationConfirmed!==true)ctx.block('A disposable isolated client is required');const discoveryFile=parameter(ctx,'isolatedCoreDiscoveryFile');await prepareActor(ctx,discoveryFile);if(ctx.page)await authorizePage(ctx.page,discoveryFile);return {discoveryFile,baseUrl:parameter(ctx,'isolatedClientBaseUrl')};}
 export async function secondary(ctx){await prepareActor(ctx,parameter(ctx,'secondCoreDiscoveryFile'));const page=await ctx.newPage();await authorizePage(page,parameter(ctx,'secondCoreDiscoveryFile'));await page.goto(parameter(ctx,'secondClientBaseUrl'));return page;}
-async function authorizePage(page,file){const d=JSON.parse(await fs.readFile(file,'utf8'));await page.route(d.endpoint.replace(/\/$/,'')+'/**',route=>route.continue({headers:{...route.request().headers(),authorization:'Bearer '+d.bearer}}));}
+async function authorizePage(page,file){const d=JSON.parse(await fs.readFile(file,'utf8'));
+ // HTTP routing does not authenticate WebSocket handshakes. Match Core bootstrap's
+ // local HttpOnly cookie so receiver tests exercise the real account realtime stream.
+ await page.context().addCookies([{name:'colab_local_token',value:d.bearer,url:d.endpoint+'/',httpOnly:true,sameSite:'Strict'}]);
+ await page.route(d.endpoint.replace(/\/$/,'')+'/**',route=>route.continue({headers:{...route.request().headers(),authorization:'Bearer '+d.bearer}}));}
 export function messageBody(text,{replyToMessageId,mentions=[]}={}){return {plainText:mentions.map(m=>(m.kind||'agent')==='agent'?'@'+(m.label||m.name):`[${m.label} · ${m.kind}:${m.id}]`).join(' ')+(mentions.length?' ':'')+text,content:{type:'doc',content:[{type:'paragraph',content:[...mentions.flatMap(m=>[{type:'mention',attrs:{...m,kind:m.kind||'agent',label:m.label||m.name}},{type:'text',text:' '}]),{type:'text',text}]}]},clientNonce:crypto.randomUUID(),...(replyToMessageId?{replyToMessageId}:{})};}
 export async function seed(ctx,text,options={}){return core(ctx,'POST','/v1/channels/'+ctx.resources.channel.id+'/messages',messageBody(text,options));}
 // Policy fixtures require a distinct authenticated member, never a cloned owner client.

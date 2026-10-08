@@ -9,19 +9,20 @@ export const META = {
   "surface": "gui",
   "priority": "normal",
   "origin": "requirement",
-  "status": "trial",
+  "status": "active",
   "effects": "isolated-write",
   "cost": "normal",
   "requires": [
     "local-core"
   ],
   "affectedPaths": [
-    "desktop/ui/src/main.tsx",
-    "skills/colab/bin/colab-browser"
-  ],
+  "desktop/ui/src/main.tsx",
+  "skills/colab/bin/colab-browser",
+  "desktop/ui/src/features/workspace"
+],
   "suite": "business",
   "testLevel": "end-to-end",
-  "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source 2918ffb54202: Real resources produce paged activity, no duplicate IDs or content prefetch; GUI navigates exact resource; owned documents cleaned.",
+  "statusReason": "Reviewed October 9 IA migration: exact mixed-item GUI actions, real Core/Server readback, captured traces where enabled and owned cleanup verified; run evidence in docs/validation-plan.md.",
   "locks": [
     "read:client.primary",
     "write:channel.shared"

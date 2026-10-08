@@ -14,19 +14,21 @@ export const META = {
   "cost": "normal",
   "requires": [],
   "affectedPaths": [
-    "skills/colab/setup",
-    "desktop/ui/src/features/updates"
-  ],
+  "skills/colab/setup",
+  "desktop/ui/src/features/updates",
+  "desktop/ui/src/features/workspace"
+],
   "suite": "release",
   "testLevel": "end-to-end",
   "statusReason": "Round 7 20261007T121017Z-7da12c1e: real GUI install/default/uninstall, unrelated target preservation and restoration reviewed.",
   "locks": [
-    "read:client.primary",
-    "read:channel.shared",
-    "write:client.owner",
-    "write:runtime.bound",
-    "write:skill.installation"
-  ]
+  "read:client.primary",
+  "read:channel.shared",
+  "write:client.owner",
+  "write:runtime.bound",
+  "write:skill.installation",
+  "write:browser.loopback-auth"
+]
 };
 
 import fs from "node:fs/promises";import path from "node:path";
