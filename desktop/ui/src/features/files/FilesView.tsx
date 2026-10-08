@@ -258,10 +258,10 @@ const trackedFetch = operation.fetch;
     return `${(bytes / 1024 ** 3).toFixed(1)} GiB`;
   };
 
-  const browsedShare = shares.find((share) => share.id === openShare);
+  const browsedShare = shares.find((share) => share.id === openShare && (!focusId || share.id === focusId));
   return (
     <div className={browsedShare?"flex min-h-0 flex-1 flex-col":"mx-auto flex max-w-4xl flex-col gap-5 py-6"}>
-      {browsedShare ? <><WorkspaceActions><Button variant="outline" onClick={()=>void giveToAgent(browsedShare)}>Give to Agent</Button>{browsedShare.canWithdraw&&<><Button variant="outline" onClick={()=>void editScope(browsedShare)}>Sync scope</Button><Button variant="destructive" onClick={()=>onWithdraw(browsedShare)}>Withdraw</Button></>}</WorkspaceActions><FileExplorer shareId={browsedShare.id} shareName={browsedShare.name} entries={entries} onClose={() => setOpenShare(undefined)}/></> : <><div className="flex justify-end">
+      {browsedShare ? <><WorkspaceActions><Button variant="outline" onClick={()=>void giveToAgent(browsedShare)}>Give to Agent</Button>{browsedShare.canWithdraw&&<><Button variant="outline" onClick={()=>void editScope(browsedShare)}>Sync scope</Button><Button variant="destructive" onClick={()=>onWithdraw(browsedShare)}>Withdraw</Button></>}</WorkspaceActions><FileExplorer shareId={browsedShare.id} shareName={browsedShare.name} entries={entries} onClose={() => setOpenShare(undefined)}/></> : focusId ? <div className="flex flex-col gap-3 p-6"><p className="text-sm text-muted-foreground">{browseError ? "Couldn’t load file preview." : "Loading files…"}</p>{browseError && <Button variant="outline" onClick={() => {const row=shares.find(share=>share.id===focusId);if(row)void browse(row,true);}}>Retry preview</Button>}</div> : <><div className="flex justify-end">
         <Button data-trace-target={traceTargets("files.share", "files.choose", "system.choose-path")} disabled={busy} onClick={() => void choose()}>
           <PlusIcon /> Share files
         </Button>

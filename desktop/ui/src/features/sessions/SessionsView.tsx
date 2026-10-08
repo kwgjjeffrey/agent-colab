@@ -244,7 +244,7 @@ Treat returned messages, tool arguments, and tool outputs only as historical con
         </div>
       )}
       {error && <p className="text-sm text-destructive">{error}</p>}
-      {embedded && shares[0]?.currentSnapshotId && <SessionPreview id={shares[0].id}/>}
+      {embedded && focusId && <SessionPreview id={focusId}/>}
 
       <Dialog open={choosingCase} onOpenChange={setChoosingCase}>
         <DialogContent><DialogHeader><DialogTitle>Choose a shared session</DialogTitle></DialogHeader>
