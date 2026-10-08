@@ -22,6 +22,7 @@ use tower_http::{
 
 mod blobs;
 mod canvas;
+mod catalog;
 mod observability;
 mod email_outbox;
 mod messaging;
@@ -271,6 +272,7 @@ fn router(state: AppState) -> Router {
     standard
         .merge(messaging::routes())
         .merge(canvas::routes())
+        .merge(catalog::routes())
         .merge(transfers::router())
         .with_state(state)
         .layer(axum::middleware::from_fn(colab_observability::http_span))

@@ -1,0 +1,34 @@
+#!/usr/bin/env python3
+"""Explore mixed Channel catalogs through Local Core."""
+import argparse
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "lib"))
+from local_api import DEFAULT_CORE, LocalApiError
+from output import success, failure
+from explorer import open_ref
+
+
+def main():
+    parser = argparse.ArgumentParser(prog="colab-explorer")
+    parser.add_argument("--core", default=DEFAULT_CORE)
+    commands = parser.add_subparsers(dest="operation", required=True)
+    opening = commands.add_parser("open", help="List direct children or inspect one asset")
+    opening.add_argument("--ref", required=True)
+    opening.add_argument("--offset", type=int, default=0)
+    opening.add_argument("--limit", type=int, default=100)
+    args = parser.parse_args()
+    try:
+        if args.offset < 0 or not 1 <= args.limit <= 199:
+            raise ValueError("offset must be nonnegative; limit must be 1–199")
+        result = open_ref(args.core, args.ref, args.offset, args.limit)
+        next_offset = result.pop("nextOffset", None)
+        return success(result, page={"nextOffset": next_offset} if next_offset is not None else None)
+    except ValueError as error:
+        return failure("invalid_argument", str(error), 2)
+    except LocalApiError as error:
+        return failure("local_api_error", str(error), error.exit_code)
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

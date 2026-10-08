@@ -1,5 +1,13 @@
 # 技术验证计划
 
+### 2026-10-08 Catalog workspace — partial validation
+
+Four Explorer contract tests passed: encoded path segments, invalid paths, nested
+resolution/stable consumer identity, and direct-child pagination. Server Cargo
+check passed. These are not end-to-end evidence. Migration execution, permissions,
+concurrent cycle rejection, old-reference consumption, GUI flows and published
+artifact acceptance remain pending; no production migration or release occurred.
+
 ### 2026-10-08 Messages welcome identity
 
 Messages onboarding now appears as an Agent Colab welcome message with the official website SVG avatar and author label, aligned with message rows. GUI 0.1.117-dev / promotion 0.1.169-dev published and normally installed; actual /ui.json verified 117. Production TypeScript/build passed. Public readback verified 918576 bytes / SHA-256 `51a0f75e080b6248d13b1f52176cb2da362fa28f1bc3bf2c2e1f00925af6701a`. Native Messages screenshot confirms the official avatar and author label. End-to-end Round `20261008T093357Z-d573f343` passed 33 assertions, including visible avatar, the entire welcome row scrolling away, populated Sessions hiding guides and owned cleanup.

@@ -31,6 +31,7 @@ mod device_auth;
 mod invite_links;
 mod observability;
 mod canvas;
+mod catalog;
 mod canvas_codec;
 mod update_status;
 mod codex_runtime;
@@ -665,6 +666,8 @@ pub fn router(state: AppState, security: LocalSecurity) -> Router {
             get(messaging::agent_request_events),
         )
         .route("/v1/messages/stream", get(messaging::stream))
+        .route("/v1/channels/{channel}/catalog-items", get(catalog::children))
+        .route("/v1/channels/{channel}/catalog-items/position", patch(catalog::place))
         .route(
             "/v1/channels/{channel_id}/canvases",
             get(canvas::list_canvases).post(canvas::create_canvas),

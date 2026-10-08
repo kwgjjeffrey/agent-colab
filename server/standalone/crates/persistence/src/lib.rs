@@ -21,6 +21,8 @@ fn unix_time_after(seconds: i64) -> i64 {
 }
 
 mod canvas;
+mod catalog;
+pub use catalog::CatalogItem;
 mod account_profile;
 pub use account_profile::AccountProfile;
 mod activity;
