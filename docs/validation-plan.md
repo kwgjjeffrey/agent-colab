@@ -2,7 +2,7 @@
 
 ### 2026-10-09 Detail actions and IA regression migration — in progress
 
-Candidate GUI 123 / Core 97; not published. GUI type check and 108 component
+GUI 123 / macOS Core 97 is published as promotion 175. GUI type check and 108 component
 tests passed. Core Session projection tests (8) and Codex queue/capture tests (3)
 passed, including retaining real failed-turn events. These are not E2E evidence.
 Rollback checkpoint: `d752304`.
@@ -40,6 +40,21 @@ roots with `result.state_committed` and causally parented Core/Server requests.
 Removed 64 obsolete Tab locator entries; legacy standalone Canvas create/title/move
 operations retain their IDs but are labeled legacy rather than presented as the
 current mixed-workspace entry points. Bounded trace samples are not population SLOs.
+
+Run `20261008T210700Z-8a535d20` passes task-event upload-outage recovery (56 real
+assertions). Run `20261008T211846Z-8f53c5f0` passes Canvas More > Move, persistent
+parent/identity, invalid-parent rejection and independently authenticated receiver
+discovery after fixing its Core 93/GUI 122 mismatch. Original failures remain.
+
+Release source `9001657`; clean component builds, canonical R2 publisher with
+`--platform darwin`, full public size/hash verification and signed promotion 175.
+Unchanged Shell/Skill and existing Windows Core are retained. Native normal
+Check updates → Update succeeded: daily `/ui.json` is 123, discovery PID 79264's
+executable resolves to `versions/local-core/0.1.97-dev/colabd`. Native verifies
+Channel click Home, direct image preview/no duplicate file tree, primary/More,
+actual formerly failing historical Session preview and Canvas正文/Synced footer.
+An initial Canvas transient offline fallback recovered on reopen; it is not
+represented as automatic retry acceptance.
 
 ### 2026-10-09 Actual asset previews — candidate validation
 

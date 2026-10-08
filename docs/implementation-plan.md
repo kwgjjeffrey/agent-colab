@@ -1,6 +1,6 @@
 # Colab 实现计划
 
-### 2026-10-09 Preview/actions hardening — candidate, verification in progress
+### 2026-10-09 Preview/actions hardening — released; expanded regression in progress
 
 Rollback checkpoint `d752304`. GUI 123 makes Give to Agent the solid primary,
 registers other real actions into one shadcn More menu, removes catalog folder
@@ -16,7 +16,12 @@ Tracing adds `workspace.mutate` and `sessions.preview` scopes and updates direct
 locators, removing obsolete Tab entry metadata. Regression helpers and affected
 cases migrate to mixed-item selection, Add/Quick Share cascade, inline rename and
 More actions. Registry check validates 133 operations; functional evidence and
-pending migration scope are recorded in validation-plan.md. Not yet published.
+pending migration scope are recorded in validation-plan.md. Source `9001657` was
+built clean and published as promotion 175 (GUI 123, macOS Core 97; unchanged
+Shell 23/Skill 55 and Windows Core retained). Normal App Check updates → Update
+completed. Active daily GUI serves 123 and PID 79264 resolves Core 97 executable.
+Native acceptance confirms Channel Home, single-image direct preview, solid
+handoff/More, real historical Session text, and compact Canvas sync footer.
 
 ### 2026-10-09 Home / Add / catalog drag refinement — verified and released
 

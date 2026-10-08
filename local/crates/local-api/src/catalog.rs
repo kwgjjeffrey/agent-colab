@@ -1,9 +1,9 @@
 use super::*;
 pub(super) async fn trail(State(state):State<AppState>,AxumPath((channel,kind,item)):AxumPath<(String,String,String)>)->Result<Json<serde_json::Value>,LocalError>{
     let token=access_token(&state).await?;
-    let response=state.inner.http.get(format!("{}/v1/channels/{channel}/catalog-items/{kind}/{item}/trail",state.inner.server_url)).bearer_auth(token).send().await.map_err(LocalError::internal)?;
-    if !response.status().is_success(){return Err(remote_error(response).await);}
-    Ok(Json(response.json().await.map_err(LocalError::internal)?))
+    let response=state.inner.http.get(format!("{}/v1/channels/{channel}/catalog-items/{kind}/{item}/trail",state.inner.server_url)).bearer_auth(token).send().await;
+    let rows = collaboration::cached_discovery::<serde_json::Value>(&state, format!("catalog-trail:{channel}:{kind}:{item}"), response).await?;
+    Ok(Json(serde_json::Value::Array(rows.0)))
 }
 
 pub(super) async fn create(State(state): State<AppState>, AxumPath(channel): AxumPath<String>, Json(body): Json<serde_json::Value>) -> Result<Json<serde_json::Value>, LocalError> {
@@ -22,9 +22,13 @@ pub(super) async fn children(
 ) -> Result<Json<serde_json::Value>, LocalError> {
     let token = access_token(&state).await?;
     let response = state.inner.http.get(format!("{}/v1/channels/{channel}/catalog-items", state.inner.server_url))
-        .query(&query).bearer_auth(token).send().await.map_err(LocalError::internal)?;
-    if !response.status().is_success() { return Err(remote_error(response).await); }
-    Ok(Json(response.json().await.map_err(LocalError::internal)?))
+        .query(&query).bearer_auth(token).send().await;
+    // Reuse account-scoped discovery recovery; HTTP permission denials never fall back.
+    // Canonical ordering keeps equivalent query keys stable across Core restarts.
+    let ordered: std::collections::BTreeMap<_, _> = query.into_iter().collect();
+    let key = serde_json::to_string(&ordered).map_err(LocalError::internal)?;
+    let rows = collaboration::cached_discovery::<serde_json::Value>(&state, format!("catalog-children:{channel}:{key}"), response).await?;
+    Ok(Json(serde_json::Value::Array(rows.0)))
 }
 
 pub(super) async fn place(
