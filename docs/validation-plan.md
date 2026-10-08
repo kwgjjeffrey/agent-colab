@@ -1,5 +1,9 @@
 # 技术验证计划
 
+### 2026-10-08 Messages composer visibility
+
+Production typecheck/build and installed visual acceptance pending; this is an empty-composer presentation change.
+
 ### 2026-10-08 workspace continuity and feature onboarding
 
 Installed root-cause evidence: current GUI ui.json reports 0.1.101-dev while its actual assets/index JS contains 0.1.100-dev, so the old package-version focus comparison reloads on every return. New build embeds the owning GUI VERSION directly.

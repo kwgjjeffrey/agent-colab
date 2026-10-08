@@ -190,7 +190,6 @@ button:not(:disabled), a[href], [role="button"]:not([aria-disabled="true"]), [ro
    from the stable blueprint id stored in the document. */
 .agent-message-editor { min-height: 1.5rem; max-height: 10rem; overflow-y: auto; outline: none; white-space: pre-wrap; overflow-wrap: anywhere; }
 .agent-message-editor p { margin: 0; }
-.agent-message-editor p.is-editor-empty:first-child::before { color: var(--muted-foreground); content: "@ Agent and User · Enter to send · Shift+Enter for a new line"; float: left; height: 0; pointer-events: none; }
 .agent-mention { display: inline-flex; align-items: center; border-radius: 9999px; background: var(--secondary); color: var(--secondary-foreground); padding: .125rem .5rem; font-size: .875rem; font-weight: 600; line-height: 1.25rem; user-select: all; }
 .member-mention { display: inline-flex; align-items: center; border-radius: 9999px; background: var(--secondary); color: var(--secondary-foreground); padding: .125rem .5rem; font-size: .875rem; font-weight: 600; line-height: 1.25rem; user-select: all; }
 .member-mention-me { background: #1d4ed8; color: white; }
@@ -224,4 +223,12 @@ button:not(:disabled), a[href], [role="button"]:not([aria-disabled="true"]), [ro
 .agent-member-working { animation: agent-member-breathe 2.4s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) {
   .agent-member-working { animation: none; background-color: var(--accent); }
+}
+
+.agent-message-editor p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  color: var(--muted-foreground);
+  pointer-events: none;
 }

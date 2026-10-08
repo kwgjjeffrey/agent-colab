@@ -1,5 +1,6 @@
 import { operations } from "@/api/trace-operations";
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import Placeholder from "@tiptap/extension-placeholder";
 import Mention from "@tiptap/extension-mention";
 import { EditorContent, useEditor, ReactNodeViewRenderer } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -122,6 +123,7 @@ export function AgentMessageComposer({
         codeBlock: false,
         horizontalRule: false,
       }),
+      Placeholder.configure({ placeholder: "Write a message… Type @ to mention a teammate or Agent." }),
       mentionExtension,
     ],
     content: "",
@@ -291,7 +293,7 @@ export function AgentMessageComposer({
         </div>
       )}
       <div className="flex items-end gap-3">
-        <div className="min-h-10 min-w-0 flex-1 px-1 py-2">
+        <div className="min-h-12 min-w-0 flex-1 rounded-lg border bg-muted px-3 py-3 focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/20">
           <EditorContent editor={editor} />
         </div>
         <Button

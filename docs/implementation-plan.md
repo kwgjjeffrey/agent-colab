@@ -1,5 +1,9 @@
 # Colab 实现计划
 
+### 2026-10-08 Messages composer visibility
+
+Added the real Tiptap Placeholder extension, explanatory empty-composer copy, pale muted background, border and focus treatment. GUI-only artifact 0.1.104-dev / promotion 0.1.156-dev; all other component versions unchanged.
+
 ### 2026-10-08 workspace continuity and feature onboarding
 
 Implemented GUI VERSION embedding, single-flight focus checks with a per-session reload guard, per-Channel tab restoration, macOS close-to-hide / activate-to-show window reuse, image upload (PNG/JPEG/WebP, 5 MB input bound, cropped 128px PNG) and local DiceBear shapes generation for Channel identity, Skills workspace gutters, in-stream Messages use cases with the real Agent manager action and bottom-follow behavior, and Session use cases wired to source sharing / existing Session selection / reader handoff. Session completion is recorded only after successful share or prompt delivery; closing a prompt leaves guidance visible.
