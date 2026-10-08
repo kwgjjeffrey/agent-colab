@@ -889,6 +889,8 @@ Complete and published as GUI `0.1.107-dev` / Skill `0.1.54-dev`, promotion `0.1
 Implemented Settings Members invitation entry, single-command prompt, signed bootstrap invitation argument, and thin join CLI using existing device authentication and invite acceptance. Existing Server 24-hour TTL/ordinary-member/revoke implementation is reused; Server and Shell are unchanged. Focused Python/GUI contract tests and UI build passed. Real distinct-member regression and publication acceptance are in progress; see validation plan for final evidence.
 # 2026-10-08 account and Channel settings
 
+Header refinement: removed the pencil entry; owner/admin double-click the Channel name to open the unchanged identity dialog. Keyboard Enter on the focused title also opens it. Existing rename/workspace regression scripts now use double-click.
+
 Agent manager fixes: global My Agents counts the same owner blueprint collection shown by the manager, not Channel-selected participants. Switching blueprint remounts its uncontrolled form. The manager has a viewport-bounded body with independent list/form scroll regions. Runtime and invocation-policy Select items supply explicit labels; popup alignment is edge-based rather than selected-item-over-trigger. Bound unavailable runtime labels remain readable.
 
 Global Settings layout follow-up: My Agents, Account settings and Linked devices use the same full-width ghost drill-down rows and trailing chevrons. Updates now opens a Settings subpage rather than expanding inline; its check/update/restart action remains on the main page, immediately before the rightmost chevron. Existing callbacks, account Badge and update progress remain intact.

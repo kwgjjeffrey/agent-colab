@@ -232,4 +232,4 @@ Updater state belongs to the backend operation, not the browser's button state. 
 Sessions 的 onboarding 仅用于空列表；已有任意 Session 时隐藏整块引导，让实际内容占据页面。Messages 的引导仍按既定规则位于消息流开始处，随对话增长自然滚出视口。
 # Compact Channel management
 
-Channel identity is edited from a hover/focus-visible pencil beside the Channel name. A compact dialog contains only Name and Icon. The adjacent shadcn AvatarGroup opens a separate Members dialog with the existing invitation and membership actions. Channel management no longer occupies a Settings tab; account settings remain in the bottom-left global Settings entry.
+Channel identity is edited by double-clicking the Channel name (owner/admin only; keyboard focus + Enter is equivalent). No pencil icon occupies the header. A compact dialog contains only Name and Icon. The adjacent shadcn AvatarGroup opens a separate Members dialog with the existing invitation and membership actions. Channel management no longer occupies a Settings tab; account settings remain in the bottom-left global Settings entry.
