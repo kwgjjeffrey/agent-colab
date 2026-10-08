@@ -21,7 +21,13 @@ export const META = {
   ],
   "suite": "business",
   "testLevel": "end-to-end",
-  "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source fa6159373629: Real Skill patch exact projection comparison; finally reverses patch and confirms full original projection restored."
+  "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source fa6159373629: Real Skill patch exact projection comparison; finally reverses patch and confirms full original projection restored.",
+  "locks": [
+    "read:client.primary",
+    "read:channel.shared",
+    "write:canvas.collection",
+    "write:canvas.fixture"
+  ]
 };
 
 import {invoke,complete} from "../../../support/agent.mjs";

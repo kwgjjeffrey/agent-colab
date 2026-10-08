@@ -21,7 +21,13 @@ export const META = {
   ],
   "suite": "business",
   "testLevel": "end-to-end",
-  "statusReason": "Round 12 20261007T122018Z-9daf491a: actual GUI POST identity, exact committed message ID, exactly one rendered copy on both independent client contexts verified after cold-list merge race repair."
+  "statusReason": "Round 12 20261007T122018Z-9daf491a: actual GUI POST identity, exact committed message ID, exactly one rendered copy on both independent client contexts verified after cold-list merge race repair.",
+  "locks": [
+    "read:client.primary",
+    "read:channel.shared",
+    "read:client.receiver",
+    "read:browser.navigation"
+  ]
 };
 
 import fs from "node:fs/promises";

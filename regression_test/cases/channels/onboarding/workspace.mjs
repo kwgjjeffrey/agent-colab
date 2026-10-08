@@ -18,7 +18,13 @@ export const META={
   ],
   "suite": "business",
   "testLevel": "end-to-end",
-  "statusReason": "Reviewed final Round 20261008T022600Z-2a527af2: actual Skills gutters, three completed focus checks without navigation, cold Channel/tab restoration, valid image upload, SVG generation and decoded header/rail images, finally readback of restored identity; 20 assertions and screenshot checked."
+  "statusReason": "Reviewed final Round 20261008T022600Z-2a527af2: actual Skills gutters, three completed focus checks without navigation, cold Channel/tab restoration, valid image upload, SVG generation and decoded header/rail images, finally readback of restored identity; 20 assertions and screenshot checked.",
+  "locks": [
+    "read:client.primary",
+    "write:channel.shared",
+    "write:native.focus",
+    "write:browser.navigation"
+  ]
 };
 export const REQUIREMENTS={channel:{permission:'read'},parameters:{keys:['disposable']}};
 import {core,resource,disposable,eventually} from '../../../support/client.mjs';

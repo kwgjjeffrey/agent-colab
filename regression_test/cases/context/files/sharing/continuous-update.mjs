@@ -21,7 +21,13 @@ export const META = {
   ],
   "suite": "business",
   "testLevel": "end-to-end",
-  "statusReason": "Reviewed Round 6 and 20261007T123407Z-b23e54a6: bound registered source is edited, published root must advance, and original source bytes are restored in finally. Repeated watcher timeout is a real continuous-publication failure; script behavior is valid. Product defect remains open."
+  "statusReason": "Reviewed Round 6 and 20261007T123407Z-b23e54a6: bound registered source is edited, published root must advance, and original source bytes are restored in finally. Repeated watcher timeout is a real continuous-publication failure; script behavior is valid. Product defect remains open.",
+  "locks": [
+    "read:client.primary",
+    "read:channel.shared",
+    "write:client.receiver",
+    "write:files.fixture"
+  ]
 };
 
 import fs from "node:fs/promises";import path from "node:path";

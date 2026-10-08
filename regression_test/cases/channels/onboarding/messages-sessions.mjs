@@ -17,7 +17,13 @@ export const META={
   ],
   "suite": "business",
   "testLevel": "end-to-end",
-  "statusReason": "Reviewed Round 20261008T025951Z-a7143d75: empty guides, actual conversation scrolling, populated Session guide absence and owned share/Canvas cleanup passed; 32 assertions and screenshots reviewed."
+  "statusReason": "Reviewed Round 20261008T025951Z-a7143d75: empty guides, actual conversation scrolling, populated Session guide absence and owned share/Canvas cleanup passed; 32 assertions and screenshots reviewed.",
+  "locks": [
+    "read:client.primary",
+    "read:channel.shared",
+    "read:session.fixture",
+    "write:browser.navigation"
+  ]
 };
 export const REQUIREMENTS={channel:{permission:'read'},parameters:{keys:['disposable','sessionSourcePath']}};
 import {core,parameter,disposable,eventually} from '../../../support/client.mjs';

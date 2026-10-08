@@ -19,7 +19,15 @@ export const META = {
   ],
   "suite": "release",
   "testLevel": "end-to-end",
-  "statusReason": "Round 7 20261007T121017Z-7da12c1e: real GUI install/default/uninstall, unrelated target preservation and restoration reviewed."
+  "statusReason": "Round 7 20261007T121017Z-7da12c1e: real GUI install/default/uninstall, unrelated target preservation and restoration reviewed.",
+  "locks": [
+    "read:client.primary",
+    "read:channel.shared",
+    "write:client.owner",
+    "write:runtime.bound",
+    "write:skill.installation",
+    "read:browser.navigation"
+  ]
 };
 
 import fs from "node:fs/promises";import path from "node:path";

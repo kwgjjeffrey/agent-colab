@@ -22,7 +22,15 @@ export const META = {
   ],
   "suite": "business",
   "testLevel": "end-to-end",
-  "statusReason": "Reviewed real actions, exact observed assertions and resource cleanup in Round 6 (20261007T115742Z-bfdf7648); corrected behavior verified."
+  "statusReason": "Reviewed real actions, exact observed assertions and resource cleanup in Round 6 (20261007T115742Z-bfdf7648); corrected behavior verified.",
+  "locks": [
+    "read:client.primary",
+    "read:channel.shared",
+    "read:client.owner",
+    "read:client.receiver",
+    "read:files.fixture",
+    "read:browser.navigation"
+  ]
 };
 
 import fs from "node:fs/promises";
@@ -35,4 +43,4 @@ export async function run(ctx){
  await eventually(ctx,'Owned withdrawal fixture is published',()=>core(ctx,'GET','/v1/channels/'+c.id+'/files'),rows=>rows.some(x=>x.id===id&&x.currentRootOid),{timeoutMs:90000});
  await core(ctx,'POST','/v1/files/'+id+'/materialize',undefined,{discoveryFile:second});const row=ctx.page.locator('div.group').filter({hasText:share.name});await row.getByRole('button',{name:'Withdraw',exact:true}).click();await eventually(ctx,'Files share leaves active discovery',()=>core(ctx,'GET','/v1/channels/'+c.id+'/files'),rows=>!rows.some(s=>s.id===id));const denied=await core(ctx,'POST','/v1/files/'+id+'/materialize',undefined,{discoveryFile:parameter(ctx,'isolatedCoreDiscoveryFile'),expectFailure:true});ctx.assert('Fresh receiver fetch is denied by authorization',/HTTP (403|404)/.test(denied.error),true);
 }
-export const REQUIREMENTS={"parameters": {"keys": ["disposable", "filesRef", "filesName", "secondCoreDiscoveryFile", "isolatedCoreDiscoveryFile"]}};
+export const REQUIREMENTS={"parameters": {"keys": ["disposable", "secondCoreDiscoveryFile", "isolatedCoreDiscoveryFile"]}};

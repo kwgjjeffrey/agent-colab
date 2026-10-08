@@ -22,7 +22,15 @@ export const META = {
   ],
   "suite": "business",
   "testLevel": "end-to-end",
-  "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source 1b37c749432e: GUI creates owned runtime-bound blueprint; instruction, identity and participation read back; invalid runtime rejected and owned blueprint removed."
+  "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source 1b37c749432e: GUI creates owned runtime-bound blueprint; instruction, identity and participation read back; invalid runtime rejected and owned blueprint removed.",
+  "locks": [
+    "read:client.primary",
+    "read:channel.shared",
+    "write:runtime.bound",
+    "read:agent.blueprint",
+    "read:client.owner",
+    "read:browser.navigation"
+  ]
 };
 
 import fs from "node:fs/promises";

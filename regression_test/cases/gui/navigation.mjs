@@ -20,8 +20,11 @@ export const META={
     "desktop/ui"
   ],
   "effects": "read-only",
-  "parallelSafe": true,
-  "locks": [],
+  "locks": [
+    "read:client.primary",
+    "read:channel.shared",
+    "read:browser.navigation"
+  ],
   "cost": "normal",
   "statusReason": "Reviewed Round 20261008T025951Z-a7143d75: four navigation assertions passed including exactly one current Channel matching header; native GUI 106 screenshots verify white marker and outline following selection."
 };

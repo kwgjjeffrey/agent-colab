@@ -21,7 +21,12 @@ export const META = {
   ],
   "suite": "business",
   "testLevel": "end-to-end",
-  "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source 2237fdc90a21: Actual GUI creates exactly one owned Channel, verifies creator role and usable navigation; uniquely named test Channel retained."
+  "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source 2237fdc90a21: Actual GUI creates exactly one owned Channel, verifies creator role and usable navigation; uniquely named test Channel retained.",
+  "locks": [
+    "read:client.primary",
+    "read:channel.shared",
+    "read:browser.navigation"
+  ]
 };
 
 import {openTab} from "../../../support/gui.mjs";

@@ -21,7 +21,19 @@ export const META = {
   ],
   "suite": "business",
   "testLevel": "end-to-end",
-  "statusReason": "Reviewed 20261007T141635Z-ef5ef721: GUI creates Files, real Agent Session, and owned Skill fixed shares; receiver preserves original content and excludes subsequent source changes for all three. Source bytes and transfer revocation cleanup verified. Prior empty-response error did not reproduce on current runtime."
+  "statusReason": "Reviewed 20261007T141635Z-ef5ef721: GUI creates Files, real Agent Session, and owned Skill fixed shares; receiver preserves original content and excludes subsequent source changes for all three. Source bytes and transfer revocation cleanup verified. Prior empty-response error did not reproduce on current runtime.",
+  "locks": [
+    "read:client.primary",
+    "read:channel.shared",
+    "write:runtime.bound",
+    "read:agent.blueprint",
+    "write:skill.fixture",
+    "write:files.fixture",
+    "write:session.fixture",
+    "write:skill.installation",
+    "read:client.owner",
+    "read:browser.navigation"
+  ]
 };
 
 import fs from "node:fs/promises";import path from "node:path";

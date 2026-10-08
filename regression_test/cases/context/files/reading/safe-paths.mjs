@@ -21,7 +21,12 @@ export const META = {
   ],
   "suite": "business",
   "testLevel": "contract",
-  "statusReason": "Reviewed real actions, exact observed assertions and resource cleanup in Round 6 (20261007T115742Z-bfdf7648); corrected behavior verified."
+  "statusReason": "Reviewed real actions, exact observed assertions and resource cleanup in Round 6 (20261007T115742Z-bfdf7648); corrected behavior verified.",
+  "locks": [
+    "read:client.primary",
+    "read:channel.shared",
+    "read:client.owner"
+  ]
 };
 
 import fs from "node:fs/promises";import path from "node:path";

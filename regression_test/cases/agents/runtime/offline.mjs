@@ -22,7 +22,14 @@ export const META = {
   ],
   "suite": "business",
   "testLevel": "end-to-end",
-  "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source 7020f611a149: Only owned runtime disconnected; pending request does not claim execution; reconnect completes same trigger once and finally restores runtime."
+  "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source 7020f611a149: Only owned runtime disconnected; pending request does not claim execution; reconnect completes same trigger once and finally restores runtime.",
+  "locks": [
+    "read:client.primary",
+    "read:channel.shared",
+    "write:runtime.bound",
+    "write:agent.blueprint",
+    "write:client.owner"
+  ]
 };
 
 import fs from "node:fs/promises";import path from "node:path";

@@ -21,7 +21,13 @@ export const META = {
   ],
   "suite": "business",
   "testLevel": "end-to-end",
-  "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source df79f1ddc600: Only owned Skill modified; real ensure reports conflict and preserves bytes; finally restores and re-ensures original."
+  "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source df79f1ddc600: Only owned Skill modified; real ensure reports conflict and preserves bytes; finally restores and re-ensures original.",
+  "locks": [
+    "read:client.primary",
+    "read:channel.shared",
+    "write:skill.fixture",
+    "write:skill.installation"
+  ]
 };
 
 import fs from 'node:fs/promises';import path from 'node:path';

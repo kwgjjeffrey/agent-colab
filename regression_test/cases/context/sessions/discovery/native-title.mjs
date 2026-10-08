@@ -18,7 +18,12 @@ export const META = {
     "local/crates/local-api/src/sessions.rs",
     "local/crates/local-api/src/sessions/native_titles.rs"
   ],
-  "statusReason": "Reviewed Run 20261007T132503Z-d7426da3: exact catalog scenario executed once; native provider fields, metadata-only rename, unchanged catalog, fallback and transcript preservation asserted; UUID-owned temporary stores cleaned by Drop. Core integration only, no installed GUI or sharing claim."
+  "statusReason": "Reviewed Run 20261007T132503Z-d7426da3: exact catalog scenario executed once; native provider fields, metadata-only rename, unchanged catalog, fallback and transcript preservation asserted; UUID-owned temporary stores cleaned by Drop. Core integration only, no installed GUI or sharing claim.",
+  "locks": [
+    "write:build.cargo"
+  ],
+  "suite": "business",
+  "testLevel": "contract"
 };
 export async function run(ctx) {
   const result = await ctx.command('Exercise real native-title catalog with isolated provider stores', 'cargo',

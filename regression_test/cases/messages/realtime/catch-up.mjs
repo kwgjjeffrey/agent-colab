@@ -21,7 +21,15 @@ export const META = {
   ],
   "suite": "business",
   "testLevel": "end-to-end",
-  "statusReason": "Reviewed 20261007T111006Z-bdad100c, execution source 9df918d6f62d: Owned receiver realtime interrupted; real committed messages all reconcile exactly once; transport restored and browser context closed."
+  "statusReason": "Reviewed 20261007T111006Z-bdad100c, execution source 9df918d6f62d: Owned receiver realtime interrupted; real committed messages all reconcile exactly once; transport restored and browser context closed.",
+  "locks": [
+    "read:client.primary",
+    "read:channel.shared",
+    "write:client.receiver",
+    "write:transport.receiver",
+    "write:native.focus",
+    "read:browser.navigation"
+  ]
 };
 
 import fs from "node:fs/promises";import path from "node:path";

@@ -21,7 +21,14 @@ export const META = {
   ],
   "suite": "business",
   "testLevel": "end-to-end",
-  "statusReason": "Round 12 20261007T122018Z-9daf491a: GUI Skill sharing, real distinct member access to identical published root, source withdrawal and membership cleanup verified."
+  "statusReason": "Round 12 20261007T122018Z-9daf491a: GUI Skill sharing, real distinct member access to identical published root, source withdrawal and membership cleanup verified.",
+  "locks": [
+    "read:client.primary",
+    "read:channel.shared",
+    "write:client.member",
+    "write:membership.fixture",
+    "read:browser.navigation"
+  ]
 };
 
 import fs from "node:fs/promises";import path from "node:path";

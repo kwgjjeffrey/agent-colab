@@ -22,7 +22,15 @@ export const META = {
   ],
   "suite": "business",
   "testLevel": "end-to-end",
-  "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source b54f5dc4ec79: Actual GUI mention creates the intended request; real runtime success and request-linked reply are verified."
+  "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source b54f5dc4ec79: Actual GUI mention creates the intended request; real runtime success and request-linked reply are verified.",
+  "locks": [
+    "read:client.primary",
+    "read:channel.shared",
+    "write:runtime.bound",
+    "read:agent.blueprint",
+    "read:client.owner",
+    "read:browser.navigation"
+  ]
 };
 
 import {invoke,complete} from "../../../support/agent.mjs";

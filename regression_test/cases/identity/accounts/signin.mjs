@@ -20,7 +20,13 @@ export const META = {
   ],
   "suite": "release",
   "testLevel": "end-to-end",
-  "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source 78337451bcf8: Real isolated device chooser signs into expected identity and loads navigation; finally restores login. Does not qualify Google linking."
+  "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source 78337451bcf8: Real isolated device chooser signs into expected identity and loads navigation; finally restores login. Does not qualify Google linking.",
+  "locks": [
+    "read:client.primary",
+    "read:channel.shared",
+    "write:client.owner",
+    "read:browser.navigation"
+  ]
 };
 
 import fs from "node:fs/promises";import path from "node:path";

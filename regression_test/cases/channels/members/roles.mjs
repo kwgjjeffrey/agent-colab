@@ -21,7 +21,14 @@ export const META = {
   ],
   "suite": "business",
   "testLevel": "end-to-end",
-  "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source 977b3a48a440: GUI changes actual member role; distinct actor receives 403 for management and invitation; finally removes owned membership."
+  "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source 977b3a48a440: GUI changes actual member role; distinct actor receives 403 for management and invitation; finally removes owned membership.",
+  "locks": [
+    "read:client.primary",
+    "read:channel.shared",
+    "write:client.member",
+    "write:membership.fixture",
+    "read:browser.navigation"
+  ]
 };
 
 import fs from "node:fs/promises";import path from "node:path";

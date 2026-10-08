@@ -21,7 +21,12 @@ export const META = {
   ],
   "suite": "business",
   "testLevel": "end-to-end",
-  "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source 2918ffb54202: Real resources produce paged activity, no duplicate IDs or content prefetch; GUI navigates exact resource; owned documents cleaned."
+  "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source 2918ffb54202: Real resources produce paged activity, no duplicate IDs or content prefetch; GUI navigates exact resource; owned documents cleaned.",
+  "locks": [
+    "read:client.primary",
+    "write:channel.shared",
+    "read:browser.navigation"
+  ]
 };
 
 import {openTab} from '../../../support/gui.mjs';

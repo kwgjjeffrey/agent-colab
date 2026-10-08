@@ -19,7 +19,8 @@ export const META = {
   ],
   "suite": "release",
   "testLevel": "end-to-end",
-  "statusReason": "Round 3 20261007T102452Z-cbabd0e6: verified signed bad-hash and correctly hashed unhealthy candidates against the real installer in an isolated root. Unhealthy candidate acceptance is a real installer gap (setup explicitly lacks readiness/rollback), not a script false positive. Product defect remains open."
+  "statusReason": "Round 3 20261007T102452Z-cbabd0e6: verified signed bad-hash and correctly hashed unhealthy candidates against the real installer in an isolated root. Unhealthy candidate acceptance is a real installer gap (setup explicitly lacks readiness/rollback), not a script false positive. Product defect remains open.",
+  "locks": []
 };
 
 import fs from "node:fs/promises";import path from "node:path";

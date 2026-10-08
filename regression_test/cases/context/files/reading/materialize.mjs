@@ -21,7 +21,12 @@ export const META = {
   ],
   "suite": "business",
   "testLevel": "end-to-end",
-  "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source b314b63f0565: Actual Skill materializes registered fixture; path is bounded and bytes equal configured source."
+  "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source b314b63f0565: Actual Skill materializes registered fixture; path is bounded and bytes equal configured source.",
+  "locks": [
+    "read:client.primary",
+    "read:channel.shared",
+    "read:files.fixture"
+  ]
 };
 
 import fs from "node:fs/promises";

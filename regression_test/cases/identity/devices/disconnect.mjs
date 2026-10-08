@@ -18,9 +18,15 @@ export const META = {
     "local/src",
     "server/standalone/src"
   ],
-  "suite": "business",
+  "suite": "release",
   "testLevel": "end-to-end",
-  "statusReason": "Reviewed Round 5 20261007T111006Z-bdad100c: real linked non-current device selected by ID, actual GUI unlink removes it, revoked client receives 401 and current device retains access. Fresh fixture availability is now checked before execution; an already revoked device is blocked, not a product failure."
+  "statusReason": "Reviewed Round 5 20261007T111006Z-bdad100c: real linked non-current device selected by ID, actual GUI unlink removes it, revoked client receives 401 and current device retains access. Fresh fixture availability is now checked before execution; an already revoked device is blocked, not a product failure.",
+  "locks": [
+    "read:client.primary",
+    "read:channel.shared",
+    "write:client.owner",
+    "read:browser.navigation"
+  ]
 };
 
 import fs from "node:fs/promises";import path from "node:path";

@@ -21,7 +21,13 @@ export const META = {
   ],
   "suite": "business",
   "testLevel": "end-to-end",
-  "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source 57cca6b5f21e: Actual Skill removes the configured member; subsequent member request is denied and owner access survives."
+  "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source 57cca6b5f21e: Actual Skill removes the configured member; subsequent member request is denied and owner access survives.",
+  "locks": [
+    "read:client.primary",
+    "read:channel.shared",
+    "write:client.member",
+    "write:membership.fixture"
+  ]
 };
 
 import fs from "node:fs/promises";import path from "node:path";

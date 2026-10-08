@@ -21,7 +21,13 @@ export const META = {
   ],
   "suite": "business",
   "testLevel": "end-to-end",
-  "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source 8b0d64b658cf: Actual GUI heading/line edits read back through Markdown projection and survive reload; owned document removed."
+  "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source 8b0d64b658cf: Actual GUI heading/line edits read back through Markdown projection and survive reload; owned document removed.",
+  "locks": [
+    "read:client.primary",
+    "read:channel.shared",
+    "write:canvas.collection",
+    "write:browser.navigation"
+  ]
 };
 
 import {openTab} from "../../../support/gui.mjs";

@@ -22,7 +22,17 @@ export const META = {
   ],
   "suite": "business",
   "testLevel": "end-to-end",
-  "statusReason": "20261007T124601Z-dcff5e91 on confirmed Core 0.1.92: non-owner rejection, real owner reply execution, exact assembled prompt, preserved rejected request and policy/membership cleanup all verified."
+  "statusReason": "20261007T124601Z-dcff5e91 on confirmed Core 0.1.92: non-owner rejection, real owner reply execution, exact assembled prompt, preserved rejected request and policy/membership cleanup all verified.",
+  "locks": [
+    "read:client.primary",
+    "read:channel.shared",
+    "write:client.member",
+    "write:membership.fixture",
+    "write:runtime.bound",
+    "write:agent.blueprint",
+    "read:client.owner",
+    "read:browser.navigation"
+  ]
 };
 
 import fs from "node:fs/promises";import path from "node:path";

@@ -22,7 +22,15 @@ export const META = {
   ],
   "suite": "business",
   "testLevel": "end-to-end",
-  "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source f1126d6718a5: Real runtime executes and replies before GUI deselection/deletion; other Channel participation and retained history are checked, retired selection is denied."
+  "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source f1126d6718a5: Real runtime executes and replies before GUI deselection/deletion; other Channel participation and retained history are checked, retired selection is denied.",
+  "locks": [
+    "read:client.primary",
+    "read:channel.shared",
+    "write:runtime.bound",
+    "read:agent.blueprint",
+    "read:client.owner",
+    "read:browser.navigation"
+  ]
 };
 
 import fs from "node:fs/promises";import path from "node:path";

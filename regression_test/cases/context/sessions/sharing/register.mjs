@@ -21,7 +21,15 @@ export const META = {
   ],
   "suite": "business",
   "testLevel": "end-to-end",
-  "statusReason": "Round 14 20261007T122531Z-50563101: GUI commit identity and published snapshot readiness, actual distinct member Session discovery/read, share and membership cleanup reviewed and passed."
+  "statusReason": "Round 14 20261007T122531Z-50563101: GUI commit identity and published snapshot readiness, actual distinct member Session discovery/read, share and membership cleanup reviewed and passed.",
+  "locks": [
+    "read:client.primary",
+    "read:channel.shared",
+    "write:client.member",
+    "write:membership.fixture",
+    "read:session.fixture",
+    "read:browser.navigation"
+  ]
 };
 
 import fs from "node:fs/promises";import path from "node:path";

@@ -21,7 +21,13 @@ export const META = {
   ],
   "suite": "business",
   "testLevel": "end-to-end",
-  "statusReason": "Round 8 20261007T121219Z-4bceb268: real ensure/update and eventual restored publication/install bytes verified; cleanup now waits for actual restored bytes."
+  "statusReason": "Round 8 20261007T121219Z-4bceb268: real ensure/update and eventual restored publication/install bytes verified; cleanup now waits for actual restored bytes.",
+  "locks": [
+    "read:client.primary",
+    "read:channel.shared",
+    "write:skill.fixture",
+    "write:skill.installation"
+  ]
 };
 
 import fs from "node:fs/promises";

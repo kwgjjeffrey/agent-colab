@@ -21,7 +21,13 @@ export const META = {
   ],
   "suite": "business",
   "testLevel": "end-to-end",
-  "statusReason": "20261007T124601Z-dcff5e91: GUI expiry update is persisted; actual unrelated actor lacks local management receipt and is denied with the supported 400 contract; capability is revoked in cleanup."
+  "statusReason": "20261007T124601Z-dcff5e91: GUI expiry update is persisted; actual unrelated actor lacks local management receipt and is denied with the supported 400 contract; capability is revoked in cleanup.",
+  "locks": [
+    "read:client.primary",
+    "read:channel.shared",
+    "read:client.member",
+    "read:browser.navigation"
+  ]
 };
 
 import fs from "node:fs/promises";import path from "node:path";

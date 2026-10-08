@@ -21,7 +21,12 @@ export const META = {
   ],
   "suite": "business",
   "testLevel": "end-to-end",
-  "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source 43064293bb73: Actual unauthenticated receiver consumes all three types through CLI; exact source bytes/adapters checked; no login created; transfers revoked."
+  "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source 43064293bb73: Actual unauthenticated receiver consumes all three types through CLI; exact source bytes/adapters checked; no login created; transfers revoked.",
+  "locks": [
+    "read:client.primary",
+    "read:channel.shared",
+    "write:client.anonymous"
+  ]
 };
 
 import fs from "node:fs/promises";import path from "node:path";

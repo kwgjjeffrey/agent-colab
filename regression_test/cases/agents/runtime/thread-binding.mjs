@@ -9,7 +9,7 @@ export const META = {
   "surface": "integration",
   "priority": "critical",
   "origin": "requirement",
-  "status": "rotten",
+  "status": "trial",
   "effects": "isolated-write",
   "cost": "normal",
   "requires": [
@@ -22,7 +22,14 @@ export const META = {
   ],
   "suite": "business",
   "testLevel": "end-to-end",
-  "statusReason": "Review found fixture cleanup gap: enables Agent in second Channel without restoring previous selection. Restore participation in finally and verify before reactivation."
+  "statusReason": "Repaired script reviewed for resource ownership; awaiting current execution qualification.",
+  "locks": [
+    "read:client.primary",
+    "read:channel.shared",
+    "write:runtime.bound",
+    "write:agent.blueprint",
+    "read:client.owner"
+  ]
 };
 
 import fs from "node:fs/promises";import path from "node:path";

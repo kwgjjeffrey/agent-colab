@@ -21,7 +21,13 @@ export const META = {
   ],
   "suite": "business",
   "testLevel": "end-to-end",
-  "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source f186aa3f2838: GUI deletes only owned target; server discovery confirms deletion and control document survives; control cleaned."
+  "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source f186aa3f2838: GUI deletes only owned target; server discovery confirms deletion and control document survives; control cleaned.",
+  "locks": [
+    "read:client.primary",
+    "read:channel.shared",
+    "write:canvas.collection",
+    "read:browser.navigation"
+  ]
 };
 
 import {openTab} from "../../../support/gui.mjs";

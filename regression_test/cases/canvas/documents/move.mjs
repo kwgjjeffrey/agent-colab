@@ -21,7 +21,14 @@ export const META = {
   ],
   "suite": "business",
   "testLevel": "end-to-end",
-  "statusReason": "20261007T125006Z-6def5954: real GUI drag sends JSON PATCH, persisted parent and identity verified, independently authenticated receiver waits for and sees moved document, invalid parent rejected and temporary document deleted. Missing Content-Type product defect repaired and verified."
+  "statusReason": "20261007T125006Z-6def5954: real GUI drag sends JSON PATCH, persisted parent and identity verified, independently authenticated receiver waits for and sees moved document, invalid parent rejected and temporary document deleted. Missing Content-Type product defect repaired and verified.",
+  "locks": [
+    "read:client.primary",
+    "read:channel.shared",
+    "read:client.receiver",
+    "write:canvas.collection",
+    "write:browser.navigation"
+  ]
 };
 
 import fs from "node:fs/promises";import path from "node:path";

@@ -21,7 +21,14 @@ export const META = {
   ],
   "suite": "business",
   "testLevel": "end-to-end",
-  "statusReason": "20261007T124601Z-dcff5e91: real GUI adds the distinct member, their authenticated client discovers the intended Channel, and actual member identity cleanup succeeds on confirmed Core 0.1.92."
+  "statusReason": "20261007T124601Z-dcff5e91: real GUI adds the distinct member, their authenticated client discovers the intended Channel, and actual member identity cleanup succeeds on confirmed Core 0.1.92.",
+  "locks": [
+    "read:client.primary",
+    "read:channel.shared",
+    "write:client.member",
+    "write:membership.fixture",
+    "read:browser.navigation"
+  ]
 };
 
 import fs from "node:fs/promises";import path from "node:path";

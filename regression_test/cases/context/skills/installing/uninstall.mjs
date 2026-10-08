@@ -21,7 +21,13 @@ export const META = {
   ],
   "suite": "business",
   "testLevel": "end-to-end",
-  "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source 35ba0c7c0c59: Real selected managed target removed while control bytes remain; selected target and prior control state restored."
+  "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source 35ba0c7c0c59: Real selected managed target removed while control bytes remain; selected target and prior control state restored.",
+  "locks": [
+    "read:client.primary",
+    "read:channel.shared",
+    "write:skill.fixture",
+    "write:skill.installation"
+  ]
 };
 
 import fs from "node:fs/promises";

@@ -20,9 +20,15 @@ export const META = {
     "desktop/ui/src/features/messages",
     "skills/colab/bin/colab-messages"
   ],
-  "suite": "business",
+  "suite": "release",
   "testLevel": "end-to-end",
-  "statusReason": "Reviewed 20261007T111006Z-bdad100c, execution source d76d74ae46aa: Two genuine saved identities; GUI switch, old Channel absence, reload persistence and finally original actor restoration verified."
+  "statusReason": "Reviewed 20261007T111006Z-bdad100c, execution source d76d74ae46aa: Two genuine saved identities; GUI switch, old Channel absence, reload persistence and finally original actor restoration verified.",
+  "locks": [
+    "read:client.primary",
+    "read:channel.shared",
+    "write:client.owner",
+    "write:browser.navigation"
+  ]
 };
 
 import fs from "node:fs/promises";import path from "node:path";

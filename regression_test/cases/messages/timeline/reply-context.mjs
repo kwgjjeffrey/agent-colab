@@ -21,7 +21,12 @@ export const META = {
   ],
   "suite": "business",
   "testLevel": "end-to-end",
-  "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source b1a4accc27bc: Actual GUI quote retains trigger and resource identity; exact committed reply survives reload."
+  "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source b1a4accc27bc: Actual GUI quote retains trigger and resource identity; exact committed reply survives reload.",
+  "locks": [
+    "read:client.primary",
+    "read:channel.shared",
+    "write:browser.navigation"
+  ]
 };
 
 import fs from "node:fs/promises";import path from "node:path";

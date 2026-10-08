@@ -21,7 +21,12 @@ export const META = {
   ],
   "suite": "business",
   "testLevel": "end-to-end",
-  "statusReason": "Reviewed Round 3 20261007T102452Z-cbabd0e6: actual source growth, cursor non-looping, original turns exactly once, new turn excluded and finally restores source; repeat pass in Rounds 1 and 2."
+  "statusReason": "Reviewed Round 3 20261007T102452Z-cbabd0e6: actual source growth, cursor non-looping, original turns exactly once, new turn excluded and finally restores source; repeat pass in Rounds 1 and 2.",
+  "locks": [
+    "read:client.primary",
+    "read:channel.shared",
+    "write:session.fixture"
+  ]
 };
 
 import fs from "node:fs/promises";

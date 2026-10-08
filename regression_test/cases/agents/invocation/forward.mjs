@@ -22,7 +22,15 @@ export const META = {
   ],
   "suite": "business",
   "testLevel": "end-to-end",
-  "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source 19c581dbe0b5: Exact forwarded instruction and selected context verified in the actual provider input; unselected context absent; real reply completed."
+  "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source 19c581dbe0b5: Exact forwarded instruction and selected context verified in the actual provider input; unselected context absent; real reply completed.",
+  "locks": [
+    "read:client.primary",
+    "read:channel.shared",
+    "write:runtime.bound",
+    "read:agent.blueprint",
+    "read:client.owner",
+    "read:browser.navigation"
+  ]
 };
 
 import fs from "node:fs/promises";

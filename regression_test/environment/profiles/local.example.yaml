@@ -1,6 +1,12 @@
 # Copy to ../environment.local.yaml (ignored). Use actual IDs or unique names; never credentials.
 parameters:
   channel: YOUR_TEST_CHANNEL
+  # Read bindings are populated by node regression_test/support/prepare-read-fixtures.mjs
+  # messageReadId: EXACT_MESSAGE_ID
+  # messageReadSeq: 100
+  # messageReadExpectedBody: "Known first fixture message"
+  # messageReadLaterId: EXACT_LATER_MESSAGE_ID
+  # messageReadLaterBody: "Known later fixture message"
   # agent: YOUR_TEST_AGENT
   # disposable: true # Only when every mutation target is an owned disposable fixture.
   # filesRef: colab://channel/CHANNEL_ID/FILES_ID

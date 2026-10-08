@@ -22,7 +22,14 @@ export const META = {
   ],
   "suite": "business",
   "testLevel": "end-to-end",
-  "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source b1af87159a83: Actual runtime reply identity/trigger checked; duplicate nonce returns same message and caller-supplied identity cannot override request authority."
+  "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source b1af87159a83: Actual runtime reply identity/trigger checked; duplicate nonce returns same message and caller-supplied identity cannot override request authority.",
+  "locks": [
+    "read:client.primary",
+    "read:channel.shared",
+    "write:runtime.bound",
+    "read:agent.blueprint",
+    "read:client.owner"
+  ]
 };
 
 import {invoke,complete} from "../../../support/agent.mjs";

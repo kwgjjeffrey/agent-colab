@@ -21,7 +21,13 @@ export const META = {
   ],
   "suite": "business",
   "testLevel": "end-to-end",
-  "statusReason": "Reviewed 20261007T111006Z-bdad100c, execution source 1837efa3c2bb: Actual GUI excludes dist; receiver bytes verify included file and absence of excluded file; independent share cleaned."
+  "statusReason": "Reviewed 20261007T111006Z-bdad100c, execution source 1837efa3c2bb: Actual GUI excludes dist; receiver bytes verify included file and absence of excluded file; independent share cleaned.",
+  "locks": [
+    "read:client.primary",
+    "read:channel.shared",
+    "read:client.receiver",
+    "read:browser.navigation"
+  ]
 };
 
 import fs from "node:fs/promises";import path from "node:path";

@@ -21,7 +21,15 @@ export const META = {
   ],
   "suite": "business",
   "testLevel": "end-to-end",
-  "statusReason": "Reviewed 20261007T142528Z-f836461e: waits for real durable pending outbox before Core restart, reopens the offline GUI from account-scoped catalog/replica, confirms the exact edit survives, restores network and verifies Server synchronization. Cleanup restores network and deletes only its disposable document."
+  "statusReason": "Reviewed 20261007T142528Z-f836461e: waits for real durable pending outbox before Core restart, reopens the offline GUI from account-scoped catalog/replica, confirms the exact edit survives, restores network and verifies Server synchronization. Cleanup restores network and deletes only its disposable document.",
+  "locks": [
+    "read:client.primary",
+    "read:channel.shared",
+    "write:client.owner",
+    "write:transport.owner",
+    "write:canvas.collection",
+    "write:browser.navigation"
+  ]
 };
 
 import fs from "node:fs/promises";import path from "node:path";

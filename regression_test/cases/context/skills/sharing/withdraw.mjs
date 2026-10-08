@@ -23,7 +23,16 @@ export const META = {
   ],
   "suite": "business",
   "testLevel": "end-to-end",
-  "statusReason": "Reviewed 20261007T142740Z-4d2cdec7: fresh consumer ensure works without preceding discovery; unique per-round owned fixture avoids historical-name ambiguity; GUI withdrawal removes publication, fresh fetch is denied, and existing installed bytes are retained. Failed fixture paths revoke publication in finally."
+  "statusReason": "Reviewed 20261007T142740Z-4d2cdec7: fresh consumer ensure works without preceding discovery; unique per-round owned fixture avoids historical-name ambiguity; GUI withdrawal removes publication, fresh fetch is denied, and existing installed bytes are retained. Failed fixture paths revoke publication in finally.",
+  "locks": [
+    "read:client.primary",
+    "read:channel.shared",
+    "read:client.owner",
+    "read:client.receiver",
+    "read:skill.fixture",
+    "read:skill.installation",
+    "read:browser.navigation"
+  ]
 };
 
 import fs from "node:fs/promises";

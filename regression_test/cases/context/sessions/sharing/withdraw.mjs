@@ -21,7 +21,12 @@ export const META = {
   ],
   "suite": "business",
   "testLevel": "end-to-end",
-  "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source 222a3700e8a8: Independent real Session first read then withdrawn via Skill; subsequent consumer read denied."
+  "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source 222a3700e8a8: Independent real Session first read then withdrawn via Skill; subsequent consumer read denied.",
+  "locks": [
+    "read:client.primary",
+    "read:channel.shared",
+    "read:client.receiver"
+  ]
 };
 
 import fs from "node:fs/promises";

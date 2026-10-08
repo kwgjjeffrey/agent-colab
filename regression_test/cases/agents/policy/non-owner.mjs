@@ -22,7 +22,16 @@ export const META = {
   ],
   "suite": "business",
   "testLevel": "end-to-end",
-  "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source cd9d6378aa5e: Distinct member submits real mentions under awaiting_owner/refuse; rejected requests never start; policy and membership restored."
+  "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source cd9d6378aa5e: Distinct member submits real mentions under awaiting_owner/refuse; rejected requests never start; policy and membership restored.",
+  "locks": [
+    "read:client.primary",
+    "read:channel.shared",
+    "write:client.member",
+    "write:membership.fixture",
+    "write:runtime.bound",
+    "write:agent.blueprint",
+    "read:client.owner"
+  ]
 };
 
 import fs from "node:fs/promises";import path from "node:path";

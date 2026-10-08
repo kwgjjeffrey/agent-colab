@@ -21,7 +21,14 @@ export const META = {
   ],
   "suite": "business",
   "testLevel": "end-to-end",
-  "statusReason": "Reviewed 20261007T141635Z-ef5ef721: locate the failed share and Retry button while publication is blocked, reconnect then click; real publication and no duplicate registration pass, cleanup restores connectivity."
+  "statusReason": "Reviewed 20261007T141635Z-ef5ef721: locate the failed share and Retry button while publication is blocked, reconnect then click; real publication and no duplicate registration pass, cleanup restores connectivity.",
+  "locks": [
+    "read:client.primary",
+    "read:channel.shared",
+    "write:client.owner",
+    "write:transport.owner",
+    "read:browser.navigation"
+  ]
 };
 
 import fs from "node:fs/promises";import path from "node:path";

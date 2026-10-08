@@ -9,7 +9,7 @@ export const META = {
   "surface": "skill",
   "priority": "normal",
   "origin": "requirement",
-  "status": "rotten",
+  "status": "trial",
   "effects": "read-only",
   "cost": "normal",
   "requires": [
@@ -21,7 +21,13 @@ export const META = {
   ],
   "suite": "business",
   "testLevel": "end-to-end",
-  "statusReason": "Review found assertion coverage gap: script checks text presence only, without bounded range, cursor or document identity assertions. Strengthen before reactivation."
+  "statusReason": "Repaired script reviewed for resource ownership; awaiting current execution qualification.",
+  "locks": [
+    "read:client.primary",
+    "read:channel.shared",
+    "read:canvas.collection",
+    "read:canvas.fixture"
+  ]
 };
 
 import fs from "node:fs/promises";

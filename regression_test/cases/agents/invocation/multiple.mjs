@@ -22,7 +22,15 @@ export const META = {
   ],
   "suite": "business",
   "testLevel": "end-to-end",
-  "statusReason": "20261007T123745Z-b3537470: actual GUI committed message includes repeated mention; exactly two independent requests and real Codex result replies succeed for both blueprints; temporary blueprint cleanup verified."
+  "statusReason": "20261007T123745Z-b3537470: actual GUI committed message includes repeated mention; exactly two independent requests and real Codex result replies succeed for both blueprints; temporary blueprint cleanup verified.",
+  "locks": [
+    "read:client.primary",
+    "read:channel.shared",
+    "write:runtime.bound",
+    "read:agent.blueprint",
+    "read:client.owner",
+    "read:browser.navigation"
+  ]
 };
 
 import fs from "node:fs/promises";

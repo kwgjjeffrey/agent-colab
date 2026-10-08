@@ -10,7 +10,7 @@ export const META = {
   "priority": "normal",
   "origin": "requirement",
   "status": "active",
-  "effects": "isolated-write",
+  "effects": "read-only",
   "cost": "normal",
   "requires": [
     "local-core"
@@ -21,7 +21,14 @@ export const META = {
   ],
   "suite": "business",
   "testLevel": "end-to-end",
-  "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source 790ca74d0301: Actual selected Skill handoff matches current installation branch: managed path or idempotent ensure with exact resource."
+  "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source 790ca74d0301: Actual selected Skill handoff matches current installation branch: managed path or idempotent ensure with exact resource.",
+  "locks": [
+    "read:client.primary",
+    "read:channel.shared",
+    "read:skill.fixture",
+    "read:skill.installation",
+    "read:browser.navigation"
+  ]
 };
 
 import {openTab,item,handoff} from "../../../../support/gui.mjs";

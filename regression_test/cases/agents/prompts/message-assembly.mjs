@@ -22,7 +22,14 @@ export const META = {
   ],
   "suite": "business",
   "testLevel": "end-to-end",
-  "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source 88412ea5131c: Actual request-specific provider input contains full message, exact blueprint instruction and scoped reply tool; CRDT details absent."
+  "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source 88412ea5131c: Actual request-specific provider input contains full message, exact blueprint instruction and scoped reply tool; CRDT details absent.",
+  "locks": [
+    "read:client.primary",
+    "read:channel.shared",
+    "write:runtime.bound",
+    "read:agent.blueprint",
+    "read:client.owner"
+  ]
 };
 
 import {invoke,complete,actualPrompt} from "../../../support/agent.mjs";

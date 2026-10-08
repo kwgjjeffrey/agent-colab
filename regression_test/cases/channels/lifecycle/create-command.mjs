@@ -21,7 +21,11 @@ export const META = {
   ],
   "suite": "business",
   "testLevel": "end-to-end",
-  "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source 3195caa36c72: Real CLI creation and rename read back in discovery; uniquely named disposable Channel retained as regression evidence."
+  "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source 3195caa36c72: Real CLI creation and rename read back in discovery; uniquely named disposable Channel retained as regression evidence.",
+  "locks": [
+    "read:client.primary",
+    "read:channel.shared"
+  ]
 };
 
 import fs from "node:fs/promises";

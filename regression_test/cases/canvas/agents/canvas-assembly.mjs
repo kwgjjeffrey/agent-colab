@@ -24,7 +24,16 @@ export const META = {
   ],
   "suite": "business",
   "testLevel": "end-to-end",
-  "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source 0d83e6bb0843: Real Canvas heading/mention prompt inspected; selected heading/reference checked; request is created and real runtime succeeds; owned document removed."
+  "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source 0d83e6bb0843: Real Canvas heading/mention prompt inspected; selected heading/reference checked; request is created and real runtime succeeds; owned document removed.",
+  "locks": [
+    "read:client.primary",
+    "read:channel.shared",
+    "write:runtime.bound",
+    "read:agent.blueprint",
+    "write:canvas.collection",
+    "read:client.owner",
+    "read:browser.navigation"
+  ]
 };
 
 import fs from "node:fs/promises";import path from "node:path";

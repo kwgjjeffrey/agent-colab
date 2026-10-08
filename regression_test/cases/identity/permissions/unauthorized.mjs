@@ -22,7 +22,13 @@ export const META = {
   ],
   "suite": "business",
   "testLevel": "end-to-end",
-  "statusReason": "Latest scoped round 20261007T123407Z-b23e54a6: existing protected resources remain readable to owner and reject actual other identity with 403/404 across Messages, Files materialization, Session and Canvas reads."
+  "statusReason": "Latest scoped round 20261007T123407Z-b23e54a6: existing protected resources remain readable to owner and reject actual other identity with 403/404 across Messages, Files materialization, Session and Canvas reads.",
+  "locks": [
+    "read:client.primary",
+    "read:channel.shared",
+    "read:client.member",
+    "read:membership.fixture"
+  ]
 };
 
 import fs from "node:fs/promises";import path from "node:path";

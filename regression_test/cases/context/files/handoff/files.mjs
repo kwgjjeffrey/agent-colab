@@ -11,8 +11,12 @@ export const META = {
   "origin": "requirement",
   "status": "active",
   "effects": "read-only",
-  "parallelSafe": true,
-  "locks": [],
+  "locks": [
+    "read:client.primary",
+    "read:channel.shared",
+    "read:files.fixture",
+    "read:browser.navigation"
+  ],
   "cost": "normal",
   "requires": [
     "local-core"

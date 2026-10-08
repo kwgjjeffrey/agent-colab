@@ -17,7 +17,12 @@ export const META={
   ],
   "suite": "business",
   "testLevel": "end-to-end",
-  "statusReason": "Reviewed final Round 20261008T022600Z-2a527af2: real GUI Channel creation, one durable guide with use cases, editor persistence, archive and reload absence, and owned cleanup; screenshot and 19 assertions checked."
+  "statusReason": "Reviewed final Round 20261008T022600Z-2a527af2: real GUI Channel creation, one durable guide with use cases, editor persistence, archive and reload absence, and owned cleanup; screenshot and 19 assertions checked.",
+  "locks": [
+    "read:client.primary",
+    "read:channel.shared",
+    "write:browser.navigation"
+  ]
 };
 export const REQUIREMENTS={channel:{permission:'read'},parameters:{keys:['disposable']}};
 import {core,disposable,eventually} from '../../../support/client.mjs';

@@ -11,8 +11,10 @@ export const META = {
   "origin": "requirement",
   "status": "active",
   "effects": "read-only",
-  "parallelSafe": true,
-  "locks": [],
+  "locks": [
+    "read:client.primary",
+    "read:channel.shared"
+  ],
   "cost": "normal",
   "requires": [
     "local-core"
@@ -30,7 +32,9 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import {parameter,resource,channelRef,cli,core,data,disposable,eventually} from "../../../support/client.mjs";
 export async function run(ctx) {
-const ref=resource(ctx,'channel').id;const firstEnvelope=await cli(ctx,'colab-messages',['messages','list','--channel',ref,'--limit','20']);const result=data(firstEnvelope);const rows=Array.isArray(result)?result:result.messages;ctx.assert('Message list is structured',Array.isArray(rows),true);if(!rows.length)ctx.block('Channel requires fixture messages');const first=rows[0];const detail=data(await cli(ctx,'colab-messages',['messages','read','--channel',ref,'--id',first.id]));ctx.assert('Read returns selected message',detail.id,first.id);const seq=firstEnvelope.page?.nextAfter;ctx.assert('Message has a cursor',Number.isFinite(seq),true);const later=data(await cli(ctx,'colab-messages',['messages','list','--channel',ref,'--after',String(seq)]));ctx.assert('Incremental read excludes previous messages',(Array.isArray(later)?later:later.messages).every(m=>m.id!==first.id),true);
+const ref=resource(ctx,'channel').id,id=parameter(ctx,'messageReadId'),seq=parameter(ctx,'messageReadSeq');
+const detail=data(await cli(ctx,'colab-messages',['messages','read','--channel',ref,'--id',id]));ctx.assert('Read returns the bound fixture identity',detail.id,id);ctx.assert('Read returns exact fixture content',detail.body,parameter(ctx,'messageReadExpectedBody'));
+const result=data(await cli(ctx,'colab-messages',['messages','list','--channel',ref,'--after',String(seq),'--limit','100']));const rows=Array.isArray(result)?result:result.messages;ctx.assert('Incremental list excludes prior fixture',rows.every(m=>m.id!==id&&m.seq>seq),true);const later=rows.find(m=>m.id===parameter(ctx,'messageReadLaterId'));ctx.assert('Bound later message is retained',later?.body,parameter(ctx,'messageReadLaterBody'));
 }
 
-export const REQUIREMENTS={"channel": {"permission": "read"}};
+export const REQUIREMENTS={channel:{permission:"read"},parameters:{keys:["messageReadId","messageReadSeq","messageReadExpectedBody","messageReadLaterId","messageReadLaterBody"]}};

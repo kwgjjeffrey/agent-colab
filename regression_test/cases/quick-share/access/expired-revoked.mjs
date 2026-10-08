@@ -11,7 +11,7 @@ export const META = {
   "origin": "requirement",
   "status": "active",
   "effects": "isolated-write",
-  "cost": "normal",
+  "cost": "slow",
   "requires": [
     "local-core"
   ],
@@ -19,9 +19,13 @@ export const META = {
     "desktop/ui/src/features/transfers",
     "skills/colab/bin/colab-transfer"
   ],
-  "suite": "business",
+  "suite": "release",
   "testLevel": "end-to-end",
-  "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source 3f832552fe65: Real capability revoked and real minimum lifetime elapsed; new consumption denied in both cases, no simulated clock."
+  "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source 3f832552fe65: Real capability revoked and real minimum lifetime elapsed; new consumption denied in both cases, no simulated clock.",
+  "locks": [
+    "read:client.primary",
+    "read:channel.shared"
+  ]
 };
 
 import fs from "node:fs/promises";import path from "node:path";

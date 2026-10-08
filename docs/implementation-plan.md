@@ -868,3 +868,9 @@ Manual Retry script now acquires its control before reconnect/automatic retry. S
 Validation: Core library tests 27 passed / 1 opt-in ignored; GUI TypeScript/build passed; Skill Tool tests 2 passed; installer unhealthy-candidate probe rejected; the six scoped cases passed. Local artifacts activated for daily/owned clients; no public release channel promoted.
 
 Planning now deduplicates identical read-only preflight requirements within its snapshot and caps distinct probes at four; execution deliberately rechecks each case. Contract validation covers both behaviors.
+
+### 2026-10-08 — Run-owned tabs and memory verification
+
+Generic browser lifetime stays in Trace; Colab's secondary-client adapter calls ctx.newPage and applies authentication only to requests to that client's exact Local Core origin. The Run leases primary/auxiliary tabs in one persistent Chrome context and closes the entire lease in finally; worker exit cannot orphan auxiliary tabs. Browser navigation persistence has an explicit resource lock because cookies/localStorage remain shared.
+
+Verified with concurrency 3, Run 20261008T035038Z-35e9136d: six cases executed, five passed initially and onboarding Session navigation timed out; the latter passed in repair round 20261008T035158Z-c1f0e92c after declaring its shared navigation dependency. The original failure is preserved. 69 CDP/process samples showed one window, peak four tabs (including the blank/auxiliary pages), falling page counts as workers completed, and owned Chrome processes gone at finalization. Aggregate process RSS peaked at 2028 MiB; this is process RSS, not unique physical memory or an all-day leak claim. Evidence: regression_test/.runs/20261008T035038Z-35e9136d/evidence/browser-memory-observation.json. 33 regression-tool tests passed, including three repeated batches returning to only the original blank tab.

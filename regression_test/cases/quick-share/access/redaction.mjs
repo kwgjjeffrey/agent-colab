@@ -11,7 +11,7 @@ export const META = {
   "origin": "requirement",
   "status": "active",
   "effects": "read-only",
-  "cost": "fast",
+  "cost": "slow",
   "requires": [
     "local-core"
   ],
@@ -21,7 +21,11 @@ export const META = {
   ],
   "suite": "business",
   "testLevel": "contract",
-  "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source a49cd4ba75c0: Controlled secret-bearing request denied; exact correlated provider span found; trace attributes and configured logs exclude secret."
+  "statusReason": "Reviewed 20261007T102452Z-cbabd0e6, execution source a49cd4ba75c0: Controlled secret-bearing request denied; exact correlated provider span found; trace attributes and configured logs exclude secret.",
+  "locks": [
+    "read:client.primary",
+    "read:channel.shared"
+  ]
 };
 
 import fs from "node:fs/promises";import path from "node:path";

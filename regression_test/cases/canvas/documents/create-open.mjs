@@ -21,7 +21,13 @@ export const META = {
   ],
   "suite": "business",
   "testLevel": "end-to-end",
-  "statusReason": "Round 12 20261007T122018Z-9daf491a: durable edited title verified by document ID, actual editor body persists across navigation, and owned document cleanup verified."
+  "statusReason": "Round 12 20261007T122018Z-9daf491a: durable edited title verified by document ID, actual editor body persists across navigation, and owned document cleanup verified.",
+  "locks": [
+    "read:client.primary",
+    "read:channel.shared",
+    "write:canvas.collection",
+    "read:browser.navigation"
+  ]
 };
 
 import {openTab} from "../../../support/gui.mjs";
