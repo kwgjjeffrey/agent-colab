@@ -6,6 +6,7 @@ import { PlusIcon, SearchIcon } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Popover, PopoverTrigger, PopoverContent, PopoverTitle } from "@/components/ui/popover";
 import { trackedFetch } from "@/api/request-activity";
 import { PreviewMarkdown } from "@/features/workspace/PreviewMarkdown";
 import {
@@ -225,13 +226,19 @@ const trackedFetch = operation.fetch;
                 {share.canWithdraw && <Button data-trace-target={traceTargets("skills.withdraw")} variant="destructive" disabled={working === share.id} onClick={() => void withdraw(share)}>Withdraw</Button>}</WorkspaceActions>
               </div>
               {preview !== undefined ? <article data-trace-region="skill-preview"><PreviewMarkdown>{preview}</PreviewMarkdown></article> : !error && <p className="text-muted-foreground">Loading Skill preview…</p>}
-              <div className="flex flex-wrap gap-2 pl-12">
+              <WorkspaceActions><Popover>
+                <PopoverTrigger render={<Button variant="outline" />}>Install to Agent</PopoverTrigger>
+                <PopoverContent align="end" className="w-80">
+                <PopoverTitle>Agent installations</PopoverTitle>
+              <div className="flex flex-col gap-2">
                 {targets.map((target) => {
                   const state = installations[share.id]?.find((item) => item.targetAgent === target.id)?.state ?? "not_installed";
                   const active = state === "installed" || state === "update_available" || state === "conflict";
                   return <div key={target.id} className="flex items-center gap-2 rounded-lg border px-3 py-2 text-sm"><span>{target.label}</span><Badge variant={state === "conflict" ? "destructive" : "secondary"}>{state.replace("_", " ")}</Badge><Button data-trace-target={traceTargets("skills.installation")} size="sm" variant="outline" disabled={busy || Boolean(working) || state === "conflict"} onClick={() => void mutateInstallation(share, target.id, active)}>{active ? "Uninstall" : "Install"}</Button>{state === "update_available" && <Button data-trace-target={traceTargets("skills.installation")} size="sm" onClick={() => void mutateInstallation(share, target.id, false)}>Update</Button>}</div>;
                 })}
               </div>
+                </PopoverContent>
+              </Popover></WorkspaceActions>
             </div>
           ))}
         </div>
