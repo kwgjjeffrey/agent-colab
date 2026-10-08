@@ -1145,13 +1145,21 @@ const api = operation.response;
                   <div className="flex h-full rounded-md bg-nav-home">
                   <TabsTrigger value="home">Home</TabsTrigger>
                   </div>
+                  <div className="flex h-full gap-2">
                   <div className="flex h-full rounded-md bg-nav-collaboration">
                   <TabsTrigger value="messages">Messages</TabsTrigger>
+                  </div>
+                  <div className="flex h-full rounded-md bg-nav-collaboration">
                   <TabsTrigger value="canvas">Canvas</TabsTrigger>
                   </div>
+                  </div>
+                  <div className="flex h-full gap-2">
                   <div className="flex h-full rounded-md bg-nav-context">
                   <TabsTrigger value="sessions">Sessions</TabsTrigger>
+                  </div>
+                  <div className="flex h-full rounded-md bg-nav-context">
                   <TabsTrigger value="files">Files</TabsTrigger>
+                  </div>
                   </div>
                   <div className="flex h-full rounded-md bg-nav-capability">
                   <TabsTrigger value="skills">Skills</TabsTrigger>
