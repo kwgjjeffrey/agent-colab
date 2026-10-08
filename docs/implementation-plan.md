@@ -1,5 +1,9 @@
 # Colab 实现计划
 
+### 2026-10-08 Give to Agent query surface
+
+Shared handoff dialog now uses a 12px label/input gap, muted filled textarea and a subtle single focus border without the heavy outer ring. GUI 0.1.114-dev / promotion 0.1.166-dev; acceptance pending.
+
 ### 2026-10-08 Global account settings
 
 Implemented Server/Core current-account profile read/name update, durable explicit names retained through Google login, global Settings account form, device-account explanation, optional Google reminder and red notification Badge. Channel/member placeholder emails are hidden. Invitation acceptance already creates Organization Member then Channel Member in one transaction. GUI focused component tests (3), GUI production build and Server/Core cargo check passed. Release and real end-to-end acceptance pending.

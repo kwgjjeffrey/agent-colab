@@ -119,9 +119,9 @@ const trackedFetch = operation.fetch;
         <pre className="max-h-[50vh] min-w-0 max-w-full overflow-auto whitespace-pre-wrap break-words rounded-lg bg-muted p-4 text-sm">
           {completePrompt(defaultAgent)}
         </pre>
-        <div className="space-y-2">
+        <div className="flex flex-col gap-3">
           <label htmlFor="agent-prompt-query" className="text-sm font-medium">User query</label>
-          <Textarea id="agent-prompt-query" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Add an instruction for this task (optional)" />
+          <Textarea id="agent-prompt-query" className="min-h-24 resize-y border-transparent bg-muted px-4 py-3 shadow-none focus-visible:border-ring/40 focus-visible:ring-0 dark:bg-muted" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Add an instruction for this task (optional)" />
         </div>
         <DialogFooter>
           {onForward && <Button variant="outline" onClick={() => onForward(query.trim())}>Forward to collaborators’ agent</Button>}

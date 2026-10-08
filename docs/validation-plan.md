@@ -1,5 +1,9 @@
 # 技术验证计划
 
+### 2026-10-08 Give to Agent query surface
+
+Shared handoff dialog now uses a 12px label/input gap, muted filled textarea and a subtle single focus border without the heavy outer ring. GUI 0.1.114-dev / promotion 0.1.166-dev; acceptance pending.
+
 ### 2026-10-08 Global account settings
 
 Focused AccountProfile component checks passed (3): name-save contract, device identity explanation/private-email hiding, failure visibility, optional Google dismissal, and existing Google account reminder suppression. GUI production build and Server/Core cargo check passed. Actual GUI → Core → deployed Server persistence, public artifact readback and installed acceptance pending; no live Google consent is claimed by component tests.
