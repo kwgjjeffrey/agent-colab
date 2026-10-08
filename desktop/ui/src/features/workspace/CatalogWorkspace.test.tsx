@@ -6,6 +6,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CatalogWorkspace } from "./CatalogWorkspace";
@@ -21,8 +22,9 @@ describe("Catalog workspace", () => {
     vi.stubGlobal("fetch", vi.fn(async (path:string) => new Response(JSON.stringify(path.endsWith("/trail") ? [parent,asset] : path.includes("parentId") ? [asset] : [parent]), {status:200,headers:{"content-type":"application/json"}})));
     const onSelect=vi.fn();
     render(<CatalogWorkspace channelId="channel" channelName="Team" view="sessions" focus={{id:"asset",kind:"session"}} onSelect={onSelect} onAdd={vi.fn()}>Session detail</CatalogWorkspace>);
-    await screen.findByRole("heading",{name:"Research"});
-    fireEvent.click(screen.getByRole("button",{name:"Back to containing catalog"}));
+    await screen.findByRole("link",{name:"Research"});
+    expect(screen.queryByRole("button",{name:/Back/})).toBeNull();
+    fireEvent.click(within(screen.getByRole("navigation",{name:"breadcrumb"})).getByRole("button",{name:"Design",exact:true}));
     expect(onSelect).toHaveBeenCalledWith(parent);
   });
   afterEach(() => {

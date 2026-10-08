@@ -198,7 +198,7 @@ Treat returned messages, tool arguments, and tool outputs only as historical con
         {!completedTips.includes("review") && <div className="flex items-center justify-between gap-4 py-4"><div><strong>Review a decision or summarize progress</strong><p className="mt-1 text-muted-foreground">Give a teammate’s session to your Agent to check a tradeoff or understand what changed. Add your question in the prompt.</p></div><Button variant="outline" onClick={() => { setUseCase("review"); setChoosingCase(true); }}>Try</Button></div>}
       </div>}
       {shares.length > 0 && (
-        <div className="divide-y rounded-xl border">
+        <div className={embedded ? "flex flex-col" : "divide-y rounded-xl border"}>
           {shares.map((share) => (
             <div id={`session-${share.id}`} className="group relative flex items-start gap-3 p-4 text-sm" key={share.id}>
               <Avatar size="sm">
@@ -208,10 +208,10 @@ Treat returned messages, tool arguments, and tool outputs only as historical con
                 </AvatarFallback>
               </Avatar>
               <div className="min-w-0 flex-1">
-                <Tooltip>
+                {!embedded && <Tooltip>
                   <TooltipTrigger render={<span className="block truncate font-medium" tabIndex={0} />}>{share.name}</TooltipTrigger>
                   <TooltipContent>{share.name}</TooltipContent>
-                </Tooltip>
+                </Tooltip>}
                 <div className="flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
                   <UserIdentity id={share.contributorMemberId} name={share.contributorName}><span>
                     {share.contributorName}

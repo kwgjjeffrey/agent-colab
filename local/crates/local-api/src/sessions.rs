@@ -820,7 +820,7 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
             snapshot = pinned.to_string();
         }
     }
-    let mut turns = project_jsonl(
+    let (mut turns, invalid_records) = project_jsonl(
         Path::new(&path),
         &adapter,
         body.include_outputs.unwrap_or(false),
@@ -833,7 +833,7 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
     let next = (start > 0).then(|| encode_cursor(&snapshot, start));
     activity::record_read(&state, &share_id, &user).await;
     Ok(Json(
-        json!({"schemaVersion":1,"session":{"id":share_id,"title":name,"provider":adapter.trim_end_matches("-jsonl-v1")},"snapshot":{"id":snapshot},"turns":page,"page":{"hasMore":start>0,"nextCursor":next},"freshness":{"cache":cache_state}}),
+        json!({"schemaVersion":1,"session":{"id":share_id,"title":name,"provider":adapter.trim_end_matches("-jsonl-v1")},"snapshot":{"id":snapshot},"turns":page,"page":{"hasMore":start>0,"nextCursor":next},"freshness":{"cache":cache_state},"warnings": if invalid_records > 0 { vec![json!({"code":"invalid_utf8_records","count":invalid_records})] } else {vec![]}}),
     ))
 
 }).await
@@ -844,15 +844,25 @@ fn project_jsonl(
     adapter: &str,
     include_outputs: bool,
     max_chars: usize,
-) -> Result<Vec<Value>, LocalError> {
-    let text = fs::read_to_string(path).map_err(LocalError::internal)?;
+) -> Result<(Vec<Value>, usize), LocalError> {
+    // A damaged legacy record must not erase the rest of the conversation. Never replace
+    // bytes inside a message: skip that record, preserve the immutable source and report it.
+    let bytes = fs::read(path).map_err(LocalError::internal)?;
+    let mut invalid = 0;
+    let mut text = String::with_capacity(bytes.len());
+    for record in bytes.split(|byte| *byte == b'\n') {
+        match std::str::from_utf8(record) {
+            Ok(line) => { text.push_str(line); text.push('\n'); }
+            Err(_) => { invalid += 1; }
+        }
+    }
     if adapter == "codex-jsonl-v1" {
-        return Ok(project_codex(&text, include_outputs, max_chars));
+        return Ok((project_codex(&text, include_outputs, max_chars), invalid));
     }
     if adapter == "myflicker-desktop-jsonl-v1" {
-        return Ok(project_myflicker_desktop(&text, include_outputs, max_chars));
+        return Ok((project_myflicker_desktop(&text, include_outputs, max_chars), invalid));
     }
-    Ok(project_anthropic(&text, include_outputs, max_chars))
+    Ok((project_anthropic(&text, include_outputs, max_chars), invalid))
 }
 
 /// MyFlicker Desktop is not the CLI JSONL shape. Its append-only cache can rewrite a message by
@@ -1327,6 +1337,18 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn damaged_utf8_record_does_not_erase_valid_conversation() {
+        let path = std::env::temp_dir().join(format!("colab-utf8-{}.jsonl", uuid::Uuid::new_v4()));
+        let mut bytes = br#"{"type":"message","role":"user","content":[{"type":"text","text":"Valid question"}]}"#.to_vec();
+        bytes.extend_from_slice(b"\n{\"damaged\":\"\xff\"}\n");
+        std::fs::write(&path, &bytes).unwrap();
+        let (turns, invalid) = super::project_jsonl(&path, "myflicker-jsonl-v1", false, 4000).unwrap();
+        assert_eq!(invalid, 1);
+        assert_eq!(turns.len(), 1);
+        assert_eq!(std::fs::read(&path).unwrap(), bytes);
+        std::fs::remove_file(path).unwrap();
+    }
     use super::*;
 
     #[test]
@@ -1363,12 +1385,12 @@ mod tests {
         fs::create_dir_all(&root).unwrap();
         let codex = root.join("codex.jsonl");
         fs::write(&codex, "{\"type\":\"response_item\",\"payload\":{\"type\":\"message\",\"role\":\"user\",\"content\":[{\"text\":\"question\"}]}}\n{\"type\":\"response_item\",\"payload\":{\"type\":\"message\",\"role\":\"assistant\",\"content\":[{\"text\":\"answer\"}]}}\n").unwrap();
-        let turns = project_jsonl(&codex, "codex-jsonl-v1", false, 4000).unwrap();
+        let (turns, _) = project_jsonl(&codex, "codex-jsonl-v1", false, 4000).unwrap();
         assert_eq!(turns[0]["items"][0]["content"][0]["text"], "question");
         assert_eq!(turns[0]["items"][1]["text"], "answer");
         let flicker = root.join("flicker.jsonl");
         fs::write(&flicker, "{\"type\":\"message\",\"role\":\"user\",\"content\":\"hello\"}\n{\"type\":\"message\",\"role\":\"assistant\",\"content\":[{\"type\":\"tool_use\",\"id\":\"call-1\",\"name\":\"bash\",\"input\":{\"command\":\"pwd\"}},{\"type\":\"text\",\"text\":\"world\"}]}\n{\"type\":\"message\",\"role\":\"tool\",\"content\":[{\"type\":\"tool-result\",\"toolCallId\":\"call-1\",\"result\":{\"llmContent\":\"/tmp\"}}]}\n").unwrap();
-        let turns = project_jsonl(&flicker, "myflicker-jsonl-v1", true, 4000).unwrap();
+        let (turns, _) = project_jsonl(&flicker, "myflicker-jsonl-v1", true, 4000).unwrap();
         assert_eq!(turns[0]["items"][0]["content"][0]["text"], "hello");
         assert_eq!(turns[0]["items"][1]["type"], "commandExecution");
         assert_eq!(turns[0]["items"][1]["result"]["text"], "/tmp");

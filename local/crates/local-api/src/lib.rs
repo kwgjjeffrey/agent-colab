@@ -775,6 +775,10 @@ pub fn router(state: AppState, security: LocalSecurity) -> Router {
             axum::routing::post(skills::share_skill),
         )
         .route(
+            "/v1/skills/{share_id}/preview",
+            axum::routing::get(skills::preview_skill),
+        )
+        .route(
             "/v1/skills/{share_id}/materialize",
             axum::routing::post(skills::materialize_skill),
         )

@@ -933,3 +933,11 @@ Agent manager fixes: global My Agents counts the same owner blueprint collection
 Global Settings layout follow-up: My Agents, Account settings and Linked devices use the same full-width ghost drill-down rows and trailing chevrons. Updates now opens a Settings subpage rather than expanding inline; its check/update/restart action remains on the main page, immediately before the rightmost chevron. Existing callbacks, account Badge and update progress remain intact.
 
 Implemented global account display-name editing and Google linking for existing and device-created accounts. Device registration retains a visible placeholder name; `nameCustomized` records explicit confirmation independently, so the setup Badge is not suppressed by the placeholder. No mandatory name gate was added. Channel identity and members now use independent header-triggered dialogs, reusing shadcn AvatarGroup and existing authorized mutations.
+# 2026-10-09 Asset preview correction
+
+- Removed redundant Back rows, duplicate asset labels and Skill collection Share entrance.
+- Unified inline breadcrumb with navigable ancestors and current-item page marker.
+- Added authenticated Local Core SKILL.md preview, without installing/executing it.
+- Session selection reads actual structured messages; damaged UTF-8 records are
+  isolated with explicit warnings and immutable source preservation.
+- Candidate GUI 120 / Core 96 / promotion 172; release acceptance pending.

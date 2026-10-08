@@ -7,6 +7,7 @@
 use super::*;
 use notify::{RecommendedWatcher, RecursiveMode, Watcher};
 use serde::Deserialize;
+use serde_json::{json, Value};
 use std::{
     collections::{BTreeMap, HashSet},
     time::{SystemTime, UNIX_EPOCH},
@@ -502,6 +503,23 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
     Ok(())
 
 }).await
+}
+
+pub(super) async fn preview_skill(
+    State(state): State<AppState>,
+    AxumPath(share_id): AxumPath<String>,
+) -> Result<Json<Value>, LocalError> {
+    // Use the authenticated materializer; preview never installs or executes a Skill.
+    let share = sync_materialization(&state, &share_id).await?;
+    let root = share.local_path.ok_or_else(|| LocalError::internal("Skill materialization has no path"))?;
+    let path = fs::canonicalize(Path::new(&root).join("SKILL.md")).map_err(LocalError::internal)?;
+    let root = fs::canonicalize(root).map_err(LocalError::internal)?;
+    if !path.starts_with(&root) { return Err(LocalError::bad_request("Invalid Skill entry path")); }
+    if fs::metadata(&path).map_err(LocalError::internal)?.len() > 1024 * 1024 {
+        return Err(LocalError::bad_request("SKILL.md is too large to preview"));
+    }
+    let content = fs::read_to_string(path).map_err(LocalError::internal)?;
+    Ok(Json(json!({"content":content})))
 }
 
 pub(super) async fn materialize_skill(

@@ -1,6 +1,16 @@
 # Colab 交互设计
 
-## 2026-10-09 Detail return repair
+## 2026-10-09 Unified asset preview correction
+
+The detail header has one inline Channel / Catalog / current-item breadcrumb.
+Ancestors navigate; the current item is non-interactive. There is no standalone
+Back row or duplicate item heading. Selected Skill shows real SKILL.md without
+the collection Share button; installation remains available. Selected Session
+automatically reads a bounded page and shows contributor/provider/sync metadata,
+not a second listing card. Files has only its internal file path below the shared
+asset trail, without another collection Back button.
+
+## 2026-10-09 Detail return repair (superseded navigation by correction above)
 
 Files preview stays inside the item detail panel, never as a fixed full-window
 overlay. Channel header, directory and item actions remain reachable. Every

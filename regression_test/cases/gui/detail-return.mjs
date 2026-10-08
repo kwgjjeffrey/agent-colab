@@ -1,6 +1,6 @@
 export const USECASE = {
   name: 'Every asset detail keeps workspace navigation and returns to its container',
-  description: 'Open real Files, Session, Skill and Canvas fixtures from the mixed root tree. Files preview must not cover the Channel header or directory. Return from each detail using the shared Back entrance and prove Add remains usable. No business data is changed.'
+  description: 'Open real Files, Session, Skill and Canvas fixtures from the mixed root tree. Assert real preview content, no redundant collection actions or Back controls, and return through the Channel breadcrumb. No business data is changed.'
 };
 export const META = {id:'gui.details.return',module:'gui/navigation',surface:'gui',priority:'critical',status:'trial',origin:'requirement',effects:'read-only',cost:'normal',requires:['local-core'],affectedPaths:['desktop/ui/src/features/workspace','desktop/ui/src/features/files','desktop/ui/src/main.tsx'],suite:'business',testLevel:'end-to-end',locks:['read:client.primary','read:channel.shared']};
 export const REQUIREMENTS = {channel:{permission:'read'}};
@@ -14,7 +14,9 @@ export async function run(ctx) {
     const target = rows.find(item=>item.kind===kind);
     if(!target) ctx.block(`Missing root ${kind} fixture`);
     await ctx.page.locator(`[data-item-id="${target.id}"][data-item-kind="${kind}"]`).click();
-    await ctx.page.getByRole('heading',{name:target.name,exact:true}).waitFor();
+    const breadcrumb=ctx.page.locator('section > div nav[aria-label="breadcrumb"]').first();
+    await breadcrumb.getByText(target.name,{exact:true}).waitFor();
+    ctx.assert(kind+' has no redundant Back control',await ctx.page.getByRole('button',{name:/^Back/}).count(),0);
     if(kind==='files') {
       await ctx.page.getByRole('tree',{name:target.name+' files',exact:true}).waitFor();
       const nav=ctx.page.getByRole('button',{name:'Add',exact:true});
@@ -22,7 +24,19 @@ export async function run(ctx) {
       ctx.assert('File preview does not intercept workspace navigation',await nav.isVisible(),true);
       await ctx.page.getByRole('button',{name:'Quick Share',exact:true}).click({trial:true});
     }
-    await ctx.page.getByRole('button',{name:'Back to containing catalog',exact:true}).click();
+    if(kind==='skill') {
+      await ctx.page.locator('[data-trace-region="skill-preview"]').waitFor();
+      ctx.assert('Skill preview contains actual SKILL.md', (await ctx.page.locator('[data-trace-region="skill-preview"]').innerText()).length>20,true);
+      ctx.assert('Skill detail has no collection Share button',await ctx.page.getByRole('button',{name:'Share skill',exact:true}).count(),0);
+    }
+    if(kind==='session') {
+      const preview=ctx.page.locator('[data-trace-region="session-preview"]');
+      await preview.locator('p.whitespace-pre-wrap').first().waitFor();
+      ctx.assert('Session preview contains real message content',(await preview.locator('p.whitespace-pre-wrap').first().innerText()).length>0,true);
+      ctx.assert('Session preview has no read error',await preview.getByRole('alert').count(),0);
+    }
+    await ctx.screenshot(kind+' actual preview and unified trail');
+    await breadcrumb.getByRole('button',{name:channel.name,exact:true}).click();
     await ctx.page.getByRole('heading',{name:'Your team is about to work at agentic velocity',exact:true}).waitFor();
     ctx.assert(kind+' returns to a usable Add page',await ctx.page.getByRole('button',{name:'Catalog',exact:true}).isVisible(),true);
   }

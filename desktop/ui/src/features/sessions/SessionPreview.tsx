@@ -1,38 +1,44 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { catalogRequest } from "@/features/workspace/CatalogWorkspace";
 
 type Turn = {
-  items: Array<{ type?: string; text?: string; content?: string }>;
+  items: Array<{ type?: string; text?: string; content?: string | Array<{text?:string}> }>;
 };
-/** Preview is explicit: listing a Session never materializes its conversation. */
+/** Selecting a Session reads a bounded page; discovery never reads conversations. */
 export function SessionPreview({ id }: { id: string }) {
   const [turns, setTurns] = useState<Turn[]>();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>();
+  const [warnings, setWarnings] = useState<Array<{code:string;count:number}>>([]);
+  const generation = useRef(0);
   useEffect(() => {
     setTurns(undefined);
     setError(undefined);
+    void read();
+    return () => { generation.current += 1; };
   }, [id]);
   async function read() {
+    const current = ++generation.current;
     setLoading(true);
     setError(undefined);
     try {
-      const row = await catalogRequest<{ turns: Turn[] }>(
+      const row = await catalogRequest<{ turns: Turn[]; warnings?:Array<{code:string;count:number}> }>(
         `/v1/sessions/${id}/read`,
         "POST",
         { turnLimit: 5, includeOutputs: false, maxOutputCharsPerItem: 2000 },
       );
-      setTurns(row.turns);
+      if (current === generation.current) { setTurns(row.turns); setWarnings(row.warnings ?? []); }
     } catch (reason) {
-      setError(String(reason));
+      if (current === generation.current) setError(String(reason));
     } finally {
-      setLoading(false);
+      if (current === generation.current) setLoading(false);
     }
   }
   return (
-    <div className="flex min-h-0 flex-col gap-3 px-4">
-      <div>
+    <div className="flex min-h-0 flex-col gap-3 px-4" data-trace-region="session-preview">
+      {warnings.map(warning=><p key={warning.code} role="status" className="text-xs text-muted-foreground">{warning.count} damaged source record(s) could not be decoded. The remaining conversation is shown; the original snapshot is unchanged.</p>)}
+      {error && <div>
         <Button
           variant="outline"
           disabled={loading}
@@ -42,9 +48,10 @@ export function SessionPreview({ id }: { id: string }) {
             ? "Loading preview…"
             : turns
               ? "Refresh preview"
-              : "Preview recent messages"}
+              : "Retry preview"}
         </Button>
-      </div>
+      </div>}
+      {loading && <p className="text-sm text-muted-foreground">Loading conversation…</p>}
       {error && (
         <p role="alert" className="text-sm text-destructive">
           {error}
@@ -57,7 +64,7 @@ export function SessionPreview({ id }: { id: string }) {
               .filter(
                 (item) =>
                   typeof item.text === "string" ||
-                  typeof item.content === "string",
+                  typeof item.content === "string" || Array.isArray(item.content),
               )
               .map((item, index) => (
                 <div
@@ -65,10 +72,10 @@ export function SessionPreview({ id }: { id: string }) {
                   className="flex flex-col gap-1"
                 >
                   <span className="text-xs text-muted-foreground">
-                    {item.type}
+                    {item.type === "userMessage" ? "User" : "Agent"}
                   </span>
                   <p className="whitespace-pre-wrap break-words text-sm">
-                    {item.text ?? item.content}
+                    {item.text ?? (typeof item.content === "string" ? item.content : item.content?.map(block=>block.text ?? "").join("\n"))}
                   </p>
                 </div>
               )),

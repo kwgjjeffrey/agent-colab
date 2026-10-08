@@ -674,3 +674,9 @@ Committed before publication (`e6e66a4`); promotion 0.1.162-dev publishes GUI 0.
 Prior account-name E2E passed in Run 20261008T082144Z-ebc223e9, Round 20261008T082230Z-a293efa7. Extended device-account acceptance remains trial: the saved second-account fixture is not bound to that test client's device credential, and reload selects its bound account. Failed rounds are retained, not counted as accepted device flow. Native established-account Settings shows real Display name and linked Google identity; isolated PostgreSQL Google-link/login name-preservation test passed. Live Google consent was not automated.
 
 Compact Channel E2E Run 20261008T083723Z-1179256b first round exercised both dialogs and persisted uploaded/generated images, then failed because the old header image locator now also matched member avatars. Locator narrowed to the Channel image; repair Round 20261008T083845Z-e1452f0a passed, including persisted image readback, decoded header/rail images and restoration of the original identity. No performance claim: Trace ingestion was unavailable in the first round. Existing rename/member-role scripts were migrated to the new entry points but were not rerun in this scope.
+# 2026-10-09 Asset preview correction
+
+- Regression gui.details.return now requires actual Skill and Session content,
+  absence of redundant controls and breadcrumb navigation, not merely exitability.
+- Added structured user-message rendering and damaged-record preservation tests.
+- Candidate and installed acceptance pending; previous results do not validate this change.

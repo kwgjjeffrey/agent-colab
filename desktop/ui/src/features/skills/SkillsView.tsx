@@ -7,6 +7,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { trackedFetch } from "@/api/request-activity";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import {
   Dialog,
   DialogContent,
@@ -85,6 +87,17 @@ export function SkillsView({ focusId, shareOpenToken, onShareOpenConsumed, onCre
   const [working, setWorking] = useState<string>();
   const [error, setError] = useState<string>();
   const [agentPrompt, setAgentPrompt] = useState<{ share: SkillShare; rows: Installation[] }>();
+  const [preview, setPreview] = useState<string>();
+  useEffect(() => {
+    let active = true;
+    setPreview(undefined); setError(undefined);
+    if (focusId) void trackedFetch(`/v1/skills/${focusId}/preview`).then(async response => {
+      if (!response.ok) throw new Error(await response.text());
+      const value = await response.json() as {content:string};
+      if (active) setPreview(value.content);
+    }).catch(reason => { if (active) setError(String(reason)); });
+    return () => { active = false; };
+  }, [focusId]);
 
   async function loadShares(silent = false) {
 return runOperation("skills.list", async (operation) => {
@@ -199,19 +212,20 @@ const trackedFetch = operation.fetch;
   const sourceRows = useMemo(() => sources, [sources]);
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-5 px-4 py-6">
-      <div className="flex justify-end"><Button data-trace-target={traceTargets("skills.share", "skills.sources")} onClick={() => setShowShare(true)}><PlusIcon />Share skill</Button></div>
+      {!focusId && <div className="flex justify-end"><Button data-trace-target={traceTargets("skills.share", "skills.sources")} onClick={() => setShowShare(true)}><PlusIcon />Share skill</Button></div>}
       {shares.length === 0 ? (
         <Empty><EmptyHeader><EmptyTitle>No shared skills yet</EmptyTitle><EmptyDescription>Share a recently changed Agent Skill or choose its source folder.</EmptyDescription></EmptyHeader></Empty>
       ) : (
-        <div className="overflow-hidden rounded-xl border">
+        <div className="flex flex-col gap-4">
           {shares.filter(share=>share.id===focusId).map((share) => (
-            <div key={share.id} className="group grid gap-3 border-b p-4 text-sm last:border-b-0">
+            <div key={share.id} className="flex flex-col gap-4 text-sm">
               <div className="flex min-w-0 items-center gap-3">
                 <Avatar className="size-9"><AvatarImage src={share.contributorAvatarUrl} /><AvatarFallback>{initials(share.contributorName)}</AvatarFallback></Avatar>
-                <div className="min-w-0 flex-1"><strong className="block truncate">{share.name}</strong><span className="text-sm text-muted-foreground">{share.contributorName}{share.canWithdraw ? " (me)" : ""}{share.description ? ` · ${share.description}` : ""}</span></div>
+                <div className="min-w-0 flex-1"><span className="text-xs text-muted-foreground">{share.contributorName}{share.canWithdraw ? " (me)" : ""}</span></div>
                 <WorkspaceActions><Button variant="outline" onClick={() => setAgentPrompt({ share, rows: installations[share.id] ?? [] })}>Give to Agent</Button>
                 {share.canWithdraw && <Button data-trace-target={traceTargets("skills.withdraw")} variant="destructive" disabled={working === share.id} onClick={() => void withdraw(share)}>Withdraw</Button>}</WorkspaceActions>
               </div>
+              {preview !== undefined ? <article className="flex flex-col gap-3 leading-relaxed" data-trace-region="skill-preview"><ReactMarkdown remarkPlugins={[remarkGfm]}>{preview}</ReactMarkdown></article> : !error && <p className="text-muted-foreground">Loading Skill preview…</p>}
               <div className="flex flex-wrap gap-2 pl-12">
                 {targets.map((target) => {
                   const state = installations[share.id]?.find((item) => item.targetAgent === target.id)?.state ?? "not_installed";

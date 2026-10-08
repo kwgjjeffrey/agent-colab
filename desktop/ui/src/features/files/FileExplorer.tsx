@@ -1,6 +1,6 @@
 import { traceTargets } from "@/api/trace-locators";
-import { useMemo, useState } from "react";
-import { ArrowLeftIcon, FileIcon, FolderIcon } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { FileIcon, FolderIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -11,20 +11,19 @@ export type LocalFileEntry = { path: string; name: string; kind: "directory" | "
 type Props = { shareId: string; shareName: string; entries: LocalFileEntry[]; onClose: () => void };
 
 /** A drill-down workspace, separate from the Files collection list, mirrors an IDE's tree/content model. */
-export function FileExplorer({ shareId, shareName, entries, onClose }: Props) {
+export function FileExplorer({ shareId, shareName, entries }: Props) {
   const firstFile = useMemo(() => entries.find((entry) => entry.kind === "file"), [entries]);
   const [selectedPath, setSelectedPath] = useState(firstFile?.path);
+  useEffect(() => { setSelectedPath(firstFile?.path); }, [shareId, firstFile?.path]);
   const selected = entries.find((entry) => entry.path === selectedPath);
   const segments = selectedPath?.split("/") ?? [];
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-background" data-trace-region="files-detail">
       <header className="flex h-14 shrink-0 items-center gap-3 border-b px-4">
-        <Button variant="ghost" size="icon" aria-label="Back to shared files" onClick={onClose}><ArrowLeftIcon /></Button>
         <Breadcrumb>
           <BreadcrumbList>
-            <BreadcrumbItem><BreadcrumbPage>{shareName}</BreadcrumbPage></BreadcrumbItem>
-            {segments.map((segment, index) => <span className="contents" key={`${segment}-${index}`}><BreadcrumbSeparator /><BreadcrumbItem><BreadcrumbPage>{segment}</BreadcrumbPage></BreadcrumbItem></span>)}
+            {segments.map((segment, index) => <span className="contents" key={`${segment}-${index}`}>{index > 0 && <BreadcrumbSeparator />}<BreadcrumbItem><BreadcrumbPage>{segment}</BreadcrumbPage></BreadcrumbItem></span>)}
           </BreadcrumbList>
         </Breadcrumb>
       </header>
