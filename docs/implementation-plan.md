@@ -2,7 +2,7 @@
 
 ### 2026-10-08 Messages composer visibility
 
-Added the real Tiptap Placeholder extension, explanatory empty-composer copy, pale muted background, border and focus treatment. GUI-only artifact 0.1.104-dev / promotion 0.1.156-dev; all other component versions unchanged.
+Added the real Tiptap Placeholder extension, explanatory empty-composer copy, pale muted background, border and focus treatment. Published and normally installed GUI-only artifact 0.1.104-dev / promotion 0.1.156-dev; native placeholder/typing/clearing and double-client message regression passed. All other component versions unchanged.
 
 ### 2026-10-08 workspace continuity and feature onboarding
 

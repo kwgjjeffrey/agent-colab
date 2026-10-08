@@ -2,7 +2,7 @@
 
 ### 2026-10-08 Messages composer visibility
 
-Production typecheck/build and installed visual acceptance pending; this is an empty-composer presentation change.
+GUI-only canonical build / TypeScript passed. Promotion 0.1.156-dev / GUI 0.1.104-dev published with full public size/hash readback: 1724462 bytes, SHA-256 `d1c0ef6227086044e086eee6d34bdb577afe1be4ab6324f67353117b902cec6a`. Normal updater installed it; actual `/ui.json` matches 104. Native `/Applications/Colab.app` screenshot confirms the visible pale-gray bordered composer and placeholder. Unsent test typing hid the placeholder; clearing restored it and left no draft. Trace Run `20261008T023858Z-21121c2b` initially blocked during post-update Core inventory timeout; preserved Round 2 `20261008T024032Z-6d914b69` passed actual GUI sending and exact single committed message on both independent clients. No full catalog rerun is claimed. Electron/Core/Skill were neither rebuilt nor version-bumped.
 
 ### 2026-10-08 workspace continuity and feature onboarding
 
