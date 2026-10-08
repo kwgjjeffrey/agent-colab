@@ -1141,13 +1141,21 @@ const api = operation.response;
                 />
               </div>
               <div className="flex items-center border-b px-8">
-                <TabsList variant="line">
+                <TabsList variant="line" className="gap-2">
+                  <div className="flex h-full rounded-md bg-nav-home">
                   <TabsTrigger value="home">Home</TabsTrigger>
+                  </div>
+                  <div className="flex h-full rounded-md bg-nav-collaboration">
                   <TabsTrigger value="messages">Messages</TabsTrigger>
+                  <TabsTrigger value="canvas">Canvas</TabsTrigger>
+                  </div>
+                  <div className="flex h-full rounded-md bg-nav-context">
                   <TabsTrigger value="sessions">Sessions</TabsTrigger>
                   <TabsTrigger value="files">Files</TabsTrigger>
+                  </div>
+                  <div className="flex h-full rounded-md bg-nav-capability">
                   <TabsTrigger value="skills">Skills</TabsTrigger>
-                  <TabsTrigger value="canvas">Canvas</TabsTrigger>
+                  </div>
                 </TabsList>
               </div>
               <TabsContent value="home" className="min-h-0 flex-1 overflow-auto"><ChannelHome key={`${selected.id}:${activeHomeTip ?? "idle"}`} accountId={auth.user?.id ?? ""} busyTip={homeTryBusy} defaultAgent={installation?.defaultAgent ?? "codex"} installedAgents={installation?.targets ?? {}} onTry={id => void tryHomeCase(id)} /></TabsContent>
