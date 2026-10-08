@@ -1,5 +1,9 @@
 # 技术验证计划
 
+### 2026-10-08 Global account settings
+
+Focused AccountProfile component checks passed (3): name-save contract, device identity explanation/private-email hiding, failure visibility, optional Google dismissal, and existing Google account reminder suppression. GUI production build and Server/Core cargo check passed. Actual GUI → Core → deployed Server persistence, public artifact readback and installed acceptance pending; no live Google consent is claimed by component tests.
+
 ### 2026-10-08 Sessions empty guidance and Channel selection
 
 Sessions guidance is restricted to an empty list. The selected Channel has a flush left white marker, lime outline and aria-current=page, keeping the icon and existing rail spacing. GUI-only 0.1.106-dev / promotion 0.1.158-dev. Verified: all 93 frontend tests and the production build passed. Canonical GUI publication publicly verified 914381 bytes / SHA-256 `6fb16b6d6d592c34e376c8dfa1f715569df07058f0dbd5eaeaf810ac4944cd6d`; the normal updater installed GUI 106 with all other component versions unchanged. Native acceptance confirmed populated Sessions has no guidance, empty Sessions retains it, and the white marker/outline follows Channel switching. Trace Round `20261008T025951Z-a7143d75` passed both selected end-to-end cases and all 36 assertions in 36.29 seconds; screenshots and owned Session withdrawal / welcome Canvas cleanup were reviewed. Both revised cases were qualified active. No full-catalog regression is claimed.

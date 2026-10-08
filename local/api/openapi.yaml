@@ -3,6 +3,27 @@ info:
   title: Colab Local API
   version: 0.1.0
 paths:
+  /v1/auth/profile:
+    get:
+      operationId: getLocalAccountProfile
+      description: Read current account profile and provider linkage; update local session projection without returning credentials.
+      responses:
+        "200": { description: "id, email, displayName, avatarUrl, nameCustomized, googleLinked" }
+    patch:
+      operationId: updateLocalAccountName
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [displayName]
+              properties:
+                displayName: { type: string, minLength: 1, maxLength: 80 }
+      responses:
+        "200": { description: Updated account profile }
+        "400": { description: Empty, overlong or control-character name }
   /v1/canvases/{canvasId}/local-replica:
     get:
       operationId: readLocalCanvasReplica

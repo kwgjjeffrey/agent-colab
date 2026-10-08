@@ -1,0 +1,32 @@
+// @vitest-environment jsdom
+import { afterEach, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { AccountProfile, needsAccountSetup, type AccountProfileData } from "./AccountProfile";
+const device: AccountProfileData = { id: "device-owner", email: "private@device.invalid", displayName: "My device", nameCustomized: false, googleLinked: false };
+afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
+it("reminds device accounts, not established Google accounts, and respects optional Google dismissal", () => {
+  expect(needsAccountSetup(device, false)).toBe(true);
+  expect(needsAccountSetup(device, true)).toBe(true);
+  expect(needsAccountSetup({ ...device, nameCustomized: true }, true)).toBe(false);
+  expect(needsAccountSetup({ ...device, googleLinked: true }, false)).toBe(false);
+});
+it("saves an existing account name through the real API contract and hides internal email", async () => {
+  const onSaved = vi.fn(), fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ ...device, displayName: "Teammate", nameCustomized: true }) });
+  vi.stubGlobal("fetch", fetch);
+  render(<AccountProfile profile={device} onSaved={onSaved} linking={false} onLinkGoogle={vi.fn()} googleDismissed={false} onDismissGoogle={vi.fn()} />);
+  expect(screen.queryByText(device.email)).toBeNull();
+  expect(screen.getByText(/created with this device/)).toBeTruthy();
+  fireEvent.change(screen.getByLabelText("Display name"), { target: { value: " Teammate " } });
+  fireEvent.click(screen.getByRole("button", { name: "Save name" }));
+  await waitFor(() => expect(onSaved).toHaveBeenCalled());
+  expect(JSON.parse(fetch.mock.calls[0][1].body)).toEqual({ displayName: "Teammate" });
+});
+it("keeps Google linking available after reminder dismissal and exposes failure", async () => {
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false }));
+  const link = vi.fn();
+  render(<AccountProfile profile={device} onSaved={vi.fn()} linking={false} onLinkGoogle={link} googleDismissed onDismissGoogle={vi.fn()} />);
+  fireEvent.click(screen.getByRole("button", { name: "Link Google account" })); expect(link).toHaveBeenCalled();
+  expect(screen.queryByText("Don’t remind me about Google")).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "Save name" }));
+  await waitFor(() => expect(screen.getByRole("alert").textContent).toContain("Could not save"));
+});

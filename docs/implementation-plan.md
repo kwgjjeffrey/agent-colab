@@ -1,5 +1,9 @@
 # Colab 实现计划
 
+### 2026-10-08 Global account settings
+
+Implemented Server/Core current-account profile read/name update, durable explicit names retained through Google login, global Settings account form, device-account explanation, optional Google reminder and red notification Badge. Channel/member placeholder emails are hidden. Invitation acceptance already creates Organization Member then Channel Member in one transaction. GUI focused component tests (3), GUI production build and Server/Core cargo check passed. Release and real end-to-end acceptance pending.
+
 ### 2026-10-08 Sessions empty guidance and Channel selection
 
 Sessions guidance is restricted to an empty list. The selected Channel has a flush left white marker, lime outline and aria-current=page, keeping the icon and existing rail spacing. GUI-only 0.1.106-dev / promotion 0.1.158-dev. Verified: all 93 frontend tests and the production build passed. Canonical GUI publication publicly verified 914381 bytes / SHA-256 `6fb16b6d6d592c34e376c8dfa1f715569df07058f0dbd5eaeaf810ac4944cd6d`; the normal updater installed GUI 106 with all other component versions unchanged. Native acceptance confirmed populated Sessions has no guidance, empty Sessions retains it, and the white marker/outline follows Channel switching. Trace Round `20261008T025951Z-a7143d75` passed both selected end-to-end cases and all 36 assertions in 36.29 seconds; screenshots and owned Session withdrawal / welcome Canvas cleanup were reviewed. Both revised cases were qualified active. No full-catalog regression is claimed.

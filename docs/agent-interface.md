@@ -1,5 +1,7 @@
 # Agent 脚手架与接口设计
 
+Local Core GET/PATCH /v1/auth/profile provides the current account profile and display-name update, without returning credentials. Google linkage remains the existing browser OAuth flow. Account/profile settings are global, not Channel membership mutations.
+
 Channel invitation: `colab-install --with-app --invitation TOKEN` prepares existing signed artifacts/service, then invokes packaged `bin/colab-join`. The join entry preserves an authenticated account, otherwise calls Local Core device start; ambiguous accounts fail with `account_selection_required` before joining. It accepts through Local Core and returns only `joined` and Channel identity. `colab-open --channel ID` uses a bootstrap-preserved fragment to locate Channel Home. Invitation capabilities must not appear in ordinary receipts or regression evidence.
 
 Canvas 投影实现（2026-10-04）：文本接口仍为 `read` / `apply-patch`，不暴露 CRDT

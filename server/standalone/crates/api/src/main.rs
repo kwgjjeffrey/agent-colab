@@ -25,6 +25,7 @@ mod canvas;
 mod observability;
 mod email_outbox;
 mod messaging;
+mod account_profile;
 mod context_prompt;
 mod transfers;
 mod device_auth;
@@ -177,6 +178,7 @@ fn router(state: AppState) -> Router {
         .route("/health/ready", get(ready))
         .route("/v1/status", get(status))
         .route("/v1/auth/google/session", post(create_google_session))
+        .route("/v1/auth/profile", get(account_profile::get).patch(account_profile::update))
         .route("/v1/auth/device/challenge", post(device_auth::challenge))
         .route("/v1/auth/device/accounts", post(device_auth::discover))
         .route("/v1/auth/device/session", post(device_auth::login))

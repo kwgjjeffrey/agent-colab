@@ -21,6 +21,8 @@ fn unix_time_after(seconds: i64) -> i64 {
 }
 
 mod canvas;
+mod account_profile;
+pub use account_profile::AccountProfile;
 mod activity;
 pub use activity::{ChannelActivity, invalid_activity_cursor};
 mod device_auth;
@@ -272,13 +274,13 @@ impl Database {
         .context("find Google identity")?;
 
         let user = if let Some((id, _, _, _)) = existing {
-            sqlx::query("update users set email = $2, display_name = $3, avatar_url = $4, updated_at = now() where id = $1")
+            sqlx::query("update users set email = $2, display_name = case when display_name_customized then display_name else $3 end, avatar_url = $4, updated_at = now() where id = $1")
                 .bind(id).bind(email).bind(display_name).bind(avatar_url)
                 .execute(&mut *tx).await.context("update user profile")?;
             AuthenticatedUser {
                 id,
                 email: email.to_owned(),
-                display_name: display_name.map(str::to_owned),
+                display_name: sqlx::query_scalar("select display_name from users where id=$1").bind(id).fetch_one(&mut *tx).await?,
                 avatar_url: avatar_url.map(str::to_owned),
             }
         } else {
@@ -291,7 +293,7 @@ impl Database {
             } else { None };
             let id = linkable.unwrap_or_else(Uuid::new_v4);
             if linkable.is_some() {
-                sqlx::query("update users set email=$2,display_name=$3,avatar_url=$4,updated_at=now() where id=$1")
+                sqlx::query("update users set email=$2,display_name=case when display_name_customized then display_name else $3 end,avatar_url=$4,updated_at=now() where id=$1")
                     .bind(id).bind(email).bind(display_name).bind(avatar_url).execute(&mut *tx).await?;
             } else { sqlx::query(
                 "insert into users (id, email, display_name, avatar_url) values ($1, $2, $3, $4)",
@@ -309,7 +311,7 @@ impl Database {
             AuthenticatedUser {
                 id,
                 email: email.to_owned(),
-                display_name: display_name.map(str::to_owned),
+                display_name: sqlx::query_scalar("select display_name from users where id=$1").bind(id).fetch_one(&mut *tx).await?,
                 avatar_url: avatar_url.map(str::to_owned),
             }
         };

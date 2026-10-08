@@ -8,6 +8,7 @@ const badgeVariants = cva(
   {
     variants: {
       variant: {
+        notification: "size-2 h-2 p-0 bg-destructive",
         role: "bg-[var(--role-background)] text-[var(--role-foreground)] border-[var(--role-border)]",
         default: "bg-primary text-primary-foreground [a]:hover:bg-primary/80",
         secondary:

@@ -26,6 +26,7 @@ use url::Url;
 use uuid::Uuid;
 
 mod auth;
+mod account_profile;
 mod device_auth;
 mod invite_links;
 mod observability;
@@ -573,6 +574,7 @@ pub fn router(state: AppState, security: LocalSecurity) -> Router {
         .route("/v1/auth/google/start", get(auth::start_google))
         .route("/v1/auth/google/callback", get(auth::google_callback))
         .route("/v1/auth/status", get(auth::auth_status))
+        .route("/v1/auth/profile", get(account_profile::get).patch(account_profile::update))
         .route("/v1/auth/device/start", axum::routing::post(device_auth::start))
         .route("/v1/auth/device/login", axum::routing::post(device_auth::login))
         .route("/v1/auth/devices", get(device_auth::devices))

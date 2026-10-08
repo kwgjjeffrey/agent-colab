@@ -3,6 +3,27 @@ info:
   title: Colab Server API
   version: 0.1.0
 paths:
+  /v1/auth/profile:
+    get:
+      operationId: getAccountProfile
+      description: Authenticated current account profile with authoritative Google linkage. No user ID supplied by caller.
+      responses:
+        "200": { description: "id, email, displayName, avatarUrl, nameCustomized, googleLinked" }
+    patch:
+      operationId: updateAccountName
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [displayName]
+              properties:
+                displayName: { type: string, minLength: 1, maxLength: 80 }
+      responses:
+        "200": { description: Updated current-account profile; explicit name survives provider logins }
+        "400": { description: Invalid display name }
   /v1/channels/{channelId}/activity:
     get:
       operationId: listChannelActivity

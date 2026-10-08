@@ -1,5 +1,7 @@
 # Colab 技术设计
 
+Account profile is Server-owned at GET/PATCH /v1/auth/profile, exposed through the same Local Core route. PATCH only accepts a trimmed 1–80-character displayName without control characters and derives account identity from authentication. users.display_name_customized preserves explicit names during provider login. GET returns authoritative googleLinked and nameCustomized; Core updates only the bound account session/cache under the account-switch lock. GUI loads this metadata on identity changes or account-settings entry, not on every auth heartbeat. No identity merge or credential protocol changes.
+
 Activity 对象一致性（2026-10-07）：分页结果追加 actorMemberId、targetBlueprintId，不从可编辑姓名反推身份。仅在选定页之后关联触发消息，返回 160 字符/40 节点/20 层深度上限的摘要；mention 保持 kind/id/label 原子身份，label 上限 160 字符。GUI 不为每条活动再取一次消息，不预取 Session/File/Canvas 正文或 task 日志。消息、Canvas 节点与 Activity 复用同一胶囊组件。
 
 Home 近期动态（2026-10-06）：GUI → Local Core → Server 的 `/v1/channels/{id}/activity` 按 `(occurredAt,id)` 倒序游标分页，默认 20、最大 50，各来源先 limit 再合并。共享/Canvas/指令来自现有表；新增 `share_read_activity` 仅保存每位 reader 对每个 Share 的最新成功消费时间，Server 按账号和当前 Channel membership 鉴权。Files 物化、Session read 与 Skill 的 owner-local Files use 在成功后 best-effort 上报；失败不影响原任务，不能称为完整读取审计，历史读取无法补出。不给 GUI 预取正文或全量资产；刷新/翻页显式请求。
