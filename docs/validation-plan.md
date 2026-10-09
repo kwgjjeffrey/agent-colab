@@ -1,5 +1,32 @@
 # 技术验证计划
 
+### 2026-10-09 Conversation tail/scroll and compact Channel — verified and released
+
+Checkpoint `fd037f9`; implementation `4a6a372`. GUI type check, production build
+and 109 tests passed. Core Session projection tests: 9 passed, including typed
+tool envelopes and mirrored provider records. Server cargo check and Linux
+release build passed; Server 0.1.2 deployed through the canonical script with
+readiness verified. These compilation/component results are not E2E claims.
+
+Trace Run `20261009T012334Z-0239217b`: four-asset detail/breadcrumb/primary-action
+acceptance passed. Round 2 (`20261009T012607Z-bd839318`) passes the new long
+conversation case: five recent turns, tool calls collapsed and not labelled as
+User, initial tail position, manual scroll unchanged across two 3-second list
+refreshes, older-page anchor, compact Channel heading inside sidebar and keyboard
+resize. Actual Core → Server latest-three, before-cursor previous-three and
+unchanged after-cursor results match exact message IDs. Owned Session withdrawn
+in finally. The reviewed case is active. GUI 125/Core 99 candidate `/ui.json` and
+running Core match; telemetry availability diagnostics remain in the records.
+Promotion 177 published with full public size/SHA-256 readback for Core 99
+(44,929,356 bytes, `0b258585db834ec55c7e7602201a1549b108d3f4c7e025ab50be9041a24b8505`)
+and GUI 125 (1,315,453 bytes,
+`313b5682b1b0c2f664a73e768082e9a0d269f9c447729ab0fe2ab43d8bef71ee`).
+Native Settings → Check updates → Update completed without replacing the shell
+manually. Active `/ui.json` reports 125. Native historical Codex Session opens
+at recent conversation, shows tool buttons rather than User blocks, scrolls
+upward normally, and retains the compact Channel heading/member entrance in
+the resizable sidebar with the detail trail at the top of the right pane.
+
 ### 2026-10-09 Detail actions and IA regression migration — verified and released
 
 GUI 123 / macOS Core 97 is published as promotion 175. GUI type check and 108 component

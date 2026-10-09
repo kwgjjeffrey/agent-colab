@@ -1,6 +1,6 @@
 # Colab 实现计划
 
-### 2026-10-09 Conversation scrolling and compact Channel — in progress
+### 2026-10-09 Conversation scrolling and compact Channel — verified and released
 
 Rollback checkpoint `fd037f9`. Channel identity/members move into a shadcn
 resizable sidebar (350px default); the detail trail starts at the top of the
@@ -9,8 +9,13 @@ pagination, retaining the existing forward realtime catch-up contract. Session
 and Message scrolling use use-stick-to-bottom; refreshed Session discovery no
 longer scrolls the selected preview back to its metadata. Tool envelopes are not
 user prose; mirrored provider records are deduplicated and tool calls collapse.
-GUI 125 / Core 99 / Server 1.2 are prepared for scoped real-browser validation.
-Publication and native update acceptance are not yet complete.
+GUI 125 / macOS Core 99 / Server 0.1.2 passed scoped real-browser validation.
+Trace Run `20261009T012334Z-0239217b` passes detail continuity and long-conversation
+tail/manual-scroll/older-page anchoring, resize and exact latest/before/after
+Server readback. Promotion 177 was publicly size/hash verified, published and
+installed through native Settings → Check updates → Update. The running App
+serves GUI 125 and its real historical Session displays folded tools and the
+latest conversation. Shell 23 and Skill 55 remain unchanged.
 
 ### 2026-10-09 Preview/actions hardening — verified and released
 

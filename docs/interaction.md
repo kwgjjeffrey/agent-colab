@@ -261,7 +261,18 @@ Updater state belongs to the backend operation, not the browser's button state. 
 Sessions 的 onboarding 仅用于空列表；已有任意 Session 时隐藏整块引导，让实际内容占据页面。Messages 的引导仍按既定规则位于消息流开始处，随对话增长自然滚出视口。
 # Compact Channel management
 
-Workspace tabs are ordered Home, Messages, Canvas, Sessions, Files, Skills. Each tab has its own rounded background with an equal gap from its neighbors. Category colors are Home (lime), collaboration (Messages/Canvas, blue), context (Sessions/Files, amber), capability (Skills, purple); same category never means a merged background. Existing active underline and typography remain unchanged.
+The Catalog workspace replaces type tabs with Home, Add, Message and mixed items.
+Channel identity and the right-aligned member entrance live inside the left
+sidebar. Its default width is 350px, with a shadcn resize handle and persisted
+width. The name stays bold, truncates on one line and reveals its full text in a
+tooltip; double-click editing remains available. The right pane starts with the
+detail breadcrumb/action row, without an empty full-width Channel header.
+
+Message and Session initially open at the latest conversation content. Normal
+refreshes must not reset manual reading. New content follows the tail only while
+the reader remains at the bottom. Loading earlier history preserves the current
+content anchor. Session previews show five recent turns and collapsed typed tool
+calls, never tool protocol blocks labelled as User.
 
 Channel identity is edited by double-clicking the Channel name (owner/admin only; keyboard focus + Enter is equivalent). No pencil icon occupies the header. A compact dialog contains only Name and Icon. The adjacent shadcn AvatarGroup opens a separate Members dialog with the existing invitation and membership actions. Channel management no longer occupies a Settings tab; account settings remain in the bottom-left global Settings entry.
 ### Catalog navigation refinement (2026-10-09)

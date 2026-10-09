@@ -714,6 +714,16 @@ Setup 还负责：
 
 ### 11.8 Channel Messages 与 Agent blueprint（首个纵向切片已实现）
 
+GUI cold Message discovery requests `latest=true&limit=200`; Server selects
+`seq DESC` using the existing `(channel_id, seq)` index, then returns chronological
+rows. Earlier history uses `before=<firstSeq>` with the same bounded query.
+The existing `after=<lastSeq>` forward catch-up contract and authorization remain
+unchanged. All requests still pass through Local Core, not directly to Server.
+GUI conversation scroll ownership belongs to use-stick-to-bottom; Session list
+refreshes never call scrollIntoView on an embedded preview. Provider adapters
+exclude typed tool envelopes from conversational text and deduplicate adjacent
+mirrored user/assistant records without altering the original snapshot.
+
 编辑器、HTTP、持久化、runtime 命令、回传、实时通知和前端投影的准确数据形态，见带完整实例的
 [`architecture/agent-request-data-flow.md`](architecture/agent-request-data-flow.md)。
 
