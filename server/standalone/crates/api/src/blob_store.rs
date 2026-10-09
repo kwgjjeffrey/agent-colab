@@ -181,6 +181,33 @@ impl BlobStore {
 
 #[cfg(test)]
 mod tests {
+    #[tokio::test]
+    #[ignore = "requires private S3 environment and an isolated COLAB_BLOB_S3_PREFIX"]
+    async fn real_s3_multipart_frame_roundtrip_and_owned_cleanup() {
+        use sha2::{Digest,Sha256};
+        let root=std::env::temp_dir().join(format!("colab-s3-session-{}",uuid::Uuid::new_v4()));
+        let store=super::BlobStore::from_env(root.clone()).unwrap();assert!(store.remote.is_some());
+        assert!(store.prefix.as_ref().starts_with("session-chunks-trial/"),"trial namespace required");
+        let key=uuid::Uuid::new_v4().simple().to_string();
+        let mut seed=7_u64;let raw:Vec<u8>=(0..20*1024*1024).map(|_|{seed^=seed<<13;seed^=seed>>7;seed^=seed<<17;seed as u8}).collect();
+        let encoded=zstd::stream::encode_all(raw.as_slice(),3).unwrap();
+        let digest=hex::encode(Sha256::digest(&encoded));
+        let result=async {
+            crate::session_upload::receive_zstd(&root,&key,axum::body::Body::from(encoded.clone()),&digest).await.map_err(|_|"receive")?;
+            crate::session_upload::verify_zstd(&crate::blobs::path(&root,&key),raw.len() as u64,&hex::encode(Sha256::digest(&raw))).map_err(|_|"verify")?;
+            store.publish_staged(&key).await.map_err(|_|"publish")?;
+            if crate::blobs::path(&root,&key).exists() {return Err("staging retained")}
+            let response=store.response(&key,"application/octet-stream").await.map_err(|_|"response")?;
+            let restored=axum::body::to_bytes(response.into_body(),41*1024*1024).await.map_err(|_|"download")?;
+            if restored.as_ref()!=encoded.as_slice() {return Err("roundtrip mismatch")}
+            println!("S3 multipart frame: encoded_bytes={}, exact_sha256=true, staging_removed=true",encoded.len());
+            Ok::<_,&str>(())
+        }.await;
+        store.delete(&key).await.unwrap();store.delete(&key).await.unwrap();
+        let location=store.location(&key).unwrap();assert!(store.remote.as_ref().unwrap().head(&location).await.is_err());
+        let _=tokio::fs::remove_dir_all(&root).await;
+        assert!(result.is_ok(),"S3 trial failed: {result:?}");
+    }
     use super::*;
     #[tokio::test]
     async fn disk_preserves_existing_layout_and_idempotent_deletion() {

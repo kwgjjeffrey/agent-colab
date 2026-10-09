@@ -6,8 +6,35 @@ use std::{path::Path, time::Duration};
 use tokio::io::AsyncWriteExt;
 use crate::ApiError;
 
+pub(crate) fn validate_codec_metadata(codec: &str, size: Option<u64>, digest: Option<&str>) -> Result<(),ApiError> {
+    let valid = match codec {
+        "identity" => size.is_none() && digest.is_none(),
+        "zstd" => size.is_some_and(|size|size>0 && size<=40*1024*1024)
+            && digest.is_some_and(|digest|digest.len()==64 && digest.bytes().all(|b|b.is_ascii_digit() || (b'a'..=b'f').contains(&b))),
+        _ => false,
+    };
+    if valid {Ok(())} else {Err(ApiError::bad_request("invalid_session_codec_metadata"))}
+}
+
+pub(crate) fn verify_zstd(path: &Path, size: u64, expected: &str) -> std::io::Result<()> {
+    use std::io::Read;
+    let file = std::fs::File::open(path)?;
+    let mut decoder = zstd::stream::read::Decoder::new(file)?;
+    decoder.window_log_max(26)?;
+    let mut limited = decoder.single_frame().take(size+1);
+    let mut hash = Sha256::new();let mut total=0_u64;let mut buffer=[0_u8;65536];
+    loop { let read=limited.read(&mut buffer)?;if read==0 {break} total+=read as u64;hash.update(&buffer[..read]); }
+    if total!=size || hex::encode(hash.finalize())!=expected {return Err(std::io::Error::new(std::io::ErrorKind::InvalidData,"decoded chunk mismatch"))}
+    let mut input=limited.into_inner().finish();
+    if !std::io::BufRead::fill_buf(&mut input)?.is_empty() {return Err(std::io::Error::new(std::io::ErrorKind::InvalidData,"trailing Session frames"))} Ok(())
+}
+
 pub(crate) async fn receive(root: &Path, key: &str, body: Body, expected: &str) -> Result<u64, ApiError> {
     receive_with_limits(root, key, body, expected, crate::blobs::REVISION_MAX_BYTES, Duration::from_secs(60)).await
+}
+
+pub(crate) async fn receive_zstd(root: &Path, key: &str, body: Body, expected: &str) -> Result<u64, ApiError> {
+    receive_with_limits(root, key, body, expected, 41*1024*1024, Duration::from_secs(60)).await
 }
 
 async fn receive_with_limits(root: &Path, key: &str, body: Body, expected: &str, limit: u64, idle: Duration) -> Result<u64, ApiError> {
@@ -45,6 +72,25 @@ mod tests {
     use axum::body::Bytes;
     fn root() -> std::path::PathBuf { std::env::temp_dir().join(format!("colab-session-upload-{}",uuid::Uuid::new_v4())) }
     const KEY: &str = "00112233445566778899aabbccddeeff";
+    #[tokio::test]
+    async fn verifies_one_bounded_zstd_frame_and_legacy_metadata() {
+        let root=root();tokio::fs::create_dir_all(&root).await.unwrap();
+        let path=root.join("frame");let raw="中文🦀\n".repeat(1000);
+        let encoded=zstd::stream::encode_all(raw.as_bytes(),3).unwrap();
+        let digest=hex::encode(Sha256::digest(raw.as_bytes()));
+        tokio::fs::write(&path,&encoded).await.unwrap();
+        assert!(validate_codec_metadata("identity",None,None).is_ok());
+        assert!(validate_codec_metadata("zstd",Some(raw.len() as u64),Some(&digest)).is_ok());
+        assert!(validate_codec_metadata("zstd",Some(0),Some(&digest)).is_err());
+        assert!(validate_codec_metadata("identity",Some(1),Some(&digest)).is_err());
+        assert!(verify_zstd(&path,raw.len() as u64,&digest).is_ok());
+        assert!(verify_zstd(&path,1,&digest).is_err());
+        assert!(verify_zstd(&path,raw.len() as u64,&"0".repeat(64)).is_err());
+        let mut joined=encoded.clone();joined.extend_from_slice(&encoded);
+        tokio::fs::write(&path,&joined).await.unwrap();assert!(verify_zstd(&path,raw.len() as u64,&digest).is_err());
+        tokio::fs::write(&path,&encoded[..encoded.len()-1]).await.unwrap();assert!(verify_zstd(&path,raw.len() as u64,&digest).is_err());
+        tokio::fs::remove_dir_all(root).await.unwrap();
+    }
     #[tokio::test]
     async fn verifies_streamed_bytes_before_publication() {
         let root = root();

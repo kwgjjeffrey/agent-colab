@@ -95,6 +95,9 @@ mod tests {
                         "session-test-blob",
                         "digest",
                         10,
+                        "identity",
+                        None,
+                        None,
                     )
                     .await?
                     .unwrap();
@@ -104,6 +107,14 @@ mod tests {
                     .unwrap();
                 assert_eq!(chain.len(), 1);
                 assert_eq!(chain[0].0.id, snapshot.id);
+                let index=crate::SessionReadIndex {id:Uuid::new_v4().simple().to_string(),snapshot_id:snapshot.id,digest:"a".repeat(64),byte_size:100,decoded_digest:"b".repeat(64),decoded_byte_size:1000};
+                assert!(!db.commit_session_read_index(member_b,second.reference_id,&index).await?);
+                assert!(db.commit_session_read_index(user,first.reference_id,&index).await?);
+                assert!(!db.commit_session_read_index(user,second.reference_id,&index).await?);
+                assert_eq!(db.session_read_index(member_b,second.reference_id).await?.unwrap().id,index.id);
+                assert!(db.session_read_index(member_b,first.reference_id).await?.is_none());
+                assert_eq!(db.session_read_index_key(member_b,&index.id).await?,Some(index.id.clone()));
+                assert!(db.session_read_index_key(outsider,&index.id).await?.is_none());
                 assert_eq!(
                     db.session_snapshot_chain(member_b, second.reference_id)
                         .await?

@@ -9,7 +9,7 @@ export const META={
   "surface": "integration",
   "priority": "critical",
   "origin": "requirement",
-  "status": "active",
+  "status": "trial",
   "effects": "isolated-write",
   "cost": "slow",
   "suite": "business",
@@ -56,9 +56,17 @@ export async function run(ctx){
    await core(ctx,'GET',`/v1/channels/${b}/${plural}`,undefined,receiver);
    const [remoteA,remoteB]=await Promise.all([first,second].map(reference=>core(ctx,'POST',`/v1/${plural}/${reference.id}/${kind==='session'?'sync':'materialize'}`,undefined,receiver)));
    ctx.assert(kind+' receiving Core reuses one materialized copy',kind==='session'?remoteB.rawPath:remoteB.localPath,kind==='session'?remoteA.rawPath:remoteA.localPath);
-   const receivedFile=kind==='files'?path.join(remoteB.localPath,'hello.txt'):kind==='skill'?path.join(remoteB.localPath,'SKILL.md'):remoteB.rawPath;
-   const sourceFile=kind==='files'?path.join(f.files,'hello.txt'):kind==='skill'?path.join(f.skill,'SKILL.md'):f.session;
-   ctx.assert(kind+' receiver obtains the exact source bytes',await fs.readFile(receivedFile,'utf8'),await fs.readFile(sourceFile,'utf8'));
+   if(kind==='session'){
+    const options={turnLimit:100,includeOutputs:true};
+    const expected=await core(ctx,'POST',`/v1/sessions/${first.id}/read`,options);
+    const received=await core(ctx,'POST',`/v1/sessions/${second.id}/read`,options,receiver);
+    ctx.assert('Session receiver obtains the exact structured source',received.turns,expected.turns);
+    ctx.assert('Session cache is a chunk manifest, not a reconstructed transcript',remoteB.rawPath.endsWith('.chunks'),true);
+   }else{
+    const receivedFile=kind==='files'?path.join(remoteB.localPath,'hello.txt'):path.join(remoteB.localPath,'SKILL.md');
+    const sourceFile=kind==='files'?path.join(f.files,'hello.txt'):path.join(f.skill,'SKILL.md');
+    ctx.assert(kind+' receiver obtains the exact source bytes',await fs.readFile(receivedFile,'utf8'),await fs.readFile(sourceFile,'utf8'));
+   }
    if(kind==='files')ctx.assert('Excluded dependencies are not published',await fs.access(path.join(remoteB.localPath,'node_modules','owned-fixture.txt')).then(()=>true,()=>false),false);
    if(kind==='files'){
     const scope=await core(ctx,'GET',`/v1/files/${second.id}/sync-scope`);
@@ -82,8 +90,13 @@ export async function run(ctx){
    // Files deliberately serve their existing preview immediately; this assertion asks for
    // the separately committed refresh rather than mistaking stale-while-revalidate for failure.
    const updatedCopy=await core(ctx,'POST',`/v1/${plural}/${second.id}/${kind==='session'?'sync':kind==='files'?'materialize?wait=true':'materialize'}`,undefined,receiver);
-   const updatedFile=kind==='files'?path.join(updatedCopy.localPath,'hello.txt'):kind==='skill'?path.join(updatedCopy.localPath,'SKILL.md'):updatedCopy.rawPath;
-   ctx.assert(kind+' receiver obtains updated bytes after original withdrawal',(await fs.readFile(updatedFile,'utf8')).includes(marker),true);
+   if(kind==='session'){
+    const updated=await core(ctx,'POST',`/v1/sessions/${second.id}/read`,{turnLimit:5},receiver);
+    ctx.assert('Session receiver reads updated structured content after original withdrawal',JSON.stringify(updated.turns).includes(marker),true);
+   }else{
+    const updatedFile=kind==='files'?path.join(updatedCopy.localPath,'hello.txt'):path.join(updatedCopy.localPath,'SKILL.md');
+    ctx.assert(kind+' receiver obtains updated bytes after original withdrawal',(await fs.readFile(updatedFile,'utf8')).includes(marker),true);
+   }
    await core(ctx,'DELETE',`/v1/${plural}/${second.id}`);owned.splice(owned.findIndex(row=>row.id===second.id),1);
    ctx.assert(kind+' last withdrawal leaves no active reference',(await core(ctx,'GET',`/v1/shares/${second.id}/asset`)).referenceCount,0);
    const restored=await create(b);owned.push({plural,id:restored.id});

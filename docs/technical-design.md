@@ -517,7 +517,7 @@ sequenceDiagram
 
 ### 7.3 Session
 
-Session connector 无损读取来源原始文件或 API 输出。大文件按稳定边界生成不可变 chunks，并生成一个描述重组顺序、来源 adapter 与读取元数据的根文件。新增对话只生成新 chunks 与新 root，不重传历史大 blob。Session Reader 在本地重组或逐 chunk 分页，不把 messages 转成服务端关系表。
+Session connector 无损读取来源原始文件或 API 输出。大文件按完整 JSONL 记录边界生成独立 Zstd-3 chunks，并发布 provider 字节定位根索引；原始游标始终使用未压缩字节偏移。新增对话只上传新块，追加型来源索引从本地检查点增量维护，Desktop rewrite/rollback 使用有界记录定位重建。Server 保持 opaque Blob 与 manifest，不拼装全文、不解析 messages。接收端按当前页范围下载和解压所需块，通过 Rust Read/Seek 适配器提供既有 Reader envelope，不重建完整文件。旧 identity 块保留兼容。协议及验收见 `docs/session-chunk-storage-design.md`。
 
 已落地实现明确区分三个位置：贡献端 SQLite 的 `last_byte_offset` 是原始来源同步游标；服务端 `current_snapshot_id` 固定一条不可变 segment 链；Reader 的 opaque cursor 绑定该 snapshot，只负责 turns 分页。正常追加只上传来源游标之后、且以换行结束的完整 JSONL 记录；来源被截断时从 0 建立新基线。每次同步先冻结本轮来源长度，以约 8 MiB 为目标边界聚合完整 JSONL records，每个 Server 已接受的 segment 都立即推进 SQLite source cursor 与 parent snapshot；网络失败从最后一个持久化边界恢复，不重传整份历史。单条 record 不拆分，超过 32 MiB 时明确拒绝并返回来源异常。贡献端 source registration 必须按当前登录 user 查找；另一账号即使共享同一台设备，也只能物化远端 snapshot，不能借用贡献者本地路径上传。
 

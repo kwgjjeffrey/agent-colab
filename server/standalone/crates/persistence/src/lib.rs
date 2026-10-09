@@ -25,6 +25,8 @@ mod canvas_images;
 pub use canvas_images::CanvasImage;
 mod catalog;
 mod assets;
+mod session_indexes;
+pub use session_indexes::SessionReadIndex;
 pub use assets::{RegisterAsset,AssetBinding};
 pub use catalog::CatalogItem;
 mod account_profile;
@@ -209,6 +211,9 @@ pub struct SessionSegment {
     pub position: i32,
     pub digest: String,
     pub byte_size: i64,
+    pub codec: String,
+    pub decoded_byte_size: Option<i64>,
+    pub decoded_digest: Option<String>,
     pub created_at: String,
 }
 
@@ -795,7 +800,7 @@ let rows=sqlx::query_as::<_,FileShare>("select fs.id,fs.channel_id,fs.name,fs.co
     /// shares and expired/revoked Quick Shares are intentionally absent and become collectible.
     pub async fn referenced_blob_keys(&self) -> anyhow::Result<Vec<String>> {
         sqlx::query_scalar(
-            "select r.blob_key from file_revisions r join shared_assets a on a.publication_share_id=r.share_id where a.retained_until is null or a.retained_until>now() union select sg.blob_key from session_segments sg join session_snapshots ss on ss.id=sg.snapshot_id join shared_assets a on a.publication_share_id=ss.share_id where a.retained_until is null or a.retained_until>now() union select blob_key from canvas_images where blob_key is not null union select qi.blob_key from quick_transfer_items qi join quick_transfers qt on qt.id=qi.transfer_id where qi.blob_key is not null and qt.state in ('uploading','ready') and qt.expires_at>now()"
+            "select r.blob_key from file_revisions r join shared_assets a on a.publication_share_id=r.share_id where a.retained_until is null or a.retained_until>now() union select sg.blob_key from session_segments sg join session_snapshots ss on ss.id=sg.snapshot_id join shared_assets a on a.publication_share_id=ss.share_id where a.retained_until is null or a.retained_until>now() union select ss.read_index_blob_key from session_snapshots ss join shared_assets a on a.publication_share_id=ss.share_id where ss.read_index_blob_key is not null and (ss.id=a.current_snapshot_id or ss.created_at>now()-interval '24 hours') and (a.retained_until is null or a.retained_until>now()) union select blob_key from canvas_images where blob_key is not null union select qi.blob_key from quick_transfer_items qi join quick_transfers qt on qt.id=qi.transfer_id where qi.blob_key is not null and qt.state in ('uploading','ready') and qt.expires_at>now()"
         ).fetch_all(&self.pool).await.map_err(Into::into)
     }
 
@@ -865,6 +870,9 @@ let rows=sqlx::query_as::<_,FileShare>("select fs.id,fs.channel_id,fs.name,fs.co
         blob_key: &str,
         digest: &str,
         byte_size: i64,
+        codec: &str,
+        decoded_byte_size: Option<i64>,
+        decoded_digest: Option<&str>,
     ) -> anyhow::Result<Option<(SessionSnapshot, SessionSegment)>> {
         let Some(share_id)=self.asset_publication(user_id,share_id,"session").await? else{return Ok(None)};
         let mut tx = self.pool.begin().await?;
@@ -876,7 +884,7 @@ let rows=sqlx::query_as::<_,FileShare>("select fs.id,fs.channel_id,fs.name,fs.co
         let segment_id = Uuid::new_v4();
         let snapshot_parent = if reset_chain { None } else { parent };
         let snapshot:SessionSnapshot=sqlx::query_as("insert into session_snapshots(id,share_id,parent_snapshot_id,source_cursor) values($1,$2,$3,$4) returning id,share_id,parent_snapshot_id,source_cursor,created_at::text created_at").bind(snapshot_id).bind(share_id).bind(snapshot_parent).bind(source_cursor).fetch_one(&mut *tx).await?;
-        let segment:SessionSegment=sqlx::query_as("insert into session_segments(id,snapshot_id,position,blob_key,digest,byte_size) values($1,$2,0,$3,$4,$5) returning id,snapshot_id,position,digest,byte_size,created_at::text created_at").bind(segment_id).bind(snapshot_id).bind(blob_key).bind(digest).bind(byte_size).fetch_one(&mut *tx).await?;
+        let segment:SessionSegment=sqlx::query_as("insert into session_segments(id,snapshot_id,position,blob_key,digest,byte_size,codec,decoded_byte_size,decoded_digest) values($1,$2,0,$3,$4,$5,$6,$7,$8) returning id,snapshot_id,position,digest,byte_size,codec,decoded_byte_size,decoded_digest,created_at::text created_at").bind(segment_id).bind(snapshot_id).bind(blob_key).bind(digest).bind(byte_size).bind(codec).bind(decoded_byte_size).bind(decoded_digest).fetch_one(&mut *tx).await?;
         sqlx::query(
             "update shared_assets set current_snapshot_id=$2,updated_at=now() where publication_share_id=$1",
         )
@@ -897,7 +905,7 @@ let rows=sqlx::query_as::<_,FileShare>("select fs.id,fs.channel_id,fs.name,fs.co
         if !allowed {
             return Ok(None);
         };
-        let rows:Vec<(Uuid,Uuid,Option<Uuid>,String,String,Uuid,i32,String,i64,String)>=sqlx::query_as("with recursive chain as (select ss.* from session_snapshots ss join channel_shares s on s.current_snapshot_id=ss.id where s.id=$1 union all select p.* from session_snapshots p join chain c on c.parent_snapshot_id=p.id) select c.id,c.share_id,c.parent_snapshot_id,c.source_cursor,c.created_at::text,sg.id,sg.position,sg.digest,sg.byte_size,sg.created_at::text from chain c join session_segments sg on sg.snapshot_id=c.id order by c.created_at,sg.position").bind(share_id).fetch_all(&self.pool).await?;
+        let rows:Vec<(Uuid,Uuid,Option<Uuid>,String,String,Uuid,i32,String,i64,String,String,Option<i64>,Option<String>)>=sqlx::query_as("with recursive chain as (select ss.*,0 depth from session_snapshots ss join channel_shares s on s.current_snapshot_id=ss.id where s.id=$1 union all select p.*,c.depth+1 from session_snapshots p join chain c on c.parent_snapshot_id=p.id) select c.id,c.share_id,c.parent_snapshot_id,c.source_cursor,c.created_at::text,sg.id,sg.position,sg.digest,sg.byte_size,sg.created_at::text,sg.codec,sg.decoded_byte_size,sg.decoded_digest from chain c join session_segments sg on sg.snapshot_id=c.id order by c.depth desc,sg.position").bind(share_id).fetch_all(&self.pool).await?;
         Ok(Some(
             rows.into_iter()
                 .map(|r| {
@@ -916,6 +924,9 @@ let rows=sqlx::query_as::<_,FileShare>("select fs.id,fs.channel_id,fs.name,fs.co
                             digest: r.7,
                             byte_size: r.8,
                             created_at: r.9,
+                            codec: r.10,
+                            decoded_byte_size: r.11,
+                            decoded_digest: r.12,
                         },
                     )
                 })
@@ -923,12 +934,12 @@ let rows=sqlx::query_as::<_,FileShare>("select fs.id,fs.channel_id,fs.name,fs.co
         ))
     }
 
-    pub async fn session_segment_blob_key(
+    pub async fn session_segment_storage(
         &self,
         user_id: Uuid,
         segment_id: Uuid,
-    ) -> anyhow::Result<Option<String>> {
-        sqlx::query_scalar("select sg.blob_key from session_segments sg join session_snapshots ss on ss.id=sg.snapshot_id join shared_assets a on a.publication_share_id=ss.share_id where sg.id=$1 and exists(select 1 from channel_shares s join channel_members cm on cm.channel_id=s.channel_id join organization_members om on om.id=cm.organization_member_id where s.asset_id=a.id and om.user_id=$2 and s.state='active')").bind(segment_id).bind(user_id).fetch_optional(&self.pool).await.map_err(Into::into)
+    ) -> anyhow::Result<Option<(String,String)>> {
+        sqlx::query_as("select sg.blob_key,sg.codec from session_segments sg join session_snapshots ss on ss.id=sg.snapshot_id join shared_assets a on a.publication_share_id=ss.share_id where sg.id=$1 and exists(select 1 from channel_shares s join channel_members cm on cm.channel_id=s.channel_id join organization_members om on om.id=cm.organization_member_id where s.asset_id=a.id and om.user_id=$2 and s.state='active')").bind(segment_id).bind(user_id).fetch_optional(&self.pool).await.map_err(Into::into)
     }
 
     pub async fn withdraw_session_share(

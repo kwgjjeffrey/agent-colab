@@ -12,6 +12,8 @@ use serde_json::{Value, json};
 use std::collections::{HashMap, HashSet};
 use std::io::{BufRead, BufReader, Read, Seek, SeekFrom};
 mod native_titles;
+mod chunk_cache;
+mod read_index;
 
 const SESSION_SEGMENT_TARGET_BYTES: usize = 8 * 1024 * 1024;
 const SESSION_RECORD_MAX_BYTES: usize = 32 * 1024 * 1024;
@@ -588,12 +590,16 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
     let reset_chain = length < offset;
     let start = if reset_chain { 0 } else { offset };
     if length == start {
-        return Ok(());
+        return publish_read_index(state,share_id,&path,parent.as_deref(),start as u64).await;
     }
     let mut file = fs::File::open(&path).map_err(LocalError::internal)?;
     file.seek(SeekFrom::Start(start as u64))
         .map_err(LocalError::internal)?;
     let token = access_token(state).await?;
+    let negotiation = state.inner.http.get(format!("{}/v1/sessions/{share_id}/segments",state.inner.server_url))
+        .bearer_auth(&token).send().await.map_err(LocalError::internal)?;
+    if !negotiation.status().is_success() {return Err(remote_error(negotiation).await)}
+    let supports_chunks = negotiation.json::<Value>().await.map_err(LocalError::internal)?["chunkProtocol"].as_u64().is_some_and(|version|version>=1);
     // Freeze the readable extent for this pass. Concurrent appends are intentionally left for
     // the next pass, which prevents a busy transcript from making synchronization unbounded.
     let mut reader = BufReader::new(file.take((length - start) as u64));
@@ -601,6 +607,11 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
     let mut first_segment = true;
     while let Some(bytes) = read_session_segment(&mut reader)? {
         let next = published + bytes.len() as i64;
+        let (chunk, bytes) = if supports_chunks {
+            let (metadata,encoded)=tokio::task::spawn_blocking(move || colab_local_core::session_chunks::encode(String::new(),&bytes))
+                .await.map_err(LocalError::internal)?.map_err(LocalError::internal)?;
+            (Some(metadata),encoded)
+        } else {(None,bytes)};
         let digest = Sha256::digest(&bytes)
             .iter()
             .map(|byte| format!("{byte:02x}"))
@@ -629,17 +640,16 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
         if let Some(ref snapshot) = parent {
             request = request.query(&[("parentSnapshotId", snapshot)])
         }
-        // Send a bounded file range with reqwest/Tokio backpressure. The digest computed
-        // above also rejects a source rewritten between scanning and streaming.
-        let mut range = tokio::fs::File::open(&path).await.map_err(LocalError::internal)?;
-        tokio::io::AsyncSeekExt::seek(&mut range, SeekFrom::Start(published as u64)).await.map_err(LocalError::internal)?;
+        if let Some(metadata)=&chunk {
+            request=request.query(&[("codec","zstd"),("decodedByteSize",&metadata.decoded_bytes.to_string()),("decodedDigest",metadata.decoded_digest.as_str())]);
+        }
+        // One immutable encoded block is held until ACK. Never reopen a mutable source
+        // range after hashing: rewritten source bytes cannot change this upload body.
         let size = bytes.len() as u64;
-        drop(bytes);
-        let stream = tokio_util::io::ReaderStream::new(tokio::io::AsyncReadExt::take(range, size));
         let response = request
             .timeout(std::time::Duration::from_secs(15 * 60))
             .header(reqwest::header::CONTENT_LENGTH, size)
-            .body(reqwest::Body::wrap_stream(stream))
+            .body(bytes)
             .send()
             .await
             .map_err(LocalError::internal)?;
@@ -649,7 +659,11 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
             let probe = state.inner.http.get(format!("{}/v1/sessions/{share_id}/segments",state.inner.server_url))
                 .bearer_auth(&token).send().await.map_err(LocalError::internal)?;
             let recovered = if probe.status().is_success() {
-                acknowledged_append(&probe.json::<Value>().await.map_err(LocalError::internal)?,parent.as_deref(),reset_chain && first_segment,next,&digest,size)
+                let value=probe.json::<Value>().await.map_err(LocalError::internal)?;
+                let codec_matches=chunk.as_ref().is_none_or(|metadata|value["segments"].as_array().and_then(|segments|segments.last()).is_some_and(|segment|
+                    segment["codec"]=="zstd" && segment["decodedByteSize"].as_u64()==Some(metadata.decoded_bytes)
+                    && segment["decodedDigest"].as_str()==Some(metadata.decoded_digest.as_str())));
+                if codec_matches {acknowledged_append(&value,parent.as_deref(),reset_chain && first_segment,next,&digest,size)} else {None}
             } else { None };
             let Some(snapshot)=recovered else { return Err(remote_error(response).await); };
             json!({"snapshot":{"id":snapshot}})
@@ -673,8 +687,13 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
         published = next;
         parent = Some(snapshot);
         first_segment = false;
+        // Publish readable progress independently. Index failure cannot revoke an accepted
+        // block or stop later blocks; the final durable job retries any missing latest index.
+        if let Err(error)=publish_read_index(state,share_id,&path,parent.as_deref(),published as u64).await {
+            eprintln!("Session read index pending; continuing byte synchronization: {}",error.message);
+        }
     }
-    Ok(())
+    publish_read_index(state,share_id,&path,parent.as_deref(),published as u64).await
 
 }).await
 }
@@ -707,6 +726,32 @@ fn read_session_segment(reader: &mut impl BufRead) -> Result<Option<Vec<u8>>, Lo
         }
     }
     Ok((!segment.is_empty()).then_some(segment))
+}
+
+async fn publish_read_index(state:&AppState,share_id:&str,source:&Path,snapshot:Option<&str>,extent:u64)->Result<(),LocalError> {
+    let Some(snapshot)=snapshot else {return Ok(())};
+    let user=current_user_id(state).await?;let token=access_token_for_user(state,&user).await?;
+    let response=state.inner.http.get(format!("{}/v1/sessions/{share_id}/segments",state.inner.server_url)).bearer_auth(&token).send().await.map_err(LocalError::internal)?;
+    if !response.status().is_success() {return Err(remote_error(response).await)}
+    let metadata=response.json::<Value>().await.map_err(LocalError::internal)?;
+    if metadata["chunkProtocol"].as_u64().is_none_or(|version|version<2) {return Ok(())}
+    if metadata["snapshot"]["id"].as_str()!=Some(snapshot) {return Err(LocalError::internal("Session index snapshot changed"))}
+    if !metadata["readIndex"].is_null() {return Ok(())}
+    let adapter:String=state.inner.store.lock().await.query_row("select source_adapter from local_session_sources where share_id=?1 and user_id=?2",[share_id,&user],|row|row.get(0)).map_err(LocalError::internal)?;
+    let dir=state.inner.data_root.join("session-previews").join(&user).join(share_id);fs::create_dir_all(&dir).map_err(LocalError::internal)?;
+    let view=dir.join(format!("{snapshot}.view"));let source=source.to_path_buf();
+    let (chunk,encoded)=tokio::task::spawn_blocking(move ||->Result<_,LocalError> {
+        read_index::freeze_extent(&source,&view,Some(extent))?;
+        let bytes=read_index::bundle(&view,&adapter)?;
+        read_index::install(&view,&bytes,extent)?;
+        if let Some(dir)=view.parent() {read_index::prune_views(dir,&view);}
+        colab_local_core::session_chunks::encode(String::new(),&bytes).map_err(LocalError::internal)
+    }).await.map_err(LocalError::internal)??;
+    let response=state.inner.http.post(format!("{}/v1/sessions/{share_id}/read-index",state.inner.server_url))
+        .bearer_auth(&token).query(&[("snapshotId",snapshot),("digest",chunk.encoded_digest.as_str()),("decodedDigest",chunk.decoded_digest.as_str()),("decodedByteSize",&chunk.decoded_bytes.to_string())])
+        .timeout(std::time::Duration::from_secs(15*60)).body(encoded).send().await.map_err(LocalError::internal)?;
+    if !response.status().is_success() {return Err(remote_error(response).await)}
+    Ok(())
 }
 
 fn acknowledged_append(value: &Value, parent: Option<&str>, reset: bool, next: i64, digest: &str, size: u64) -> Option<String> {
@@ -742,111 +787,7 @@ mod append_ack_tests {
 }
 async fn materialize(state: &AppState, share_id: &str) -> Result<String, LocalError> {
 colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.sessions.materialize", async {
-
-    let user = current_user_id(state).await?;
-    let token = access_token_for_user(state, &user).await?;
-    let response = state
-        .inner
-        .http
-        .get(format!(
-            "{}/v1/sessions/{share_id}/segments",
-            state.inner.server_url
-        ))
-        .bearer_auth(&token)
-        .send()
-        .await
-        .map_err(|error| LocalError { status: StatusCode::SERVICE_UNAVAILABLE, message:error.to_string() })?;
-    if !response.status().is_success() {
-        return Err(remote_error(response).await);
-    }
-    let value: Value = response.json().await.map_err(LocalError::internal)?;
-    let asset_id = assets::binding(state,share_id).await?.asset_id;
-    // Different Channel references can request the same snapshot concurrently. Serialize
-    // its one partial-file writer, without blocking an already available preview.
-    let _materialization_guard=assets::publication_guard(state,"materialize_session",&format!("{user}:{asset_id}")).await;
-    let snapshot = value["snapshot"]["id"]
-        .as_str()
-        .ok_or_else(|| LocalError::internal("Session has no synchronized snapshot"))?
-        .to_string();
-    let dir = state
-        .inner
-        .data_root
-        .join("sessions")
-        .join(&user)
-        .join(&asset_id);
-    fs::create_dir_all(&dir).map_err(LocalError::internal)?;
-    let final_path = dir.join(format!("{snapshot}.jsonl"));
-    if !final_path.exists() {
-        let temporary = final_path.with_extension("jsonl.partial");
-        let previous: Option<(String, PathBuf)> = {
-            let store = state.inner.store.lock().await;
-            store.query_row("select snapshot_id,raw_path from session_materializations where share_id=?1 and user_id=?2",[&asset_id,&user],|row|Ok((row.get(0)?,PathBuf::from(row.get::<_,String>(1)?)))).ok()
-        };
-        let segments = value["segments"].as_array().cloned().unwrap_or_default();
-        let start_index = previous
-            .as_ref()
-            .and_then(|(old_snapshot, old_path)| {
-                old_path
-                    .exists()
-                    .then(|| {
-                        segments
-                            .iter()
-                            .position(|segment| {
-                                segment["snapshotId"].as_str() == Some(old_snapshot.as_str())
-                            })
-                            .map(|index| index + 1)
-                    })
-                    .flatten()
-            })
-            .unwrap_or(0);
-        if let Some((_, old_path)) = previous.as_ref().filter(|_| start_index > 0) {
-            fs::copy(old_path, &temporary).map_err(LocalError::internal)?;
-        } else {
-            fs::File::create(&temporary).map_err(LocalError::internal)?;
-        }
-        let mut output = fs::OpenOptions::new()
-            .append(true)
-            .open(&temporary)
-            .map_err(LocalError::internal)?;
-        for segment in segments.into_iter().skip(start_index) {
-            let id = segment["id"]
-                .as_str()
-                .ok_or_else(|| LocalError::internal("Invalid Session segment"))?;
-            let mut response = state
-                .inner
-                .http
-                .get(format!(
-                    "{}/v1/session-segments/{id}/content",
-                    state.inner.server_url
-                ))
-                .bearer_auth(&token)
-                .send()
-                .await
-                .map_err(|error| LocalError { status: StatusCode::SERVICE_UNAVAILABLE, message:error.to_string() })?;
-            if !response.status().is_success() {
-                return Err(remote_error(response).await);
-            }
-            while let Some(bytes) = response.chunk().await.map_err(|error| LocalError { status:StatusCode::SERVICE_UNAVAILABLE, message:error.to_string() })? {
-                output.write_all(&bytes).map_err(LocalError::internal)?;
-            }
-        }
-        output.flush().map_err(LocalError::internal)?;
-        fs::rename(temporary, &final_path).map_err(LocalError::internal)?;
-        // Retain immutable views for cursors already issued to readers. A new current
-        // snapshot must not invalidate an in-flight pagination session.
-        let mut views: Vec<_> = fs::read_dir(&dir).map_err(LocalError::internal)?
-            .filter_map(Result::ok).filter(|e| e.path().extension().is_some_and(|x| x == "jsonl"))
-            .collect();
-        views.sort_by_key(|e| e.metadata().and_then(|m| m.modified()).ok());
-        let remove_count = views.len().saturating_sub(8);
-        for view in views.into_iter().take(remove_count) {
-            if view.path() != final_path { let _ = fs::remove_file(view.path()); }
-        }
-    }
-    let store = state.inner.store.lock().await;
-    store.execute("insert into session_materializations(share_id,user_id,snapshot_id,raw_path) values(?1,?2,?3,?4) on conflict(share_id,user_id) do update set snapshot_id=excluded.snapshot_id,raw_path=excluded.raw_path,updated_at=current_timestamp",rusqlite::params![asset_id,user,snapshot,final_path.to_string_lossy()]).map_err(LocalError::internal)?;
-    Ok(final_path.to_string_lossy().into())
-
+    chunk_cache::materialize(state,share_id).await
 }).await
 }
 
@@ -864,6 +805,7 @@ async fn cached_preview(state: &AppState, id: &str, user: &str) -> Result<Option
         Ok(response) if response.status().is_success() => {
             let metadata: Value = response.json().await.map_err(LocalError::internal)?;
             metadata["snapshot"]["id"].as_str() == Some(snapshot.as_str())
+                && (metadata["readIndex"].is_null() || read_index::cached(Path::new(&path)))
         }
         Ok(response) if !matches!(response.status(),StatusCode::BAD_GATEWAY|StatusCode::SERVICE_UNAVAILABLE|StatusCode::GATEWAY_TIMEOUT|StatusCode::REQUEST_TIMEOUT) => return Err(remote_error(response).await),
         _ => false,
@@ -896,7 +838,7 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
     // Local preview owns a frozen extent, never the uploader's cursor/lock/cache. An issued
     // pagination cursor keeps that view even while source appends and publication proceeds.
     let local_view = if let Some((source, _)) = source.as_ref().filter(|(path,_)|Path::new(path).is_file()) {
-        let dir = state.inner.data_root.join("session-previews").join(&user).join(&share_id);
+        let dir = state.inner.data_root.join("session-previews").join(&user).join(&source_id);
         let pinned = body.cursor.as_deref().map(|cursor| -> Result<String,LocalError> {
             let raw = URL_SAFE_NO_PAD.decode(cursor).map_err(|_|LocalError::bad_request("Invalid Session cursor"))?;
             let value: Value = serde_json::from_slice(&raw).map_err(|_|LocalError::bad_request("Invalid Session cursor"))?;
@@ -904,26 +846,14 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
             uuid::Uuid::parse_str(id).map_err(|_|LocalError::bad_request("Invalid Session snapshot"))?;
             Ok(id.to_owned())
         }).transpose()?;
-        let snapshot = pinned.clone().unwrap_or_else(||uuid::Uuid::new_v4().to_string());
-        let path = dir.join(format!("{snapshot}.jsonl"));
-        if pinned.is_none() {
-            let source = source.clone(); let output = path.clone();
-            tokio::task::spawn_blocking(move || -> Result<(),LocalError> {
-                fs::create_dir_all(&dir).map_err(LocalError::internal)?;
-                let input = fs::File::open(source).map_err(LocalError::internal)?;
-                let size = input.metadata().map_err(LocalError::internal)?.len();
-                let temporary = output.with_extension("reading");
-                let mut file = fs::File::create(&temporary).map_err(LocalError::internal)?;
-                std::io::copy(&mut input.take(size), &mut file).map_err(LocalError::internal)?;
-                drop(file);
-                fs::rename(temporary, &output).map_err(LocalError::internal)?;
-                let mut views: Vec<_> = fs::read_dir(&dir).map_err(LocalError::internal)?.filter_map(Result::ok)
-                    .filter(|entry|entry.path().extension().is_some_and(|extension|extension == "jsonl")).collect();
-                views.sort_by_key(|entry|entry.metadata().and_then(|metadata|metadata.modified()).ok());
-                let excess = views.len().saturating_sub(8);
-                for entry in views.into_iter().take(excess) { if entry.path() != output { let _ = fs::remove_file(entry.path()); } }
-                Ok(())
-            }).await.map_err(LocalError::internal)??;
+        let snapshot = pinned.clone().or_else(||read_index::reusable(Path::new(source),&dir)).unwrap_or_else(||uuid::Uuid::new_v4().to_string());
+        let view=dir.join(format!("{snapshot}.view"));
+        let legacy=dir.join(format!("{snapshot}.jsonl"));
+        let path=if legacy.is_file() {legacy} else {view};
+        if pinned.is_none() && !path.is_file() {
+            let source=source.clone();let output=path.clone();
+            tokio::task::spawn_blocking(move ||read_index::freeze(Path::new(&source),&output)).await.map_err(LocalError::internal)??;
+            read_index::prune_views(&dir,&path);
         }
         if !path.is_file() { return Err(LocalError::bad_request("Pinned Session preview expired; restart pagination")); }
         Some((path.to_string_lossy().into_owned(),snapshot))
@@ -951,13 +881,9 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
                 |r| Ok((r.get(0)?, r.get(1)?)),
             )
             .ok();
-        let snapshot: String = if let Some((_,snapshot)) = &pinned_view { snapshot.clone() } else { store
-            .query_row(
-                "select snapshot_id from session_materializations where share_id=?1 and user_id=?2",
-                [&share_id, &user],
-                |r| r.get(0),
-            )
-            .map_err(LocalError::internal)? };
+        let snapshot: String = if let Some((_,snapshot)) = &pinned_view { snapshot.clone() } else {
+            Path::new(&path).file_stem().and_then(|stem|stem.to_str()).ok_or_else(||LocalError::internal("Invalid Session view"))?.to_owned()
+        };
         let (adapter, name) = cached.unwrap_or_else(|| (source.as_ref().map(|(_,adapter)|adapter.clone()).unwrap_or_else(||"codex-jsonl-v1".into()), share_id.clone()));
         (adapter, name, snapshot)
     };
@@ -968,7 +894,9 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
         uuid::Uuid::parse_str(pinned).map_err(|_| LocalError::bad_request("Invalid Session snapshot"))?;
         if pinned != snapshot {
             // materialize above checked present authorization before any cached bytes are used.
-            let old = state.inner.data_root.join("sessions").join(&user).join(&share_id).join(format!("{pinned}.jsonl"));
+            let dir=Path::new(&path).parent().ok_or_else(||LocalError::internal("Invalid Session view"))?;
+            let frames=dir.join(format!("{pinned}.chunks"));
+            let old = if frames.is_file() {frames} else {dir.join(format!("{pinned}.jsonl"))};
             if !old.is_file() { return Err(LocalError::bad_request("Pinned Session snapshot expired; restart pagination")); }
             path = old.to_string_lossy().into();
             snapshot = pinned.to_string();
@@ -977,13 +905,12 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
     let projection_path = path.clone(); let projection_adapter = adapter.clone();
     let outputs = body.include_outputs.unwrap_or(false); let max_chars = body.max_output_chars_per_item.unwrap_or(4000);
     // Transcript decoding cannot occupy an async runtime worker needed by upload/progress.
-    let (mut turns, invalid_records) = tokio::task::spawn_blocking(move ||
-        project_jsonl(Path::new(&projection_path), &projection_adapter, outputs, max_chars)
-    ).await.map_err(LocalError::internal)??;
-    let before = decode_cursor(body.cursor.as_deref(), &snapshot, turns.len())?;
     let limit = body.turn_limit.unwrap_or(20).clamp(1, 100);
-    let start = before.saturating_sub(limit);
-    let page = turns.drain(start..before).collect::<Vec<_>>();
+    chunk_cache::ensure_page(&state,Path::new(&path),&user,outputs,body.cursor.as_deref(),&snapshot,limit).await?;
+    let cursor=body.cursor.clone();let projection_snapshot=snapshot.clone();
+    let (page,start,invalid_records) = tokio::task::spawn_blocking(move ||
+        read_index::page(Path::new(&projection_path), &projection_adapter, outputs, max_chars,cursor.as_deref(),&projection_snapshot,limit)
+    ).await.map_err(LocalError::internal)??;
     let next = (start > 0).then(|| encode_cursor(&snapshot, start));
     activity::record_read(&state, &share_id, &user).await;
     Ok(Json(
@@ -993,41 +920,44 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
 }).await
 }
 
-fn project_jsonl(
-    path: &Path,
-    adapter: &str,
-    include_outputs: bool,
-    max_chars: usize,
-) -> Result<(Vec<Value>, usize), LocalError> {
-    // A damaged legacy record must not erase the rest of the conversation. Never replace
-    // bytes inside a message: skip that record, preserve the immutable source and report it.
-    let bytes = fs::read(path).map_err(LocalError::internal)?;
-    let mut invalid = 0;
-    let mut text = String::with_capacity(bytes.len());
-    for record in bytes.split(|byte| *byte == b'\n') {
-        match std::str::from_utf8(record) {
-            Ok(line) => { text.push_str(line); text.push('\n'); }
-            Err(_) => { invalid += 1; }
+#[cfg(test)]
+fn project_jsonl(path: &Path, adapter: &str, include_outputs: bool, max_chars: usize) -> Result<(Vec<Value>,usize),LocalError> {
+    let input = read_index::input(path)?;
+    let mut input=BufReader::new(input);let mut index=0usize;
+    let invalid=std::cell::Cell::new(0usize);let error=std::cell::RefCell::new(None);
+    let rows=std::iter::from_fn(||loop {
+        let mut bytes=Vec::new();
+        let result=std::io::BufRead::read_until(&mut input.by_ref().take((SESSION_RECORD_MAX_BYTES+1) as u64),b'\n',&mut bytes);
+        match result {
+            Ok(0)=>return None,
+            Err(e)=>{*error.borrow_mut()=Some(e);return None},
+            _=>{}
         }
-    }
-    if adapter == "codex-jsonl-v1" {
-        return Ok((project_codex(&text, include_outputs, max_chars), invalid));
-    }
-    if adapter == "myflicker-desktop-jsonl-v1" {
-        return Ok((project_myflicker_desktop(&text, include_outputs, max_chars), invalid));
-    }
-    Ok((project_anthropic(&text, include_outputs, max_chars), invalid))
+        if bytes.len()>SESSION_RECORD_MAX_BYTES {*error.borrow_mut()=Some(std::io::Error::other("Session record exceeds reader bound"));return None}
+        let line=match std::str::from_utf8(&bytes) {Ok(line)=>line,Err(_)=>{invalid.set(invalid.get()+1);continue}};
+        let position=index;index+=1;
+        if let Ok(row)=serde_json::from_str::<Value>(line) {return Some((position,row))}
+    });
+    let turns=match adapter {
+        "codex-jsonl-v1"=>project_codex_rows(rows,include_outputs,max_chars),
+        "myflicker-desktop-jsonl-v1"=>project_myflicker_desktop_rows(rows.map(|(_,row)|row),include_outputs,max_chars),
+        _=>project_anthropic_rows(rows,include_outputs,max_chars),
+    };
+    if let Some(e)=error.into_inner() {return Err(LocalError::internal(e))}
+    Ok((turns,invalid.get()))
 }
 
 /// MyFlicker Desktop is not the CLI JSONL shape. Its append-only cache can rewrite a message by
 /// repeating its numeric id, and rollback activities retract later ids. Materialize those rules
 /// locally before projecting to the common read envelope; the raw snapshot remains untouched.
+#[cfg(test)]
 fn project_myflicker_desktop(text: &str, include_outputs: bool, max_chars: usize) -> Vec<Value> {
+    project_myflicker_desktop_rows(text.lines().filter_map(|line|serde_json::from_str::<Value>(line).ok()),include_outputs,max_chars)
+}
+#[cfg(test)]
+fn project_myflicker_desktop_rows(rows: impl Iterator<Item=Value>, include_outputs: bool, max_chars: usize) -> Vec<Value> {
     let mut live = Vec::<Value>::new();
-    for line in text.lines() {
-        let Ok(row) = serde_json::from_str::<Value>(line) else {
-            continue;
-        };
+    for row in rows {
         if row["activityType"] == "CHECKPOINT_ROLLBACK" {
             let description = row
                 .pointer("/content/description")
@@ -1056,8 +986,12 @@ fn project_myflicker_desktop(text: &str, include_outputs: bool, max_chars: usize
         live.push(row);
     }
 
-    let mut turns = Vec::<Value>::new();
-    for (index, row) in live.into_iter().enumerate() {
+    let mut turns=Vec::new();
+    fold_desktop_rows(live.into_iter().enumerate(),&mut turns,include_outputs,max_chars);
+    turns
+}
+fn fold_desktop_rows(rows: impl Iterator<Item=(usize,Value)>, turns:&mut Vec<Value>, include_outputs:bool,max_chars:usize) {
+    for (index, row) in rows {
         let role = row["role"].as_str();
         if role == Some("user") {
             let raw = text_value(&row["content"]).unwrap_or_default();
@@ -1067,7 +1001,7 @@ fn project_myflicker_desktop(text: &str, include_outputs: bool, max_chars: usize
         } else if role == Some("assistant") {
             if let Some(message) = text_value(&row["content"]).filter(|value| !value.is_empty()) {
                 push_item(
-                    &mut turns,
+                    turns,
                     json!({"type":"agentMessage","text":message}),
                     index,
                 );
@@ -1089,7 +1023,7 @@ fn project_myflicker_desktop(text: &str, include_outputs: bool, max_chars: usize
                     .and_then(|value| serde_json::from_str(value).ok())
                     .unwrap_or(raw);
                 push_item(
-                    &mut turns,
+                    turns,
                     json!({"type":if matches!(tool,"execute_command"|"bash"|"shell"|"terminal"|"run_command") {"commandExecution"} else {"mcpToolCall"},"id":id,"server":"myflicker","tool":tool,"arguments":arguments,"status":"inProgress"}),
                     index,
                 );
@@ -1100,7 +1034,7 @@ fn project_myflicker_desktop(text: &str, include_outputs: bool, max_chars: usize
                 .or_else(|| row["tool_use_id"].as_str())
                 .unwrap_or("");
             attach_result(
-                &mut turns,
+                turns,
                 call,
                 &text_value(&row["content"]).unwrap_or_default(),
                 max_chars,
@@ -1108,22 +1042,31 @@ fn project_myflicker_desktop(text: &str, include_outputs: bool, max_chars: usize
         } else if role == Some("reasoning") && include_outputs {
             if let Some(reasoning) = text_value(&row["content"]) {
                 push_item(
-                    &mut turns,
+                    turns,
                     json!({"type":"reasoning","summary":[reasoning]}),
                     index,
                 );
             }
         }
     }
-    turns
 }
 
+#[cfg(test)]
 fn project_codex(text: &str, include_outputs: bool, max_chars: usize) -> Vec<Value> {
-    let mut turns = Vec::<Value>::new();
-    for (index, line) in text.lines().enumerate() {
-        let Ok(v) = serde_json::from_str::<Value>(line) else {
-            continue;
-        };
+    project_codex_rows(text.lines().enumerate().filter_map(|(index,line)| serde_json::from_str::<Value>(line).ok().map(|row|(index,row))),include_outputs,max_chars)
+}
+
+#[cfg(test)]
+fn project_codex_rows(rows: impl Iterator<Item=(usize,Value)>, include_outputs: bool, max_chars: usize) -> Vec<Value> {
+    let mut turns=Vec::new();
+    fold_codex_rows(rows,&mut turns,include_outputs,max_chars);
+    turns
+        .into_iter()
+        .filter(|t| t["items"].as_array().is_some_and(|x| !x.is_empty()))
+        .collect()
+}
+fn fold_codex_rows(rows: impl Iterator<Item=(usize,Value)>, turns: &mut Vec<Value>, include_outputs: bool, max_chars: usize) {
+    for (index, v) in rows {
         let row_type = v.get("type").and_then(Value::as_str);
         let payload = v.get("payload").unwrap_or(&Value::Null);
         let payload_type = payload.get("type").and_then(Value::as_str);
@@ -1131,7 +1074,7 @@ fn project_codex(text: &str, include_outputs: bool, max_chars: usize) -> Vec<Val
             for block in payload["content"].as_array().into_iter().flatten() {
                 if matches!(block["type"].as_str(), Some("tool_result" | "tool-result")) && include_outputs {
                     let call = block["tool_use_id"].as_str().or_else(|| block["toolCallId"].as_str()).unwrap_or("");
-                    attach_result(&mut turns, call, &tool_result_text(block), max_chars);
+                    attach_result(turns, call, &tool_result_text(block), max_chars);
                 }
             }
         }
@@ -1172,7 +1115,7 @@ fn project_codex(text: &str, include_outputs: bool, max_chars: usize) -> Vec<Val
                 turns.push(json!({"id":format!("turn-{index}"),"items":[]}));
             }
             push_item(
-                &mut turns,
+                turns,
                 json!({"type":"userMessage","content":[{"type":"text","text":clean}]}),
                 index,
             );
@@ -1184,7 +1127,7 @@ fn project_codex(text: &str, include_outputs: bool, max_chars: usize) -> Vec<Val
         {
             if let Some(text) = text_value(&payload["content"]) {
                 push_item(
-                    &mut turns,
+                    turns,
                     json!({"type":"agentMessage","text":text,"phase":payload.get("phase")}),
                     index,
                 )
@@ -1194,7 +1137,7 @@ fn project_codex(text: &str, include_outputs: bool, max_chars: usize) -> Vec<Val
         if row_type == Some("event_msg") && payload_type == Some("agent_message") {
             if let Some(text) = payload.get("message").and_then(Value::as_str) {
                 push_item(
-                    &mut turns,
+                    turns,
                     json!({"type":"agentMessage","text":text,"phase":payload.get("phase")}),
                     index,
                 )
@@ -1231,7 +1174,7 @@ fn project_codex(text: &str, include_outputs: bool, max_chars: usize) -> Vec<Val
                 "mcpToolCall"
             };
             push_item(
-                &mut turns,
+                turns,
                 json!({"type":kind,"id":call,"server":"codex","tool":tool,"arguments":arguments,"status":"inProgress"}),
                 index,
             );
@@ -1247,7 +1190,7 @@ fn project_codex(text: &str, include_outputs: bool, max_chars: usize) -> Vec<Val
             let call = payload.get("call_id").and_then(Value::as_str).unwrap_or("");
             let output =
                 text_value(payload.get("output").unwrap_or(&Value::Null)).unwrap_or_default();
-            attach_result(&mut turns, call, &output, max_chars);
+            attach_result(turns, call, &output, max_chars);
         }
         if include_outputs && row_type == Some("response_item") && payload_type == Some("reasoning")
         {
@@ -1255,25 +1198,28 @@ fn project_codex(text: &str, include_outputs: bool, max_chars: usize) -> Vec<Val
                 text_value(payload.get("summary").unwrap_or(&Value::Null)).unwrap_or_default();
             if !text.is_empty() {
                 push_item(
-                    &mut turns,
+                    turns,
                     json!({"type":"reasoning","summary":[text]}),
                     index,
                 )
             }
         }
     }
-    turns
-        .into_iter()
-        .filter(|t| t["items"].as_array().is_some_and(|x| !x.is_empty()))
-        .collect()
 }
 
+#[cfg(test)]
 fn project_anthropic(text: &str, include_outputs: bool, max_chars: usize) -> Vec<Value> {
-    let mut turns = Vec::<Value>::new();
-    for (index, line) in text.lines().enumerate() {
-        let Ok(v) = serde_json::from_str::<Value>(line) else {
-            continue;
-        };
+    project_anthropic_rows(text.lines().enumerate().filter_map(|(index,line)| serde_json::from_str::<Value>(line).ok().map(|row|(index,row))),include_outputs,max_chars)
+}
+
+#[cfg(test)]
+fn project_anthropic_rows(rows: impl Iterator<Item=(usize,Value)>, include_outputs: bool, max_chars: usize) -> Vec<Value> {
+    let mut turns=Vec::new();
+    fold_anthropic_rows(rows,&mut turns,include_outputs,max_chars);
+    turns
+}
+fn fold_anthropic_rows(rows: impl Iterator<Item=(usize,Value)>, turns: &mut Vec<Value>, include_outputs: bool, max_chars: usize) {
+    for (index, v) in rows {
         // MyFlicker records use `type: message` with a top-level role/content,
         // while Claude Code wraps role/content in `message`. Keep the raw
         // formats untouched at rest and converge them only in this adapter.
@@ -1297,7 +1243,7 @@ fn project_anthropic(text: &str, include_outputs: bool, max_chars: usize) -> Vec
                 if matches!(block["type"].as_str(), Some("tool_result" | "tool-result")) {
                     if include_outputs {
                         attach_result(
-                            &mut turns,
+                            turns,
                             block["tool_use_id"]
                                 .as_str()
                                 .or_else(|| block["toolCallId"].as_str())
@@ -1326,17 +1272,17 @@ fn project_anthropic(text: &str, include_outputs: bool, max_chars: usize) -> Vec
             {
                 match block["type"].as_str() {
                     Some("text") => push_item(
-                        &mut turns,
+                        turns,
                         json!({"type":"agentMessage","text":block["text"]}),
                         index,
                     ),
                     Some("thinking") if include_outputs => push_item(
-                        &mut turns,
+                        turns,
                         json!({"type":"reasoning","summary":[block["thinking"].as_str().unwrap_or("")]}),
                         index,
                     ),
                     Some("tool_use") => push_item(
-                        &mut turns,
+                        turns,
                         json!({
                             "type": if matches!(block["name"].as_str(), Some("bash" | "shell")) { "commandExecution" } else { "mcpToolCall" },
                             "id":block["id"],"server":"agent","tool":block["name"],"arguments":block["input"],"status":"inProgress"
@@ -1359,12 +1305,11 @@ fn project_anthropic(text: &str, include_outputs: bool, max_chars: usize) -> Vec
                         .as_str()
                         .or_else(|| block["toolCallId"].as_str())
                         .unwrap_or("");
-                    attach_result(&mut turns, call, &tool_result_text(&block), max_chars);
+                    attach_result(turns, call, &tool_result_text(&block), max_chars);
                 }
             }
         }
     }
-    turns
 }
 
 fn tool_result_text(block: &Value) -> String {

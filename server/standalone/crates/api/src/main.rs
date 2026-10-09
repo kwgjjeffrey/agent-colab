@@ -20,6 +20,9 @@ use tower_http::{
 
 mod blobs;
 mod session_upload;
+mod session_indexes;
+#[cfg(test)]
+mod session_protocol_tests;
 mod assets;
 mod canvas;
 mod canvas_images;
@@ -291,6 +294,8 @@ fn router(state: AppState) -> Router {
     standard
         // Upload owns a per-chunk idle timeout, not the metadata request deadline.
         .merge(Router::new().route("/v1/sessions/{share_id}/segments", post(upload_session_segment)))
+        .merge(Router::new().route("/v1/sessions/{share_id}/read-index", post(session_indexes::upload)))
+        .merge(Router::new().route("/v1/session-read-indexes/{index_id}/content", get(session_indexes::download)))
         .merge(messaging::routes())
         .merge(canvas::routes())
         .merge(canvas_images::router())
@@ -474,7 +479,15 @@ struct UploadSessionSegmentQuery {
     digest: String,
     #[serde(default)]
     reset_chain: bool,
+    #[serde(default = "identity_codec")]
+    codec: String,
+    decoded_byte_size: Option<u64>,
+    decoded_digest: Option<String>,
 }
+fn identity_codec() -> String { "identity".into() }
+
+#[derive(Deserialize)]
+struct SegmentDownloadQuery { #[serde(default)] encoded: bool }
 
 async fn list_channels(
     State(state): State<AppState>,
@@ -1120,7 +1133,22 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
         return Err(ApiError::bad_request("invalid_session_segment"));
     }
     let key = uuid::Uuid::new_v4().simple().to_string();
-    let size = session_upload::receive(&state.blob_root, &key, body, &query.digest).await?;
+    session_upload::validate_codec_metadata(&query.codec, query.decoded_byte_size, query.decoded_digest.as_deref())?;
+    let size = if query.codec == "zstd" {
+        session_upload::receive_zstd(&state.blob_root, &key, body, &query.digest).await?
+    } else {
+        session_upload::receive(&state.blob_root, &key, body, &query.digest).await?
+    };
+    if query.codec == "zstd" {
+        let path = blobs::path(&state.blob_root, &key);
+        let expected_size = query.decoded_byte_size.unwrap();
+        let expected_digest = query.decoded_digest.clone().unwrap();
+        let validated = tokio::task::spawn_blocking(move || session_upload::verify_zstd(&path, expected_size, &expected_digest)).await;
+        if !matches!(validated, Ok(Ok(()))) {
+            let _ = state.blob_store.delete(&key).await;
+            return Err(ApiError::bad_request("session_decoded_chunk_mismatch"));
+        }
+    }
     state.blob_store.publish_staged(&key).await?;
     match state
         .database
@@ -1133,6 +1161,9 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
             &key,
             &query.digest,
             size as i64,
+            &query.codec,
+            query.decoded_byte_size.map(|size|size as i64),
+            query.decoded_digest.as_deref(),
         )
         .await
         .map_err(|_| ApiError::internal("session_segment_creation_failed"))
@@ -1165,8 +1196,9 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
         .map_err(|_| ApiError::internal("session_snapshot_list_failed"))?
         .ok_or_else(|| ApiError::forbidden("session_share_access_forbidden"))?;
     let current = chain.last().map(|x| &x.0);
+    let read_index=state.database.session_read_index(user,share_id).await.map_err(|_|ApiError::internal("session_read_index_lookup_failed"))?;
     Ok(Json(
-        serde_json::json!({"snapshot":current,"segments":chain.into_iter().map(|(_,s)|s).collect::<Vec<_>>() }),
+        serde_json::json!({"snapshot":current,"chunkProtocol":2,"readIndex":read_index,"segments":chain.into_iter().map(|(_,s)|s).collect::<Vec<_>>() }),
     ))
 
 }).await
@@ -1175,17 +1207,25 @@ async fn download_session_segment(
     State(state): State<AppState>,
     headers: HeaderMap,
     Path(segment_id): Path<uuid::Uuid>,
+    Query(query): Query<SegmentDownloadQuery>,
 ) -> Result<Response, ApiError> {
 colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.main.download-session-segment", async {
 
     let user = authenticated_user(&state, &headers).await?;
-    let key = state
+    let (key, codec) = state
         .database
-        .session_segment_blob_key(user, segment_id)
+        .session_segment_storage(user, segment_id)
         .await
         .map_err(|_| ApiError::internal("session_segment_lookup_failed"))?
         .ok_or_else(|| ApiError::forbidden("session_share_access_forbidden"))?;
-    state.blob_store.response(&key, "application/x-ndjson").await
+    let response = state.blob_store.response(&key, if query.encoded {"application/octet-stream"} else {"application/x-ndjson"}).await?;
+    if codec != "zstd" || query.encoded { return Ok(response); }
+    // Old clients retain their raw-byte contract; new readers request encoded frames.
+    // This is a streaming compatibility decoder, never a reconstructed Server file.
+    use futures_util::TryStreamExt;
+    let input = tokio_util::io::StreamReader::new(response.into_body().into_data_stream().map_err(std::io::Error::other));
+    let decoded = async_compression::tokio::bufread::ZstdDecoder::new(tokio::io::BufReader::new(input));
+    Ok(([(header::CONTENT_TYPE,"application/x-ndjson")], Body::from_stream(tokio_util::io::ReaderStream::new(decoded))).into_response())
 
 }).await
 }

@@ -7,7 +7,12 @@ contract and acceptance gates: `docs/session-chunk-storage-design.md`. Disk/S3
 Blob support now has a disk-compatible/S3 adapter wired into all four asset
 transports and GC. Core has bounded Zstd-3 frame verification and a seekable
 one-block read view. These foundations passed unit checks; negotiated manifests,
-provider boundary/dependency indexes and end-to-end Reader wiring remain pending.
+provider boundary/dependency indexes and Reader wiring are now implemented and
+under compatibility acceptance. Protocol 2 publishes opaque snapshot locators;
+receiver downloads only selected page frames and keeps no concatenated JSONL.
+Contributor-only checkpoints incrementally maintain append-only indexes; Desktop
+rollback indexes retain a full bounded locator rebuild. Compression/index failure
+cannot roll back accepted bytes; preview does not own the publication transaction.
 Do not deploy a write-only compressed protocol. Rollback checkpoint: `6b85fc4`.
 Enterprise integration remains untouched; existing production data is preserved.
 

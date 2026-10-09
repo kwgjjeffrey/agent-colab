@@ -7,9 +7,10 @@ Foundation implemented: Server `blob_store.rs` wraps standard object_store S3
 with bounded upload staging and private namespace GC; disk preserves its old
 layout. Core `session_chunks.rs` verifies independently compressed frames and
 provides a lazy seekable byte view holding one decoded block. Existing production
-Session read/write paths still use the legacy raw protocol until negotiation,
-provider indexes and compatibility acceptance are complete. This is not a
-compressed Session release. Live test evidence is in `validation-plan.md`.
+Session read/write paths now negotiate protocol 2, publish encoded blocks and
+opaque byte-locator indexes, and lazily read selected frames. Legacy protocol and
+identity segments remain readable. Deployment acceptance is still in progress;
+live test evidence is in `validation-plan.md`.
 
 ## Boundaries and compatibility
 
@@ -68,6 +69,20 @@ must remain bounded and never persist a reconstructed full file.
    no release before the complete read/write compatibility path passes.
 
 Compression byte fidelity is already verified for all ten full-source candidates.
-Stateful projection equivalence currently covers only four real Codex blocks;
-it does not establish full adapter or end-to-end compatibility. Native Windows,
-S3 integration, production migration and release remain unverified.
+Provider page equivalence passes Codex, Claude, MyFlicker CLI and Desktop fixtures,
+including cross-turn tool dependencies and Desktop rollback. The actual 1.79 GB
+Codex tail matches the frozen full projection. Receiver HTTP cache/restart and
+isolated PostgreSQL/Server HTTP authorization, shared-reference and retry checks
+pass. Real R2 multipart storage verifies a 20 MiB synthetic frame with exact bytes
+and staging cleanup. Native Windows, installed GUI and release remain unverified.
+
+Contributor indexes publish after each accepted block, so partial durable progress
+is consumable while later blocks upload. Index failure does not stop accepted-byte
+progress; the durable job retries the latest missing index. A new compressed
+snapshot without its index returns a preparing state rather than downloading all
+history. Already cached previews stay usable. Append-only adapter checkpoints are
+local-only and never included in remote locator bundles. Desktop retains bounded
+full indexing because overwrites/rollback can retract old records. Initial index
+creation is linear; subsequent append indexes resume from the last complete record.
+Old local UUID views and remote non-current locator indexes have a 24-hour grace;
+current snapshot indexes and referenced transcript frames remain retained.

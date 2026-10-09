@@ -302,18 +302,43 @@ paths:
     get:
       operationId: getSessionSnapshotManifest
       responses:
-        "200": { description: Current immutable snapshot and its ordered raw segment chain }
+        "200": { description: Current immutable snapshot, chunkProtocol 2 negotiation, optional opaque readIndex metadata, and ordered segment chain with codec and encoded/decoded integrity metadata }
     post:
       operationId: appendSessionSegment
+      parameters:
+        - { name: codec, in: query, schema: { type: string, enum: [identity, zstd], default: identity } }
+        - { name: decodedByteSize, in: query, schema: { type: integer, minimum: 1, maximum: 41943040 }, description: Required only for zstd; source cursor remains in decoded bytes }
+        - { name: decodedDigest, in: query, schema: { type: string, pattern: '^[0-9a-f]{64}$' }, description: Required only for zstd; digest still hashes encoded transport bytes }
       responses:
-        "201": { description: Raw provider segment accepted and snapshot CAS advanced }
+        "201": { description: Immutable segment integrity verified and snapshot CAS advanced }
         "409": { description: Parent snapshot does not match current snapshot }
   /v1/session-segments/{segmentId}/content:
     get:
       operationId: downloadSessionSegment
+      parameters:
+        - { name: encoded, in: query, schema: { type: boolean, default: false }, description: Return stored frame bytes; false preserves legacy raw provider bytes using streaming decoding }
       responses:
         "200":
           description: Opaque provider JSONL segment streamed from Blob storage
+  /v1/sessions/{shareId}/read-index:
+    post:
+      operationId: publishSessionReadIndex
+      description: Owner-only immutable Zstd byte-locator projection for the current snapshot; exact retry reuses the committed object. No provider transcript parsing occurs on Server.
+      parameters:
+        - { name: snapshotId, in: query, required: true, schema: { type: string, format: uuid } }
+        - { name: digest, in: query, required: true, schema: { type: string, pattern: '^[0-9a-f]{64}$' } }
+        - { name: decodedDigest, in: query, required: true, schema: { type: string, pattern: '^[0-9a-f]{64}$' } }
+        - { name: decodedByteSize, in: query, required: true, schema: { type: integer, minimum: 1, maximum: 41943040 } }
+      responses:
+        "200": { description: Committed immutable read-index metadata }
+        "403": { description: Only the publication owner may publish or recover an index acknowledgement }
+        "409": { description: Snapshot changed or a different index already committed }
+  /v1/session-read-indexes/{indexId}/content:
+    get:
+      operationId: downloadSessionReadIndex
+      responses:
+        "200": { description: Opaque compressed locator projection; current Channel authorization required }
+        "403": { description: No active reference accessible to this account }
   /v1/channels/{channelId}/skills:
     get:
       operationId: listSkillShares

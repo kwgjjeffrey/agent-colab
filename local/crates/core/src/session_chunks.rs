@@ -51,9 +51,9 @@ impl Chunk {
         let is_digest = |s: &str| s.len() == 64 && s.bytes().all(|b| b.is_ascii_hexdigit());
         if !matches!(self.codec.as_str(), "identity" | "zstd")
             || self.encoded_bytes == 0
-            || self.encoded_bytes > MAX_ENCODED_BYTES
+            || self.encoded_bytes > if self.codec == "identity" {256 * 1024 * 1024} else {MAX_ENCODED_BYTES}
             || self.decoded_bytes == 0
-            || self.decoded_bytes > MAX_DECODED_BYTES
+            || self.decoded_bytes > if self.codec == "identity" {256 * 1024 * 1024} else {MAX_DECODED_BYTES}
             || !is_digest(&self.encoded_digest)
             || !is_digest(&self.decoded_digest)
         {

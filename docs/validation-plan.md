@@ -1,5 +1,29 @@
 # 技术验证计划
 
+### 2026-10-09 Compressed Session read/write acceptance
+
+Core frame tests: 4 passed. Session API/index/receiver tests: 16 passed, two
+explicit native-data tests ignored in routine runs. Server routine tests: 14
+passed; isolated PostgreSQL shared-publication/index permission test and actual
+HTTP upload/download/index retry test both passed. Real R2 S3 port uploaded a
+20,972,009-byte independently compressed synthetic frame through multipart,
+read back exact bytes/SHA-256, removed staging and deleted only its owned object.
+No production storage configuration changed.
+
+Release-mode read-only native measurement froze 1,786,504,615 bytes. Initial
+1,752,630,485-byte locator build: 9,974 ms; incrementally extending that index:
+217 ms; recent five turns: 4 ms / 322,178 selected record bytes. Locator bundle
+3,334,183 bytes before compression. Frozen full projection comparison: exact
+structured equality, 1,072 ms. Single-host warm-I/O observations, not network
+latency or confidence intervals. No reconstructed transcript was persisted.
+
+Trace contract Run `20261009T141937Z-3f2d8095`: one selected case passed all six
+assertions, executing actual 4 Core frame, 16 Session and 4 streamed-upload tests.
+No provider performance budget claimed. Cross-channel E2E assertions were
+adapted from reading a full raw cache to Reader structured equality, and returned
+to trial pending candidate execution. Production deployment, installed GUI and
+native Windows acceptance remain pending.
+
 ### 2026-10-09 Rust codec comparison — verified, product migration pending
 
 `.trial/V-SESSION-CHUNKS-01/rust-codecs-full.json`: same frozen 1,752,630,485 bytes,

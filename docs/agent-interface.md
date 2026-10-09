@@ -1,5 +1,10 @@
 # Agent 脚手架与接口设计
 
+Session Reader 的命令、分页和结构化输出保持不变。Local Core 使用压缩块和
+snapshot 字节定位索引按需读取，Agent 不处理 Zstd、Blob key 或解压文件。
+内部 sync 的历史 rawPath 字段在新 Core 中指向 chunk manifest，不是完整
+JSONL；内容消费者必须使用 Reader。旧 identity 来源仍能读取。
+
 Shared Files/Session/Skill references remain Channel-scoped and stable. The same
 owned source can resolve to one asset through several different reference IDs;
 sharing and withdrawal still operate on the selected Channel reference. Explorer
