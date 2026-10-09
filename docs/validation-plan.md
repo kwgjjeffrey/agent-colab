@@ -1106,3 +1106,5 @@ Empty-search fix: 4 focused selector tests and canonical GUI build passed. Nativ
 - Public component versions: Core 0.1.103-dev, GUI 0.1.151-dev, Skill 0.1.58-dev; Electron Shell unchanged. Final public archives are built after the source commit; installation validation remains user-owned.
 
 - Enterprise build destinations are now required to resolve beneath `integration/.../artifacts`; canonical Kwai intermediates were moved into `integration/kuaishou/artifacts/build/canonical` and private input references updated. Public artifacts remain in root `dist`.
+
+- Final public Core/GUI/Skill archives generated and checked: Core TAR payload hashes match packaged files; both public ZIP integrity checks passed; public GUI archive contains its public version and no company domain/server/enterprise version. Kwai Skill 0.1.2-ks.1 prepared separately under ignored integration artifacts. Installation-entrypoint tests (2) passed. No channel promotion or user installation performed in this public-artifact validation step.
