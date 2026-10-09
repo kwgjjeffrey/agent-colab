@@ -224,10 +224,46 @@ def safe_extract_macos_app(archive: pathlib.Path, destination: pathlib.Path):
             if candidate.is_symlink() and not candidate.resolve().is_relative_to(destination):
                 raise RuntimeError(f"unsafe app archive link: {candidate}")
 
+def core_database_path():
+    """Updates preserve the service's database instead of silently starting a new replica."""
+    explicit = os.environ.get("COLAB_LOCAL_DATABASE_PATH")
+    if explicit:
+        return pathlib.Path(explicit)
+    default = ROOT / "data/colab.sqlite3"
+    if sys.platform != "darwin":
+        return default
+    plist = pathlib.Path.home() / "Library/LaunchAgents/online.agent-colab.core.plist"
+    try:
+        previous = plistlib.loads(plist.read_bytes()).get("EnvironmentVariables", {})
+        if previous.get("COLAB_APPLICATION_ROOT") == str(ROOT):
+            candidate = pathlib.Path(previous.get("COLAB_LOCAL_DATABASE_PATH", str(default)))
+            if candidate.exists() and candidate != default:
+                return candidate
+    except (OSError, ValueError, plistlib.InvalidFileException):
+        pass
+    # The original macOS app stored the account, replicas and device identity here.
+    # Recover that same database only for the ordinary public installation with an
+    # empty canonical database; never import accounts into enterprise/test roots.
+    public_root = pathlib.Path.home() / ".local/share/agent-colab"
+    if ROOT == public_root and ARTIFACT_CONFIG["deploymentMode"] == "public":
+        import sqlite3
+        def has_account(path):
+            if not path.exists():
+                return False
+            try:
+                with sqlite3.connect(path.as_uri() + "?mode=ro", uri=True) as db:
+                    return db.execute("select exists(select 1 from accounts)").fetchone()[0] != 0
+            except sqlite3.Error:
+                return False
+        legacy = pathlib.Path.home() / "Library/Application Support/online.agent-colab.Colab/colab.sqlite3"
+        if not has_account(default) and has_account(legacy):
+            return legacy
+    return default
+
 def core_environment(server_url: str, credentials: pathlib.Path):
     return {"COLAB_SERVER_URL": server_url, "COLAB_GUI_ROOT": str(ROOT/"current/ui"),
             "COLAB_GOOGLE_OAUTH_CREDENTIALS_FILE": str(credentials), "COLAB_DISCOVERY_FILE": str(DISCOVERY),
-            "COLAB_APPLICATION_ROOT": str(ROOT), "COLAB_LOCAL_DATABASE_PATH": str(ROOT/"data/colab.sqlite3"),
+            "COLAB_APPLICATION_ROOT": str(ROOT), "COLAB_LOCAL_DATABASE_PATH": str(core_database_path()),
             "COLAB_SETUP_PATH": str(ROOT/"current/skill/setup/colab-setup"), "COLAB_RELEASE_MANIFEST": DEFAULT_MANIFEST,
             "COLAB_EXTERNAL_AUTH_REQUIRED": "1" if ARTIFACT_CONFIG["deploymentMode"] == "enterprise" else "0"}
 
