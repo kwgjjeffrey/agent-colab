@@ -117,6 +117,7 @@ export function CatalogWorkspace({
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [selectedCatalog, setSelectedCatalog] = useState<CatalogItem>();
   const [error, setError] = useState<string>();
+  const [readError, setReadError] = useState<string>();
   const [working, setWorking] = useState(false);
   const [form, setForm] = useState<{
     parent?: string;
@@ -196,7 +197,8 @@ export function CatalogWorkspace({
     setExpanded({});
     setSelectedCatalog(undefined);
     setError(undefined);
-    void load().catch((reason) => setError(String(reason)));
+    setReadError(undefined);
+    void load().then(() => setReadError(undefined)).catch((reason) => setReadError(String(reason)));
   }, [channelId]);
   useEffect(() => {
     setFocusedTrail([]);
@@ -210,10 +212,10 @@ export function CatalogWorkspace({
         if (current?.kind === "catalog") setSelectedCatalog(current);
         for (const ancestor of path.slice(0, -1)) {
           setExpanded((value) => ({ ...value, [ancestor.id]: true }));
-          void load(ancestor.id).catch((reason) => setError(String(reason)));
+          void load(ancestor.id).catch((reason) => setReadError(String(reason)));
         }
       })
-      .catch((reason) => setError(String(reason)));
+      .catch((reason) => setReadError(String(reason)));
   }, [channelId, focus?.id, focus?.kind, trailRevision]);
   useEffect(() => {
     const listener = (event: Event) => {
@@ -232,7 +234,7 @@ export function CatalogWorkspace({
         ...Object.keys(expanded)
           .filter((id) => expanded[id])
           .map((id) => load(id)),
-      ]).catch((reason) => setError(String(reason)));
+      ]).then(() => setReadError(undefined)).catch((reason) => setReadError(String(reason)));
     };
     const timer = window.setInterval(refresh, 10000);
     window.addEventListener("colab:catalog-changed", refresh);
@@ -747,9 +749,9 @@ export function CatalogWorkspace({
                 </div>
               </div>
             )}
-            {error && (
+            {(error || readError) && (
               <p role="alert" className="px-6 py-2 text-sm text-destructive">
-                {error}
+                {error || readError}
               </p>
             )}
             {view === "catalog" ? (
