@@ -116,7 +116,8 @@ fi
 
 if $build_ui; then
   cd "$repo_root/desktop"
-  COLAB_DESKTOP_UI_VERSION="$ui_version" npx --yes pnpm@10.18.3 --dir ui build --outDir "$build_work/ui"
+  npx --yes pnpm@10.18.3 --dir ui exec tsc --noEmit --incremental false
+  COLAB_DESKTOP_UI_VERSION="$ui_version" npx --yes pnpm@10.18.3 --dir ui exec vite build --outDir "$build_work/ui"
   mkdir -p "$dist/desktop-ui/$ui_version"
   cp -R "$build_work/ui/." "$dist/desktop-ui/$ui_version/"
   cp -R "$repo_root/desktop/ui/tracing" "$dist/desktop-ui/$ui_version/"
