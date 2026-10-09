@@ -1,5 +1,29 @@
 export const USECASE={name:'Give to Agent opens before prompt preparation finishes',description:'Delay the real Canvas/Files preparation request without fabricating a response. Verify immediate dialog/loading, disabled handoff, retained user query, real prompt completion, and closing during preparation never reopens it. No clipboard, Agent launch or business mutation.'};
-export const META={id:'gui.prompt.loading',module:'gui/handoff',surface:'gui',priority:'critical',origin:'bug',status:'trial',effects:'read-only',cost:'normal',requires:['local-core'],affectedPaths:['desktop/ui/src/features/agent/AgentPromptDialog.tsx','desktop/ui/src/features/canvas/CanvasView.tsx','desktop/ui/src/features/files/FilesView.tsx'],suite:'business',testLevel:'end-to-end',locks:['read:client.primary','read:channel.shared']};
+export const META={
+  "id": "gui.prompt.loading",
+  "module": "gui/handoff",
+  "surface": "gui",
+  "priority": "critical",
+  "origin": "bug",
+  "status": "active",
+  "effects": "read-only",
+  "cost": "normal",
+  "requires": [
+    "local-core"
+  ],
+  "affectedPaths": [
+    "desktop/ui/src/features/agent/AgentPromptDialog.tsx",
+    "desktop/ui/src/features/canvas/CanvasView.tsx",
+    "desktop/ui/src/features/files/FilesView.tsx"
+  ],
+  "suite": "business",
+  "testLevel": "end-to-end",
+  "locks": [
+    "read:client.primary",
+    "read:channel.shared"
+  ],
+  "statusReason": "Reviewed Run 20261009T015000Z-cf188d5c: Canvas/Files real HTTP gate, visible loading before response, disabled delivery, retained query, exact request completion after close without reopen; no business writes."
+};
 export const REQUIREMENTS={channel:{permission:'read'}};
 import {core,resource} from '../../support/client.mjs';
 import {openTab} from '../../support/gui.mjs';
@@ -28,8 +52,10 @@ export async function run(ctx){
       gate=new Promise(resolve=>release=resolve);
       pending=ctx.page.waitForRequest(request=>kind==='canvas'?request.url().endsWith(`/v1/canvases/${item.id}/document`):request.url().endsWith('/v1/channels'));
       await ctx.page.getByRole('button',{name:'Give to Agent',exact:true}).click();await pending;
-      await dialog.getByText('Preparing Agent prompt…',{exact:true}).waitFor();await ctx.page.keyboard.press('Escape');release();
-      await ctx.page.waitForTimeout(2000);ctx.assert(kind+' late response does not reopen a closed dialog',await dialog.count(),0);
+      await dialog.getByText('Preparing Agent prompt…',{exact:true}).waitFor();await ctx.page.keyboard.press('Escape');
+      const late=ctx.page.waitForResponse(response=>kind==='canvas'?response.url().endsWith(`/v1/canvases/${item.id}/document`):response.url().endsWith('/v1/channels'));
+      release();await (await late).finished();
+      await ctx.page.waitForTimeout(500);ctx.assert(kind+' late response does not reopen a closed dialog',await dialog.count(),0);
     }finally{release();await ctx.page.unroute(pattern,handler);}
   }
 }

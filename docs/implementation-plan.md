@@ -1,5 +1,18 @@
 # Colab 实现计划
 
+### 2026-10-09 Immediate handoff Dialog — verified and released
+
+Canvas/Files open the shared Agent prompt Dialog before real HTTP preparation;
+shadcn Spinner, disabled delivery actions, inline retry and stale-result guards
+replace silent waiting. Session/Skill remain immediately available. User query
+survives completion. GUI 127 only; Core/Server/Skill/Shell unchanged. Production
+build and 112 GUI tests pass. Delayed real-request regression
+`20261009T015000Z-cf188d5c` passes Canvas and Files loading, query preservation
+and close-before-response behavior. Promotion 179 is publicly verified and
+normally installed through native Settings. The running App serves GUI 127;
+native Canvas acceptance observes loading first, then real commands and enabled
+delivery actions. Backend preparation latency remains outside this change.
+
 ### 2026-10-09 Primary Add entrance
 
 Add precedes Home in the Channel sidebar and uses the existing shadcn default

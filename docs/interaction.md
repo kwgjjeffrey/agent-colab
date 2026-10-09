@@ -263,6 +263,12 @@ Sessions 的 onboarding 仅用于空列表；已有任意 Session 时隐藏整�
 
 The Catalog workspace replaces type tabs with Add, Home, Message and mixed items.
 Add is a filled primary button above Home and opens the existing item/Quick Share menu.
+
+Give to Agent opens its Dialog immediately, before asynchronous prompt preparation.
+While preparing, the Dialog shows a spinner; users may enter their task, but
+copy/open/forward actions are disabled until the complete prompt is available.
+Preparation failures remain inside the Dialog with Retry. Closing or changing
+the selected Canvas invalidates late results so they cannot reopen the Dialog.
 Channel identity and the right-aligned member entrance live inside the left
 sidebar. Its default width is 350px, with a shadcn resize handle and persisted
 width. The name stays bold, truncates on one line and reveals its full text in a

@@ -1,5 +1,24 @@
 # 技术验证计划
 
+### 2026-10-09 Immediate handoff Dialog — verified and released
+
+Implementation `a71419c`; GUI 127 production type check/build and 112 GUI tests
+pass. Component tests cover loading, preserved query and retry; these do not
+prove backend behavior. Trace Run `20261009T015000Z-cf188d5c` passes
+`gui.prompt.loading`: holds the real Canvas document / Files channel request,
+asserts the Dialog and disabled delivery before releasing it, then continues
+the actual response and checks assembled commands and preserved user query.
+Closing before response completion does not reopen the Dialog. No fake response,
+clipboard write or Agent launch is used. The reviewed case is active.
+
+Promotion 179 publicly verifies GUI 127 (1,315,946 bytes; SHA-256
+`dfc0634cbd5dd80d30cfd787e1bce4f69cbd02075d86b562dbbf51941fdb4b33`).
+Core 99, Skill 55, Shell 23 and Server 0.1.2 are unchanged. Native Settings →
+Check updates → Update completed; active `/ui.json` reports `0.1.127-dev`.
+Native Canvas handoff visibly shows Preparing Agent prompt with disabled actions,
+then actual document commands with enabled copy/forward/open actions. Dialog
+closed after acceptance. This validates feedback ordering, not preparation latency.
+
 ### 2026-10-09 Primary Add entrance
 
 Six CatalogWorkspace tests pass, including DOM order Add → Home, `bg-primary`
