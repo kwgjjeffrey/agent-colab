@@ -27,7 +27,7 @@ export async function run(ctx){
  await openTab(ctx,'Home'); const hero=ctx.page.locator('.home-network-strip');await hero.waitFor();await hero.scrollIntoViewIfNeeded();
  ctx.assert('Three official cards',await hero.locator('figure').count(),3);
  ctx.assert('Official multiplier captions',await hero.locator('.network-multiplier').allTextContents(),['1×','2×','200×']);
- const gradient=await hero.evaluate(el=>getComputedStyle(el).backgroundImage);ctx.assert('Dark to light gradient',gradient.includes('linear-gradient')&&gradient.includes('rgb(16, 20, 17)'),true);
+ const gradient=await hero.evaluate(el=>getComputedStyle(el).backgroundImage);ctx.assert('Dark to light gradient',gradient.includes('linear-gradient')&&gradient.includes('rgb(48, 58, 51)'),true);
  await ctx.page.emulateMedia({reducedMotion:'no-preference'});
  const packet=hero.locator('[data-packet]').last();const sample=()=>packet.evaluate(el=>[el.getAttribute('cx'),el.getAttribute('cy'),el.getAttribute('style')].join('|'));
  const first=await sample();await ctx.page.waitForTimeout(75);ctx.assert('Particles animate',await sample()!==first,true);await ctx.screenshot('Official Home hero desktop');

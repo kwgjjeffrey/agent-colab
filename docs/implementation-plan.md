@@ -1147,3 +1147,8 @@ Home is banner → Recent activity → action guidance → scenario guidance. Em
 ### Official Home animation — 2026-10-09
 
 GUI 0.1.147-dev / promotion 0.1.199-dev reuses the official website network component with three material cards, 1×/2×/200× captions, glowing edges and packet animation. Scoped styles add a dark-to-theme background fade and container adaptation; reduced-motion and hidden-document pause remain. GUI-only build, targeted component test and R2 exact public verification passed (1322269 bytes; SHA-256 `289ee800705862c9cca3a6075e90dd5552c564b7c86ed025149e2962f95a0f3b`). Normal installation confirmed active ui.json 0.1.147-dev. Read-only E2E `channels.home.hero`, Run `20261009T064721Z-9ecf2890`, passed official captions/cards, gradient, moving particles, reduced-motion pause and narrow containment; desktop and narrow screenshots reviewed. No product fixtures modified. Trace ingestion diagnostics are retained; no performance budget is claimed.
+
+
+### Softer Home gradient — 2026-10-09
+
+GUI 0.1.148-dev / promotion 0.1.200-dev lightens the hero base to gray-green #303a33 and starts the fade at 38% of banner height with an intermediate theme mix at 68%. GUI build and immutable public readback passed (1322279 bytes; SHA-256 `deed0cb58f2941546dd6a612960e484c1dfd168e77c949da0ef3aededb0760a3`). Normal installation confirmed active ui.json 0.1.148-dev. Read-only E2E `channels.home.hero` Run `20261009T070009Z-33f24127` passed all seven assertions. Desktop/narrow screenshots reviewed; card contrast, particle movement and reduced-motion pause retained.
