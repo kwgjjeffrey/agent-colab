@@ -1,7 +1,7 @@
 import {isolated} from '../../../support/controls.mjs';
 import {resource,cli} from '../../../support/client.mjs';
 export const USECASE={name:'Home guidance and pre-choice Files configuration',description:'Read the real owned workspace, verify Home action order and shared Agent prompt targeting, execute its explorer read, and open Files configuration before any native chooser. No sharing mutation or Agent model execution.'};
-export const META={id:'channels.home.actions',module:'channels/home',surface:'gui',priority:'critical',origin:'requirement',status:'trial',effects:'read-only',cost:'normal',suite:'business',testLevel:'end-to-end',locks:['write:client.owner','write:browser.loopback-auth'],affectedPaths:['desktop/ui/src/features/onboarding','desktop/ui/src/features/files/FilesView.tsx','desktop/ui/src/main.tsx']};
+export const META={id:'channels.home.actions',module:'channels/home',surface:'gui',priority:'critical',origin:'requirement',status:'active',statusReason:'Reviewed packaged GUI 136 / Core 99 Round 20261009T035734Z-ed28dec9: seven vertical actions, precise Skill/Channel prompt, real explorer read and pre-choice Files Agent configuration passed. No Agent model run or sharing mutation is claimed.',effects:'read-only',cost:'normal',suite:'business',testLevel:'end-to-end',locks:['write:client.owner','write:browser.loopback-auth'],affectedPaths:['desktop/ui/src/features/onboarding','desktop/ui/src/features/files/FilesView.tsx','desktop/ui/src/main.tsx']};
 export const REQUIREMENTS={channel:{permission:'read'},parameters:{keys:['isolationConfirmed','isolatedCoreDiscoveryFile','isolatedClientBaseUrl','testUserId','testOrganizationId']}};
 export async function run(ctx){
   const target=await isolated(ctx),channel=resource(ctx,'channel');

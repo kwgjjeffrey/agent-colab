@@ -321,3 +321,8 @@ destination highlights before commit, and failures remain visible. Existing
 Move dialog remains the keyboard-accessible alternative. Catalog uses a gold
 folder; shared Files use a distinct blue synced-files symbol or native IDE file
 icon. Content file icons follow Material Icon Theme filename/extension mappings.
+# Home setup actions
+
+Home retains the collaboration illustration and Recent activity. Its guidance is a vertical list of left-aligned action buttons with purpose text on the right: primary Call my Agent, Share my Session, Share my Files, Share my Skills, Add a Canvas, Catalog, Quick Share. Call my Agent opens the shared handoff dialog immediately, locating the installed Skill and exact Channel; the user supplies their requirements. Existing use cases remain recoverable in a collapsible section.
+
+Files creation opens a configuration dialog before invoking the native chooser. Users can choose manually or Give to Agent without first supplying a path. Cancelling native selection keeps configuration available; a chosen source continues through the existing Core-backed scope inspection/review before sharing.

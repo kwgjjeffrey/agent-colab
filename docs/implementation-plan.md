@@ -1097,7 +1097,7 @@ Implemented global account display-name editing and Google linking for existing 
 - Implemented seven vertical action/explanation rows, with primary Call my Agent using the shared AgentPromptDialog and exact Channel identity / installed Skill path. Existing collaboration illustration, recoverable use cases and Recent activity are retained.
 - Home actions dispatch existing creation workflows; Quick Share reuses its existing direct-share control.
 - Files creation now opens a configuration Dialog before the native chooser, with Give to Agent available without a preselected source. Cancelling the chooser leaves configuration open; manual selection still uses Local Core inspection and sync-scope review.
-- TypeScript / production build and 123 GUI unit tests passed. Real GUI/Core read-only acceptance passed in Run 20261009T035505Z-9762f851, including execution of the displayed explorer Channel read. No Agent model execution or new sharing mutation is claimed. GUI 136 / promotion 188 packaging is in progress.
+- TypeScript / production build and 123 GUI unit tests passed. Real GUI/Core read-only acceptance passed in Run 20261009T035505Z-9762f851 and packaged GUI 136 Round 20261009T035734Z-ed28dec9, including execution of the displayed explorer Channel read. No Agent model execution or new sharing mutation is claimed. GUI 136 / promotion 188 published through canonical R2 verification; Core, Skill and Shell unchanged. Daily App activation remains user-triggered through Updates.
 
 Rollback checkpoint: `d752304`. In progress; not released or accepted yet.
 
