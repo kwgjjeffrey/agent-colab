@@ -115,8 +115,8 @@ export function SessionPreview({ id }: { id: string }) {
         className="flex flex-col gap-3 px-4 pb-4"
         scrollClassName="min-h-0 flex-1 overflow-y-auto"
       >
-        {sync?.contributor && <p role="status" className="text-sm text-muted-foreground">
-          {sync.state === "synced" ? "Synced" : sync.state === "failed" ? "Sync failed — local preview is still available. Background sync will retry." : "Syncing"}
+        {sync && sync.state !== "unknown" && <p role="status" className="text-sm text-muted-foreground">
+          {sync.state === "synced" ? "Synced" : sync.state === "failed" ? "Sync failed — local preview is still available. Background sync will retry." : sync.state === "downloading" ? "Downloading updates — showing cached preview" : "Syncing"}
           {sync.state !== "synced" && sync.totalBytes !== undefined && ` · ${((sync.uploadedBytes ?? 0) / 1048576).toFixed(1)} / ${(sync.totalBytes / 1048576).toFixed(1)} MiB uploaded`}
         </p>}
         {warnings.map((warning) => (

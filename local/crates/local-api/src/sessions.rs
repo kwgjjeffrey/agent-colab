@@ -143,7 +143,12 @@ pub(super) async fn session_sync_status(State(state): State<AppState>, AxumPath(
     let user = current_user_id(&state).await?;
     let store = state.inner.store.lock().await;
     let source: Option<(String,i64)> = store.query_row("select source_path,last_byte_offset from local_session_sources where share_id=?1 and user_id=?2",rusqlite::params![id,user],|row|Ok((row.get(0)?,row.get(1)?))).optional().map_err(LocalError::internal)?;
-    let Some((path, uploaded)) = source else { return Ok(Json(json!({"state":"unknown","contributor":false}))); };
+    let Some((path, uploaded)) = source else {
+        let raw: Option<String> = store.query_row("select value from local_settings where key=?1",[format!("session_sync:{user}:{id}")],|row|row.get(0)).optional().map_err(LocalError::internal)?;
+        let mut status: Value = raw.and_then(|raw|serde_json::from_str(&raw).ok()).unwrap_or(json!({"state":"unknown"}));
+        status["contributor"] = json!(false);
+        return Ok(Json(status));
+    };
     let total = fs::metadata(path).map(|file|file.len()).unwrap_or(uploaded.max(0) as u64);
     let raw: Option<String> = store.query_row("select value from local_settings where key=?1",[format!("session_sync:{user}:{id}")],|row|row.get(0)).optional().map_err(LocalError::internal)?;
     let mut status: Value = raw.and_then(|raw|serde_json::from_str(&raw).ok()).unwrap_or(json!({"state":"pending"}));
@@ -537,6 +542,13 @@ pub(super) async fn sync_session(
 colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.sessions.sync-session", async {
 
     sync_initial_source(&state, &share_id, None).await?;
+    let user = current_user_id(&state).await?;
+    let local: Option<String> = state.inner.store.lock().await.query_row(
+        "select source_path from local_session_sources where share_id=?1 and user_id=?2",
+        rusqlite::params![share_id,user],|row|row.get(0)).optional().map_err(LocalError::internal)?;
+    if let Some(path) = local.filter(|path|Path::new(path).is_file()) {
+        return Ok(Json(json!({"shareId":share_id,"rawPath":path,"syncState":"synced"})));
+    }
     let path = materialize(&state, &share_id).await?;
     Ok(Json(json!({"shareId":share_id,"rawPath":path})))
 
@@ -698,7 +710,8 @@ fn read_session_segment(reader: &mut impl BufRead) -> Result<Option<Vec<u8>>, Lo
 async fn materialize(state: &AppState, share_id: &str) -> Result<String, LocalError> {
 colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.sessions.materialize", async {
 
-    let token = access_token(state).await?;
+    let user = current_user_id(state).await?;
+    let token = access_token_for_user(state, &user).await?;
     let response = state
         .inner
         .http
@@ -718,7 +731,6 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
         .as_str()
         .ok_or_else(|| LocalError::internal("Session has no synchronized snapshot"))?
         .to_string();
-    let user = current_user_id(state).await?;
     let dir = state
         .inner
         .data_root
@@ -801,6 +813,38 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
 }).await
 }
 
+/// Validate access with metadata only. A cached recipient view never waits for replacement
+/// bytes; a background job repairs it. Explicit permission denials never fall back to cache.
+async fn cached_preview(state: &AppState, id: &str, user: &str) -> Result<Option<(String,String,&'static str)>,LocalError> {
+    let cached: Option<(String,String)> = state.inner.store.lock().await.query_row(
+        "select raw_path,snapshot_id from session_materializations where share_id=?1 and user_id=?2",
+        [id,user],|row|Ok((row.get(0)?,row.get(1)?))).optional().map_err(LocalError::internal)?;
+    let Some((path,snapshot)) = cached.filter(|(path,_)|Path::new(path).is_file()) else { return Ok(None); };
+    let token = access_token_for_user(state,user).await?;
+    let response = state.inner.http.get(format!("{}/v1/sessions/{id}/segments",state.inner.server_url))
+        .bearer_auth(token).timeout(std::time::Duration::from_secs(2)).send().await;
+    let fresh = match response {
+        Ok(response) if response.status().is_success() => {
+            let metadata: Value = response.json().await.map_err(LocalError::internal)?;
+            metadata["snapshot"]["id"].as_str() == Some(snapshot.as_str())
+        }
+        Ok(response) if !matches!(response.status(),StatusCode::BAD_GATEWAY|StatusCode::SERVICE_UNAVAILABLE|StatusCode::GATEWAY_TIMEOUT|StatusCode::REQUEST_TIMEOUT) => return Err(remote_error(response).await),
+        _ => false,
+    };
+    if !fresh {
+        let state = state.clone(); let id = id.to_owned(); let user = user.to_owned();
+        tokio::spawn(async move {
+            let lock = { let mut locks=state.inner.session_sync_locks.lock().await; Arc::clone(locks.entry(id.clone()).or_insert_with(||Arc::new(Mutex::new(())))) };
+            let Ok(_guard) = lock.try_lock() else { return; };
+            if current_user_id(&state).await.ok().as_deref() != Some(user.as_str()) { return; }
+            let _ = record_sync_state(&state,&id,"downloading",None).await;
+            let result = materialize(&state,&id).await;
+            let _ = record_sync_state(&state,&id,if result.is_ok(){"synced"}else{"failed"},result.err().as_ref().map(|error|error.message.as_str())).await;
+        });
+    }
+    Ok(Some((path,snapshot,if fresh {"current"} else {"stale"})))
+}
+
 pub(super) async fn read_session(
     State(state): State<AppState>,
     AxumPath(share_id): AxumPath<String>,
@@ -847,7 +891,9 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
         if !path.is_file() { return Err(LocalError::bad_request("Pinned Session preview expired; restart pagination")); }
         Some((path.to_string_lossy().into_owned(),snapshot))
     } else { None };
-    let (mut path, cache_state) = if let Some((path,_)) = &local_view { (path.clone(),"local") } else { match materialize(&state, &share_id).await {
+    let cached_view = if local_view.is_none() { cached_preview(&state, &share_id, &user).await? } else { None };
+    let pinned_view = local_view.clone().or_else(||cached_view.as_ref().map(|(path,snapshot,_)|(path.clone(),snapshot.clone())));
+    let (mut path, cache_state) = if let Some((path,_)) = &pinned_view { (path.clone(), if local_view.is_some() { "local" } else { cached_view.as_ref().unwrap().2 }) } else { match materialize(&state, &share_id).await {
         Ok(path) => (path, "current"),
         Err(error) if matches!(error.status, StatusCode::BAD_GATEWAY | StatusCode::SERVICE_UNAVAILABLE | StatusCode::GATEWAY_TIMEOUT) => {
             // Offline reads may reuse only this authenticated user's previously materialized
@@ -868,7 +914,7 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
                 |r| Ok((r.get(0)?, r.get(1)?)),
             )
             .ok();
-        let snapshot: String = if let Some((_,snapshot)) = &local_view { snapshot.clone() } else { store
+        let snapshot: String = if let Some((_,snapshot)) = &pinned_view { snapshot.clone() } else { store
             .query_row(
                 "select snapshot_id from session_materializations where share_id=?1 and user_id=?2",
                 [&share_id, &user],
