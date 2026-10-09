@@ -220,12 +220,11 @@ export function CatalogWorkspace({
       const detail = (
         event as CustomEvent<{ kind: "catalog" | "canvas"; parentId?: string }>
       ).detail;
-      setName("");
-      setForm({ kind: detail.kind, parent: detail.parentId });
+      add(detail.kind, detail.parentId);
     };
     window.addEventListener("colab:catalog-add", listener);
     return () => window.removeEventListener("colab:catalog-add", listener);
-  }, [channelId]);
+  }, [channelId, working, onSelect]);
   useEffect(() => {
     const refresh = () => {
       void Promise.all([
