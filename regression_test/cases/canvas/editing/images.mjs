@@ -13,7 +13,7 @@ export async function run(ctx){disposable(ctx);const doc=await createDocument(ct
  await ctx.page.route('**/v1/canvases/'+doc.id+'/images',route=>route.fulfill({status:503,body:'Temporary upload failure'}));
  await ctx.page.locator('input[type=file][accept*="image/png"]').setInputFiles({name:'canvas-regression.png',mimeType:'image/png',buffer:png});
  await ctx.page.getByRole('button',{name:'Retry',exact:true}).waitFor();
- ctx.assert('Failed uploads never insert a broken image',await editor.locator('img').count(),0);
+ ctx.assert('Failed uploads never insert a broken image',await editor.locator('img[data-canvas-image]').count(),0);
  await ctx.page.unroute('**/v1/canvases/'+doc.id+'/images');await ctx.page.getByRole('button',{name:'Retry',exact:true}).click();
  const image=editor.locator('img[data-canvas-image]').first();await image.waitFor({timeout:30000});
  await eventually(ctx,'Uploaded image loads',()=>image.evaluate(el=>el.complete&&el.naturalWidth>0),Boolean); 

@@ -1174,3 +1174,9 @@ Empty-search fix: 4 focused selector tests and canonical GUI build passed. Nativ
 - Production R2 readback verified all three test images against exact stored byte counts and SHA-256; all remained available after Canvas archive, consistent with delayed retention. Initial 2,929,365-byte PNG Put/Get/Head trial also passed and its owned trial object was removed.
 - Codec checks: 13 passing cases, including image identity/geometry across text patch and Yjs replay. Real Tiptap replica attachment discovery passed; GUI type/build and Server/Core compile checks passed.
 - Acceptance is macOS public deployment only. Kuaishou Blob infrastructure is being prepared separately; no enterprise Blob or Windows image acceptance is claimed.
+
+### Canvas image placeholder acceptance (2026-10-09)
+
+- GUI type/build passed. Canonical desktop-ui-only build and R2 publisher verified GUI 0.1.155-dev (SHA-256 e73cec775f69a82a29578ff8bd01b53f671a792c91f2c269162a1a9e33fbd31d); public promotion 0.1.209-dev installed and actual GUI /ui.json verified. Core remains 0.1.104-dev.
+- End-to-end canvas.editing.images passed all 28 assertions in Round 20261009T150103Z-27cddfc6 of Run 20261009T145918Z-dd6cb3c1. Paused upload verified a visible skeleton inside the editor immediately after paste, no pending durable image node, and removal after real upload. Existing retry, resize, reload, drop, Agent interpretation/download and text patch coverage passed; owned Canvas archived. Skeleton and final screenshots visually reviewed.
+- Initial failure retained: assertion counted ProseMirror's cursor separator image; repaired selector counts only img[data-canvas-image]. No product failure was hidden.

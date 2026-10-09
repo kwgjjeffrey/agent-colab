@@ -1234,3 +1234,7 @@ Person search state now depends on trimmed query: empty renders input guidance a
 
 ### Canvas images — public R2 first
 Public implementation released and accepted: bounded validated uploads to R2, distinct image Blob namespace, durable attachment metadata, Yrs reference reconciliation, 24-hour retention, GUI paste/drop/picker and native resizing, stable Markdown image handles and hidden Agent interpretation/download commands. Promotion 0.1.208-dev installs Core 0.1.104-dev, GUI 0.1.154-dev and Skill 0.1.62-dev; Server 0.1.9 is deployed. Electron Shell is unchanged. macOS installed acceptance passed. Kuaishou Blob infrastructure is owned by another agent; integration will consume that service when ready.
+
+### Canvas image paste feedback (2026-10-09)
+
+Implemented immediate inline skeleton blocks at pending image insertion positions. ProseMirror decorations track edits locally; unfinished uploads do not enter Yrs or durable Markdown. Success replaces the skeleton with the stored image; failure retains feedback and existing Retry/Dismiss controls. Public promotion 0.1.209-dev releases only GUI 0.1.155-dev; installed acceptance passed.
