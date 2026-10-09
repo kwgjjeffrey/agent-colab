@@ -492,22 +492,11 @@ export function CatalogWorkspace({
                 {heading}
               </div>
             )}
-            <Button
-              variant={view === "home" ? "secondary" : "ghost"}
-              className="justify-start"
-              onClick={() => {
-                setSelectedCatalog(undefined);
-                onSelect("add");
-              }}
-            >
-              <HouseIcon data-icon="inline-start" />
-              Home
-            </Button>
             <DropdownMenu>
               <DropdownMenuTrigger
-                render={<Button variant="ghost" className="justify-start" />}
+                render={<Button variant="default" className="justify-start" />}
               >
-                <PlusIcon />
+                <PlusIcon data-icon="inline-start" />
                 Add
               </DropdownMenuTrigger>
               <DropdownMenuContent keepMounted align="start" className="w-52">
@@ -523,6 +512,17 @@ export function CatalogWorkspace({
                 {quickShare}
               </DropdownMenuContent>
             </DropdownMenu>
+            <Button
+              variant={view === "home" ? "secondary" : "ghost"}
+              className="justify-start"
+              onClick={() => {
+                setSelectedCatalog(undefined);
+                onSelect("add");
+              }}
+            >
+              <HouseIcon data-icon="inline-start" />
+              Home
+            </Button>
             <Button
               variant={view === "messages" ? "secondary" : "ghost"}
               className="justify-start"

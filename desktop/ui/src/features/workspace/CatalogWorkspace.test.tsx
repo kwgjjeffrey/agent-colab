@@ -16,6 +16,16 @@ vi.mock("@/api/request-activity", () => ({
 }));
 
 describe("Catalog workspace", () => {
+  it("places primary Add above Home and retains its item menu", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("[]", {status:200})));
+    render(<CatalogWorkspace channelId="channel" channelName="Team" view="home" onSelect={vi.fn()} onAdd={vi.fn()}>Home</CatalogWorkspace>);
+    const add=screen.getByRole("button",{name:"Add",exact:true});
+    const home=screen.getByRole("button",{name:"Home",exact:true});
+    expect(add.classList.contains("bg-primary")).toBe(true);
+    expect(add.compareDocumentPosition(home) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    fireEvent.click(add);
+    expect(await screen.findByRole("menuitem",{name:"Catalog",exact:true})).toBeTruthy();
+  });
   it("renames native Canvas through the existing name contract and cancels Escape without saving", async () => {
     const doc={id:"doc",kind:"canvas",name:"Plan",parentId:null,updatedAt:"today"};
     const fetcher=vi.fn(async (_path:string,init?:RequestInit)=>new Response(JSON.stringify(init?.method==="PATCH"?doc:[doc]),{status:200}));
