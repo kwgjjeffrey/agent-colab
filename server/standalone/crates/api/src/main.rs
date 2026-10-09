@@ -31,6 +31,8 @@ mod account_profile;
 mod context_prompt;
 mod transfers;
 mod device_auth;
+mod external_auth;
+mod directory;
 mod activity;
 mod invite_links;
 
@@ -39,6 +41,7 @@ struct AppState {
     database: Database,
     http: reqwest::Client,
     google_client_id: String,
+    external_auth: Option<external_auth::Config>,
     blob_root: PathBuf,
     message_events: tokio::sync::broadcast::Sender<messaging::MessageInvalidation>,
     agent_status_events: tokio::sync::broadcast::Sender<messaging::AgentRequestInvalidation>,
@@ -109,10 +112,12 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
     let _ = dotenvy::from_filename(".env.local");
     let _telemetry = colab_observability::init("colab-server", option_env!("COLAB_SERVER_VERSION").unwrap_or("development"));
     let config = Config::from_env()?;
+    let external_auth = external_auth::Config::load()?;
     let google =
         colab_server_auth::GoogleDesktopCredentials::load(&config.google_oauth_credentials_file)?;
     println!("google OAuth client loaded: {}", google.client_id);
-    let database = Database::connect(&config.database_url, config.database_max_connections).await?;
+    let database = Database::connect(&config.database_url, config.database_max_connections).await?
+        .with_external_policy(external_auth.as_ref().and_then(|c| c.policy.clone()));
     tokio::fs::create_dir_all(&config.blob_root)
         .await
         .context("create blob root")?;
@@ -156,6 +161,7 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
             database,
             http: reqwest::Client::new(),
             google_client_id: google.client_id,
+            external_auth,
             blob_root: config.blob_root,
             message_events,
             agent_status_events,
@@ -179,6 +185,8 @@ fn router(state: AppState) -> Router {
         .route("/v1/observability/traces", axum::routing::post(observability::traces).layer(axum::extract::DefaultBodyLimit::max(1024*1024)))
         .route("/health/ready", get(ready))
         .route("/v1/status", get(status))
+        .route("/v1/auth/external/config", get(external_auth::config))
+        .route("/v1/auth/external/session", post(external_auth::session).layer(DefaultBodyLimit::max(8192)))
         .route("/v1/auth/google/session", post(create_google_session))
         .route("/v1/auth/profile", get(account_profile::get).patch(account_profile::update))
         .route("/v1/auth/device/challenge", post(device_auth::challenge))
@@ -321,6 +329,7 @@ async fn create_google_session(
 ) -> Result<Json<colab_server_persistence::CreatedSession>, ApiError> {
 colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.main.create-google-session", async {
 
+    if state.external_auth.as_ref().is_some_and(|c| c.policy.is_some()) { return Err(ApiError::forbidden("external_login_required")); }
     let identity = colab_server_auth::verify_google_id_token(
         &state.http,
         &request.id_token,
@@ -409,7 +418,8 @@ struct UpdateChannelRequest {
 }
 #[derive(Deserialize)]
 struct AddMemberRequest {
-    email: String,
+    email: Option<String>,
+    identity: Option<directory::Identity>,
     role: String,
 }
 #[derive(Deserialize)]
@@ -596,12 +606,17 @@ async fn add_member(
 colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.main.add-member", async {
 
     let user = authenticated_user(&state, &headers).await?;
-    if !matches!(request.role.as_str(), "admin" | "member") || !request.email.contains('@') {
+    if !matches!(request.role.as_str(), "admin" | "member") {
         return Err(ApiError::bad_request("invalid_member"));
     }
+    if state.database.profile_managed() {
+        return directory::add(&state,user,channel_id,&request).await;
+    }
+    if request.identity.is_some() { return Err(ApiError::bad_request("unsupported_person_identity")); }
+    let email=request.email.as_deref().filter(|s|s.contains('@')).ok_or_else(||ApiError::bad_request("invalid_member"))?;
     match state
         .database
-        .add_member(user, channel_id, &request.email, &request.role)
+        .add_member(user, channel_id, email, &request.role)
         .await
         .map_err(|error| {
             eprintln!("add member failed: {error:#}");
@@ -633,16 +648,19 @@ async fn search_people(
     headers: HeaderMap,
     Path(channel_id): Path<uuid::Uuid>,
     axum::extract::Query(query): axum::extract::Query<SearchPeopleQuery>,
-) -> Result<Json<Vec<colab_server_persistence::OrganizationPerson>>, ApiError> {
+) -> Result<Json<Vec<directory::Person>>, ApiError> {
 colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.main.search-people", async {
 
     let user = authenticated_user(&state, &headers).await?;
+    if state.database.profile_managed() {
+        return directory::search(&state,user,channel_id,query.q.as_deref().unwrap_or("")).await.map(Json);
+    }
     state
         .database
         .search_organization_people(user, channel_id, query.q.as_deref().unwrap_or(""))
         .await
         .map_err(|_| ApiError::internal("people_search_failed"))?
-        .map(Json)
+        .map(|rows|Json(rows.into_iter().map(directory::Person::from).collect()))
         .ok_or_else(|| ApiError::forbidden("channel_access_forbidden"))
 
 }).await

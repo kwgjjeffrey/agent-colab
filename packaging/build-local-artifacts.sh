@@ -19,7 +19,25 @@ skill_version=$(tr -d '[:space:]' < "$repo_root/skills/colab/VERSION")
 shell_version=$(tr -d '[:space:]' < "$repo_root/desktop/shell/VERSION")
 platform=$(uname -s | tr '[:upper:]' '[:lower:]')
 arch=$(uname -m)
-dist="$repo_root/dist"
+dist="${COLAB_ARTIFACT_DIST_DIR:-$repo_root/dist}"
+# A private deployment owns independent component versions and an isolated output directory.
+# The public build remains unchanged when no profile directory is provided.
+if [[ -n "${COLAB_COMPONENT_VERSIONS_DIR:-}" ]]; then
+  [[ -n "${COLAB_ARTIFACT_DIST_DIR:-}" ]] || { echo "private builds require COLAB_ARTIFACT_DIST_DIR" >&2; exit 2; }
+  [[ "$(python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "$dist")" != "$repo_root/dist" ]] || { echo "private builds cannot use public dist" >&2; exit 2; }
+  export VITE_COLAB_DEPLOYMENT_MODE=enterprise
+  core_version=$(tr -d '[:space:]' < "$COLAB_COMPONENT_VERSIONS_DIR/local-core")
+  ui_version=$(tr -d '[:space:]' < "$COLAB_COMPONENT_VERSIONS_DIR/desktop-ui")
+  skill_version=$(tr -d '[:space:]' < "$COLAB_COMPONENT_VERSIONS_DIR/colab-skill")
+  shell_version=$(tr -d '[:space:]' < "$COLAB_COMPONENT_VERSIONS_DIR/electron-shell")
+else
+  export VITE_COLAB_DEPLOYMENT_MODE=public
+fi
+mkdir -p "$dist"
+dist=$(cd "$dist" && pwd)
+build_work=$(mktemp -d "$dist/.build-XXXXXXXX")
+trap 'rm -rf "$build_work"' EXIT
+export CARGO_TARGET_DIR="$dist/.cargo-target"
 
 build_core=false
 build_ui=false
@@ -51,17 +69,26 @@ else
   done
 fi
 
+# Never rebuild an existing independent version in place.
+for entry in "local-core:$build_core:$core_version" "desktop-ui:$build_ui:$ui_version" "colab-skill:$build_skill:$skill_version" "electron-shell:$build_shell:$shell_version"; do
+  IFS=: read -r component enabled version <<< "$entry"
+  if [[ "$enabled" == true && -e "$dist/$component/$version" ]]; then
+    echo "artifact version already exists: $component/$version; advance its owning version" >&2
+    exit 2
+  fi
+done
+
 # Each archive is independently installable and versioned. The optional
 # Electron launcher is built separately and is not required by Core, GUI, or Skill.
 if $build_core; then
   # esbuild uses its pinned platform package; no dependency lifecycle scripts are needed.
   CI=true npx --yes pnpm@10.18.3 --dir "$repo_root/local/canvas-codec" install --frozen-lockfile --ignore-scripts
-  npx --yes pnpm@10.18.3 --dir "$repo_root/local/canvas-codec" build
-  cargo build --locked --release --manifest-path "$repo_root/local/Cargo.toml" -p colabd
+  npx --yes pnpm@10.18.3 --dir "$repo_root/local/canvas-codec" exec esbuild "$repo_root/local/canvas-codec/cli.mjs" --bundle --platform=node --format=cjs --outfile="$build_work/codec.cjs"
+  COLAB_LOCAL_CORE_VERSION="$core_version" cargo build --locked --release --manifest-path "$repo_root/local/Cargo.toml" -p colabd
   mkdir -p "$dist/local-core/$core_version/$platform-$arch"
-  cp "$repo_root/local/target/release/colabd" "$dist/local-core/$core_version/$platform-$arch/colabd"
+  cp "$CARGO_TARGET_DIR/release/colabd" "$dist/local-core/$core_version/$platform-$arch/colabd"
   mkdir -p "$dist/local-core/$core_version/$platform-$arch/canvas-codec"
-  cp "$repo_root/local/canvas-codec/dist/codec.cjs" "$dist/local-core/$core_version/$platform-$arch/canvas-codec/codec.cjs"
+  cp "$build_work/codec.cjs" "$dist/local-core/$core_version/$platform-$arch/canvas-codec/codec.cjs"
   node_runtime=$(command -v node)
   cp "$node_runtime" "$dist/local-core/$core_version/$platform-$arch/canvas-codec/node"
   if [[ -n "${COLAB_DESKTOP_GOOGLE_OAUTH_CREDENTIALS_FILE:-}" ]]; then
@@ -76,9 +103,9 @@ fi
 
 if $build_ui; then
   cd "$repo_root/desktop"
-  npx --yes pnpm@10.18.3 --dir ui build
+  COLAB_DESKTOP_UI_VERSION="$ui_version" npx --yes pnpm@10.18.3 --dir ui build --outDir "$build_work/ui"
   mkdir -p "$dist/desktop-ui/$ui_version"
-  cp -R "$repo_root/desktop/ui/dist/." "$dist/desktop-ui/$ui_version/"
+  cp -R "$build_work/ui/." "$dist/desktop-ui/$ui_version/"
   cp -R "$repo_root/desktop/ui/tracing" "$dist/desktop-ui/$ui_version/"
   printf '{"package":"colab-desktop-ui","version":"%s","hostProtocol":1,"localApi":">=0.1.0 <0.2.0"}\n' "$ui_version" > "$dist/desktop-ui/$ui_version/ui.json"
   rm -f "$dist/desktop-ui/$ui_version.zip"
@@ -107,15 +134,15 @@ fi
 if $build_shell; then
   # ZIP remains the machine-consumed launcher/update artifact. DMG is the
   # human-facing macOS evaluation installer mirrored by GitHub Releases.
-  npx --yes pnpm@10.18.3 --dir "$repo_root/desktop/shell" exec electron-builder --mac dir --arm64
-  codesign --force --deep --sign - "$repo_root/desktop/shell/dist/mac-arm64/Colab.app"
-  codesign --verify --deep --strict "$repo_root/desktop/shell/dist/mac-arm64/Colab.app"
+  npx --yes pnpm@10.18.3 --dir "$repo_root/desktop/shell" exec electron-builder --mac dir --arm64 --config.directories.output="$build_work/shell"
+  codesign --force --deep --sign - "$build_work/shell/mac-arm64/Colab.app"
+  codesign --verify --deep --strict "$build_work/shell/mac-arm64/Colab.app"
   # Package only after signing; otherwise the DMG would contain the unsigned
   # pre-signing App even though the adjacent build directory verifies.
-  npx --yes pnpm@10.18.3 --dir "$repo_root/desktop/shell" exec electron-builder --prepackaged "$repo_root/desktop/shell/dist/mac-arm64/Colab.app" --mac dmg --arm64
+  npx --yes pnpm@10.18.3 --dir "$repo_root/desktop/shell" exec electron-builder --prepackaged "$build_work/shell/mac-arm64/Colab.app" --mac dmg --arm64 --config.directories.output="$build_work/shell"
   mkdir -p "$dist/electron-shell/$shell_version"
-  ditto -c -k --sequesterRsrc --keepParent "$repo_root/desktop/shell/dist/mac-arm64/Colab.app" "$dist/electron-shell/$shell_version/Colab-$shell_version-arm64.zip"
-  cp "$repo_root/desktop/shell/dist/Colab-$shell_version-arm64.dmg" "$dist/electron-shell/$shell_version/"
+  ditto -c -k --sequesterRsrc --keepParent "$build_work/shell/mac-arm64/Colab.app" "$dist/electron-shell/$shell_version/Colab-$shell_version-arm64.zip"
+  cp "$build_work/shell/Colab-$shell_version-arm64.dmg" "$dist/electron-shell/$shell_version/"
 fi
 
 artifacts=()

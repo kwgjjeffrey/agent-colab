@@ -172,7 +172,7 @@ async fn main() -> anyhow::Result<()> {
     if let Some(parent) = discovery_path.parent() {
         let _ = dotenvy::from_path(parent.join("config/observability.env"));
     }
-    let _telemetry = colab_observability::init_local("colab-local-core", include_str!("../../../VERSION").trim(), format!("{endpoint}/v1/observability/traces"), bearer.clone());
+    let _telemetry = colab_observability::init_local("colab-local-core", option_env!("COLAB_LOCAL_CORE_VERSION").unwrap_or(include_str!("../../../VERSION").trim()), format!("{endpoint}/v1/observability/traces"), bearer.clone());
     let clock_endpoint = format!("{server_url}/v1/observability/clock");
     if std::env::var("COLAB_TRACING_ENABLED").is_ok_and(|v|v=="1") {
         tokio::spawn(async move {

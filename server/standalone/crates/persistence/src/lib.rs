@@ -26,6 +26,10 @@ mod assets;
 pub use assets::{RegisterAsset,AssetBinding};
 pub use catalog::CatalogItem;
 mod account_profile;
+mod external_policy;
+mod identity_session;
+mod directory;
+pub use external_policy::ExternalPolicy;
 pub use account_profile::AccountProfile;
 mod activity;
 pub use activity::{ChannelActivity, invalid_activity_cursor};
@@ -232,6 +236,7 @@ pub enum AddChannelMember {
 #[derive(Clone)]
 pub struct Database {
     pool: PgPool,
+    external_policy: Option<ExternalPolicy>,
 }
 
 impl Database {
@@ -247,7 +252,7 @@ impl Database {
             .await
             .context("run PostgreSQL migrations")?;
 
-        Ok(Self { pool })
+        Ok(Self { pool, external_policy: None })
     }
 
     pub async fn is_ready(&self) -> bool {
@@ -255,100 +260,6 @@ impl Database {
             .fetch_one(&self.pool)
             .await
             .is_ok()
-    }
-
-    pub async fn create_google_session(
-        &self,
-        subject: &str,
-        email: &str,
-        display_name: Option<&str>,
-        avatar_url: Option<&str>,
-        link_user_id: Option<Uuid>,
-    ) -> anyhow::Result<CreatedSession> {
-        let mut tx = self.pool.begin().await.context("begin auth transaction")?;
-        // Serialize callbacks for one provider identity before checking whether it exists.
-        sqlx::query("select pg_advisory_xact_lock(hashtextextended($1,1))")
-            .bind(subject).execute(&mut *tx).await?;
-        let existing = sqlx::query_as::<_, (Uuid, String, Option<String>, Option<String>)>(
-            "select u.id, u.email, u.display_name, u.avatar_url from auth_identities i join users u on u.id = i.user_id where i.provider = 'google' and i.subject = $1"
-        )
-        .bind(subject)
-        .fetch_optional(&mut *tx)
-        .await
-        .context("find Google identity")?;
-
-        let user = if let Some((id, _, _, _)) = existing {
-            sqlx::query("update users set email = $2, display_name = case when display_name_customized then display_name else $3 end, avatar_url = case when avatar_customized then avatar_url else $4 end, updated_at = now() where id = $1")
-                .bind(id).bind(email).bind(display_name).bind(avatar_url)
-                .execute(&mut *tx).await.context("update user profile")?;
-            AuthenticatedUser {
-                id,
-                email: email.to_owned(),
-                display_name: sqlx::query_scalar("select display_name from users where id=$1").bind(id).fetch_one(&mut *tx).await?,
-                avatar_url: sqlx::query_scalar("select avatar_url from users where id=$1").bind(id).fetch_one(&mut *tx).await?,
-            }
-        } else {
-            let linkable = if let Some(id) = link_user_id {
-                let account = sqlx::query_scalar::<_, Uuid>("select id from users where id=$1 for update")
-                    .bind(id).fetch_optional(&mut *tx).await?;
-                let has_identity: bool = sqlx::query_scalar("select exists(select 1 from auth_identities where user_id=$1)")
-                    .bind(id).fetch_one(&mut *tx).await?;
-                account.filter(|_| !has_identity)
-            } else { None };
-            let id = linkable.unwrap_or_else(Uuid::new_v4);
-            if linkable.is_some() {
-                sqlx::query("update users set email=$2,display_name=case when display_name_customized then display_name else $3 end,avatar_url=case when avatar_customized then avatar_url else $4 end,updated_at=now() where id=$1")
-                    .bind(id).bind(email).bind(display_name).bind(avatar_url).execute(&mut *tx).await?;
-            } else { sqlx::query(
-                "insert into users (id, email, display_name, avatar_url) values ($1, $2, $3, $4)",
-            )
-            .bind(id)
-            .bind(email)
-            .bind(display_name)
-            .bind(avatar_url)
-            .execute(&mut *tx)
-            .await
-            .context("create user (email may already belong to another identity)")?;
-            }
-            sqlx::query("insert into auth_identities (provider, subject, user_id) values ('google', $1, $2)")
-                .bind(subject).bind(id).execute(&mut *tx).await.context("create Google identity")?;
-            AuthenticatedUser {
-                id,
-                email: email.to_owned(),
-                display_name: sqlx::query_scalar("select display_name from users where id=$1").bind(id).fetch_one(&mut *tx).await?,
-                avatar_url: sqlx::query_scalar("select avatar_url from users where id=$1").bind(id).fetch_one(&mut *tx).await?,
-            }
-        };
-
-        sqlx::query("insert into organizations(id,name,slug,created_by) values($1,$2,$3,$1) on conflict(id) do nothing")
-            .bind(user.id).bind(format!("{}'s team",display_name.unwrap_or(email))).bind(format!("personal-{}",user.id.simple())).execute(&mut *tx).await.context("ensure personal organization")?;
-        sqlx::query("insert into organization_members(id,organization_id,user_id,role) values($1,$2,$2,'owner') on conflict(organization_id,user_id) do nothing")
-            .bind(Uuid::new_v4()).bind(user.id).execute(&mut *tx).await.context("ensure organization owner")?;
-
-        let access_token = new_token("colab_at_");
-        let refresh_token = new_token("colab_rt_");
-        let access_hash = token_hash(&access_token);
-        let refresh_hash = token_hash(&refresh_token);
-        let session_id = Uuid::new_v4();
-        sqlx::query("insert into sessions (id, user_id, access_token_hash, refresh_token_hash, expires_at) values ($1, $2, $3, $4, now() + interval '30 days')")
-            .bind(session_id).bind(user.id).bind(access_hash).bind(&refresh_hash)
-            .execute(&mut *tx).await.context("create session")?;
-        sqlx::query(
-            "insert into session_refresh_tokens(token_hash,session_id,generation) values($1,$2,0)",
-        )
-        .bind(refresh_hash)
-        .bind(session_id)
-        .execute(&mut *tx)
-        .await
-        .context("record initial refresh token")?;
-        tx.commit().await.context("commit auth transaction")?;
-        Ok(CreatedSession {
-            access_token,
-            refresh_token,
-            expires_in: 2_592_000,
-            expires_at: unix_time_after(2_592_000),
-            user,
-        })
     }
 
     /// Rotates both opaque credentials atomically. A consumed token is positive replay evidence,
@@ -395,6 +306,7 @@ impl Database {
             .fetch_one(&mut *tx)
             .await
             .context("load session user")?;
+        if !self.external_login_allowed(user_id).await? { return Err(RefreshSessionError::Invalid); }
         let access_token = new_token("colab_at_");
         let next_refresh_token = new_token("colab_rt_");
         let access_hash = token_hash(&access_token);
@@ -431,8 +343,9 @@ impl Database {
     }
 
     pub async fn authenticate(&self, access_token: &str) -> anyhow::Result<Option<Uuid>> {
-        sqlx::query_scalar("select user_id from sessions where access_token_hash = $1 and revoked_at is null and expires_at > now()")
-            .bind(token_hash(access_token)).fetch_optional(&self.pool).await.context("authenticate session")
+        let user = self.authenticate_for_identity_link(access_token).await?;
+        if let Some(user) = user { if !self.external_login_allowed(user).await? { return Ok(None); } }
+        Ok(user)
     }
 
     pub async fn revoke_session(&self, access_token: &str) -> anyhow::Result<bool> {
@@ -442,8 +355,8 @@ impl Database {
     }
 
     pub async fn list_organizations(&self, user_id: Uuid) -> anyhow::Result<Vec<Organization>> {
-        sqlx::query_as::<_, Organization>("select o.id,om.id member_id,o.name,om.role,o.created_at::text created_at from organizations o join organization_members om on om.organization_id=o.id where om.user_id=$1 order by o.created_at")
-            .bind(user_id).fetch_all(&self.pool).await.context("list organizations")
+        sqlx::query_as::<_, Organization>("select o.id,om.id member_id,o.name,om.role,o.created_at::text created_at from organizations o join organization_members om on om.organization_id=o.id where om.user_id=$1 and ($2::uuid is null or o.id=$2) order by o.created_at")
+            .bind(user_id).bind(self.external_policy.as_ref().map(|p| p.organization_id)).fetch_all(&self.pool).await.context("list organizations")
     }
 
     pub async fn create_organization(
@@ -451,6 +364,7 @@ impl Database {
         user_id: Uuid,
         name: &str,
     ) -> anyhow::Result<Organization> {
+        anyhow::ensure!(self.external_policy.is_none(), "organization is deployment-owned");
         let mut tx = self.pool.begin().await?;
         let id = Uuid::new_v4();
         let member_id = Uuid::new_v4();

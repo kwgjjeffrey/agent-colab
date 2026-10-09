@@ -16,6 +16,25 @@ def load_browser():
     return module
 
 
+class MemberIdentityTest(unittest.TestCase):
+    def test_public_invitation_uses_email_without_directory_search(self):
+        browser = load_browser()
+        browser.request = lambda *args, **kwargs: {"profileManaged": False}
+        self.assertEqual(browser.member_request("core", "channel", "new@example.com", "member"),
+                         {"email": "new@example.com", "role": "member"})
+
+    def test_enterprise_requires_exact_verified_person(self):
+        browser = load_browser()
+        identity = {"provider": "enterprise", "subject": "employee-123"}
+        browser.request = lambda method, path, **kwargs: ({"profileManaged": True}
+            if path == "/v1/auth/profile" else [{"username": "alice", "email": "alice@example.com", "identity": identity}])
+        body = browser.member_request("core", "channel", "alice", "member")
+        self.assertEqual(body["identity"], identity)
+        self.assertEqual(body["email"], "alice@example.com")
+        with self.assertRaises(ValueError):
+            browser.member_request("core", "channel", "ali", "member")
+
+
 class ReadableResolutionTest(unittest.TestCase):
     def setUp(self):
         self.browser = load_browser()

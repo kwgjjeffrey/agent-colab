@@ -44,3 +44,19 @@ it("keeps Google linking available after reminder dismissal and exposes failure"
   fireEvent.click(screen.getByRole("button", { name: "Save name" }));
   await waitFor(() => expect(screen.getByRole("alert").textContent).toContain("Could not save"));
 });
+it("enterprise profiles are read only and omit public identity linking", () => {
+  render(<AccountProfile profile={device} publicAuth={false} onSaved={vi.fn()} onLinkGoogle={vi.fn()} linking={false} onDismissGoogle={vi.fn()} googleDismissed={false} />);
+  expect(screen.queryByRole("button", { name: "Save name" })).toBeNull();
+  expect(screen.queryByLabelText("Upload avatar")).toBeNull();
+  expect(screen.queryByText("Google account")).toBeNull();
+  expect(screen.queryByRole("button", { name: "Link Google account" })).toBeNull();
+  expect(needsAccountSetup(device, false, false)).toBe(false);
+  expect(needsAccountSetup(device, false)).toBe(true);
+});
+
+it("honors server-managed profiles even in a public client", () => {
+  render(<AccountProfile profile={{...device, profileManaged: true}} onSaved={vi.fn()} onLinkGoogle={vi.fn()} linking={false} onDismissGoogle={vi.fn()} googleDismissed={false} />);
+  expect(screen.queryByRole("textbox")).toBeNull();
+  expect(screen.queryByRole("button")).toBeNull();
+  expect(needsAccountSetup({...device, profileManaged: true}, false)).toBe(false);
+});

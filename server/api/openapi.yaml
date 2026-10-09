@@ -3,6 +3,43 @@ info:
   title: Colab Server API
   version: 0.1.0
 paths:
+  /v1/auth/external/config:
+    get:
+      operationId: externalIdentityProvider
+      description: Optional deployment-configured browser authorization endpoint; never includes broker credentials.
+      responses:
+        '200':
+          description: External provider configuration
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [provider, displayName, authorizationUrl]
+                properties:
+                  provider: {type: string}
+                  displayName: {type: string}
+                  authorizationUrl: {type: string, format: uri}
+        '404': {description: External login is not configured}
+  /v1/auth/external/session:
+    post:
+      operationId: exchangeExternalLogin
+      description: Redeems a one-time PKCE-bound authorization code through the configured trusted broker. Optional existing Colab bearer plus explicit broker confirmation links an identity without changing the account UUID. Provider identity mapping and normal session issuance remain Server-owned.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code, codeVerifier, redirectUri]
+              properties:
+                code: {type: string, maxLength: 256}
+                codeVerifier: {type: string, minLength: 43, maxLength: 128}
+                redirectUri: {type: string, format: uri, maxLength: 256}
+      responses:
+        '200': {description: Standard Colab session and account identity}
+        '401': {description: Invalid grant, identity, or existing account proof}
+        '404': {description: External login is not configured}
+        '409': {description: Identity linking conflicts with an existing account}
   /v1/channels/{channelId}/catalog-items:
     get:
       operationId: listCatalogItems
@@ -47,7 +84,7 @@ paths:
       operationId: getAccountProfile
       description: Authenticated current account profile with authoritative Google linkage. No user ID supplied by caller.
       responses:
-        "200": { description: "id, email, displayName, avatarUrl, nameCustomized, googleLinked" }
+        "200": { description: "id, email, displayName, avatarUrl, nameCustomized, googleLinked, profileManaged (enterprise identity owns profile; PATCH returns 403)" }
     patch:
       operationId: updateAccountName
       requestBody:
@@ -89,6 +126,25 @@ paths:
       responses:
         "204": { description: Latest consumption time recorded }
         "403": { description: Share withdrawn, unsupported, or caller not a member }
+  /v1/channels/{channelId}/organization/people:
+    get:
+      description: Search authorized organization people. Optional enterprise directory returns verified identity, username, avatarUrl and department; public mode returns existing userId/email/profile.
+      parameters:
+        - { name: channelId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: q, in: query, schema: { type: string, maxLength: 128 } }
+      responses:
+        "200": { description: Array of people; identity is provider/subject, optional userId for a registered account }
+        "403": { description: Not a Channel member }
+  /v1/channels/{channelId}/members:
+    post:
+      description: Public mode accepts email/role. Enterprise mode requires identity (provider/subject) and role, revalidates active employee through the directory, and provisions a dormant account if needed. No login session is created. Duplicate selection preserves role.
+      parameters:
+        - { name: channelId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: Member joined }
+        "202": { description: Public email invitation queued }
+        "400": { description: Invalid person selection }
+        "403": { description: Not a Channel administrator }
   /health/live:
     get:
       operationId: getLiveness

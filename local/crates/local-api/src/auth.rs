@@ -141,6 +141,14 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
     }
     let session = state.inner.session.lock().await.clone();
     let error = state.inner.last_error.lock().await.clone();
+    let session = if external_auth::required() {
+        if let Some(session) = session {
+            let response = state.inner.http.get(format!("{}/v1/organizations", state.inner.server_url)).bearer_auth(&session.access_token).send().await.map_err(LocalError::internal)?;
+            if response.status() == StatusCode::UNAUTHORIZED { None }
+            else if !response.status().is_success() { return Err(remote_error(response).await); }
+            else { Some(session) }
+        } else { None }
+    } else { session };
     Ok(Json(AuthStatus {
         authenticated: session.is_some(),
         user: session.map(|value| value.user),

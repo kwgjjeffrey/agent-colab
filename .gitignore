@@ -36,6 +36,9 @@ Desktop.ini
 .idea/
 .vscode/
 
+# Private company integrations; publish only reverse-extracted examples.
+/integration/
+
 # Repository-local Agent tooling installed for development, not product source
 .agents/
 skills-lock.json

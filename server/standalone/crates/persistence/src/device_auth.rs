@@ -370,6 +370,7 @@ impl Database {
         let device_id = if let Some(id) = device {
             id
         } else {
+            if self.external_policy.is_some() { tx.commit().await?; return Ok(Vec::new()); }
             let device_id = Uuid::new_v4();
             let user_id = Uuid::new_v4();
             let member_id = Uuid::new_v4();
@@ -455,6 +456,7 @@ impl Database {
             .await?;
         let device_id: Option<Uuid> = sqlx::query_scalar("select ad.device_id from account_devices ad join login_devices d on d.id=ad.device_id where ad.user_id=$1 and d.public_key=$2 and ad.revoked_at is null for update of ad")
             .bind(user_id).bind(key).fetch_optional(&mut *tx).await?;
+        ensure!(self.external_login_allowed(user_id).await?, "external login required");
         let device_id = device_id.ok_or_else(|| anyhow::anyhow!("device not bound to account"))?;
         let (email, display_name, avatar_url) =
             sqlx::query_as::<_, (String, Option<String>, Option<String>)>(

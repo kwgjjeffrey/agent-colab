@@ -30,6 +30,7 @@ pub(super) async fn update(State(state): State<AppState>, headers: HeaderMap, Js
     if body.reset_avatar && body.avatar_url.is_some() { return Err(ApiError::bad_request("conflicting_avatar_update")); }
     if let Some(avatar) = &body.avatar_url { validate_avatar(avatar)?; }
     let user = authenticated_user(&state, &headers).await?;
+    if state.database.profile_managed() { return Err(ApiError::forbidden("profile_managed_by_identity_provider")); }
     let result = if let Some(name) = &body.display_name {
         state.database.set_account_name(user, name.trim()).await
     } else {

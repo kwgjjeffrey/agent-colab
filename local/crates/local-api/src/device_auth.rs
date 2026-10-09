@@ -101,6 +101,10 @@ pub(super) async fn bind_current(
 
 pub(super) async fn start(State(state): State<AppState>) -> Result<Json<StartResult>, LocalError> {
     let _guard = state.inner.account_switch_lock.lock().await;
+    if external_auth::required() {
+        // SSO creates/binds the account explicitly; never bootstrap an anonymous one here.
+        return Ok(Json(StartResult { accounts: Vec::new(), requires_selection: false }));
+    }
     // Existing installations must retain their account, not bootstrap a second one. The first
     // migration binds only accounts already authenticated on this installation.
     let migrated = {

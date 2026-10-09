@@ -24,6 +24,7 @@ mod tests {
     async fn one_publication_many_authorized_references() -> anyhow::Result<()> {
         let url = std::env::var("COLAB_ASSET_TEST_DATABASE_URL")?;
         let db = Database {
+            external_policy: None,
             pool: sqlx::postgres::PgPoolOptions::new()
                 .max_connections(8)
                 .connect(&url)

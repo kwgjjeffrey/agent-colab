@@ -1050,10 +1050,18 @@ Home is banner → Recent activity → action guidance → scenario guidance. Em
 
 GUI 0.1.147-dev / promotion 0.1.199-dev reuses the official website network component with three material cards, 1×/2×/200× captions, glowing edges and packet animation. Scoped styles add a dark-to-theme background fade and container adaptation; reduced-motion and hidden-document pause remain. GUI-only build, targeted component test and R2 exact public verification passed (1322269 bytes; SHA-256 `289ee800705862c9cca3a6075e90dd5552c564b7c86ed025149e2962f95a0f3b`). Normal installation confirmed active ui.json 0.1.147-dev. Read-only E2E `channels.home.hero`, Run `20261009T064721Z-9ecf2890`, passed official captions/cards, gradient, moving particles, reduced-motion pause and narrow containment; desktop and narrow screenshots reviewed. No product fixtures modified. Trace ingestion diagnostics are retained; no performance budget is claimed.
 
+### Private enterprise integration placement — 2026-10-09
+
+Repository-root `integration/` is Git-ignored. Enterprise component versions, distribution and Server deployment records remain independent from public release versions. Company-specific targets, scripts and evidence are retained only in the private directory; `integration.example` will be extracted after real implementation. Placement probes verified remote directories, isolated PostgreSQL 16 write/restart/read persistence and Blob file writes, a real GUI ZIP upload with curl Range/full size/SHA-256 readback, and an isolated fixed CDN path overwrite with unchanged URL. The database instance remains for subsequent deployment; its test schema was removed. Existing Linux Server binary transfer digest matched; native execution and bookworm runtime failed due to glibc, while a newer existing container runtime entered application configuration validation. This is not Server readiness, enterprise release, full installation/update, SSO or HTTP/WebSocket acceptance. Docker storage is full and needs capacity work before new builds/image pulls. No public channel or public component version changed.
+
 
 ### Softer Home gradient — 2026-10-09
 
 GUI 0.1.148-dev / promotion 0.1.200-dev lightens the hero base to gray-green #303a33 and starts the fade at 38% of banner height with an intermediate theme mix at 68%. GUI build and immutable public readback passed (1322279 bytes; SHA-256 `deed0cb58f2941546dd6a612960e484c1dfd168e77c949da0ef3aededb0760a3`). Normal installation confirmed active ui.json 0.1.148-dev. Read-only E2E `channels.home.hero` Run `20261009T070009Z-33f24127` passed all seven assertions. Desktop/narrow screenshots reviewed; card contrast, particle movement and reduced-motion pause retained.
+
+### Enterprise host capacity recovery — 2026-10-09
+
+After explicit user authorization, unused Docker build cache was pruned; reported reclaimed space was 90.58 GB and the host data disk returned to 83% used with 82.5 GiB available. Existing images, containers and business volumes were retained. The pre-existing database recovered from disk-full recovery failures and passed pg_isready/container-health checks. Read-only storage investigation identified retained cumulative Agent state checkpoints as the dominant payload. Private project-specific evidence remains under ignored integration/. No database data, application code, release version or public channel was changed.
 
 
 ### Home card alignment — 2026-10-09
@@ -1064,3 +1072,35 @@ Removed the official hero third-card lift at both desktop and narrow container s
 ### Home light surface — 2026-10-09
 
 Removed the dark hero background and gradient. Hero uses the workspace surface; pale green/purple/lime cards and adjusted text/network contrast retain animation and equal geometry. GUI 0.1.150-dev / promotion 0.1.202-dev built, publicly verified (1322404 bytes; SHA-256 `d73649c4bcb881514d78af64794cd1c942a28ceb9fb85b59bb9876912ef2d644`) and normally installed, active ui.json confirmed. Read-only E2E `channels.home.hero` Run `20261009T081239Z-86e8e483` passed nine assertions including absence of a background gradient, desktop/narrow alignment, movement and reduced motion. Narrow screenshot reviewed.
+
+## Enterprise SSO acceptance (2026-10-09)
+
+- PASS: real KSAP RS256 signature/JWKS and exact deployment host, system-browser employee confirmation, PKCE exchange, existing account UUID retained, Core-owned SQLite session persistence.
+- PASS: installed kwai-colab Skill workspace discovery before and after Core restart; one Kuaishou organization; existing workspace and Canvas visible.
+- PASS: native enterprise GUI omits Google linking/reminder, account switch and organization switch. Public/enterprise AccountProfile tests (5) and default public GUI build pass.
+- PASS: bridge negative tests (9), isolated PostgreSQL external identity/lease test, existing public Google profile preservation and device lifecycle tests. Expired enterprise lease blocks HTTP identity, refresh and device re-login; anonymous device creation and public Google login are denied by enterprise policy.
+- PASS: company domain anonymous request redirects to SSO; direct bridge without identity is 403; company browser identity verifies.
+- Evidence: ignored integration/kuaishou/evidence/sso-*. Public App/service hashes match earlier installation evidence; public receipt/discovery changed before enterprise candidate installation, so they are not claimed unchanged against that historical baseline.
+- Not accepted: API HTTPS, live offboarding, immediate closure of already-open sockets on lease expiry, corporate Developer ID signing/notarization, Windows/x64.
+
+Enterprise distribution verified: promotion 0.1.2-ks.1; Core 0.1.2-ks.1, GUI/Skill 0.1.1-ks.1, Shell 0.1.0-ks.1; Server 0.1.1-ks.1. Canonical --component local-core build used isolated enterprise versions/output. Unchanged immutable GUI/Skill/Shell reused exactly; signed CDN stable readback and installed update check pass. SSO account/Skill reads survive final Core update.
+
+### Managed-profile validation (2026-10-09)
+
+Verified 6 account UI tests, GUI type/build check, Server cargo check, 9 private bridge tests, isolated Postgres enterprise profile overwrite/rejection and public Google customization preservation tests. Real enterprise SSO refreshed corporate name/avatar into Core SQLite with stable UUID. Core-proxied name PATCH and avatar reset both returned 403. Installed native GUI displayed company-managed profile without edit controls; private Server and GUI independently advanced, other components retained versions. Enterprise directory API credentials/permissions and live search remain unverified.
+
+### People selector validation (2026-10-09)
+
+9 selected UI tests passed (public email invitation, enterprise keyboard identity selection/form reset, duplicates, errors and profile rules); GUI default type/build check passed. Server/Core cargo checks and isolated PostgreSQL directory provisioning test passed: unauthorized actor rejected, no login lease before SSO, stable first-login UUID, duplicate role unchanged and email collision rejected. 11 private bridge/adapter tests passed. dev01 production OpenAPI search and batch revalidation passed through installed Core; wrong provider/free email rejected (400), duplicate add preserved existing owner. Native GUI showed company photo/name/username/department and disabled already-added user. Installed signed CDN candidate independently upgraded Server, Core and GUI; Skill/Shell versions unchanged.
+
+### Person selector layout acceptance (2026-10-09)
+
+3 focused PersonSelect tests passed (keyboard/form reset, public email invitation, duplicates/errors); canonical GUI type/build passed. Installed private GUI verified visually: dropdown attached to input, selected photo/name/username capsule inside one field with no duplicate name row; clearing restores search. Only GUI advanced to 0.1.4-ks.1, promotion 0.1.5-ks.1.
+
+Empty-search fix: 4 focused selector tests and canonical GUI build passed. Native empty focused field showed input guidance without error; signed candidate installed and accepted.
+
+### Public/enterprise release isolation follow-up (2026-10-09)
+
+- Completed Skill member addition: consult the Core profile identity policy; public invitations retain email semantics, managed profiles resolve an exact directory username/email and submit the verified identity through Core. Live enterprise duplicate self-add passed without changing the existing owner role; Browser tests (7) and GUI account/person tests (10) passed.
+- Canonical builds now isolate GUI, codec, Rust target and Electron intermediate outputs beneath the selected artifact destination. Enterprise versions require a separate destination; existing component version directories are rejected instead of rebuilt. Public GUI build with an inherited enterprise mode variable passed using the public version; archive scan found no company domain/server address.
+- Public component versions: Core 0.1.103-dev, GUI 0.1.151-dev, Skill 0.1.58-dev; Electron Shell unchanged. Final public archives are built after the source commit; installation validation remains user-owned.

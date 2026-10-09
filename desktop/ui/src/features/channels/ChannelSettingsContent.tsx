@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useState } from "react";
-import { runOperation } from "@/api/operation-runner";
+import { PersonSelect } from "@/features/people/PersonSelect";
+import { enterpriseDeployment } from "@/deployment";
 import { traceTargets } from "@/api/trace-locators";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -13,7 +14,6 @@ import { isDeviceEmail } from "@/features/account/AccountProfile";
 import { type AgentTarget } from "@/features/agent/AgentPromptDialog";
 type Channel = {id: string; name: string; icon?: string | null; role: string};
 type Member = {memberId?: string; email: string; displayName?: string; avatarUrl?: string; role: string; status: "joined" | "pending"};
-type OrganizationPerson = {userId: string; email: string; displayName?: string};
 function initials(name: string) { return name.trim().split(/\s+/).slice(0,2).map(part=>part[0]?.toUpperCase()).join("") || "C"; }
 
 export function ChannelSettingsContent({
@@ -47,7 +47,6 @@ export function ChannelSettingsContent({
   installedAgents: Record<string, { installed: boolean }>;
   onRefresh: () => Promise<void>;
 }) {
-  const [people, setPeople] = useState<OrganizationPerson[]>([]);
   const [iconPreparing, setIconPreparing] = useState(false);
   useEffect(() => { if (mode === "members") onLoad(); }, [channel.id, mode]);
   useEffect(() => {
@@ -65,25 +64,6 @@ export function ChannelSettingsContent({
       document.removeEventListener("visibilitychange", reconcile);
     };
   }, [channel.id, mode, onRefresh]);
-  async function searchPeople(query: string) {
-return runOperation("members.search", async (operation) => {
-const trackedFetch = operation.fetch;
-
-    if (!query.trim()) {
-      setPeople([]);
-      return;
-    }
-    try {
-      const response = await trackedFetch(
-        `/v1/channels/${channel.id}/organization/people?q=${encodeURIComponent(query)}`,
-      );
-      if (response.ok) setPeople(await response.json());
-    } catch {
-      /* Search is progressive enhancement. */
-    }
-
-});
-}
   const canManage = channel.role === "owner" || channel.role === "admin";
   return (
     <div className="flex flex-col gap-4">
@@ -116,28 +96,12 @@ const trackedFetch = operation.fetch;
       {mode === "members" && <section className="flex flex-col gap-4">
         {canManage && <Button variant="outline" className="w-fit" disabled={busy || inviteBusy} onClick={onInvite}>{inviteBusy ? "Creating invitation…" : "Invite via Agent"}</Button>}
         {canManage && (
-          <form data-trace-target={traceTargets("members.add", "members.search")} onSubmit={onAdd}>
+          <form data-trace-target={traceTargets("members.add", "members.search")} onSubmit={event=>{if(enterpriseDeployment && !new FormData(event.currentTarget).get("identity")){event.preventDefault();return;}onAdd(event);}}>
             <FieldGroup>
               <div className="flex items-end gap-3">
                 <Field className="flex-1">
-                  <FieldLabel>Person or email</FieldLabel>
-                  <Input
-                    name="email"
-                    type="email"
-                    list={`organization-people-${channel.id}`}
-                    required
-                    placeholder="name@company.com"
-                    onChange={(event) =>
-                      void searchPeople(event.currentTarget.value)
-                    }
-                  />
-                  <datalist id={`organization-people-${channel.id}`}>
-                    {people.map((person) => (
-                      <option key={person.userId} value={person.email}>
-                        {person.displayName ?? person.email}
-                      </option>
-                    ))}
-                  </datalist>
+                  <FieldLabel>{enterpriseDeployment ? "Person" : "Person or email"}</FieldLabel>
+                  <PersonSelect channelId={channel.id} enterprise={enterpriseDeployment} excluded={members.map(m=>m.email)} disabled={busy}/>
                 </Field>
                 <Field className="w-32">
                   <FieldLabel>Role</FieldLabel>

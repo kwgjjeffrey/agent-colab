@@ -9,6 +9,7 @@ pub struct AccountProfile {
     pub avatar_url: Option<String>,
     pub name_customized: bool,
     pub google_linked: bool,
+    pub profile_managed: bool,
 }
 
 #[cfg(test)]
@@ -46,18 +47,21 @@ mod tests {
 }
 
 impl Database {
+    pub fn profile_managed(&self) -> bool { self.external_policy.is_some() }
     pub async fn set_account_avatar(&self, user: Uuid, avatar: Option<&str>) -> anyhow::Result<AccountProfile> {
+        anyhow::ensure!(!self.profile_managed(), "profile managed by identity provider");
         // Explicit initials are a choice too: later provider login must not replace them.
         sqlx::query("update users set avatar_url=$2,avatar_customized=true,updated_at=now() where id=$1")
             .bind(user).bind(avatar).execute(&self.pool).await?;
         self.account_profile(user).await
     }
     pub async fn account_profile(&self, user: Uuid) -> anyhow::Result<AccountProfile> {
-        Ok(sqlx::query_as("select id,email,display_name,avatar_url,display_name_customized name_customized,exists(select 1 from auth_identities i where i.user_id=u.id and i.provider='google') google_linked from users u where id=$1")
-            .bind(user).fetch_one(&self.pool).await?)
+        Ok(sqlx::query_as("select id,email,display_name,avatar_url,display_name_customized name_customized,exists(select 1 from auth_identities i where i.user_id=u.id and i.provider='google') google_linked,$2::boolean profile_managed from users u where id=$1")
+            .bind(user).bind(self.profile_managed()).fetch_one(&self.pool).await?)
     }
 
     pub async fn set_account_name(&self, user: Uuid, name: &str) -> anyhow::Result<AccountProfile> {
+        anyhow::ensure!(!self.profile_managed(), "profile managed by identity provider");
         sqlx::query("update users set display_name=$2,display_name_customized=true,updated_at=now() where id=$1")
             .bind(user).bind(name).execute(&self.pool).await?;
         self.account_profile(user).await

@@ -19,6 +19,20 @@ class AmbiguousReference(ValueError):
         super().__init__(message)
         self.candidates = candidates
 
+def member_request(core, channel_id, user, role):
+    body = {"email": user, "role": role}
+    # The Core exposes the active identity policy; public email invitations stay unchanged.
+    profile = request("GET", "/v1/auth/profile", core=core)
+    if profile.get("profileManaged", False):
+        query = user.strip().split("@", 1)[0]
+        rows = request("GET", f"/v1/channels/{channel_id}/organization/people?q={quote(query, safe='')}", core=core)
+        exact = [row for row in rows if user.casefold() in
+                 {str(row.get(key) or "").casefold() for key in ("email", "username")}]
+        if len(exact) != 1 or not exact[0].get("identity"):
+            raise ValueError("Specify an exact employee username or email; no unique verified person found")
+        body.update(email=exact[0]["email"], identity=exact[0]["identity"])
+    return body
+
 def parse_ref(value: str):
     parsed = urlparse(value)
     if parsed.scheme != "colab":
@@ -244,7 +258,7 @@ def main() -> int:
             channel = resolve_channel_ref(args.core, args.channel)
             path = f"/v1/channels/{channel['id']}/members"
             if args.operation == "members": return success(public_result(request("GET", path, core=args.core)))
-            if args.operation == "add-member": return success(public_result(request("POST", path, core=args.core, body={"email": args.user, "role": args.role})))
+            if args.operation == "add-member": return success(public_result(request("POST", path, core=args.core, body=member_request(args.core, channel["id"], args.user, args.role))))
             if args.operation == "update-member": return success(public_result(request("PATCH", f"{path}/{quote(args.user, safe='')}", core=args.core, body={"email": None, "role": args.role})))
             request("DELETE", f"{path}/{quote(args.user, safe='')}", core=args.core)
             return success({"user": args.user, "state": "removed"})

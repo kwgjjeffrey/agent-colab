@@ -1,3 +1,4 @@
+import { enterpriseDeployment } from "@/deployment";
 import { traceTargets } from "@/api/trace-locators";
 import { runOperation, type OperationScope } from "@/api/operation-runner";
 import { initializeTelemetry } from "@/api/telemetry";
@@ -228,7 +229,7 @@ function App() {
   const [settingsView, setSettingsView] = useState<"main" | "accounts" | "organizations" | "devices" | "profile" | "updates">("main");
   const [accountProfile, setAccountProfile] = useState<AccountProfileData>();
   const [googleReminderDismissed, setGoogleReminderDismissed] = useState(false);
-  const accountSetupPending = accountProfile?.id === auth.user?.id && needsAccountSetup(accountProfile, googleReminderDismissed);
+  const accountSetupPending = accountProfile?.id === auth.user?.id && needsAccountSetup(accountProfile, googleReminderDismissed, !enterpriseDeployment);
   async function loadAccountProfile() {
     const response = await fetch("/v1/auth/profile");
     if (!response.ok) throw new Error("Could not load account settings.");
@@ -600,7 +601,7 @@ const trackedFetch = operation.fetch;
     setError(undefined);
     try {
       const response = await trackedFetch(
-        `/v1/auth/google/start${loginHint ? `?loginHint=${encodeURIComponent(loginHint)}` : ""}`,
+        `/v1/auth/${enterpriseDeployment ? "external" : "google"}/start${loginHint ? `?loginHint=${encodeURIComponent(loginHint)}` : ""}`,
       );
       if (!response.ok) throw new Error(await response.text());
       const body = await response.json();
@@ -980,6 +981,7 @@ const api = operation.response;
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           email: form.get("email"),
+          identity: form.get("identity") ? JSON.parse(String(form.get("identity"))) : undefined,
           role: form.get("role"),
         }),
       });
@@ -1109,7 +1111,7 @@ const api = operation.response;
                 {settingsView!=="main"&&<Button data-trace-nav={"settings.main"} size="icon-sm" variant="ghost" aria-label="Back to Settings" onClick={()=>setSettingsView("main")}><ChevronLeftIcon/></Button>}
                 <PopoverTitle>{settingsView==="profile"?"Account settings":settingsView==="accounts"?"Switch user":settingsView==="organizations"?"Switch organization":settingsView==="devices"?"Linked devices":settingsView==="updates"?"Updates":"Settings"}</PopoverTitle>
               </PopoverHeader>
-              {settingsView==="updates"?<div className="mt-2 rounded-lg border"><div className="p-3"><p className="text-sm font-medium">Colab resources</p><p className="text-xs text-muted-foreground">Independently distributed local artifacts</p></div>{installationMessage&&!updateRunning&&<p role="status" className={`max-h-28 overflow-auto break-words border-y px-3 py-2 text-xs ${installationMessage.kind==="error"?"bg-destructive/10 text-destructive":"bg-muted text-muted-foreground"}`}>{installationMessage.text}</p>}{([['local-core','Local Core'],['desktop-ui','GUI Resources'],['colab-skill','Agent Colab Skill'],['electron-shell','Electron Shell']] as const).map(([id,label])=>{const component=installation?.components?.[id];return <div key={id} className="flex items-center gap-3 border-t p-3"><div className="min-w-0 flex-1"><p className="text-sm font-medium">{label}</p><p className="text-xs text-muted-foreground">{component?.installedVersion??"Not installed"}{component?.latestVersion?` · Latest ${component.latestVersion}`:""}</p></div>{component?.updateAvailable&&<span className="text-xs font-medium text-primary">Update available</span>}{id==="electron-shell"&&!host.isElectron&&component?.downloadUrl&&<Button size="sm" variant="outline" onClick={()=>void host.openExternal(component.downloadUrl!)}>Download app</Button>}</div>})}</div>:settingsView==="profile"?<AccountProfile profile={accountProfile?.id===auth.user?.id?accountProfile:undefined} linking={busy} googleDismissed={googleReminderDismissed} onLinkGoogle={()=>void signIn()} onDismissGoogle={()=>{localStorage.setItem(`colab:google-reminder-dismissed:${auth.user?.id}`,"1");setGoogleReminderDismissed(true);}} onSaved={profile=>{setAccountProfile(profile);void refreshAuth();void refreshAccounts();if(selected)void loadMembers();}}/>:settingsView==="accounts"?<div className="flex flex-col gap-1">
+              {settingsView==="updates"?<div className="mt-2 rounded-lg border"><div className="p-3"><p className="text-sm font-medium">Colab resources</p><p className="text-xs text-muted-foreground">Independently distributed local artifacts</p></div>{installationMessage&&!updateRunning&&<p role="status" className={`max-h-28 overflow-auto break-words border-y px-3 py-2 text-xs ${installationMessage.kind==="error"?"bg-destructive/10 text-destructive":"bg-muted text-muted-foreground"}`}>{installationMessage.text}</p>}{([['local-core','Local Core'],['desktop-ui','GUI Resources'],['colab-skill','Agent Colab Skill'],['electron-shell','Electron Shell']] as const).map(([id,label])=>{const component=installation?.components?.[id];return <div key={id} className="flex items-center gap-3 border-t p-3"><div className="min-w-0 flex-1"><p className="text-sm font-medium">{label}</p><p className="text-xs text-muted-foreground">{component?.installedVersion??"Not installed"}{component?.latestVersion?` · Latest ${component.latestVersion}`:""}</p></div>{component?.updateAvailable&&<span className="text-xs font-medium text-primary">Update available</span>}{id==="electron-shell"&&!host.isElectron&&component?.downloadUrl&&<Button size="sm" variant="outline" onClick={()=>void host.openExternal(component.downloadUrl!)}>Download app</Button>}</div>})}</div>:settingsView==="profile"?<AccountProfile publicAuth={!enterpriseDeployment} profile={accountProfile?.id===auth.user?.id?accountProfile:undefined} linking={busy} googleDismissed={googleReminderDismissed} onLinkGoogle={()=>void signIn()} onDismissGoogle={()=>{localStorage.setItem(`colab:google-reminder-dismissed:${auth.user?.id}`,"1");setGoogleReminderDismissed(true);}} onSaved={profile=>{setAccountProfile(profile);void refreshAuth();void refreshAccounts();if(selected)void loadMembers();}}/>:settingsView==="accounts"?<div className="flex flex-col gap-1">
                 {accounts.map(account=><Button data-trace-target={traceTargets("auth.switch", "accounts.list")} key={account.userId} variant={account.active?"secondary":"ghost"} className="h-auto justify-start gap-3 p-2" disabled={busy||account.active} onClick={()=>void switchAccount(account).then(()=>setSettingsView("main"))}><Avatar><AvatarImage src={account.avatarUrl}/><AvatarFallback>{initials(account.displayName??account.email)}</AvatarFallback></Avatar><span className="min-w-0 flex-1 text-left"><strong className="block truncate">{account.displayName??account.email}</strong><small className="block truncate text-muted-foreground">{isDeviceEmail(account.email)?"Device sign-in":account.email}</small></span>{account.active&&<CheckIcon/>}</Button>)}
                 <Button data-trace-target={traceTargets("auth.sign-in")} variant="outline" disabled={busy} onClick={()=>void signIn()}><PlusIcon/>Add another account</Button>
                 {auth.authenticated&&<Button data-trace-target={traceTargets("auth.logout")} variant="ghost" className="text-destructive" disabled={busy} onClick={()=>void logout()}><LogOutIcon/>Sign out</Button>}
@@ -1118,8 +1120,10 @@ const api = operation.response;
                 <Button data-trace-target={traceTargets("organizations.create")} variant="outline" onClick={()=>setShowCreateOrganization(true)}><PlusIcon/>Create Organization</Button>
               </div>:<div className="flex flex-col gap-4">
                 <div className="flex flex-col gap-1">
+                  {enterpriseDeployment ? <div className="flex items-center gap-3 px-2 py-2"><Avatar><AvatarImage src={auth.user?.avatarUrl}/><AvatarFallback>{initials(auth.user?.displayName??auth.user?.email??"U")}</AvatarFallback></Avatar><span className="min-w-0 flex-1 text-left"><span className="block text-xs text-muted-foreground">User</span><strong className="block truncate">{auth.user?.displayName??auth.user?.email??"Not signed in"}</strong></span></div> : <>
                   <Button data-trace-nav={"accounts"} variant="ghost" className="h-auto justify-start gap-3 px-2 py-2" onClick={()=>setSettingsView("accounts")}><Avatar><AvatarImage src={auth.user?.avatarUrl}/><AvatarFallback>{initials(auth.user?.displayName??auth.user?.email??"U")}</AvatarFallback></Avatar><span className="min-w-0 flex-1 text-left"><span className="block text-xs text-muted-foreground">User</span><strong className="block truncate">{auth.user?.displayName??auth.user?.email??"Not signed in"}</strong></span><span className="text-xs text-muted-foreground">Switch</span><ChevronRightIcon/></Button>
                   <Button data-trace-nav={"organizations"} variant="ghost" className="h-auto justify-start px-2 py-2" onClick={()=>setSettingsView("organizations")}><span className="min-w-0 flex-1 text-left"><span className="block text-xs text-muted-foreground">Organization</span><strong className="block truncate">{organizations.find(item=>item.active)?.name??"No organization"}</strong></span><span className="text-xs text-muted-foreground">Switch</span><ChevronRightIcon/></Button>
+                  </>}
                 </div>
                 {selected&&<Button data-trace-target={traceTargets("members.agent-count")} variant="ghost" className="h-10 w-full justify-start px-2" onClick={()=>{setSettingsOpen(false);setWorkspaceTab("messages");setAgentSettingsOpenToken(value=>value+1)}}><span className="min-w-0 flex-1 text-left">My Agents</span><span className="text-muted-foreground">{myAgentCount}</span><ChevronRightIcon/></Button>}
                 {auth.authenticated&&<div className="flex flex-col gap-1"><Button variant="ghost" className="h-10 w-full justify-start px-2" onClick={()=>{setSettingsView("profile");void loadAccountProfile().catch(reason=>setError(String(reason)));}}><span className="min-w-0 flex-1 text-left">Account settings</span>{accountSetupPending&&<Badge variant="notification" aria-label="Complete your account settings"/>}<ChevronRightIcon data-icon="inline-end"/></Button><Button variant="ghost" className="h-10 w-full justify-start px-2" onClick={()=>setSettingsView("devices")}><span className="min-w-0 flex-1 text-left">Linked devices</span><ChevronRightIcon data-icon="inline-end"/></Button></div>}
@@ -1225,7 +1229,7 @@ const api = operation.response;
               description={
                 auth.authenticated
                   ? "Channels organize an ongoing collaboration and its shared context."
-                  : "Sign in with Google to create or join a Channel."
+                  : enterpriseDeployment ? "使用公司 SSO 登录，加入企业协作空间。" : "Sign in with Google to create or join a Channel."
               }
               action={
                 auth.authenticated ? (
@@ -1234,7 +1238,7 @@ const api = operation.response;
                   </Button>
                 ) : (
                   <Button disabled={busy} onClick={() => void signIn()}>
-                    Sign in with Google
+                    {enterpriseDeployment ? "公司 SSO 登录" : "Sign in with Google"}
                   </Button>
                 )
               }

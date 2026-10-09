@@ -26,6 +26,7 @@ use url::Url;
 use uuid::Uuid;
 
 mod auth;
+mod external_auth;
 mod account_profile;
 mod device_auth;
 mod invite_links;
@@ -73,6 +74,7 @@ struct Inner {
     server_url: String,
     http: colab_observability::Client,
     pending: Mutex<HashMap<String, PendingLogin>>,
+    external_pending: Mutex<HashMap<String, external_auth::Pending>>,
     session: Mutex<Option<ColabSession>>,
     /// Prevent two callers from presenting the same one-time refresh token concurrently. The
     /// server treats the second presentation as replay and revokes the session family.
@@ -178,6 +180,8 @@ struct UpdateChannel {
 }
 #[derive(Deserialize, Serialize)]
 struct MemberMutation {
+    #[serde(default, skip_serializing_if="Option::is_none")]
+    identity: Option<serde_json::Value>,
     email: Option<String>,
     role: String,
 }
@@ -200,7 +204,13 @@ struct ChannelMember {
 #[derive(Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct OrganizationPerson {
-    user_id: String,
+    user_id: Option<String>,
+    #[serde(default)]
+    identity: Option<serde_json::Value>,
+    #[serde(default)]
+    username: Option<String>,
+    #[serde(default)]
+    department: Option<String>,
     email: String,
     display_name: Option<String>,
     avatar_url: Option<String>,
@@ -507,6 +517,7 @@ impl AppState {
                 server_url,
                 http: colab_observability::client(),
                 pending: Mutex::new(HashMap::new()),
+                external_pending: Mutex::new(HashMap::new()),
                 session: Mutex::new(session),
                 auth_refresh_lock: Mutex::new(()),
                 account_switch_lock: Mutex::new(()),
@@ -586,6 +597,8 @@ pub fn router(state: AppState, security: LocalSecurity) -> Router {
             axum::routing::post(system::open_agent),
         )
         .route("/v1/system/choose-path", get(choose_path))
+        .route("/v1/auth/external/start", get(external_auth::start))
+        .route("/v1/auth/external/callback", get(external_auth::callback))
         .route("/v1/auth/google/start", get(auth::start_google))
         .route("/v1/auth/google/callback", get(auth::google_callback))
         .route("/v1/auth/status", get(auth::auth_status))
@@ -915,7 +928,7 @@ async fn enforce_local_security(
         )
             .into_response();
     }
-    let public = path == "/v1/auth/google/callback" || !path.starts_with("/v1/");
+    let public = path == "/v1/auth/google/callback" || path == "/v1/auth/external/callback" || !path.starts_with("/v1/");
     if !public {
         let bearer_header = headers
             .get(header::AUTHORIZATION)

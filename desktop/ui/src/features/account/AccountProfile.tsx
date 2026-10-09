@@ -9,16 +9,18 @@ import { initials } from "@/features/messages/AgentAvatar";
 
 export type AccountProfileData = {
   id: string; email: string; displayName?: string; avatarUrl?: string;
-  nameCustomized: boolean; googleLinked: boolean;
+  profileManaged?: boolean; nameCustomized: boolean; googleLinked: boolean;
 };
 
-export function needsAccountSetup(profile: AccountProfileData | undefined, googleDismissed: boolean) {
+export function needsAccountSetup(profile: AccountProfileData | undefined, googleDismissed: boolean, publicAuth = true) {
+  if (!publicAuth || profile?.profileManaged) return false;
   return Boolean(profile && ((!profile.googleLinked && !profile.nameCustomized) || (!profile.googleLinked && !googleDismissed)));
 }
 
 export function isDeviceEmail(email: string) { return email.endsWith("@device.invalid"); }
 
-export function AccountProfile({ profile, onSaved, onLinkGoogle, linking, onDismissGoogle, googleDismissed }: {
+export function AccountProfile({ profile, onSaved, onLinkGoogle, linking, onDismissGoogle, googleDismissed, publicAuth = true }: {
+  publicAuth?: boolean;
   profile: AccountProfileData | undefined;
   onSaved: (profile: AccountProfileData) => void;
   onLinkGoogle: () => void; linking: boolean;
@@ -58,6 +60,13 @@ export function AccountProfile({ profile, onSaved, onLinkGoogle, linking, onDism
     } catch (reason) { setError(String(reason)); } finally { setSaving(false); }
   }
   if (!profile) return <p role="status" className="text-sm text-muted-foreground">Loading account…</p>;
+  if (profile.profileManaged || !publicAuth) return <div className="flex flex-col gap-4">
+    <div className="flex items-center gap-3">
+      <Avatar className="size-12"><AvatarImage src={profile.avatarUrl} alt="Your avatar" /><AvatarFallback>{initials(profile.displayName ?? profile.email)}</AvatarFallback></Avatar>
+      <div><p className="font-medium">{profile.displayName ?? profile.email}</p><p className="text-sm text-muted-foreground">{profile.email}</p></div>
+    </div>
+    <p className="text-sm text-muted-foreground">Your organization manages your name and avatar.</p>
+  </div>;
   return <div className="flex flex-col gap-4">
     <FieldGroup><Field>
       <FieldLabel>Avatar</FieldLabel>
@@ -79,7 +88,7 @@ export function AccountProfile({ profile, onSaved, onLinkGoogle, linking, onDism
     </FieldGroup></form>
     {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
     {saved && <p role="status" className="text-sm text-muted-foreground">Name saved.</p>}
-    <section className="flex flex-col gap-2">
+    {publicAuth && <section className="flex flex-col gap-2">
       <div className="flex items-center gap-2"><span className="text-sm font-medium">Google account</span><Badge variant="secondary">{profile.googleLinked ? "Linked" : "Not linked"}</Badge></div>
       {profile.googleLinked ? <p className="text-sm text-muted-foreground">{profile.email}</p> : <>
         <p className="text-sm text-muted-foreground">{isDeviceEmail(profile.email) ? "Your account was created with this device. This device signs you in automatically." : "You can sign in with your linked devices."} Link Google to sign in on other devices and recover access.</p>
@@ -87,6 +96,6 @@ export function AccountProfile({ profile, onSaved, onLinkGoogle, linking, onDism
         <Button variant="outline" disabled={linking || saving} onClick={onLinkGoogle}>{linking ? "Opening Google…" : "Link Google account"}</Button>
         {!googleDismissed && <Button variant="ghost" size="sm" onClick={onDismissGoogle}>Don’t remind me about Google</Button>}
       </>}
-    </section>
+    </section>}
   </div>;
 }
