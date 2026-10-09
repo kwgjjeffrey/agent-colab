@@ -1,15 +1,28 @@
 # 技术验证计划
 
-### 2026-10-09 Creation hints / sharing setup — validation in progress
+### 2026-10-09 Creation hints / sharing setup — verified and published
 
 GUI 128 production build and 115 tests pass. Skill 56: 43 tests pass, including
 Files exclusion forwarding and rejection on Skill, packaged entrypoints and CLI
 registry coverage (48 leaf commands). Registry check: 142 operations valid. These
-are not E2E claims. New trial `gui.sharing.agent-setup` obtains real GUI prompts
+are not E2E claims. Case `gui.sharing.agent-setup` obtains real GUI prompts
 and executes their arguments against isolated sources using the candidate package.
 Run `20261009T022759Z-82283a05` preserves selector repairs and the discovered
-Quick Share Tooltip/submenu hover conflict; the latter is repaired in `ba67e66`.
-Real command, publication/consumer bytes and cleanup acceptance is still pending.
+Quick Share Tooltip/submenu hover conflict; the final repair is `b372345`.
+Round `20261009T024436Z-3e56e1a2` passes real prompt commands, Catalog placement,
+Files exclusions and exact separate-receiver bytes, existing scope GET/PATCH and
+clear, Skill source discovery/publication, and owned fixture withdrawal/cleanup.
+Only installed executable prefixes were replaced with candidate package paths;
+the Skill source placeholder was explicitly selected from the isolated fixture.
+No Agent LLM was launched. The reviewed case is active. The 300-second execution
+window is not a performance budget; registry validation is not trace ingestion.
+
+Promotion 180 publicly size/hash verifies GUI 128 (3,553,651 bytes; SHA-256
+`20bad4274d8810b4c1983be6d5bb4bf153da2f7b39053cc6f78b76935e3dde3f`)
+and Skill 56 (1,727,142 bytes; SHA-256
+`859c4298f171c6803a129f0c47b920eaa61dbf02e149765b856b4b2ff260068b`).
+Core 99 / Shell 23 / Server 0.1.2 remain unchanged. Native update was interrupted
+by user interaction; installation is not yet confirmed.
 
 ### 2026-10-09 Immediate handoff Dialog — verified and released
 

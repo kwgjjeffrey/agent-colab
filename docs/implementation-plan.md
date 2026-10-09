@@ -1,16 +1,17 @@
 # Colab 实现计划
 
-### 2026-10-09 Creation hints and Agent-assisted sharing — in progress
+### 2026-10-09 Creation hints and Agent-assisted sharing — verified and published
 
 Rollback baseline `1670fa5`. Add/Catalog menus use shadcn hover explanations;
 Files scope and Skill source dialogs offer the shared Agent prompt Dialog.
 Prompts bind the exact Channel/Catalog and distinguish new registration from
 scope editing. Skill exposes existing Core inspect-source/sync-scope capabilities
-and Explorer Files exclusions, with no Core/Server business changes. Validate
-actual generated commands on isolated sources, consumer bytes/exclusions, nested
-placement and cleanup before publication. GUI 128 / Skill 56 planned; other
-artifacts unchanged. Unit checks, real-browser hints/dialogs, packaged command
-acceptance, release and native update remain tracked below.
+and Explorer Files exclusions, with no Core/Server business changes. Actual GUI
+prompt commands passed on isolated sources, including receiver bytes/exclusions,
+nested placement, existing scope changes, Skill publication and cleanup. Reviewed
+case gui.sharing.agent-setup is active. GUI 128 / Skill 56 are publicly verified
+and published as promotion 180; other artifacts unchanged. Native installation
+is not yet confirmed; the user can update through Settings → Check updates.
 
 ### 2026-10-09 Immediate handoff Dialog — verified and released
 

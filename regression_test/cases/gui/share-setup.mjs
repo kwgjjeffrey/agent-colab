@@ -1,5 +1,29 @@
 export const USECASE={name:'Creation hints and executable Agent sharing setup',description:'Hover actual Add menu explanations. Obtain Files/Skill configuration prompts from GUI, read and execute their exact tool arguments on owned sources; verify Catalog placement, Files exclusions and scope replacement, Skill publication and cleanup. Only native chooser path is fixture-supplied.'};
-export const META={id:'gui.sharing.agent-setup',module:'context/sharing/setup',surface:'gui',priority:'critical',origin:'requirement',status:'trial',effects:'isolated-write',cost:'normal',requires:['local-core'],affectedPaths:['desktop/ui/src/features/agent/ShareSetupPrompt.tsx','skills/colab/bin/colab-browser','skills/colab/bin/colab-explorer'],suite:'business',testLevel:'end-to-end',locks:['read:client.primary','read:channel.shared']};
+export const META={
+  "id": "gui.sharing.agent-setup",
+  "module": "context/sharing/setup",
+  "surface": "gui",
+  "priority": "critical",
+  "origin": "requirement",
+  "status": "active",
+  "effects": "isolated-write",
+  "cost": "normal",
+  "requires": [
+    "local-core"
+  ],
+  "affectedPaths": [
+    "desktop/ui/src/features/agent/ShareSetupPrompt.tsx",
+    "skills/colab/bin/colab-browser",
+    "skills/colab/bin/colab-explorer"
+  ],
+  "suite": "business",
+  "testLevel": "end-to-end",
+  "locks": [
+    "read:client.primary",
+    "read:channel.shared"
+  ],
+  "statusReason": "Reviewed Round 20261009T024436Z-3e56e1a2: GUI hover/cascade and generated prompt commands, candidate packaged tools, owned scope read/set, separate receiver bytes/exclusion, Catalog placement, Files/Skill publication and cleanup. Prior failures retained in Run 20261009T022759Z-82283a05."
+};
 export const REQUIREMENTS={channel:{permission:'read'},parameters:{keys:['nativeChooserBoundary','secondCoreDiscoveryFile']}};
 import fs from 'node:fs/promises';import path from 'node:path';
 import {core,cli,data,resource,eventually,parameter} from '../../support/client.mjs';
