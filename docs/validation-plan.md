@@ -4,13 +4,29 @@
 
 Canvas creation entrances now commit an Untitled document immediately, select its workspace identity, then focus and fully select the sidebar name after creation finishes. Native rename uses a transparent surface and subtle focus border. GUI 0.1.132-dev / promotion 0.1.184-dev published and normally installed; actual GUI metadata matches 132. TypeScript/build and public artifact readback passed (1317287 bytes; SHA-256 `b875a522dbb9040ff01fe4df963a13b11ba37c95633e6788a52d48eb2110dec7`). E2E `20261009T030939Z-401d5947` passed all eight assertions: no dialog, selected focused name, real rename with stable ID, reload persistence and owned archive; screenshot reviewed. Earlier failures `20261009T030455Z-9c8aa6d2` and `20261009T030709Z-4f035407` are preserved: candidate proxy served old GUI 129. Final scope uses an isolated temporary index pointing to daily GUI/Core with aligned actor, leaving the other task candidate unchanged.
 
-### 2026-10-09 Account avatar — acceptance in progress
+### 2026-10-09 Account avatar — verified and published
 
 117 GUI tests / 42 files and production build pass. Includes avatar upload/reset
 contract and deterministic eight-colour fallback contrast >= 4.5:1 against white.
 Server avatar envelope validation test and cargo check pass. These do not prove
-durable GUI-to-Server behavior. Isolated persistence tests and real-browser
-upload/reset/reload acceptance must pass before claiming availability.
+durable GUI-to-Server behavior. The isolated PostgreSQL test passes customized
+photo preservation during Google linking/login and explicit initials preservation
+against a later provider photo. No live OAuth consent is simulated.
+
+Run 20261009T030620Z-362f57b8 retains the non-restorable provider-avatar fixture
+blocker and concurrent-browser profile blocker. Reviewed passing Round
+20261009T031400Z-16ed1cc7 on GUI 132 / Core 99 / Server 0.1.3 proves actual PNG upload
+through GUI, native 256px JPEG decode, durable profile and saved-account/session
+projection, reload, rejected SVG/URL/oversize input with unchanged photo, initials
+reset, exact palette membership/white text, and fixture restoration. Screenshots
+were reviewed; identity.accounts.avatar is active. Compact one-initial versus
+two-initial colour consistency has a separate passing unit assertion in GUI 133.
+
+Canonical Server deployment activates 0.1.3 and passes readiness. Promotion 185
+publishes GUI 133, 1,317,274 bytes, SHA-256
+`2d14909e5f1c32dbf339f1f365351c23e17a0d1b10dc833818feb777cab0347b`,
+with public exact size/hash verification. App /ui.json currently reports GUI 132;
+installation of final 133 is left to the normal user update, not claimed here.
 
 ### 2026-10-09 Creation hints / sharing setup — verified and published
 

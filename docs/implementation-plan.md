@@ -4,15 +4,21 @@
 
 Canvas creation entrances now commit an Untitled document immediately, select its workspace identity, then focus and fully select the sidebar name after creation finishes. Native rename uses a transparent surface and subtle focus border. GUI 0.1.132-dev / promotion 0.1.184-dev published and normally installed; actual GUI metadata matches 132. TypeScript/build and public artifact readback passed (1317287 bytes; SHA-256 `b875a522dbb9040ff01fe4df963a13b11ba37c95633e6788a52d48eb2110dec7`). E2E `20261009T030939Z-401d5947` passed all eight assertions: no dialog, selected focused name, real rename with stable ID, reload persistence and owned archive; screenshot reviewed. Earlier failures `20261009T030455Z-9c8aa6d2` and `20261009T030709Z-4f035407` are preserved: candidate proxy served old GUI 129. Final scope uses an isolated temporary index pointing to daily GUI/Core with aligned actor, leaving the other task candidate unchanged.
 
-### 2026-10-09 Account avatar — implementation and acceptance
+### 2026-10-09 Account avatar — verified and published
 
 Checkpoint db8825a. Account settings adds upload and explicit initials reset;
 shadcn Avatar fallbacks share an eight-colour, white-text contrast-safe palette.
 GUI crops local PNG/JPEG/WebP to a 256px JPEG; Server accepts bounded JPEG data
 through the existing authenticated profile route. Core remains unchanged as the
 profile proxy. Migration 0041 preserves customized photos and explicit initials
-across Google link/login. GUI/build and Server checks pass; isolated persistence,
-GUI-to-Server acceptance and publication remain pending.
+across Google link/login. 117 GUI tests/build, Server validation/check and isolated
+Postgres Google link/login preservation pass. Avatar E2E Round
+20261009T031400Z-16ed1cc7 passes real upload, crop/decode, session/account projection,
+reload, invalid input rejection, reset, palette/contrast and fixture restoration.
+Server 0.1.3 is deployed with readiness verified. GUI 133 / promotion 185 is
+publicly size/hash verified and published; Core/Skill/Shell are unchanged. Native
+App still serves GUI 132 (already containing upload/reset); normal update brings
+the final one/two-initial colour consistency correction in 133.
 
 ### 2026-10-09 Creation hints and Agent-assisted sharing — verified and published
 
