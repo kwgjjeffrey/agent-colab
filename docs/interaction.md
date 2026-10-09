@@ -348,3 +348,6 @@ Manual primary actions use the existing lime-green identity. Buttons that give c
 The shared Agent handoff dialog gives Copy prompt the green manual-primary style alongside purple Agent execution/launch actions. Agent generation/setup entrances, including Channel icon generation, Home Call, Create by my agent and session Prepare prompt, use the same purple supernova component. Ordinary manual setup, upload, save and cancel controls preserve their GUI action styles.
 
 Home 的顺序为动效 banner、Recent activity、操作引导、场景引导。活动成功返回空数据时，整个模块（含标题和占位）不展示。有数据时显示总条数、当前条目范围、数字页码和 Previous/Next，每页最多 20 条；翻页替换当前列表，不追加、不使用底部加载。页码较多时显示首尾页和当前页附近页码；刷新保留当前页，删除使页码越界时 Server 收敛到末页。读失败保留明确的重试入口，不伪装成空数据。
+
+
+Canvas image editing: paste/drop image files or choose Add image. Upload has a visible pending state and Retry/Dismiss on failure. Validated uploads insert at the original editing location, mapped through intervening editor transactions. Drag image handles to resize while preserving aspect ratio; ordinary document undo/delete removes the node. Interpretation metadata is never shown as a caption or required from the user.

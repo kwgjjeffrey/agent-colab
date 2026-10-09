@@ -9,7 +9,7 @@ from pathlib import Path
 from urllib.parse import unquote, urlparse
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "lib"))
-from local_api import DEFAULT_CORE, LocalApiError, request
+from local_api import DEFAULT_CORE, LocalApiError, request, download
 from output import failure, success
 
 
@@ -84,10 +84,28 @@ def main() -> int:
     patching = operations.add_parser("apply-patch")
     patching.add_argument("--ref", required=True)
 
+    image_read = operations.add_parser("image-read")
+    image_read.add_argument("--id", required=True)
+    image_read.add_argument("--output", required=True)
+    image_interpret = operations.add_parser("image-interpret")
+    image_interpret.add_argument("--id", required=True)
+    image_interpret.add_argument("--text", required=True)
+
     args = parser.parse_args()
     __import__("telemetry").select_operation(args)
     success = __import__("output_views").writer("canvas", args)
     try:
+        if args.operation in {"image-read", "image-interpret"}:
+            import uuid
+            image_id = str(uuid.UUID(args.id))
+            if args.operation == "image-interpret":
+                return success(request("PATCH", f"/v1/canvas-images/{image_id}", core=args.core, body={"image_interpretation": args.text}))
+            metadata = request("GET", f"/v1/canvas-images/{image_id}", core=args.core)
+            result = download(f"/v1/canvas-images/{image_id}/content", args.output, core=args.core)
+            if result["sha256"] != metadata["sha256"] or result["byteSize"] != metadata["byteSize"]:
+                Path(result["localPath"]).unlink(missing_ok=True)
+                raise LocalApiError("Image digest or size mismatch")
+            return success({**metadata, **result})
         if args.operation in {"list", "create"}:
             channel_row = channel(args.core, args.channel)
             if args.operation == "create":
@@ -109,6 +127,9 @@ def main() -> int:
             end = start + max(1, min(args.limit, 1000))
             document["content"] = "".join(lines[start:end])
             document["nextOffset"] = end + 1 if end < len(lines) else None
+            import re
+            image_ids = dict.fromkeys(re.findall(r"colab-image:([0-9a-f-]{36})", document["content"]))
+            document["images"] = [request("GET", f"/v1/canvas-images/{image_id}", core=args.core) for image_id in image_ids]
             return success(document)
         if args.operation == "search":
             needle = args.query.casefold()

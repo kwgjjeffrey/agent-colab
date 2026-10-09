@@ -1,3 +1,4 @@
+import Image from '@tiptap/extension-image';
 import {getSchema} from '@tiptap/core';
 import StarterKit from '@tiptap/starter-kit';
 import Mention from '@tiptap/extension-mention';
@@ -6,7 +7,7 @@ import {MarkdownParser,MarkdownSerializer,defaultMarkdownSerializer as base} fro
 import * as Y from 'yjs';
 import {prosemirrorToYXmlFragment,yXmlFragmentToProseMirrorRootNode} from '@tiptap/y-tiptap';
 
-export const schema=getSchema([StarterKit.configure({undoRedo:false}),Mention.extend({addAttributes(){return {...this.parent?.(),kind:{default:'agent'},mentionId:{default:null}}}})]);
+export const schema=getSchema([Image.extend({addAttributes(){return {...this.parent?.(),attachmentId:{default:null}}}}),StarterKit.configure({undoRedo:false}),Mention.extend({addAttributes(){return {...this.parent?.(),kind:{default:'agent'},mentionId:{default:null}}}})]);
 const md=new MarkdownIt('commonmark',{html:false}).enable('strikethrough');
 // CommonMark omits a terminal hard break. A conventional explicit <br> keeps it
 // representable without enabling arbitrary HTML in the document parser.
@@ -22,15 +23,25 @@ md.inline.ruler.before('link','identity',(state,silent)=>{
  if(!silent){const t=state.push('identity','',0);t.meta=attrs;}
  state.pos+=m[0].length;return true;
 });
+// Stored images are block nodes; unwrap Markdown's standalone image paragraph.
+md.core.ruler.after('inline','canvas_images',state=>{
+ for(let i=0;i<state.tokens.length-2;i++){
+  const [open,inline,close]=state.tokens.slice(i,i+3);
+  if(open.type==='paragraph_open'&&inline.type==='inline'&&close.type==='paragraph_close'&&inline.children?.length===1&&inline.children[0].type==='image'){
+   state.tokens.splice(i,3,inline.children[0]);
+  }
+ }
+});
 export const parser=new MarkdownParser(schema,md,{
  paragraph:{block:'paragraph'},blockquote:{block:'blockquote'},heading:{block:'heading',getAttrs:t=>({level:+t.tag.slice(1)})},
  bullet_list:{block:'bulletList'},ordered_list:{block:'orderedList',getAttrs:t=>({start:+t.attrGet('start')||1})},list_item:{block:'listItem'},
  fence:{block:'codeBlock',getAttrs:t=>({language:t.info||null}),noCloseToken:true},code_block:{block:'codeBlock',noCloseToken:true},
+ image:{node:'image',getAttrs:t=>{const src=t.attrGet('src');if(!/^colab-image:[0-9a-f-]{36}$/.test(src))throw Error('invalid_image_handle');const attrs=t.attrGet('title')?JSON.parse(Buffer.from(t.attrGet('title'),'base64url').toString()):{};return {...attrs,attachmentId:src.slice(12),src:`/v1/canvas-images/${src.slice(12)}/content`,alt:t.content||null};}},
  hr:{node:'horizontalRule'},hardbreak:{node:'hardBreak'},identity:{node:'mention',getAttrs:t=>t.meta},
  strong:{mark:'bold'},em:{mark:'italic'},s:{mark:'strike'},code_inline:{mark:'code',noCloseToken:true},link:{mark:'link',getAttrs:t=>({href:t.attrGet('href'),title:t.attrGet('title')||null})},
 });
 export const serializer=new MarkdownSerializer({
- ...base.nodes,bulletList:base.nodes.bullet_list,listItem:base.nodes.list_item,horizontalRule:base.nodes.horizontal_rule,
+ ...base.nodes,image:(s,n)=>{const {src,attachmentId,alt,...attrs}=n.attrs;if(!attachmentId)throw Error('invalid_image_handle');s.write(`![${String(alt??'').replace(/[\[\]]/g,'')}](colab-image:${attachmentId} "${Buffer.from(JSON.stringify(attrs)).toString('base64url')}")`);s.closeBlock(n);},bulletList:base.nodes.bullet_list,listItem:base.nodes.list_item,horizontalRule:base.nodes.horizontal_rule,
  hardBreak:(s,n,parent,index)=>{if(index===parent.childCount-1)s.write('<br>');else base.nodes.hard_break(s,n,parent,index);},
  orderedList:(s,n)=>s.renderList(n,'  ',i=>`${n.attrs.start+i}. `),
  codeBlock:(s,n)=>base.nodes.code_block(s,{...n,attrs:{params:n.attrs.language},textContent:n.textContent}),

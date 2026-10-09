@@ -5,6 +5,7 @@ edition.workspace = true
 license.workspace = true
 
 [dependencies]
+yrs = "0.28.0"
 anyhow.workspace = true
 sqlx.workspace = true
 serde.workspace = true

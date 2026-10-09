@@ -1139,3 +1139,7 @@ Empty-search fix: 4 focused selector tests and canonical GUI build passed. Nativ
 - GUI person/account/invitation tests (12), installed Skill entrypoint tests (2) and setup/platform tests (8) passed. Windows native installation remains unexecuted on this macOS host.
 
 - Configuration release accepted: public stable 0.1.206-dev (GUI 0.1.152-dev, Skill 0.1.59-dev) uploaded and fully curl-verified; Core/Shell/Windows artifacts retained. Enterprise stable 0.1.7-ks.1 (GUI 0.1.6-ks.1, Skill 0.1.3-ks.1) signed, installed and promoted after acceptance. Installed Skill JSON matches enterprise profile; launchd Server/manifest/SSO policy match; installed GUI has the company installer and no public artifact domain. Public installation baseline hashes unchanged by enterprise installation. No Windows native acceptance claimed.
+
+
+### Canvas images — preliminary checks
+R2 real-object trial passed Put/Get/Head with exact size and SHA-256 for a 2,929,365-byte PNG; only the trial-owned object was removed. Canvas codec has 13 passing cases, including image identity/geometry preservation through text patch and Yjs replay. GUI type/build and Server cargo check passed. Installed public artifacts and end-to-end image editing/Agent consumption are still pending; this is not release acceptance.

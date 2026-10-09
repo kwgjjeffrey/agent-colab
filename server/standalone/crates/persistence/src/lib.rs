@@ -21,6 +21,8 @@ fn unix_time_after(seconds: i64) -> i64 {
 }
 
 mod canvas;
+mod canvas_images;
+pub use canvas_images::CanvasImage;
 mod catalog;
 mod assets;
 pub use assets::{RegisterAsset,AssetBinding};
@@ -793,7 +795,7 @@ let rows=sqlx::query_as::<_,FileShare>("select fs.id,fs.channel_id,fs.name,fs.co
     /// shares and expired/revoked Quick Shares are intentionally absent and become collectible.
     pub async fn referenced_blob_keys(&self) -> anyhow::Result<Vec<String>> {
         sqlx::query_scalar(
-            "select r.blob_key from file_revisions r join shared_assets a on a.publication_share_id=r.share_id where a.retained_until is null or a.retained_until>now() union select sg.blob_key from session_segments sg join session_snapshots ss on ss.id=sg.snapshot_id join shared_assets a on a.publication_share_id=ss.share_id where a.retained_until is null or a.retained_until>now() union select qi.blob_key from quick_transfer_items qi join quick_transfers qt on qt.id=qi.transfer_id where qi.blob_key is not null and qt.state in ('uploading','ready') and qt.expires_at>now()"
+            "select r.blob_key from file_revisions r join shared_assets a on a.publication_share_id=r.share_id where a.retained_until is null or a.retained_until>now() union select sg.blob_key from session_segments sg join session_snapshots ss on ss.id=sg.snapshot_id join shared_assets a on a.publication_share_id=ss.share_id where a.retained_until is null or a.retained_until>now() union select blob_key from canvas_images where blob_key is not null union select qi.blob_key from quick_transfer_items qi join quick_transfers qt on qt.id=qi.transfer_id where qi.blob_key is not null and qt.state in ('uploading','ready') and qt.expires_at>now()"
         ).fetch_all(&self.pool).await.map_err(Into::into)
     }
 

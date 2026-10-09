@@ -42,7 +42,7 @@ def project(tool, operation, value, args):
         elif operation == "create":
             data = {"created": True, **pick(value, "ref title")}
         elif operation == "read":
-            data = {**pick(value, "ref path content"), "offset": args.offset}
+            data = {**pick(value, "ref path content images"), "offset": args.offset}
             context = canvas_context(value.get("content", ""), value.get("ref", ""))
             if context:
                 data["context"] = context
@@ -50,6 +50,8 @@ def project(tool, operation, value, args):
                 page = {"nextOffset": value["nextOffset"]}
             if value.get("syncState") not in (None, "synced"):
                 data["syncState"] = value["syncState"]
+        elif operation in ("image-read", "image-interpret"):
+            data = pick(value, "id canvasId contentType byteSize sha256 imageInterpretation localPath")
         elif operation == "search":
             data = pick(value, "ref matches truncated")
         else:

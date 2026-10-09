@@ -50,6 +50,16 @@ impl BlobStore {
         }
     }
 
+    /// Canvas attachments have a separate namespace so enabling R2 never relocates
+    /// existing Files and Session bytes or changes their deployment backend.
+    pub(crate) fn canvas_images_from_env(root: PathBuf) -> anyhow::Result<Self> {
+        let Ok(bucket) = std::env::var("COLAB_CANVAS_IMAGE_S3_BUCKET") else { return Ok(Self::disk(root)); };
+        let prefix = std::env::var("COLAB_CANVAS_IMAGE_S3_PREFIX")?;
+        anyhow::ensure!(!prefix.is_empty() && !prefix.starts_with('/') && !prefix.ends_with('/') && prefix.split('/').all(|p| !p.is_empty() && p != "." && p != ".."), "invalid Canvas image prefix");
+        let remote = AmazonS3Builder::from_env().with_bucket_name(bucket).build()?;
+        Ok(Self { root, remote: Some(Arc::new(remote)), prefix: object_store::path::Path::parse(prefix)? })
+    }
+
     pub(crate) fn disk(root: PathBuf) -> Self {
         Self {
             root,

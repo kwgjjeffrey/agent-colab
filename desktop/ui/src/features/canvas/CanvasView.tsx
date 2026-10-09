@@ -1,3 +1,4 @@
+import { CanvasImage, CanvasImageUploads } from "./CanvasImages";
 import { AgentButton } from "@/features/agent/AgentButton";
 import { traceTargets } from "@/api/trace-locators";
 import { WorkspaceActions } from "@/features/workspace/WorkspaceActions";
@@ -629,6 +630,7 @@ function LoadedCanvasEditor({
       extensions: [
         StarterKit.configure({ undoRedo: false }),
         mentionExtension,
+        CanvasImage,
         Collaboration.configure({ document }),
       ],
       editorProps: {
@@ -924,6 +926,7 @@ const canvasJson=operation.json;
           trackBlock(event);
         }}
       >
+        <CanvasImageUploads editor={editor} canvasId={canvasId} />
         <EditorContent editor={editor} />
         {blockMenu && (
           <div

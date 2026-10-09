@@ -1,6 +1,6 @@
 {
   "name": "@colab/desktop-ui",
-  "version": "0.1.152-dev",
+  "version": "0.1.153-dev",
   "license": "Apache-2.0",
   "private": true,
   "type": "module",
@@ -24,6 +24,7 @@
     "@opentelemetry/resources": "^2.11.0",
     "@opentelemetry/sdk-trace-web": "^2.11.0",
     "@tiptap/extension-collaboration": "3.31.4",
+    "@tiptap/extension-image": "3.31.4",
     "@tiptap/extension-mention": "^3.31.4",
     "@tiptap/extension-placeholder": "3.31.4",
     "@tiptap/react": "^3.31.4",

@@ -266,6 +266,7 @@ impl Database {
             .bind(canvas_id)
             .execute(&mut *tx)
             .await?;
+        crate::canvas_images::reconcile_images(&mut tx,canvas_id).await?;
         tx.commit().await?;
         Ok(Some(row))
     }

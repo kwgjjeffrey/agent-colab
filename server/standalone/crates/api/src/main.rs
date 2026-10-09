@@ -22,6 +22,7 @@ mod blobs;
 mod session_upload;
 mod assets;
 mod canvas;
+mod canvas_images;
 mod catalog;
 mod observability;
 mod email_outbox;
@@ -44,6 +45,7 @@ struct AppState {
     external_auth: Option<external_auth::Config>,
     blob_root: PathBuf,
     blob_store: blob_store::BlobStore,
+    canvas_image_store: blob_store::BlobStore,
     message_events: tokio::sync::broadcast::Sender<messaging::MessageInvalidation>,
     agent_status_events: tokio::sync::broadcast::Sender<messaging::AgentRequestInvalidation>,
     canvas_events: tokio::sync::broadcast::Sender<canvas::CanvasInvalidation>,
@@ -114,6 +116,7 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
     let _telemetry = colab_observability::init("colab-server", option_env!("COLAB_SERVER_VERSION").unwrap_or("development"));
     let config = Config::from_env()?;
     let blob_store = blob_store::BlobStore::from_env(config.blob_root.clone())?;
+    let canvas_image_store = blob_store::BlobStore::canvas_images_from_env(config.blob_root.join("canvas-images"))?;
     let external_auth = external_auth::Config::load()?;
     let google =
         colab_server_auth::GoogleDesktopCredentials::load(&config.google_oauth_credentials_file)?;
@@ -150,6 +153,7 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
     println!("colab-server listening on http://{}", config.address);
     transfers::spawn_expired_transfer_gc(database.clone(), blob_store.clone());
     blobs::spawn_orphan_gc(database.clone(), blob_store.clone());
+    blobs::spawn_orphan_gc(database.clone(), canvas_image_store.clone());
     if let Some(sender) = email.clone() {
         email_outbox::spawn(database.clone(), sender, config.public_url.clone());
     }
@@ -166,6 +170,7 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
             external_auth,
             blob_root: config.blob_root,
             blob_store,
+            canvas_image_store,
             message_events,
             agent_status_events,
             agent_request_events,
@@ -288,6 +293,7 @@ fn router(state: AppState) -> Router {
         .merge(Router::new().route("/v1/sessions/{share_id}/segments", post(upload_session_segment)))
         .merge(messaging::routes())
         .merge(canvas::routes())
+        .merge(canvas_images::router())
         .merge(catalog::routes())
         .merge(transfers::router())
         .with_state(state)

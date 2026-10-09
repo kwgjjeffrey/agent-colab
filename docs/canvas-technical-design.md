@@ -912,3 +912,14 @@ local_core_unavailable
 ### Offline GUI hydration after Core restart (2026-10-07)
 
 Local Core retains account-scoped Organization/Channel/Canvas/folder discovery in local_settings after successful authorized reads. Transport or gateway unavailability can reuse that catalog; an explicit authorization rejection clears the affected cached catalog and never falls back. GUI can render its existing account replica via GET /v1/canvases/{id}/local-replica (update, lastServerSeq, pending). This is GUI CRDT hydration, not a Skill interface. It neither advances the remote cursor nor marks the document synced. Remote updates remain the repair path after reconnect; the durable outbox preserves clientUpdateId and ordered submission. The GUI displays Offline while showing cached edits.
+
+
+## Canvas image attachments
+
+Canvas images are immutable validated PNG/JPEG/WebP/GIF objects (20 MiB maximum, bounded decode), uploaded through GUI/Skill → Local Core → Server before an image node enters the collaborative document. CRDT stores only attachment UUID, stable local content route and resize geometry; it never contains binary image bytes or provider credentials. Paste and drop image files use the same upload use case as the file picker. Pending uploads expose retry and cancellation; late completion cannot insert into a different Canvas.
+
+Server uses the existing object_store S3 adapter with a separate Canvas image store and managed prefix, configured by COLAB_CANVAS_IMAGE_S3_BUCKET/PREFIX and private standard AWS_* environment. Public deployment uses R2; enabling it does not relocate existing Files/Session objects. Missing image-store configuration selects disk for local development. Image content/metadata use opaque UUID handles without additional Channel membership checks. Upload still requires existing Canvas edit access; interpretation mutation requires an authenticated account.
+
+image_interpretation is separate metadata, hidden in GUI and available in Agent read output. Agent image-read downloads original bytes with exact length/SHA-256 validation; image-interpret updates interpretation. Canonical Markdown emits ![](colab-image:<UUID> "<encoded geometry>"); it remains a stable identity handle across document rename/move and text edits. Interpretation does not alter the document's text revision.
+
+Under the Canvas row lock Server merges the authoritative ordered updates to reconcile referenced images. Unreferenced uploads and removed images are retained 24 hours; archived documents retain images 24 hours after archive. GC clears durable blob heads first, then ordinary object/staging GC reclaims bytes with retry. Images currently belong to their originating Canvas; independent cross-Canvas attachment reuse is not an advertised use case.

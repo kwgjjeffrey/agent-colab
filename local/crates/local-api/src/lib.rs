@@ -32,6 +32,7 @@ mod device_auth;
 mod invite_links;
 mod observability;
 mod canvas;
+mod canvas_images;
 mod catalog;
 mod canvas_codec;
 mod update_status;
@@ -703,6 +704,9 @@ pub fn router(state: AppState, security: LocalSecurity) -> Router {
             get(canvas::list_canvases).post(canvas::create_canvas),
         )
         .route("/v1/canvases/{canvas_id}", patch(canvas::rename_canvas).delete(canvas::archive_canvas))
+        .route("/v1/canvases/{canvas_id}/images", axum::routing::post(canvas_images::upload))
+        .route("/v1/canvas-images/{id}",get(canvas_images::metadata).patch(canvas_images::interpret))
+        .route("/v1/canvas-images/{id}/content",get(canvas_images::content))
         .route("/v1/canvases/{canvas_id}/local-replica", get(canvas::local_replica))
         .route("/v1/canvases/{canvas_id}/position", patch(canvas::move_canvas))
         .route("/v1/canvases/{canvas_id}/agent-prompt", axum::routing::post(canvas::agent_prompt))

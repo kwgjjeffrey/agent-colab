@@ -237,3 +237,6 @@ button:not(:disabled), a[href], [role="button"]:not([aria-disabled="true"]), [ro
 .catalog-drop-target[data-drop-position="after"]::after { content: ""; position: absolute; left: 0; right: 0; height: 2px; background: var(--primary); z-index: 1; }
 .catalog-drop-target[data-drop-position="before"]::before { top: 0; }
 .catalog-drop-target[data-drop-position="after"]::after { bottom: 0; }
+
+.canvas-editor-content img { max-width: 100%; height: auto; border-radius: 8px; }
+.canvas-editor-content [data-resize-container] { max-width: 100%; margin-block: 12px; }

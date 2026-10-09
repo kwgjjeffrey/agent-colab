@@ -1225,3 +1225,7 @@ Person search state now depends on trimmed query: empty renders input guidance a
 - GUI person/account/invitation tests (12), installed Skill entrypoint tests (2) and setup/platform tests (8) passed. Windows native installation remains unexecuted on this macOS host.
 
 - Configuration release accepted: public stable 0.1.206-dev (GUI 0.1.152-dev, Skill 0.1.59-dev) uploaded and fully curl-verified; Core/Shell/Windows artifacts retained. Enterprise stable 0.1.7-ks.1 (GUI 0.1.6-ks.1, Skill 0.1.3-ks.1) signed, installed and promoted after acceptance. Installed Skill JSON matches enterprise profile; launchd Server/manifest/SSO policy match; installed GUI has the company installer and no public artifact domain. Public installation baseline hashes unchanged by enterprise installation. No Windows native acceptance claimed.
+
+
+### Canvas images — public R2 first
+Implementation in progress: bounded validated uploads, distinct image Blob namespace, durable attachment metadata, Yrs reference reconciliation, 24-hour retention, GUI paste/drop/picker and native resizing, stable Markdown image handles and Agent interpretation/download commands. Kuaishou console provisioning is deferred until public release acceptance is complete.

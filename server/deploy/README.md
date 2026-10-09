@@ -46,3 +46,16 @@ COLAB_OBSERVABILITY_ENV=/private/path/server-exporter.env server/deploy/configur
 ```
 
 This writes `/etc/agent-colab/observability.env` and a systemd drop-in; the next Server deployment/restart activates it. A provider switch regenerates and reinstalls this file, then restarts Server. Never copy the token into GUI/Skill/Core artifacts. Linux source builds include the shared `observability/rust` crate and inject the selected Server release version.
+
+Canvas image storage is installed separately from business/server configuration:
+
+```bash
+COLAB_BLOB_ENV_FILE=/private/canvas-image-storage.env server/deploy/configure-blob.sh
+```
+
+The private file supplies `COLAB_CANVAS_IMAGE_S3_BUCKET`, a dedicated managed
+`COLAB_CANVAS_IMAGE_S3_PREFIX`, and standard `AWS_ENDPOINT`, `AWS_REGION`,
+`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`. R2 uses region `auto`; credentials
+remain on Server. Restart/deploy Server after installation. Existing Files and
+Sessions retain their configured store. Do not place images under the client
+artifact prefix. Image GC only scans its dedicated namespace.

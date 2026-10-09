@@ -56,3 +56,31 @@ def request(method: str, path: str, *, core: str = DEFAULT_CORE, body=None, time
     except urllib.error.URLError as error:
         raise LocalApiError(f"Cannot reach Colab Local Core at {core}: {error.reason}", 3) from error
     return json.loads(raw) if raw else None
+
+def download(path: str, destination, *, core: str = DEFAULT_CORE, limit: int = 20 * 1024 * 1024):
+    """Download a bounded Canvas attachment through authenticated Local Core."""
+    import hashlib
+    import tempfile
+    discovered_core, bearer = discovery()
+    core = core or discovered_core
+    target = pathlib.Path(destination).expanduser().resolve()
+    target.parent.mkdir(parents=True, exist_ok=True)
+    query = urllib.request.Request(core.rstrip('/') + path, headers={'authorization': f'Bearer {bearer}'})
+    temp = None
+    digest, size = hashlib.sha256(), 0
+    try:
+        with _OPENER.open(query, timeout=60) as response, tempfile.NamedTemporaryFile(dir=target.parent, delete=False) as output:
+            temp = pathlib.Path(output.name)
+            while chunk := response.read(65536):
+                size += len(chunk)
+                if size > limit:
+                    raise LocalApiError('Image exceeds the download size limit')
+                digest.update(chunk)
+                output.write(chunk)
+        temp.replace(target)
+        return {'localPath': str(target), 'byteSize': size, 'sha256': digest.hexdigest()}
+    except (urllib.error.URLError, OSError) as error:
+        raise LocalApiError(f'Image download failed: {error}') from error
+    finally:
+        if temp is not None:
+            temp.unlink(missing_ok=True)

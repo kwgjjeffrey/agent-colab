@@ -54,3 +54,14 @@ test('Server welcome fixture hydrates the real editor and remains editable throu
  Y.applyUpdate(doc,Buffer.from(result.update,'base64'));
  assert(render(yXmlFragmentToProseMirrorRootNode(doc.getXmlFragment('default'),schema)).includes('## Our team’s uses'));
 });
+
+test('image handles and resized geometry survive projection, text patch and Yjs replay',()=>{
+ const id='550e8400-e29b-41d4-a716-446655440000';
+ const node=schema.nodeFromJSON({type:'doc',content:[p(t('Before')), {type:'image',attrs:{attachmentId:id,src:`/v1/canvas-images/${id}/content`,width:320,height:200}},p(t('After'))]});
+ assert(parser.parse(render(node)).eq(node));
+ const next=patch(node,'Before','Changed');assert(next.child(1).eq(node.child(1)));
+ const doc=prosemirrorJSONToYDoc(schema,node.toJSON(),'default');
+ const out=run({operation:'patch',state:Buffer.from(Y.encodeStateAsUpdate(doc)).toString('base64'),old:'After',new:'Updated'});
+ Y.applyUpdate(doc,Buffer.from(out.update,'base64'));
+ assert(yXmlFragmentToProseMirrorRootNode(doc.getXmlFragment('default'),schema).child(1).eq(node.child(1)));
+});
