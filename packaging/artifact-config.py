@@ -10,6 +10,11 @@ def load_config(path):
     value = json.loads(Path(path).read_text())
     if value.get('schemaVersion') != 1 or value.get('deploymentMode') not in ('public', 'enterprise'):
         raise ValueError('unsupported artifact configuration')
+    auth = value.get('auth', {})
+    if auth.get('kind') not in ('google', 'external') or not isinstance(auth.get('label'), str) or not auth['label'].strip():
+        raise ValueError('auth.kind and auth.label are required')
+    if value['deploymentMode'] == 'enterprise' and auth['kind'] != 'external':
+        raise ValueError('enterprise configuration must select its external identity provider')
     for key in ('serverUrl', 'releaseManifestUrl', 'installMacUrl', 'installWindowsUrl'):
         url = value[key]
         parsed = urlsplit(url)

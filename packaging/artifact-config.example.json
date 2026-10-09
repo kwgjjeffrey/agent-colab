@@ -4,5 +4,9 @@
   "serverUrl": "https://colab.example.com",
   "releaseManifestUrl": "https://artifacts.example.com/channels/stable.json",
   "installMacUrl": "https://artifacts.example.com/install/colab-install",
-  "installWindowsUrl": "https://artifacts.example.com/install/colab-install.ps1"
+  "installWindowsUrl": "https://artifacts.example.com/install/colab-install.ps1",
+  "auth": {
+    "kind": "google",
+    "label": "Google"
+  }
 }

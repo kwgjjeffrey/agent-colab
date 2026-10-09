@@ -1185,3 +1185,9 @@ Empty-search fix: 4 focused selector tests and canonical GUI build passed. Nativ
 
 - GUI compile/build passed; canonical GUI-only R2 release 0.1.156-dev verified size 1,330,151 and SHA-256 82fbe14727cc9b3baf5b2794396506e3b0e517dbbc2002d9e54c9d6b4325827f. Promotion 0.1.210-dev installed; actual /ui.json reports 0.1.156-dev. Core/Skill/Shell retained.
 - canvas.editing.images passed 32 assertions in Run 20261009T154431Z-f9fc5e9d. Independently paused POST upload and GET image content: local blob preview decodes before upload, remains visible and busy after successful upload while remote bytes are held, then disappears after the actual editor image renders. Durable projection contains no blob URLs. Existing image retry/resize/reload/drop/Agent consumption/text-patch checks also passed; owned Canvas archived. Delayed-response screenshot visually reviewed.
+
+### Required identity onboarding (2026-10-10)
+
+- Added a shared top-of-app, non-dismissible identity verification banner. Custom name/avatar and old reminder-dismissal settings do not suppress it. Binding Google or an authenticated managed enterprise profile removes it. Enterprise managed profiles are trusted because the Server only allows profile reads after validating the SSO session lease.
+- Artifact config `auth.kind` selects the existing Core Google/external start endpoint; `auth.label` supplies the provider button label. No company-specific branch inside the banner and no separate GUI implementation. Focus refresh plus five-second checks while unbound observe browser-completed binding even if account ID/email stay unchanged; stale profile responses cannot cross account changes.
+- Onboarding (4), AccountProfile (6), invitation (2) tests and GUI TypeScript check passed. Only GUI artifact versions advance; Core/Skill/Shell remain independently unchanged.

@@ -1,3 +1,5 @@
+import { artifactConfig } from "@/artifact-config";
+import { AuthOnboarding, hasBoundAuth } from "@/features/account/AuthOnboarding";
 import { enterpriseDeployment } from "@/deployment";
 import { traceTargets } from "@/api/trace-locators";
 import { runOperation, type OperationScope } from "@/api/operation-runner";
@@ -230,16 +232,28 @@ function App() {
   const [accountProfile, setAccountProfile] = useState<AccountProfileData>();
   const [googleReminderDismissed, setGoogleReminderDismissed] = useState(false);
   const accountSetupPending = accountProfile?.id === auth.user?.id && needsAccountSetup(accountProfile, googleReminderDismissed, !enterpriseDeployment);
+  const profileAccountId = useRef(auth.user?.id);
+  profileAccountId.current = auth.user?.id;
   async function loadAccountProfile() {
+    const userId = profileAccountId.current;
     const response = await fetch("/v1/auth/profile");
     if (!response.ok) throw new Error("Could not load account settings.");
-    setAccountProfile(await response.json());
+    const profile = await response.json();
+    if (profileAccountId.current === userId && profile.id === userId) setAccountProfile(profile);
   }
   useEffect(() => {
     setAccountProfile(undefined);
     setGoogleReminderDismissed(localStorage.getItem(`colab:google-reminder-dismissed:${auth.user?.id}`) === "1");
     if (auth.user?.id) void loadAccountProfile().catch(() => {});
   }, [auth.user?.id, auth.user?.email]);
+  useEffect(() => {
+    if (!auth.authenticated || !auth.user?.id) return;
+    const refresh = () => { void loadAccountProfile().catch(() => {}); };
+    window.addEventListener("focus", refresh);
+    // Binding can finish in the browser without changing the current user ID or email.
+    const timer = !accountProfile || !hasBoundAuth(accountProfile) ? window.setInterval(refresh, 5000) : undefined;
+    return () => { window.removeEventListener("focus", refresh); if (timer) window.clearInterval(timer); };
+  }, [auth.authenticated, auth.user?.id, accountProfile?.googleLinked, accountProfile?.profileManaged]);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [myAgentCount, setMyAgentCount] = useState(0);
   const [agentActivity, setAgentActivity] = useState<string>();
@@ -601,7 +615,7 @@ const trackedFetch = operation.fetch;
     setError(undefined);
     try {
       const response = await trackedFetch(
-        `/v1/auth/${enterpriseDeployment ? "external" : "google"}/start${loginHint ? `?loginHint=${encodeURIComponent(loginHint)}` : ""}`,
+        `/v1/auth/${artifactConfig.auth.kind}/start${loginHint ? `?loginHint=${encodeURIComponent(loginHint)}` : ""}`,
       );
       if (!response.ok) throw new Error(await response.text());
       const body = await response.json();
@@ -1043,6 +1057,7 @@ const api = operation.response;
         {host.isElectron && /Macintosh|Mac OS X/.test(navigator.userAgent) && (
           <div className="macos-titlebar" aria-label="Window title bar"><span>Colab</span></div>
         )}
+        <AuthOnboarding resolved={authResolved} authenticated={auth.authenticated} profile={accountProfile} userId={auth.user?.id} config={artifactConfig} busy={busy} onAuthenticate={() => void signIn()}/>
         <div className="grid min-h-0 flex-1 grid-cols-[72px_1fr] overflow-hidden">
         <aside data-trace-target={traceTargets("channels.list")} data-trace-region={"channels"}
           className="flex h-full min-h-0 flex-col items-center gap-3 bg-sidebar-foreground py-3"

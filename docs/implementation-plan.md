@@ -1242,3 +1242,9 @@ Implemented immediate inline skeleton blocks at pending image insertion position
 ### Canvas local image preview through render (2026-10-09)
 
 Supersedes upload-only placeholders: paste/drop/picker immediately render a local object-URL preview with busy feedback. The preview remains through upload, remote image fetch/decode, and the editor image decode/frame handoff. Only stable attachment identity/content URL enters the replica. Object URLs are reclaimed on completed handoff, dismissal and editor teardown; failed remote loading retries the existing uploaded attachment. Public GUI 0.1.156-dev accepted under promotion 0.1.210-dev.
+
+### Required identity onboarding (2026-10-10)
+
+- Added a shared top-of-app, non-dismissible identity verification banner. Custom name/avatar and old reminder-dismissal settings do not suppress it. Binding Google or an authenticated managed enterprise profile removes it. Enterprise managed profiles are trusted because the Server only allows profile reads after validating the SSO session lease.
+- Artifact config `auth.kind` selects the existing Core Google/external start endpoint; `auth.label` supplies the provider button label. No company-specific branch inside the banner and no separate GUI implementation. Focus refresh plus five-second checks while unbound observe browser-completed binding even if account ID/email stay unchanged; stale profile responses cannot cross account changes.
+- Onboarding (4), AccountProfile (6), invitation (2) tests and GUI TypeScript check passed. Only GUI artifact versions advance; Core/Skill/Shell remain independently unchanged.
