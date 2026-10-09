@@ -2144,7 +2144,7 @@
     },
     {
       "id": "canvas.reconcile",
-      "description": "打开或修复 Canvas，按持久化序列应用更新",
+      "description": "同步 Canvas：失效通知和 Offline 重试均核对 Core outbox；恢复后清除错误。记录触发原因、HTTP 状态、游标、待同步数量和恢复结果，不记录正文。",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {

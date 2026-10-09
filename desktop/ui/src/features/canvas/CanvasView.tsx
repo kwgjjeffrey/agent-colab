@@ -361,19 +361,22 @@ const canvasJson=operation.json;
     );
 
 });}
-  function pull() {
+  function pull(trigger = "realtime") {
     if (pullInFlight.current) return pullInFlight.current;
     const pending = (async () => {return runOperation("canvas.reconcile", async (operation)=>{
 const canvasJson=operation.json;
-
+      operation.operation.span.setAttributes({"canvas.id": canvasId, "canvas.sync.trigger": trigger, "canvas.sync.cursor.before": seq.current, "canvas.sync.stage": "remote-request"});
       const response = await operation.fetch(
         `/v1/canvases/${canvasId}/updates?after=${seq.current}&limit=1000`,
       );
+      operation.operation.span.setAttribute("canvas.sync.http_status", response.status);
       if (!response.ok) {
+        operation.operation.span.addEvent("canvas.sync.failed", {"http.status_code": response.status});
         if (![500, 502, 503, 504].includes(response.status)) throw new Error(await response.text());
         const cached = await canvasJson<{update: string; lastServerSeq: number; pending: number}>(
           `/v1/canvases/${canvasId}/local-replica`,
         );
+        operation.operation.span.setAttributes({"canvas.sync.pending": cached.pending, "canvas.sync.state": "offline"});
         Y.applyUpdate(document, decode(cached.update), REMOTE);
         seq.current = Math.max(seq.current, cached.lastServerSeq);
         if (mounted.current) {
@@ -383,11 +386,15 @@ const canvasJson=operation.json;
         }
         return;
       }
+      operation.operation.span.setAttribute("canvas.sync.stage", "apply-updates");
       const rows = await response.json() as CanvasUpdate[];
+      operation.operation.span.setAttributes({"canvas.sync.update_count": rows.length, "canvas.sync.state": "synced"});
+      operation.operation.span.addEvent("canvas.sync.reconciled", {"canvas.sync.cursor": seq.current});
       for (const row of rows) {
         Y.applyUpdate(document, decode(row.update), REMOTE);
         seq.current = Math.max(seq.current, row.serverSeq);
       }
+      operation.operation.span.setAttributes({"canvas.sync.stage": "recovered", "canvas.sync.cursor.after": seq.current, "canvas.sync.recovered": trigger === "offline-retry"});
       if (mounted.current) {
         setReady(true);
         setState("synced");
@@ -402,7 +409,7 @@ const canvasJson=operation.json;
   }
   useEffect(() => {
     mounted.current = true;
-    void pull().catch((reason) => {
+    void pull("mount").catch((reason) => {
       setState("offline");
       setError(String(reason));
     });
@@ -424,6 +431,21 @@ const canvasJson=operation.json;
       document.destroy();
     };
   }, [canvasId, document]);
+  // A successful Core outbox retry can produce no newer invalidation: own edits already advanced
+  // the GUI cursor. Reconcile while offline even without a websocket reconnect or another edit.
+  useEffect(() => {
+    if (state !== "offline") return;
+    let cancelled = false, attempts = 0;
+    let timer: ReturnType<typeof setTimeout>;
+    async function recover() {
+      if (cancelled) return;
+      try { await pull("offline-retry"); }
+      catch (reason) { if (!cancelled && mounted.current) setError(String(reason)); }
+      if (!cancelled) timer = setTimeout(recover, Math.min(30000, 3000 * 2 ** Math.min(attempts++, 4)));
+    }
+    timer = setTimeout(recover, 3000);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [state, canvasId, document]);
   useEffect(() => {
     void refreshRequests().catch(() => {});
     const unsubscribe = accountRealtime.subscribe((frame) => {
@@ -872,7 +894,7 @@ const canvasJson = operation.json;
       const started = beginOperation(operations["canvas.edit"]);
       queue.current = queue.current.then(async () => {return runOperation("canvas.edit", async (operation)=>{
 const canvasJson=operation.json;
-
+        operation.operation.span.setAttributes({"canvas.id": canvasId, "canvas.update.id": id, "canvas.update.bytes": update.byteLength});
         try {
           const row = await canvasJson<CanvasUpdate>(
             `/v1/canvases/${canvasId}/updates`,
@@ -884,12 +906,14 @@ const canvasJson=operation.json;
               }),
             },
           );
+          operation.operation.span.addEvent("canvas.sync.edit_acked", {"canvas.sync.server_seq": row.serverSeq});
           seq.current = Math.max(seq.current, row.serverSeq);
           if (mounted.current) {
             setState("synced");
             setError(undefined);
           }
         } catch (reason) {operation.fail();
+          operation.operation.span.addEvent("canvas.sync.edit_failed", {"canvas.sync.state": "offline"});
           if (mounted.current) {
             setState("offline");
             setError(String(reason));
