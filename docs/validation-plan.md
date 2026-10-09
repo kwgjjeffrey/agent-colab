@@ -1013,3 +1013,8 @@ GUI 0.1.148-dev / promotion 0.1.200-dev lightens the hero base to gray-green #30
 ### Home card alignment — 2026-10-09
 
 Removed the official hero third-card lift at both desktop and narrow container sizes. All three card tops/bottoms, SVG regions, multipliers and captions now share geometry. GUI 0.1.149-dev / promotion 0.1.201-dev built, publicly verified (1322253 bytes; SHA-256 `553ad9b4cb26e507ad41368523d3e0ab38c7fcbf2c35e163a2736f7eaa1b13fa`) and normally installed; active ui.json confirmed 0.1.149-dev. Read-only E2E `channels.home.hero` Run `20261009T072613Z-c5d6512f` passed nine assertions including explicit desktop/narrow geometry alignment, animation, gradient and reduced motion. Narrow screenshot reviewed.
+
+
+### Home light surface — 2026-10-09
+
+Removed the dark hero background and gradient. Hero uses the workspace surface; pale green/purple/lime cards and adjusted text/network contrast retain animation and equal geometry. GUI 0.1.150-dev / promotion 0.1.202-dev built, publicly verified (1322404 bytes; SHA-256 `d73649c4bcb881514d78af64794cd1c942a28ceb9fb85b59bb9876912ef2d644`) and normally installed, active ui.json confirmed. Read-only E2E `channels.home.hero` Run `20261009T081239Z-86e8e483` passed nine assertions including absence of a background gradient, desktop/narrow alignment, movement and reduced motion. Narrow screenshot reviewed.

@@ -76,7 +76,7 @@ Home 收口（2026-10-06）：Tips 展示名称改为 Use cases，保留已有�
 
 Tips 角色场景（2026-10-06）：每条显示角色 Badge，顶部可按 Individual / Collaborator / Team lead / Reviewer / Skill sharing 筛选；这是使用视角，不是账号权限。新增求助、接手、团队总结、决策评审、远端检查、Skill 复用六条。共享类 Try 复用 Quick Share；Session 消费类只在 Try 时读取当前 Channel 的 Session 元数据，用户选择来源后得到任务预填的标准提示词，可追加 User query、复制或转发。未同步的 Session 不可选择；缺少同事 Session 进入已有邀请分享流程。远端检查复用选择 Agent + 可编辑指令，必须显式发送；缺少 Agent 有明确提示。Skill 复用进入已有安装界面。保留折叠、dismiss 和恢复，不新建工作流、调度或权限系统。
 
-Home（2026-10-09）：复用官网三张协作卡片与动效，包含 1× / 2× / 200× 倍数、发光连线和流动粒子；价值陈述为 “Your team is about to work at agentic velocity”。banner 为深色，底部渐变至当前主题内容背景。窄窗口使用容器自适应，系统减少动态效果设置暂停动画。Tips 条目只由分隔线区分，整体可折叠且按账号记忆；不重复提供已有 Tab 的功能按钮。动效 banner 下方的 Recent activity 用数字分页真实元数据展示共享、最近消费、Canvas 创建和 Messages/Canvas Agent 指令，资源可跳至既有详情。它不是完整安全审计，也不展示资源正文或工具日志。
+Home（2026-10-09）：复用官网三张协作卡片与动效，包含 1× / 2× / 200× 倍数、发光连线和流动粒子；价值陈述为 “Your team is about to work at agentic velocity”。banner 使用页面浅色背景，三张卡片分别为淡绿、淡紫和淡黄绿色，无深色背景或渐变。窄窗口使用容器自适应，系统减少动态效果设置暂停动画。Tips 条目只由分隔线区分，整体可折叠且按账号记忆；不重复提供已有 Tab 的功能按钮。动效 banner 下方的 Recent activity 用数字分页真实元数据展示共享、最近消费、Canvas 创建和 Messages/Canvas Agent 指令，资源可跳至既有详情。它不是完整安全审计，也不展示资源正文或工具日志。
 
 状态：首版结构稿  
 范围：Channel、Messages、Session、Files、Skills、Settings
