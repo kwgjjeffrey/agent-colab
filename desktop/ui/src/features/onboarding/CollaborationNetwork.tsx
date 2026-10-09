@@ -1,3 +1,5 @@
+// Reuses the official website hero network; desktop-specific transition styles stay local.
+import "./CollaborationNetwork.css";
 import { useEffect, useRef } from "react";
 import { gsap } from "gsap";
 
@@ -127,9 +129,11 @@ export function CollaborationNetwork() {
   }, []);
   return (
     <div ref={root} className="home-network-strip">
+      <div className="network-value"><div className="hero-kicker"><span/> HUMAN INTENT. AGENT MOMENTUM.</div><h2>Your team is about to work at <span>agentic velocity</span></h2></div>
       <div className="home-networks">
         {modes.map((label, mode) => (
           <figure key={label}>
+            <div className="network-phase" aria-hidden="true"><span>0{mode + 1}</span><span>{["HUMAN PACE", "INDIVIDUAL SPEED", "TEAM VELOCITY"][mode]}</span></div>
             <svg viewBox="0 0 280 210" role="img" aria-label={label}>
               {points.map(([x, y], index) => (
                 <path
@@ -157,7 +161,7 @@ export function CollaborationNetwork() {
                   data-end-y={points[(index + 1) % 3][1]}
                   cx={x}
                   cy={y}
-                  r={mode === 2 ? 3.8 : 2.4}
+                  r={mode === 2 ? 6.5 : 2.4}
                   opacity="0"
                 />
               ))}
@@ -219,11 +223,10 @@ export function CollaborationNetwork() {
                 );
               })}
             </svg>
-            <figcaption>{label}</figcaption>
+            <figcaption><span className="network-multiplier">{["1×", "2×", "200×"][mode]}</span>{label}<span className="phase-detail">{["Every handoff takes time", "Faster agents. Same bottlenecks.", "Shared context. Collective momentum."][mode]}</span></figcaption>
           </figure>
         ))}
       </div>
-      <h2>Your team is about to work at agentic velocity</h2>
     </div>
   );
 }
