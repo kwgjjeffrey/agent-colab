@@ -9,7 +9,7 @@ for unit,registry,source in [('desktop-ui','desktop/ui/tracing/registry.json','d
         if file.suffix not in ('.rs','.ts','.tsx') or '.test.' in file.name:continue
         text=file.read_text()
         if unit=='desktop-ui':bound.update(re.findall(r'runOperation(?:<[^>]+>)?\(\s*["\']([a-z][a-z0-9._-]+)["\']',text));bound.update(re.findall(r'beginOperation\(operations\[["\']([^"\']+)["\']\]',text))
-        else:bound.update(re.findall(r'registered_business\(include_str!\("[^"]+"\),\s*"([^"]+)"',text))
+        else:bound.update(re.findall(r'registered_business\(\s*include_str!\("[^"]+"\),\s*"([^"]+)"',text))
     for id in sorted(ids-bound):problems.append({'unit':unit,'unbound':id})
     for id in sorted(bound-ids):problems.append({'unit':unit,'unregistered':id})
     for row in definitions:

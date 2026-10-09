@@ -20,7 +20,11 @@ insert into shared_assets(id,owner_user_id,kind,name,description,source_adapter,
  select s.id,om.user_id,s.kind,s.name,s.description,s.source_adapter,s.id,s.current_root_oid,s.current_snapshot_id,case when s.state='withdrawn' then now()+interval '24 hours' end
  from channel_shares s join organization_members om on om.id=s.contributor_member_id;
 update channel_shares set asset_id=id;
+-- Validate deferred backfill FKs before ALTER; populated databases otherwise retain
+-- pending constraint-trigger events and PostgreSQL refuses the NOT NULL change.
+set constraints all immediate;
 alter table channel_shares alter column asset_id set not null;
+set constraints all deferred;
 create index channel_shares_asset on channel_shares(asset_id,state);
 -- Keep historical reference IDs active even if one Channel previously shared a source twice.
 -- Registration is owner-serialized and reuses one existing placement for all new requests.
