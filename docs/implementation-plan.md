@@ -1228,4 +1228,4 @@ Person search state now depends on trimmed query: empty renders input guidance a
 
 
 ### Canvas images — public R2 first
-Implementation in progress: bounded validated uploads, distinct image Blob namespace, durable attachment metadata, Yrs reference reconciliation, 24-hour retention, GUI paste/drop/picker and native resizing, stable Markdown image handles and Agent interpretation/download commands. Kuaishou console provisioning is deferred until public release acceptance is complete.
+Public implementation released and accepted: bounded validated uploads to R2, distinct image Blob namespace, durable attachment metadata, Yrs reference reconciliation, 24-hour retention, GUI paste/drop/picker and native resizing, stable Markdown image handles and hidden Agent interpretation/download commands. Promotion 0.1.208-dev installs Core 0.1.104-dev, GUI 0.1.154-dev and Skill 0.1.62-dev; Server 0.1.9 is deployed. Electron Shell is unchanged. macOS installed acceptance passed. Kuaishou Blob infrastructure is owned by another agent; integration will consume that service when ready.
