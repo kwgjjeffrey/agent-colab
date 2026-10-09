@@ -31,8 +31,18 @@ export async function run(ctx){disposable(ctx);const doc=await createDocument(ct
  ctx.assert('Agent receives hidden interpretation',result.imageInterpretation,interpretation);
  ctx.assert('Agent downloads original bytes',createHash('sha256').update(await readFile(output)).digest('hex'),createHash('sha256').update(png).digest('hex'));
  await editor.press('ControlOrMeta+End');
+ let releaseUpload; const uploadGate=new Promise(resolve=>{releaseUpload=resolve;});
+ await ctx.page.route('**/v1/canvases/'+doc.id+'/images',async route=>{await uploadGate;await route.continue();});
  await editor.evaluate((el,bytes)=>{const transfer=new DataTransfer();transfer.items.add(new File([new Uint8Array(bytes)],'pasted.png',{type:'image/png'}));el.dispatchEvent(new ClipboardEvent('paste',{clipboardData:transfer,bubbles:true,cancelable:true}));},[...png]);
+ const placeholder=editor.locator('.canvas-image-upload-placeholder[aria-busy="true"]');
+ await placeholder.waitFor();
+ ctx.assert('Paste immediately shows a visible skeleton block',await placeholder.isVisible(),true);
+ ctx.assert('Pending upload has no durable image node',await editor.locator('img[data-canvas-image]').count(),1);
+ await ctx.screenshot('Paste acknowledged by inline image skeleton');
+ releaseUpload();
  await eventually(ctx,'Pasted image inserts through upload',()=>editor.locator('img[data-canvas-image]').count(),count=>count===2);
+ await ctx.page.unroute('**/v1/canvases/'+doc.id+'/images');
+ await eventually(ctx,'Completed upload removes its skeleton',()=>editor.locator('.canvas-image-upload-placeholder').count(),count=>count===0);
  await editor.evaluate((el,bytes)=>{const transfer=new DataTransfer();transfer.items.add(new File([new Uint8Array(bytes)],'dropped.png',{type:'image/png'}));const box=el.getBoundingClientRect();el.dispatchEvent(new DragEvent('drop',{dataTransfer:transfer,clientX:box.left+30,clientY:box.top+30,bubbles:true,cancelable:true}));},[...png]);
  await eventually(ctx,'Dropped image inserts through upload',()=>editor.locator('img[data-canvas-image]').count(),count=>count===3);
  const before=await core(ctx,'GET','/v1/canvases/'+doc.id+'/document');

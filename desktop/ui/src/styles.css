@@ -244,3 +244,9 @@ button:not(:disabled), a[href], [role="button"]:not([aria-disabled="true"]), [ro
 .canvas-editor-content [data-resize-container]:hover [data-resize-handle], .canvas-editor-content .ProseMirror-selectednode [data-resize-handle] { opacity: 1; }
 .canvas-editor-content [data-resize-handle="top-left"], .canvas-editor-content [data-resize-handle="bottom-right"] { cursor: nwse-resize; }
 .canvas-editor-content [data-resize-handle="top-right"], .canvas-editor-content [data-resize-handle="bottom-left"] { cursor: nesw-resize; }
+
+.canvas-image-upload-placeholder { display: block; position: relative; width: min(100%, 360px); height: 200px; margin: 12px 0; border-radius: 8px; overflow: hidden; background: var(--muted); color: var(--muted-foreground); }
+.canvas-image-upload-placeholder > span { position: absolute; inset: 0; display: grid; place-items: center; font-size: 14px; }
+.canvas-image-upload-skeleton { height: 100%; background: linear-gradient(100deg, transparent 20%, color-mix(in srgb, var(--background) 65%, transparent) 50%, transparent 80%); background-size: 200% 100%; animation: canvas-image-upload-shimmer 1.6s ease-in-out infinite; }
+@keyframes canvas-image-upload-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) { .canvas-image-upload-skeleton { animation: none; } }
