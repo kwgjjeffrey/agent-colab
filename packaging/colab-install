@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-manifest_url="${COLAB_RELEASE_MANIFEST:-https://artifacts.agent-colab.zhiyuanwangluo.online/channels/stable.json}"
+manifest_url="${COLAB_RELEASE_MANIFEST:-@COLAB_RELEASE_MANIFEST@}"
 google_credentials=""
 with_app=false
 invitation=""

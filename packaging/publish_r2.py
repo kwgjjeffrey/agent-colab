@@ -171,6 +171,9 @@ def main() -> None:
     )
     s3.head_bucket(Bucket=bucket)
 
+    config_path = Path(os.environ.get("COLAB_ARTIFACT_CONFIG", repo / "packaging/artifact-config.local.json"))
+    subprocess.run(["python3", str(repo / "packaging/artifact-config.py"), "--config", str(config_path), "--mode", "public", "--out", str(repo / "dist/bootstrap")], check=True)
+
     promoted = current_channel(public_base)
     artifacts = []
     selected = set(args.component or [])
@@ -279,8 +282,8 @@ def main() -> None:
                 raise RuntimeError(f"channel readback mismatch: {name}")
 
     bootstraps = [
-        (repo / "packaging" / "colab-install", "install/colab-install", "text/x-shellscript"),
-        (repo / "packaging" / "colab-install.ps1", "install/colab-install.ps1", "text/plain; charset=utf-8"),
+        (repo / "dist/bootstrap" / "colab-install", "install/colab-install", "text/x-shellscript"),
+        (repo / "dist/bootstrap" / "colab-install.ps1", "install/colab-install.ps1", "text/plain; charset=utf-8"),
     ]
     for bootstrap, bootstrap_key, content_type in bootstraps:
         s3.upload_file(str(bootstrap), bucket, bootstrap_key, ExtraArgs={"CacheControl": "no-cache", "ContentType": content_type})

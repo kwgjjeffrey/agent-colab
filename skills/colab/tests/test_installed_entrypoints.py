@@ -18,6 +18,7 @@ class InstalledEntrypointTests(unittest.TestCase):
         self.temporary = tempfile.TemporaryDirectory()
         self.root = pathlib.Path(self.temporary.name) / "agent-colab"
         shutil.copytree(SOURCE, self.root)
+        shutil.copyfile(SOURCE.parents[1] / "packaging/artifact-config.example.json", self.root / "artifact-config.json")
         for command in list((self.root / "bin").glob("colab-*")) + [self.root / "setup/colab-setup"]:
             command.chmod(command.stat().st_mode | stat.S_IXUSR)
 

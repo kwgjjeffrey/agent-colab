@@ -1,7 +1,7 @@
 param(
   [string]$GoogleCredentials,
   [ValidateSet("codex", "claude", "myflicker")][string[]]$Agent = @("codex"),
-  [string]$Manifest = "https://artifacts.agent-colab.zhiyuanwangluo.online/channels/stable.json"
+  [string]$Manifest = "@COLAB_RELEASE_MANIFEST@"
 )
 
 $ErrorActionPreference = "Stop"

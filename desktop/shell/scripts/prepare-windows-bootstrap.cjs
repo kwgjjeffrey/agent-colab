@@ -27,6 +27,7 @@ const versions = {
   ui: readVersion('desktop/ui/VERSION'),
   skill: readVersion('skills/colab/VERSION'),
 }
+const artifactConfig = JSON.parse(fs.readFileSync(process.env.COLAB_ARTIFACT_CONFIG || path.join(repo, 'packaging/artifact-config.local.json'), 'utf8'))
 const inputs = [
   ['local-core.zip', `dist/local-core/${versions.core}/windows-x86_64.zip`],
   ['desktop-ui.zip', `dist/desktop-ui/${versions.ui}.zip`],
@@ -51,7 +52,7 @@ for (const [name, relative] of inputs) {
 fs.writeFileSync(path.join(output, 'bootstrap.json'), JSON.stringify({
   releaseVersion: versions.release,
   componentVersions: { 'local-core': versions.core, 'desktop-ui': versions.ui, 'colab-skill': versions.skill },
-  serverUrl: process.env.COLAB_SERVER_URL || 'http://108.174.57.132:8787',
-  manifest: process.env.COLAB_RELEASE_MANIFEST || 'https://artifacts.agent-colab.zhiyuanwangluo.online/channels/stable.json',
+  serverUrl: artifactConfig.serverUrl,
+  manifest: artifactConfig.releaseManifestUrl,
   artifacts,
 }, null, 2) + '\n')

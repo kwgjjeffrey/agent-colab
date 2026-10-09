@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "deploymentMode": "public",
+  "serverUrl": "https://colab.example.com",
+  "releaseManifestUrl": "https://artifacts.example.com/channels/stable.json",
+  "installMacUrl": "https://artifacts.example.com/install/colab-install",
+  "installWindowsUrl": "https://artifacts.example.com/install/colab-install.ps1"
+}

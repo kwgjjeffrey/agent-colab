@@ -35,18 +35,21 @@ except ValueError:
 if "artifacts" not in relative.parts:
     sys.exit("enterprise artifacts must stay under integration/.../artifacts")
 PYPATH
-  export VITE_COLAB_DEPLOYMENT_MODE=enterprise
+  export COLAB_ARTIFACT_CONFIG="${COLAB_ARTIFACT_CONFIG:-$(dirname "$COLAB_COMPONENT_VERSIONS_DIR")/config.json}"
+  deployment_mode=enterprise
   core_version=$(tr -d '[:space:]' < "$COLAB_COMPONENT_VERSIONS_DIR/local-core")
   ui_version=$(tr -d '[:space:]' < "$COLAB_COMPONENT_VERSIONS_DIR/desktop-ui")
   skill_version=$(tr -d '[:space:]' < "$COLAB_COMPONENT_VERSIONS_DIR/colab-skill")
   shell_version=$(tr -d '[:space:]' < "$COLAB_COMPONENT_VERSIONS_DIR/electron-shell")
 else
-  export VITE_COLAB_DEPLOYMENT_MODE=public
+  export COLAB_ARTIFACT_CONFIG="${COLAB_ARTIFACT_CONFIG:-$repo_root/packaging/artifact-config.local.json}"
+  deployment_mode=public
 fi
 mkdir -p "$dist"
 dist=$(cd "$dist" && pwd)
 build_work=$(mktemp -d "$dist/.build-XXXXXXXX")
 trap 'rm -rf "$build_work"' EXIT
+python3 "$repo_root/packaging/artifact-config.py" --config "$COLAB_ARTIFACT_CONFIG" --mode "$deployment_mode" --out "$dist/bootstrap"
 export CARGO_TARGET_DIR="$dist/.cargo-target"
 
 build_core=false
@@ -124,6 +127,7 @@ fi
 
 if $build_skill; then
   mkdir -p "$dist/colab-skill/$skill_version"
+  cp "$COLAB_ARTIFACT_CONFIG" "$dist/colab-skill/$skill_version/artifact-config.json"
   cp "$repo_root/skills/colab/SKILL.md" "$dist/colab-skill/$skill_version/"
   cp "$repo_root/skills/colab/AGENTS.md" "$dist/colab-skill/$skill_version/"
   cp -R "$repo_root/skills/colab/agents" "$repo_root/skills/colab/bin" "$repo_root/skills/colab/lib" "$repo_root/skills/colab/setup" "$repo_root/skills/colab/references" "$repo_root/skills/colab/tracing" "$dist/colab-skill/$skill_version/"
@@ -144,12 +148,12 @@ fi
 if $build_shell; then
   # ZIP remains the machine-consumed launcher/update artifact. DMG is the
   # human-facing macOS evaluation installer mirrored by GitHub Releases.
-  npx --yes pnpm@10.18.3 --dir "$repo_root/desktop/shell" exec electron-builder --mac dir --arm64 --config.directories.output="$build_work/shell"
+  npx --yes pnpm@10.18.3 --dir "$repo_root/desktop/shell" exec electron-builder --mac dir --arm64 --config.directories.output="$build_work/shell" --config.mac.extraResources.0.from="$dist/bootstrap/colab-install"
   codesign --force --deep --sign - "$build_work/shell/mac-arm64/Colab.app"
   codesign --verify --deep --strict "$build_work/shell/mac-arm64/Colab.app"
   # Package only after signing; otherwise the DMG would contain the unsigned
   # pre-signing App even though the adjacent build directory verifies.
-  npx --yes pnpm@10.18.3 --dir "$repo_root/desktop/shell" exec electron-builder --prepackaged "$build_work/shell/mac-arm64/Colab.app" --mac dmg --arm64 --config.directories.output="$build_work/shell"
+  npx --yes pnpm@10.18.3 --dir "$repo_root/desktop/shell" exec electron-builder --prepackaged "$build_work/shell/mac-arm64/Colab.app" --mac dmg --arm64 --config.directories.output="$build_work/shell" --config.mac.extraResources.0.from="$dist/bootstrap/colab-install"
   mkdir -p "$dist/electron-shell/$shell_version"
   ditto -c -k --sequesterRsrc --keepParent "$build_work/shell/mac-arm64/Colab.app" "$dist/electron-shell/$shell_version/Colab-$shell_version-arm64.zip"
   cp "$build_work/shell/Colab-$shell_version-arm64.dmg" "$dist/electron-shell/$shell_version/"
