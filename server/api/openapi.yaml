@@ -73,10 +73,11 @@ paths:
       parameters:
         - { name: channelId, in: path, required: true, schema: { type: string, format: uuid } }
         - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 50, default: 20 } }
+        - { name: page, in: query, schema: { type: integer, minimum: 1 }, description: "Numbered pagination. Returns total/page/pageSize; cannot combine with cursors. Out-of-range pages clamp to the last page." }
         - { name: before, in: query, schema: { type: string, format: date-time } }
         - { name: beforeId, in: query, schema: { type: string } }
       responses:
-        "200": { description: "items with id/action/actorName/actorMemberId/resourceKind/resourceId/resourceName/occurredAt/targetName/targetBlueprintId/previewContent/source/state and nullable nextCursor {before,beforeId}; newest first" }
+        "200": { description: "items with id/action/actorName/actorMemberId/resourceKind/resourceId/resourceName/occurredAt/targetName/targetBlueprintId/previewContent/source/state and nullable nextCursor {before,beforeId}; numbered queries also return total/page/pageSize; newest first" }
         "400": { description: Invalid pagination cursor }
         "403": { description: Caller is not a Channel member }
   /v1/shares/{shareId}/read-activity:

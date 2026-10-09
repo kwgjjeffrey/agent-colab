@@ -1,6 +1,7 @@
 use super::*;
 #[derive(Deserialize)]
 pub(super) struct Page {
+    page: Option<i64>,
     before: Option<String>,
     #[serde(rename = "beforeId")]
     before_id: Option<String>,
@@ -14,6 +15,13 @@ pub(super) async fn list(
 ) -> Result<Json<serde_json::Value>, ApiError> {
     let user = authenticated_user(&state, &headers).await?;
     let limit = page.limit.unwrap_or(20).clamp(1, 50);
+    if let Some(number) = page.page {
+        if number < 1 || page.before.is_some() || page.before_id.is_some() { return Err(ApiError::bad_request("invalid_activity_page")); }
+        let (rows, total, number) = state.database.channel_activity_page(user, channel, number, limit).await
+            .map_err(|_| ApiError::internal("activity_read_failed"))?
+            .ok_or_else(|| ApiError::forbidden("channel_forbidden"))?;
+        return Ok(Json(serde_json::json!({"items":rows,"total":total,"page":number,"pageSize":limit,"nextCursor":null})));
+    }
     let mut rows = state
         .database
         .channel_activity(

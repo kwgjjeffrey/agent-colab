@@ -33,13 +33,33 @@ impl Database {
             .bind(share).bind(user).execute(&self.pool).await?;
         Ok(result.rows_affected() > 0)
     }
-    pub async fn channel_activity(
+    /// Numbered pages expose total cardinality without loading resource bodies or all rows.
+    pub async fn channel_activity_page(&self, user: Uuid, channel: Uuid, page: i64, limit: i64) -> anyhow::Result<Option<(Vec<ChannelActivity>, i64, i64)>> {
+        let allowed: bool = sqlx::query_scalar("select exists(select 1 from channel_members cm join organization_members om on om.id=cm.organization_member_id where cm.channel_id=$1 and om.user_id=$2)").bind(channel).bind(user).fetch_one(&self.pool).await?;
+        if !allowed { return Ok(None); }
+        let total: i64 = sqlx::query_scalar(r#"
+select
+ (select count(*) from channel_shares s where s.channel_id=$1 and s.state='active' and s.kind in ('files','session')) +
+ (select count(*) from share_read_activity r join channel_shares s on s.id=r.share_id where r.channel_id=$1 and s.state='active') +
+ (select count(*) from agent_requests r join agent_blueprints b on b.id=r.target_blueprint_id where r.channel_id=$1) +
+ (select count(*) from canvases c where c.channel_id=$1 and c.archived_at is null)
+"#).bind(channel).fetch_one(&self.pool).await?;
+        let limit = limit.clamp(1, 50);
+        let page = page.clamp(1, ((total + limit - 1) / limit).max(1));
+        let rows = self.channel_activity_window(user, channel, None, "", limit, (page - 1) * limit).await?;
+        Ok(rows.map(|rows| (rows, total, page)))
+    }
+    pub async fn channel_activity(&self, user: Uuid, channel: Uuid, before: Option<&str>, before_id: &str, limit: i64) -> anyhow::Result<Option<Vec<ChannelActivity>>> {
+        self.channel_activity_window(user, channel, before, before_id, limit, 0).await
+    }
+    async fn channel_activity_window(
         &self,
         user: Uuid,
         channel: Uuid,
         before: Option<&str>,
         before_id: &str,
         limit: i64,
+        offset: i64,
     ) -> anyhow::Result<Option<Vec<ChannelActivity>>> {
         let allowed:bool=sqlx::query_scalar("select exists(select 1 from channel_members cm join organization_members om on om.id=cm.organization_member_id where cm.channel_id=$1 and om.user_id=$2)").bind(channel).bind(user).fetch_one(&self.pool).await?;
         if !allowed {
@@ -65,10 +85,10 @@ with shares as (
  where c.channel_id=$1 and c.archived_at is null and ($2::timestamptz is null or (c.created_at,'canvas:'||c.id)<($2::timestamptz,$3)) order by c.created_at desc,c.id desc limit $4
 )
 select a.id,action,actor_name,actor_member_id,resource_kind,resource_id,resource_name,to_char(occurred_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"') occurred_at,target_name,target_blueprint_id,source,state,m.content preview_content
-from (select * from (select * from shares union all select * from reads union all select * from commands union all select * from documents) all_activity order by occurred_at desc,id desc limit $4) a
+from (select * from (select * from shares union all select * from reads union all select * from commands union all select * from documents) all_activity order by occurred_at desc,id desc limit $5 offset $6) a
 left join channel_messages m on a.action='requested' and m.id=a.resource_id and m.channel_id=$1
 order by a.occurred_at desc,a.id desc
-"#).bind(channel).bind(before).bind(before_id).bind(limit.clamp(1,51)).fetch_all(&self.pool).await?;
+"#).bind(channel).bind(before).bind(before_id).bind(offset + limit.clamp(1,51)).bind(limit.clamp(1,51)).bind(offset).fetch_all(&self.pool).await?;
         for row in &mut rows {
             row.preview_content = row.preview_content.as_ref().map(activity_preview);
         }
