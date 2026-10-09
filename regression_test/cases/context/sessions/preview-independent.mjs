@@ -33,7 +33,7 @@ export async function run(ctx){
     await ctx.screenshot('Readable Session with failed publication');
     await ctx.command('Throttle owned upload proxy','python3',['regression_test/support/test-control.py','network','slow',ctx.caseId]);
     const started=performance.now();
-    publication=core(ctx,'POST',`/v1/sessions/${share.id}/sync`,undefined,target);
+    publication=core(ctx,'POST',`/v1/sessions/${share.id}/sync`,undefined,{...target,timeoutSeconds:300});
     await ctx.page.getByRole('button',{name:'Home',exact:true}).click();
     await eventually(ctx,'Background publication starts without preview',status,row=>row.state==='syncing');
     const during=await core(ctx,'POST',`/v1/sessions/${share.id}/read`,{turnLimit:1},target);
@@ -42,7 +42,7 @@ export async function run(ctx){
     ctx.assert('Controlled upload outlives old metadata deadline',performance.now()-started>30000,true);
     const complete=await eventually(ctx,'All bytes committed after slow upload',status,row=>row.state==='synced'&&row.uploadedBytes===row.totalBytes,{timeoutMs:240000});
     ctx.assert('Large source exceeds one segment',complete.totalBytes>16*1024*1024,true);
-    const received=await core(ctx,'POST',`/v1/sessions/${share.id}/read`,{turnLimit:5}, {discoveryFile:parameter(ctx,'secondCoreDiscoveryFile')});
+    const received=await core(ctx,'POST',`/v1/sessions/${share.id}/read`,{turnLimit:5}, {discoveryFile:parameter(ctx,'secondCoreDiscoveryFile'),timeoutSeconds:300});
     ctx.assert('Recipient reads the actually published final content',JSON.stringify(received.turns).includes(marker+'_7'),true);
     ctx.assert('Recipient sees committed remote snapshot, not contributor preview',received.snapshot.id!==preview.snapshot.id,true);
     const older=await core(ctx,'POST',`/v1/sessions/${share.id}/read`,{turnLimit:5,cursor:preview.page.nextCursor},target);

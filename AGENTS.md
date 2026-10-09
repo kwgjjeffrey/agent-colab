@@ -18,6 +18,8 @@ Read `docs/canvas-technical-design.md` before changing Canvas. Canvas durable mu
 
 The independently released or deployed units are Electron Shell, Desktop GUI resources, Rust Local Core, Python Colab Skill, and Rust Server. Do not move business logic across these boundaries for convenience. GUI and Skill call Local Core; Local Core calls Server. Server is never bundled into the desktop distribution.
 
+Session preview and synchronization are independent use cases. Contributor preview reads an account-scoped frozen local extent without awaiting publication; recipient preview reads validated committed snapshots and may refresh an existing cache in the background, never bypassing explicit authorization denial. Progress polling is read-only. Upload streams must validate bounded bytes/digest before snapshot CAS; partial upload files must never become preview data.
+
 The release channel has its own promotion identifier, while every client artifact has an independent version read from its owning directory. Never advance Electron Shell merely because Core, GUI, or Skill changed. A single user-facing update operation compares all artifact versions and installs only changed artifacts.
 
 Keep provider-specific release credentials and endpoints in ignored configuration. Checked-in release code may define provider adapters and examples, but must remain usable by an open-source fork with a different artifact store, signer, domain, or deployment host.

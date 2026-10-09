@@ -373,7 +373,7 @@ colab-session-reader read \
 
 `items[]` 允许来源 adapter 暴露其原生 item 类型，例如 `userMessage`、`agentMessage`、`reasoning`、`commandExecution` 和 `mcpToolCall`。公共字段只覆盖类型、id、正文/摘要、工具名、参数、结果、状态和截断元数据；无法表达的来源字段保留在 adapter namespaced payload 中，不为了统一而丢弃。用户与 Agent 消息默认完整返回；`include-outputs` 只控制工具、命令和推理等执行细节，`max-output-chars-per-item` 只限制这些高体积 item，并明确返回 `truncated/originalChars`。
 
-Session Reader 在本机解释来源原始快照。一次 `read` 内部完成权限解析、检查更新、拉取缺失 segment 和读取，不要求 Agent 预先调用 Browser。与 Files 一样，已有缓存可先读；刷新超时或离线时返回固定缓存并在 `freshness` 中明确说明，而不是把可用历史变成错误。
+Session Reader 在本机解释来源原始快照，不要求 Agent 预先调用 Browser。贡献者 `read` 读取独立的本地固定快照（`freshness.cache=local`），不触发、等待或取消上传；分页 cursor 固定到该预览快照。接收端有缓存时先返回已提交的固定缓存，更新下载独立进行，`freshness.cache=current|stale` 表明新鲜度；没有缓存时才等待首次下载。明确的鉴权失败不能回退缓存。预览失败与后台同步互不取消，`GET /v1/sessions/{id}/sync-status` 仅报告状态和已确认上传字节数，不执行同步。服务端未校验提交的上传字节不是预览数据源。
 
 分发验收必须从临时安装树直接执行 `colab-open`、`colab-browser`、`colab-session-reader`、`colab-skill-tool` 和 `colab-setup`，不能用源码目录导入成功替代。真实跨账号 E2E 还要由账号 A 经 Browser 分别共享 Files、Session、Skill，账号 B 经三个专用入口完成可见、物化、读取、安装/卸载，最后由 A 撤回；这同时验证脚手架参数、Local API 权限和远端持久化契约。
 

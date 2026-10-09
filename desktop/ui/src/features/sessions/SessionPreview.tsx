@@ -33,7 +33,10 @@ export function SessionPreview({ id }: { id: string }) {
     async function poll() {
       try {
         const response = await fetch(`/v1/sessions/${id}/sync-status`);
-        if (response.ok && !stopped) setSync(await response.json());
+        if (response.ok) {
+          const status = await response.json();
+          if (!stopped) setSync(status);
+        }
       } finally { if (!stopped) timer = setTimeout(() => void poll().catch(() => {}), 3000); }
     }
     void poll().catch(() => {});
@@ -116,7 +119,7 @@ export function SessionPreview({ id }: { id: string }) {
         scrollClassName="min-h-0 flex-1 overflow-y-auto"
       >
         {sync && sync.state !== "unknown" && <p role="status" className="text-sm text-muted-foreground">
-          {sync.state === "synced" ? "Synced" : sync.state === "failed" ? "Sync failed — local preview is still available. Background sync will retry." : sync.state === "downloading" ? "Downloading updates — showing cached preview" : "Syncing"}
+          {sync.state === "synced" ? "Synced" : sync.state === "failed" ? (sync.contributor ? "Sync failed — local preview is still available. Background sync will retry." : "Download failed — cached preview is still available.") : sync.state === "downloading" ? "Downloading updates — showing cached preview" : "Syncing"}
           {sync.state !== "synced" && sync.totalBytes !== undefined && ` · ${((sync.uploadedBytes ?? 0) / 1048576).toFixed(1)} / ${(sync.totalBytes / 1048576).toFixed(1)} MiB uploaded`}
         </p>}
         {warnings.map((warning) => (

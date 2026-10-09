@@ -10,7 +10,7 @@ try:
     # retain their first outcome; retry must not duplicate product mutations.
     for attempt in range(3):
         try:
-            value=request(sys.argv[1],sys.argv[2],body=body,timeout=15)
+            value=request(sys.argv[1],sys.argv[2],body=body,timeout=float(sys.argv[5]) if len(sys.argv)>5 else 15)
             break
         except LocalApiError as error:
             if sys.argv[1]!='GET' or attempt==2 or not re.search(r'HTTP (502|503|504)',str(error)):
