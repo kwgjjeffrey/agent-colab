@@ -240,3 +240,7 @@ button:not(:disabled), a[href], [role="button"]:not([aria-disabled="true"]), [ro
 
 .canvas-editor-content img { max-width: 100%; height: auto; border-radius: 8px; }
 .canvas-editor-content [data-resize-container] { max-width: 100%; margin-block: 12px; }
+.canvas-editor-content [data-resize-handle] { width: 12px; height: 12px; background: #7c3aed; border: 2px solid white; border-radius: 4px; opacity: 0; transition: opacity 120ms; }
+.canvas-editor-content [data-resize-container]:hover [data-resize-handle], .canvas-editor-content .ProseMirror-selectednode [data-resize-handle] { opacity: 1; }
+.canvas-editor-content [data-resize-handle="top-left"], .canvas-editor-content [data-resize-handle="bottom-right"] { cursor: nwse-resize; }
+.canvas-editor-content [data-resize-handle="top-right"], .canvas-editor-content [data-resize-handle="bottom-left"] { cursor: nesw-resize; }
