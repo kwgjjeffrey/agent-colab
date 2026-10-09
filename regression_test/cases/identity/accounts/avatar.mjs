@@ -4,7 +4,28 @@ export const USECASE = {
   name: 'Upload and reset a persistent account avatar',
   description: 'An isolated account uploads an actual PNG through Account settings. Verify bounded 256px JPEG persisted by Server through Core, session/account projection, displayed image and reload. Reject unsafe SVG/URL/oversize payloads without modifying the avatar. Restore initials and check matching palette; restore original fixture image in finally. Explicit customization remains recorded on this disposable account. Google-login preservation is covered by isolated persistence acceptance, not fake GUI consent.',
 };
-export const META = {id:'identity.accounts.avatar',module:'identity/accounts',surface:'gui',priority:'critical',origin:'requirement',status:'trial',effects:'isolated-write',cost:'normal',suite:'business',testLevel:'end-to-end',locks:['write:client.owner'],affectedPaths:['desktop/ui/src/features/account','desktop/ui/src/components/ui/avatar.tsx','server/standalone/crates/api/src/account_profile.rs','server/standalone/crates/persistence/src/account_profile.rs']};
+export const META = {
+  "id": "identity.accounts.avatar",
+  "module": "identity/accounts",
+  "surface": "gui",
+  "priority": "critical",
+  "origin": "requirement",
+  "status": "active",
+  "effects": "isolated-write",
+  "cost": "normal",
+  "suite": "business",
+  "testLevel": "end-to-end",
+  "locks": [
+    "write:client.owner"
+  ],
+  "affectedPaths": [
+    "desktop/ui/src/features/account",
+    "desktop/ui/src/components/ui/avatar.tsx",
+    "server/standalone/crates/api/src/account_profile.rs",
+    "server/standalone/crates/persistence/src/account_profile.rs"
+  ],
+  "statusReason": "Reviewed GUI 132 Round 20261009T031400Z-16ed1cc7: real PNG upload, 256px JPEG decode, Server/Core projections and reload, rejected unsafe input, initials reset/palette/white contrast, and fixture restoration; prior environment blockers retained in Run 20261009T030620Z-362f57b8."
+};
 export const REQUIREMENTS = {parameters:{keys:['isolationConfirmed','isolatedCoreDiscoveryFile','isolatedClientBaseUrl','testUserId','testOrganizationId','secondAccountId']}};
 export async function run(ctx) {
   const target = await isolated(ctx);
@@ -43,7 +64,9 @@ export async function run(ctx) {
     await ctx.page.reload(); await open();
     ctx.assert('Uploaded image removed',await ctx.page.getByAltText('Your avatar',{exact:true}).count(),0);
     const fallback=ctx.page.locator('[data-slot="avatar-fallback"]').last();
-    ctx.assert('Initials background uses the shared palette',await fallback.evaluate(element=>getComputedStyle(element).backgroundColor)!=='rgb(245, 245, 245)',true);
+    const appearance=await fallback.evaluate(element=>({background:getComputedStyle(element).backgroundColor,foreground:getComputedStyle(element).color}));
+    ctx.assert('Initials background uses the shared palette',['rgb(53, 92, 125)','rgb(72, 106, 91)','rgb(102, 85, 140)','rgb(155, 78, 100)','rgb(164, 93, 53)','rgb(56, 111, 117)','rgb(89, 103, 140)','rgb(130, 112, 71)'].includes(appearance.background),true);
+    ctx.assert('Initials have contrasting white text',appearance.foreground,'rgb(255, 255, 255)');
     await ctx.screenshot('Account settings with coloured initials');
   } finally {
     try {
