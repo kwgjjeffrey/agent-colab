@@ -1116,3 +1116,7 @@ Rollback checkpoint: `d752304`. In progress; not released or accepted yet.
 2. Compact Canvas status, eliminate single-file nested navigation, repair bounded Session and request-scoped task previews using real content.
 3. Audit operation registry, GUI locators and impacted regression assertions; run affected end-to-end cases and retain failures/evidence.
 4. Publish only changed artifacts, verify actual App update, then record results and documentation boundaries.
+
+### Catalog row layout acceptance — 2026-10-09
+
+GUI 0.1.140-dev / promotion 0.1.192-dev published and normally installed; both running GUI ui.json endpoints confirmed 0.1.140-dev. Catalog counts and contributor avatars share a fixed metadata column. The complete row owns hover and selection; the Catalog add action uses an absolute trailing gutter so it does not shift metadata. Avatar profile actions remain independent. Targeted end-to-end context.catalog.metadata Round 2 `20261009T054151Z-2421e3b5` (Run `20261009T054029Z-1ceba7e5`) passed all 34 assertions, including metadata alignment, whole-row selection, hover on the count, transparent name-button surface, real profiles and owned fixture cleanup. Hover and profile screenshots reviewed. Public GUI readback verified 1320020 bytes and SHA-256 `52e80edb50ea9b36b5bf387efcab254eaea7c09f3c5cd06d10199a28439da47b`. Only GUI built; no full frontend suite run.

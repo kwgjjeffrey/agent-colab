@@ -382,7 +382,11 @@ export function CatalogWorkspace({
             disabled={working}
             onDrop={(source, position) => void drop(source, item, position)}
           >
-            <div className="group flex min-w-0 items-center gap-0">
+            <div
+              data-catalog-row={item.id}
+              data-selected={selected?.id === item.id ? "true" : "false"}
+              className={cn("group relative flex min-w-0 items-center gap-0 rounded-lg pr-8 transition-colors hover:bg-muted", selected?.id === item.id && "bg-secondary")}
+            >
               {item.kind === "catalog" && (
                 <Button
                   variant="ghost"
@@ -405,7 +409,7 @@ export function CatalogWorkspace({
               {renaming?.id === item.id ? (
                 <Input
                   aria-label="Item name"
-                  className="bg-transparent shadow-none dark:bg-transparent focus-visible:ring-0 focus-visible:border-ring/40"
+                  className="min-w-0 flex-1 bg-transparent shadow-none dark:bg-transparent focus-visible:ring-0 focus-visible:border-ring/40"
                   value={name}
                   autoFocus
                   disabled={working}
@@ -423,9 +427,9 @@ export function CatalogWorkspace({
                 />
               ) : (
                 <Button
-                  variant={selected?.id === item.id ? "secondary" : "ghost"}
+                  variant="ghost"
                   className={cn(
-                    "min-w-0 flex-1 justify-start",
+                    "min-w-0 flex-1 justify-start bg-transparent hover:bg-transparent dark:hover:bg-transparent aria-expanded:bg-transparent",
                     item.kind === "catalog" && "pl-1",
                   )}
                   title={item.name}
@@ -454,16 +458,18 @@ export function CatalogWorkspace({
                   <span className="truncate">{item.name}</span>
                 </Button>
               )}
+              <div data-catalog-metadata className="flex w-6 shrink-0 items-center justify-center">
               {item.kind === "catalog" && item.childCount != null && (
-                <span className="shrink-0 px-1 text-xs tabular-nums text-muted-foreground" aria-label={`${item.childCount} items in ${item.name}`}>{item.childCount}</span>
+                <span className="shrink-0 text-xs tabular-nums text-muted-foreground" aria-label={`${item.childCount} items in ${item.name}`}>{item.childCount}</span>
               )}
               {["files", "session", "skill"].includes(item.kind) && item.contributorMemberId && (
-                <UserIdentity id={item.contributorMemberId} name={item.contributorName ?? "Channel member"} className="ml-2 inline-flex shrink-0 cursor-pointer rounded-full focus-visible:outline-2 focus-visible:outline-ring">
+                <UserIdentity id={item.contributorMemberId} name={item.contributorName ?? "Channel member"} className="inline-flex shrink-0 cursor-pointer rounded-full focus-visible:outline-2 focus-visible:outline-ring">
                   <span aria-label={`Uploaded by ${item.contributorName ?? "Channel member"}`} title={item.contributorName ?? "Channel member"}>
                     <Avatar className="size-5"><AvatarImage src={item.contributorAvatarUrl ?? undefined} /><AvatarFallback className="text-[9px]">{(item.contributorName ?? "?").slice(0, 1).toUpperCase()}</AvatarFallback></Avatar>
                   </span>
                 </UserIdentity>
               )}
+              </div>
               {item.kind === "catalog" && (
                 <DropdownMenu>
                   <DropdownMenuTrigger
@@ -471,7 +477,7 @@ export function CatalogWorkspace({
                       <Button
                         variant="ghost"
                         size="icon-xs"
-                        className="opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"
+                        className="absolute right-1 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"
                         aria-label={`Add to ${item.name}`}
                       />
                     }

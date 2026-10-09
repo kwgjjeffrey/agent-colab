@@ -329,3 +329,5 @@ Files creation opens a configuration dialog before invoking the native chooser. 
 
 
 Catalog sidebar metadata: Catalog rows show their Server-provided direct visible child count, including zero, even while collapsed. Files, Sessions and Skills show their uploader avatar on the right; clicking it opens the existing member profile without navigating or invoking the item action. Counts exclude archived Canvas and withdrawn shares; descendants are not accumulated.
+
+Catalog sidebar rows share one hover/selection surface across name, direct-child count and contributor avatar. Counts and avatars occupy the same fixed right-hand metadata column; the Catalog add action must not shift that column. Contributor clicks open the member profile without changing the selected asset.
