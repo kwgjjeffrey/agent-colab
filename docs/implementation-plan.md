@@ -4,13 +4,16 @@
 
 Rollback checkpoints: approved codec `6b85fc4`, protocol/reader `1470b7a`,
 legacy-client raw integrity `daebc25`, measured acceptance `c59e84e`.
-Server 0.1.11 is deployed; Core 0.1.106-dev is built, not yet promoted.
-The public stable channel retains Core 0.1.104-dev. Other capabilities' newer
-GUI/Skill releases must be retained by a component-scoped promotion.
+Server codec support is deployed. Core106 candidate gates passed, then a concurrent
+public release promoted Core107 including the unchanged Session implementation.
+Public stable213 contains Core107, GUI159, Skill62 and unchanged Shell23. We did
+not downgrade that newer Core or overwrite the other publisher's promotion.
+Full public Core107 readback and actual packaged compressed-sharing Round
+`20261009T161703Z-c967abac` passed; normal updater reports latest Core107.
 
-Remaining order: (1) complete candidate cross-Channel, delayed independent-preview,
-legacy/current-client and restart acceptance; (2) commit release guards and verified
-evidence, promote only Core and verify normal update discovery; (3) private
+Completed: candidate cross-Channel, delayed independent-preview, old/current-client
+and restart acceptance, committed guards, public component availability and updater
+discovery. Remaining order: private
 integration's actual Rust Blob multipart/read acceptance; (4) freeze/back up and
 copy/hash-verify historical Blob objects before backend activation, with no source
 deletion and an explicit rollback serving path; (5) enterprise client/server
@@ -23,7 +26,7 @@ in place. Do not roll back a Server to one that cannot decode newly committed Zs
 content. Backend rollback also must account for objects written after cutover;
 switching to an old disk-only directory without those objects is not a safe plan.
 
-### 2026-10-09 Compressed Session chunks — in progress
+### 2026-10-09 Compressed Session chunks — public release verified
 
 User selected Zstd 3 after ten Rust full-source codec comparisons. Implementation
 contract and acceptance gates: `docs/session-chunk-storage-design.md`. Disk/S3

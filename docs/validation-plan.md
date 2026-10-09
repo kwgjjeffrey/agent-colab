@@ -23,7 +23,14 @@ guards the retained artifact set, but is not cross-host atomic CAS. Core archive
 `dd44dde84a9ff7c95f7501f90ea7078ba6aaaac2b725e743dd027b0dadb3f0ac`.
 Server11 deployed binary:
 `8d84f51b0b2618e2f0d6a5cb27d948d1ef923618793e0c45691771802b7036ae`.
-Public promotion/readback follows next; native Windows is not claimed.
+Public stable213 already promoted Core107 (Session implementation identical to106).
+Full curl/parallel-range readback verified 45,569,542 bytes and SHA-256
+`ca89811f2d2a6d21481192092b005faf544bd351aa397c646d8a73dc125c6743`.
+Actual packaged Core107/GUI159 compressed-sharing repair Round
+`20261009T161703Z-c967abac` passed16 assertions against the public Server.
+Normal `/v1/system/installation?refresh=true` reports latest Core107, GUI159,
+Skill62 and unchanged Shell23, with an actual update proposal. No daily installation
+was replaced by this task. Native Windows is not claimed.
 
 ### 2026-10-09 Compressed Session read/write acceptance
 
