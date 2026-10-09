@@ -1,5 +1,30 @@
 # 技术验证计划
 
+### 2026-10-10 Chunk release candidate — verified
+
+Actual packaged Core 0.1.106-dev with GUI 0.1.157-dev and deployed Server 0.1.11:
+cross-Channel Round `20261009T160641Z-de5033ff` passed 125 assertions; independent
+preview Round `20261009T160833Z-48b7963b` passed 30. The latter injects 35 seconds
+inside actual upload bodies independent of compression ratio. GUI local preview
+survives failed publication, off-preview sync completes, receiver gets the tail,
+and local pinned paging survives. Screenshot and exact owned cleanup reviewed.
+Earlier transport/cleanup-timeout failure remains in the same cross-Channel Run.
+
+Actual packaged Core 103 vs106 compatibility Round `20261009T161241Z-d59c20cf`
+passed20 assertions: new receiver reads raw publication; old receiver reads new
+compressed publication via default raw Server compatibility; structured turns
+and content agree. Receiver restored in finally. Isolated HTTP test also passes
+Zstd→identity→Zstd append history, with exact raw/encoded size and SHA-256.
+Historical byte rewrite is unnecessary.
+
+Four publisher guard tests passed: numeric ordering, stale promotion rejection,
+local mutual exclusion and unreadable stable fail-closed. Final stable readback
+guards the retained artifact set, but is not cross-host atomic CAS. Core archive:
+`dd44dde84a9ff7c95f7501f90ea7078ba6aaaac2b725e743dd027b0dadb3f0ac`.
+Server11 deployed binary:
+`8d84f51b0b2618e2f0d6a5cb27d948d1ef923618793e0c45691771802b7036ae`.
+Public promotion/readback follows next; native Windows is not claimed.
+
 ### 2026-10-09 Compressed Session read/write acceptance
 
 Core frame tests: 4 passed. Session API/index/receiver tests: 16 passed, two

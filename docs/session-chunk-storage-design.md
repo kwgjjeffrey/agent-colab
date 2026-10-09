@@ -1,6 +1,6 @@
 # Session compressed chunk storage
 
-Status: implementation in progress, not deployed. User selected Zstd level 3 on
+Status: Server 0.1.11 deployed; Core 0.1.106 accepted, promotion next. User selected Zstd level 3 on
 2026-10-09 after the full Rust comparison in `.trial/V-SESSION-CHUNKS-01/README.md`.
 
 Foundation implemented: Server `blob_store.rs` wraps standard object_store S3
@@ -77,7 +77,21 @@ including cross-turn tool dependencies and Desktop rollback. The actual 1.79 GB
 Codex tail matches the frozen full projection. Receiver HTTP cache/restart and
 isolated PostgreSQL/Server HTTP authorization, shared-reference and retry checks
 pass. Real R2 multipart storage verifies a 20 MiB synthetic frame with exact bytes
-and staging cleanup. Native Windows, installed GUI and release remain unverified.
+and staging cleanup. GUI independent-preview and real Core103/106 compatibility
+passed; public release readback remains next. Native Windows is unverified.
+
+## Rollback boundaries
+
+Keep the additive database migration in place. Server11 compatibility must remain
+serving any committed Zstd blocks; reverting to a pre-codec Server is unsafe.
+An older Core can publish identity blocks and read through raw HTTP compatibility.
+Before downgrading a receiver that used106, back up its local database and remove
+only `session_materializations` rows whose raw_path ends in `.chunks` so the old
+Core rebuilds disposable raw caches. Do not delete native sources or published
+bytes. A previously copied cursor may expire across a client downgrade.
+Disk→S3 cutover requires verified copying of existing objects; S3→disk rollback
+must also copy/hash-check objects written after cutover, never simply switch back
+to an obsolete directory. No automatic historical migration or cleanup is implied.
 
 Contributor indexes publish after each accepted block, so partial durable progress
 is consumable while later blocks upload. Index failure does not stop accepted-byte

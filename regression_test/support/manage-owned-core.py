@@ -6,6 +6,13 @@ if name not in ['owner','receiver']:raise SystemExit('Only owned owner/receiver 
 root=p.FIX/name;d=root/'discovery.json';label='personal.colab.regression.'+name;domain='gui/'+str(os.getuid())
 core=pathlib.Path(os.environ.get('COLAB_REGRESSION_CORE_ROOT',root/'current/core')).resolve();gui=pathlib.Path(os.environ.get('COLAB_REGRESSION_GUI_ROOT',root/'current/ui')).resolve()
 allowed=pathlib.Path(__file__).resolve().parents[2]
+if len(sys.argv)>2:
+ import re
+ if not re.fullmatch(r'0\.1\.\d+-dev',sys.argv[2]):raise SystemExit('Invalid candidate version')
+ core=allowed/'dist/local-core'/sys.argv[2]/'darwin-arm64'
+if len(sys.argv)>3:
+ if not re.fullmatch(r'0\.1\.\d+-dev',sys.argv[3]):raise SystemExit('Invalid GUI version')
+ gui=allowed/'dist/desktop-ui'/sys.argv[3]
 if not all(path.is_relative_to(allowed) for path in [core,gui]) or not (core/'colabd').is_file() or not gui.is_dir():raise SystemExit('Existing regression artifacts must be within this repository')
 try:os.kill(json.loads(d.read_text())['pid'],signal.SIGTERM)
 except ProcessLookupError:pass

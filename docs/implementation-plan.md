@@ -1,5 +1,28 @@
 # Colab 实现计划
 
+### 2026-10-10 Session chunk rollout — completion gates
+
+Rollback checkpoints: approved codec `6b85fc4`, protocol/reader `1470b7a`,
+legacy-client raw integrity `daebc25`, measured acceptance `c59e84e`.
+Server 0.1.11 is deployed; Core 0.1.106-dev is built, not yet promoted.
+The public stable channel retains Core 0.1.104-dev. Other capabilities' newer
+GUI/Skill releases must be retained by a component-scoped promotion.
+
+Remaining order: (1) complete candidate cross-Channel, delayed independent-preview,
+legacy/current-client and restart acceptance; (2) commit release guards and verified
+evidence, promote only Core and verify normal update discovery; (3) private
+integration's actual Rust Blob multipart/read acceptance; (4) freeze/back up and
+copy/hash-verify historical Blob objects before backend activation, with no source
+deletion and an explicit rollback serving path; (5) enterprise client/server
+release, post-restart functional verification and independent release records.
+
+No historical Session byte rewrite is required for protocol 2. Missing codec is
+identity; default Server manifest/content responses preserve raw sizes/digests for
+old clients. Database additions are additive; binary rollback leaves these tables
+in place. Do not roll back a Server to one that cannot decode newly committed Zstd
+content. Backend rollback also must account for objects written after cutover;
+switching to an old disk-only directory without those objects is not a safe plan.
+
 ### 2026-10-09 Compressed Session chunks — in progress
 
 User selected Zstd 3 after ten Rust full-source codec comparisons. Implementation

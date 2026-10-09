@@ -2,7 +2,31 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {core,resource,parameter,disposable} from '../../../../support/client.mjs';
 export const USECASE={name:'Publish compressed Session and consume only recent blocks',description:'Using actual candidate contributor/receiver Core and Server, publish an owned >20 MiB transcript whose large tool-output record is in a separate chunk from recent user/agent messages. Assert durable raw-byte progress, Zstd metadata, shared asset-scoped manifest, only the recent frame cached for default preview, structured tail content, and no reconstructed JSONL. Withdraw the owned reference and remove its source fixture. Requires a protocol-2 Server; no compatibility fallback is accepted by this case.'};
-export const META={id:'context.sessions.sharing.compressed',module:'context/sessions/sharing',surface:'integration',priority:'critical',origin:'requirement',status:'trial',effects:'isolated-write',cost:'normal',suite:'business',testLevel:'end-to-end',locks:['write:client.owner','write:session.fixture'],requires:['local-core'],affectedPaths:['local/crates/local-api/src/sessions.rs','local/crates/local-api/src/sessions/chunk_cache.rs','server/standalone/crates/api/src/session_indexes.rs']};
+export const META={
+  "id": "context.sessions.sharing.compressed",
+  "module": "context/sessions/sharing",
+  "surface": "integration",
+  "priority": "critical",
+  "origin": "requirement",
+  "status": "active",
+  "effects": "isolated-write",
+  "cost": "normal",
+  "suite": "business",
+  "testLevel": "end-to-end",
+  "locks": [
+    "write:client.owner",
+    "write:session.fixture"
+  ],
+  "requires": [
+    "local-core"
+  ],
+  "affectedPaths": [
+    "local/crates/local-api/src/sessions.rs",
+    "local/crates/local-api/src/sessions/chunk_cache.rs",
+    "server/standalone/crates/api/src/session_indexes.rs"
+  ],
+  "statusReason": "Reviewed Core106 Server11 Round20261009T145915Z-fc29d0e7:16assertions; actual >20MiB compressed publication, raw durable cursor, multipleframes, index-only materialization before page, skippedhistorical output frame, exact tailcontent, noJSONL reconstruction and owned cleanup."
+};
 export const REQUIREMENTS={channel:{permission:'read'},parameters:{keys:['disposable','secondCoreDiscoveryFile']}};
 export async function run(ctx){
   disposable(ctx);const directory=await fs.mkdtemp(path.join(process.cwd(),'regression_test/.fixtures/session-compressed-'));

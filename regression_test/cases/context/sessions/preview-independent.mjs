@@ -25,7 +25,7 @@ export const META={
     "server/standalone/crates/api/src/session_upload.rs",
     "desktop/ui/src/features/sessions/SessionPreview.tsx"
   ],
-  "statusReason": "Reviewed Round 20261009T060810Z-d0b8d152 in Run 20261009T060217Z-7f0f33de: real 16 MiB failed publication with readable GUI; throttled multi-segment upload exceeds 30s, continues off-preview, durable byte receipt equals source, receiver exact final marker and independent snapshot, pinned local cursor and owned cleanup. Earlier script wait failures retained; no provider performance budget claimed."
+  "statusReason": "Reviewed Core106 GUI157 Round 20261009T160833Z-48b7963b: 30 assertions; publication failure leaves readable native GUI preview and zero uploaded cursor; fixed body delay exceeds30s; off-preview sync completes exact raw cursor and receiver tail, local pinned cursor survives; proxy restored and owned reference withdrawn."
 };
 export const REQUIREMENTS={channel:{permission:'read'},parameters:{keys:['disposable','isolationConfirmed','isolatedCoreDiscoveryFile','isolatedClientBaseUrl','testUserId','testOrganizationId','secondCoreDiscoveryFile']}};
 export async function run(ctx){

@@ -19,3 +19,7 @@ try:
     print(json.dumps({'ok':True,'data':value}))
 except LocalApiError as e:
     print(json.dumps({'ok':False,'error':str(e)}));sys.exit(1)
+except (OSError, ValueError) as e:
+    # Transport failures still need a machine-readable result. Do not expose
+    # request headers/capabilities through exception representations.
+    print(json.dumps({'ok':False,'error':'Local Core transport/response failure: '+type(e).__name__}));sys.exit(1)

@@ -9,6 +9,7 @@ before the channel is promoted, so an S3 success alone cannot claim release.
 from __future__ import annotations
 
 import argparse
+import atexit
 import concurrent.futures
 import hashlib
 import json
@@ -112,7 +113,7 @@ def public_download(url: str, output: Path, expected_size: int | None = None) ->
             part.unlink()
 
 
-def current_channel(public_base: str) -> dict[tuple[str, str, str | None, str | None], dict]:
+def current_channel(public_base: str, next_version: str | None = None) -> dict[tuple[str, str, str | None, str | None], dict]:
     """Return artifacts already promoted and publicly verified by an earlier release.
 
     Immutable objects reused by a later mixed-version channel do not need to be
@@ -124,12 +125,37 @@ def current_channel(public_base: str) -> dict[tuple[str, str, str | None, str | 
             channel = Path(temp) / "stable.json"
             public_download(f"{public_base}/channels/stable.json", channel)
             payload = json.loads(channel.read_text())
-    except (OSError, ValueError, subprocess.CalledProcessError):
-        return {}
+    except (OSError, ValueError, subprocess.CalledProcessError) as error:
+        raise SystemExit('Cannot verify current stable; refusing partial promotion') from error
+    if not isinstance(payload.get('artifacts'), list) or not payload.get('version'):
+        raise SystemExit('Invalid stable manifest; refusing partial promotion')
+    if next_version is not None:
+        current = payload.get("version")
+        if current and promotion_order(next_version) <= promotion_order(current):
+            raise SystemExit(f"Promotion {next_version} is not newer than stable {current}; allocate a new promotion identifier")
     return {
         (artifact["name"], artifact["version"], artifact.get("platform"), artifact.get("arch")): artifact
         for artifact in payload.get("artifacts", [])
     }
+
+def promotion_order(version: str) -> tuple[int, ...]:
+    try:
+        return tuple(int(part) for part in version.split("-", 1)[0].split("."))
+    except ValueError as error:
+        raise SystemExit("Invalid numeric promotion version") from error
+
+def acquire_publish_lock(repo: Path) -> None:
+    # Serialize this deployment's publishers before reading the retained component set.
+    # This is a local publisher lock, not a claim of cross-host atomic promotion.
+    import fcntl
+    (repo / "dist").mkdir(exist_ok=True)
+    descriptor = os.open(repo / "dist" / ".r2-publish.lock", os.O_CREAT | os.O_RDWR, 0o600)
+    try:
+        fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        os.close(descriptor)
+        raise SystemExit("Another R2 publication is in progress; retry after it completes")
+    atexit.register(os.close, descriptor)
 
 
 def main() -> None:
@@ -155,6 +181,7 @@ def main() -> None:
     )
     args = parser.parse_args()
     repo = args.repo.resolve()
+    acquire_publish_lock(repo)
     version = (repo / "VERSION").read_text().strip()
     bucket = os.environ["R2_BUCKET"]
     endpoint = os.environ["R2_ENDPOINT"].rstrip("/")
@@ -174,7 +201,7 @@ def main() -> None:
     config_path = Path(os.environ.get("COLAB_ARTIFACT_CONFIG", repo / "packaging/artifact-config.local.json"))
     subprocess.run(["python3", str(repo / "packaging/artifact-config.py"), "--config", str(config_path), "--mode", "public", "--out", str(repo / "dist/bootstrap")], check=True)
 
-    promoted = current_channel(public_base)
+    promoted = current_channel(public_base, version)
     artifacts = []
     selected = set(args.component or [])
     selected_platforms = set(args.platform or [])
@@ -262,6 +289,8 @@ def main() -> None:
             if downloaded.stat().st_size != artifact["size"] or sha256(downloaded) != artifact["sha256"]:
                 raise RuntimeError(f"public verification failed: {artifact['name']}")
 
+    if current_channel(public_base, version) != promoted:
+        raise SystemExit("Stable changed during verification; retry with its latest component set")
     for source, key, content_type in [
         (manifest, "channels/stable.json", "application/json"),
         (signature, "channels/stable.json.sig", "application/octet-stream"),

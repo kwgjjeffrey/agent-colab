@@ -17,13 +17,19 @@ class Handler(socketserver.BaseRequestHandler):
    up=socket.create_connection((host,port),timeout=10)
    if not websocket:
     lines=raw.split(b'\r\n');raw=b'\r\n'.join(x for x in lines if not x.lower().startswith(b'connection:'));raw=raw.replace(b'\r\n\r\n',b'\r\nConnection: close\r\n\r\n',1)
-   raw=re.sub(br'(?im)^host:[^\r\n]+',('Host: '+host+':'+str(port)).encode(),raw);up.sendall(raw);up.setblocking(True);self.request.setblocking(True)
+   raw=re.sub(br'(?im)^host:[^\r\n]+',('Host: '+host+':'+str(port)).encode(),raw)
+   if session_upload and state.exists() and state.read_text().strip()=='session-slow':
+    # Delay inside the real body transaction independent of compression ratio.
+    # Headers start Server processing; 35s exceeds its old 30s metadata policy,
+    # but stays below the intentional 60s upload idle timeout.
+    header,body=raw.split(b'\r\n\r\n',1);up.sendall(header+b'\r\n\r\n');time.sleep(35);up.sendall(body)
+   else:up.sendall(raw)
+   up.setblocking(True);self.request.setblocking(True)
    while not blocked():
     ready,_,_=select.select([up,self.request],[],[],.2)
     for source in ready:
      b=source.recv(65536)
      if not b:return
-     if source is self.request and session_upload and state.exists() and state.read_text().strip()=='session-slow':time.sleep(.35)
      (self.request if source is up else up).sendall(b)
   except (OSError,IndexError) as e:print(type(e).__name__,flush=True)
   finally:

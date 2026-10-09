@@ -9,7 +9,7 @@ export const META={
   "surface": "integration",
   "priority": "critical",
   "origin": "requirement",
-  "status": "trial",
+  "status": "active",
   "effects": "isolated-write",
   "cost": "slow",
   "suite": "business",
@@ -24,7 +24,7 @@ export const META={
     "server/standalone/crates/persistence/src/assets.rs",
     "server/standalone/migrations/0042_shared_assets.sql"
   ],
-  "statusReason": "Reviewed packaged Core 101 Round 20261009T091734Z-1cd6014b in Run 20261009T080837Z-c94ad994: 124 assertions cover concurrent receiver reads, exact initial and updated bytes, one publication/cache, scope preservation, independent withdrawal and final re-share; finally withdrew only owned fixtures. Prior failures retained; B-only authorization and legacy merge separately passed PostgreSQL contract tests."
+  "statusReason": "Reviewed Core106 Round 20261009T160641Z-de5033ff:125 assertions, exact receiver Reader turns and lazy chunk manifest, one publication across Channels, scope retained, update after first withdrawal, final re-share and owned cleanup; prior transport failure preserved."
 };
 export const REQUIREMENTS={channel:{permission:'read'},parameters:{keys:['disposable','secondDisposableChannelId','secondCoreDiscoveryFile']}};
 export async function run(ctx){
@@ -104,7 +104,7 @@ export async function run(ctx){
    ctx.assert(kind+' re-share retains asset identity',rebound.assetId,firstBinding.assetId);
   }
  }finally{
-  for(const row of owned.reverse())await core(ctx,'DELETE',`/v1/${row.plural}/${row.id}`);
+  for(const row of owned.reverse())await core(ctx,'DELETE',`/v1/${row.plural}/${row.id}`,undefined,{timeoutSeconds:90});
   await fs.rm(f.root,{recursive:true,force:true});
  }
 }

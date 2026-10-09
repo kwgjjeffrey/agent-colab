@@ -58,5 +58,27 @@ async fn compressed_http_roundtrip_legacy_reads_shared_references_and_index_retr
     assert_eq!(response.status(),StatusCode::FORBIDDEN);
     let response=http.get(format!("{base}/v1/session-segments/{segment}/content")).bearer_auth(&outsider.access_token).send().await?;
     assert_eq!(response.status(),StatusCode::FORBIDDEN);
+    // A legacy writer may append raw bytes to a compressed chain. A later
+    // protocol-2 writer can resume without rewriting either historical segment.
+    let legacy_query=[("parentSnapshotId",snapshot.to_owned()),("sourceCursor",serde_json::json!({"byteOffset":raw.len()*2}).to_string()),("digest",hex::encode(Sha256::digest(raw)))];
+    let response=http.post(format!("{base}/v1/sessions/{}/segments",second.reference_id)).bearer_auth(&owner.access_token).query(&legacy_query).body(raw.to_vec()).send().await?;
+    assert_eq!(response.status(),StatusCode::CREATED);
+    let next=response.json::<serde_json::Value>().await?;
+    let query=[("parentSnapshotId",next["snapshot"]["id"].as_str().unwrap().to_owned()),("sourceCursor",serde_json::json!({"byteOffset":raw.len()*3}).to_string()),("digest",digest),("codec","zstd".into()),("decodedByteSize",raw.len().to_string()),("decodedDigest",hex::encode(Sha256::digest(raw)))];
+    let response=http.post(format!("{base}/v1/sessions/{}/segments",first.reference_id)).bearer_auth(&owner.access_token).query(&query).body(encoded.clone()).send().await?;
+    assert_eq!(response.status(),StatusCode::CREATED);
+    for encoded_mode in [false,true] {
+        let response=http.get(format!("{base}/v1/sessions/{}/segments?encoded={encoded_mode}",second.reference_id)).bearer_auth(&owner.access_token).send().await?;
+        let chain=response.json::<serde_json::Value>().await?;
+        let segments=chain["segments"].as_array().unwrap();assert_eq!(segments.len(),3);
+        assert_eq!(segments[0]["codec"],"zstd");assert_eq!(segments[1]["codec"],"identity");assert_eq!(segments[2]["codec"],"zstd");
+        for segment in segments {
+            let id=segment["id"].as_str().unwrap();
+            let bytes=http.get(format!("{base}/v1/session-segments/{id}/content?encoded={encoded_mode}")).bearer_auth(&owner.access_token).send().await?.bytes().await?;
+            assert_eq!(bytes.len() as u64,segment["byteSize"].as_u64().unwrap());
+            assert_eq!(hex::encode(Sha256::digest(&bytes)),segment["digest"].as_str().unwrap());
+            if !encoded_mode || segment["codec"]=="identity" {assert_eq!(bytes.as_ref(),raw)}
+        }
+    }
     server.abort();tokio::fs::remove_dir_all(root).await?;Ok(())
 }
