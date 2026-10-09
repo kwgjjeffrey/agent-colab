@@ -8,7 +8,7 @@ pub(super) struct Manifest { pub chunks: Vec<Chunk> }
 pub(super) async fn materialize(state: &AppState, share_id: &str) -> Result<String,LocalError> {
     let user=current_user_id(state).await?;
     let token=access_token_for_user(state,&user).await?;
-    let response=state.inner.http.get(format!("{}/v1/sessions/{share_id}/segments",state.inner.server_url))
+    let response=state.inner.http.get(format!("{}/v1/sessions/{share_id}/segments?encoded=true",state.inner.server_url))
         .bearer_auth(&token).send().await.map_err(LocalError::internal)?;
     if !response.status().is_success() {return Err(remote_error(response).await)}
     let value=response.json::<Value>().await.map_err(LocalError::internal)?;
@@ -21,7 +21,7 @@ pub(super) async fn materialize(state: &AppState, share_id: &str) -> Result<Stri
     let final_path=dir.join(format!("{snapshot}.chunks"));
     let indexed=!value["readIndex"].is_null();
     if !indexed && value["chunkProtocol"].as_u64().is_some_and(|version|version>=2)
-        && value["segments"].as_array().is_some_and(|segments|segments.iter().any(|segment|segment["codec"]=="zstd")) {
+        && value["segments"].as_array().and_then(|segments|segments.last()).is_some_and(|segment|segment["codec"]=="zstd") {
         return Err(LocalError {status:StatusCode::SERVICE_UNAVAILABLE,message:"Session preview index is preparing; synchronization continues independently. Retry shortly.".into()});
     }
     let mut chunks=Vec::new();

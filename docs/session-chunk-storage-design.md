@@ -35,6 +35,9 @@ the target is not a strict block maximum. Metadata distinguishes codec, encoded
 size/hash and decoded size/hash. Source byte offsets always refer to decoded
 original bytes, never compressed bytes. Missing codec means legacy identity.
 Only verified durable blobs become manifest entries. Partial data is not preview.
+Manifest GET and content GET default to raw sizes/digests/streamed bytes for old
+clients. New Core explicitly requests `encoded=true` on both routes so encoded
+integrity metadata cannot be confused with raw integrity metadata.
 Lost acknowledgements recover only matching parent, range, codec and digests.
 
 Server validates transport bounds and hashes, commits through existing snapshot

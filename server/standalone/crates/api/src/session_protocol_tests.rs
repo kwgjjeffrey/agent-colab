@@ -33,9 +33,12 @@ async fn compressed_http_roundtrip_legacy_reads_shared_references_and_index_retr
     let response=http.post(format!("{base}/v1/sessions/{}/segments",first.reference_id)).bearer_auth(&owner.access_token).query(&query).body(encoded.clone()).send().await?;
     assert_eq!(response.status(),StatusCode::CREATED);let result=response.json::<serde_json::Value>().await?;
     let snapshot=result["snapshot"]["id"].as_str().unwrap();
-    let response=http.get(format!("{base}/v1/sessions/{}/segments",second.reference_id)).bearer_auth(&owner.access_token).send().await?;
+    let response=http.get(format!("{base}/v1/sessions/{}/segments?encoded=true",second.reference_id)).bearer_auth(&owner.access_token).send().await?;
     let manifest=response.json::<serde_json::Value>().await?;assert_eq!(manifest["snapshot"]["id"],snapshot);assert_eq!(manifest["segments"].as_array().unwrap().len(),1);assert_eq!(manifest["chunkProtocol"],2);
     let segment=manifest["segments"][0]["id"].as_str().unwrap();
+    let legacy=http.get(format!("{base}/v1/sessions/{}/segments",second.reference_id)).bearer_auth(&owner.access_token).send().await?.json::<serde_json::Value>().await?;
+    assert_eq!(legacy["segments"][0]["byteSize"],raw.len());
+    assert_eq!(legacy["segments"][0]["digest"],hex::encode(Sha256::digest(raw)));
     for (suffix,expected) in [("",raw.as_slice()),("?encoded=true",encoded.as_slice())] {
         let response=http.get(format!("{base}/v1/session-segments/{segment}/content{suffix}")).bearer_auth(&owner.access_token).send().await?;
         assert_eq!(response.status(),StatusCode::OK);assert_eq!(response.bytes().await?.as_ref(),expected);

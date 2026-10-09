@@ -596,7 +596,7 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
     file.seek(SeekFrom::Start(start as u64))
         .map_err(LocalError::internal)?;
     let token = access_token(state).await?;
-    let negotiation = state.inner.http.get(format!("{}/v1/sessions/{share_id}/segments",state.inner.server_url))
+    let negotiation = state.inner.http.get(format!("{}/v1/sessions/{share_id}/segments?encoded=true",state.inner.server_url))
         .bearer_auth(&token).send().await.map_err(LocalError::internal)?;
     if !negotiation.status().is_success() {return Err(remote_error(negotiation).await)}
     let supports_chunks = negotiation.json::<Value>().await.map_err(LocalError::internal)?["chunkProtocol"].as_u64().is_some_and(|version|version>=1);
@@ -656,7 +656,7 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
         let value: Value = if response.status() == StatusCode::CONFLICT {
             // The Server may commit an append whose acknowledgement is lost on restart.
             // Adopt only that exact segment, never an arbitrary newer remote cursor.
-            let probe = state.inner.http.get(format!("{}/v1/sessions/{share_id}/segments",state.inner.server_url))
+            let probe = state.inner.http.get(format!("{}/v1/sessions/{share_id}/segments?encoded=true",state.inner.server_url))
                 .bearer_auth(&token).send().await.map_err(LocalError::internal)?;
             let recovered = if probe.status().is_success() {
                 let value=probe.json::<Value>().await.map_err(LocalError::internal)?;
@@ -731,7 +731,7 @@ fn read_session_segment(reader: &mut impl BufRead) -> Result<Option<Vec<u8>>, Lo
 async fn publish_read_index(state:&AppState,share_id:&str,source:&Path,snapshot:Option<&str>,extent:u64)->Result<(),LocalError> {
     let Some(snapshot)=snapshot else {return Ok(())};
     let user=current_user_id(state).await?;let token=access_token_for_user(state,&user).await?;
-    let response=state.inner.http.get(format!("{}/v1/sessions/{share_id}/segments",state.inner.server_url)).bearer_auth(&token).send().await.map_err(LocalError::internal)?;
+    let response=state.inner.http.get(format!("{}/v1/sessions/{share_id}/segments?encoded=true",state.inner.server_url)).bearer_auth(&token).send().await.map_err(LocalError::internal)?;
     if !response.status().is_success() {return Err(remote_error(response).await)}
     let metadata=response.json::<Value>().await.map_err(LocalError::internal)?;
     if metadata["chunkProtocol"].as_u64().is_none_or(|version|version<2) {return Ok(())}
@@ -799,7 +799,7 @@ async fn cached_preview(state: &AppState, id: &str, user: &str) -> Result<Option
         [id,user],|row|Ok((row.get(0)?,row.get(1)?))).optional().map_err(LocalError::internal)?;
     let Some((path,snapshot)) = cached.filter(|(path,_)|Path::new(path).is_file()) else { return Ok(None); };
     let token = access_token_for_user(state,user).await?;
-    let response = state.inner.http.get(format!("{}/v1/sessions/{id}/segments",state.inner.server_url))
+    let response = state.inner.http.get(format!("{}/v1/sessions/{id}/segments?encoded=true",state.inner.server_url))
         .bearer_auth(token).timeout(std::time::Duration::from_secs(2)).send().await;
     let fresh = match response {
         Ok(response) if response.status().is_success() => {

@@ -301,6 +301,8 @@ paths:
   /v1/sessions/{shareId}/segments:
     get:
       operationId: getSessionSnapshotManifest
+      parameters:
+        - { name: encoded, in: query, schema: { type: boolean, default: false }, description: Opt into encoded frame size/hash metadata; default preserves legacy raw download integrity checks }
       responses:
         "200": { description: Current immutable snapshot, chunkProtocol 2 negotiation, optional opaque readIndex metadata, and ordered segment chain with codec and encoded/decoded integrity metadata }
     post:

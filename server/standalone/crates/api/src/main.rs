@@ -1185,6 +1185,7 @@ async fn list_session_segments(
     State(state): State<AppState>,
     headers: HeaderMap,
     Path(share_id): Path<uuid::Uuid>,
+    Query(query): Query<SegmentDownloadQuery>,
 ) -> Result<Json<serde_json::Value>, ApiError> {
 colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.main.list-session-segments", async {
 
@@ -1197,9 +1198,15 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
         .ok_or_else(|| ApiError::forbidden("session_share_access_forbidden"))?;
     let current = chain.last().map(|x| &x.0);
     let read_index=state.database.session_read_index(user,share_id).await.map_err(|_|ApiError::internal("session_read_index_lookup_failed"))?;
-    Ok(Json(
-        serde_json::json!({"snapshot":current,"chunkProtocol":2,"readIndex":read_index,"segments":chain.into_iter().map(|(_,s)|s).collect::<Vec<_>>() }),
-    ))
+    let mut result=serde_json::json!({"snapshot":current,"chunkProtocol":2,"readIndex":read_index,"segments":chain.into_iter().map(|(_,s)|s).collect::<Vec<_>>() });
+    if !query.encoded {
+        // Legacy clients hash the bytes returned by the default raw content route.
+        // New clients opt into encoded metadata and content together.
+        for segment in result["segments"].as_array_mut().unwrap() {
+            if segment["codec"]=="zstd" {segment["byteSize"]=segment["decodedByteSize"].clone();segment["digest"]=segment["decodedDigest"].clone();}
+        }
+    }
+    Ok(Json(result))
 
 }).await
 }
