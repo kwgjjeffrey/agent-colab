@@ -24,7 +24,17 @@ dist="${COLAB_ARTIFACT_DIST_DIR:-$repo_root/dist}"
 # The public build remains unchanged when no profile directory is provided.
 if [[ -n "${COLAB_COMPONENT_VERSIONS_DIR:-}" ]]; then
   [[ -n "${COLAB_ARTIFACT_DIST_DIR:-}" ]] || { echo "private builds require COLAB_ARTIFACT_DIST_DIR" >&2; exit 2; }
-  [[ "$(python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "$dist")" != "$repo_root/dist" ]] || { echo "private builds cannot use public dist" >&2; exit 2; }
+  python3 - "$repo_root/integration" "$dist" <<'PYPATH'
+import pathlib, sys
+root = pathlib.Path(sys.argv[1]).resolve()
+output = pathlib.Path(sys.argv[2]).resolve()
+try:
+    relative = output.relative_to(root)
+except ValueError:
+    sys.exit("enterprise artifacts must stay under integration/.../artifacts")
+if "artifacts" not in relative.parts:
+    sys.exit("enterprise artifacts must stay under integration/.../artifacts")
+PYPATH
   export VITE_COLAB_DEPLOYMENT_MODE=enterprise
   core_version=$(tr -d '[:space:]' < "$COLAB_COMPONENT_VERSIONS_DIR/local-core")
   ui_version=$(tr -d '[:space:]' < "$COLAB_COMPONENT_VERSIONS_DIR/desktop-ui")
