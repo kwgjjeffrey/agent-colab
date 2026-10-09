@@ -9,10 +9,16 @@ import {
 } from "@/components/ui/collapsible";
 import { runOperation } from "@/api/operation-runner";
 import { traceTargets } from "@/api/trace-locators";
+import { StickToBottom, type StickToBottomContext } from "use-stick-to-bottom";
 
 type Turn = {
+  id?: string;
   items: Array<{
+    id?: string;
     type?: string;
+    tool?: string;
+    command?: unknown;
+    arguments?: unknown;
     text?: string;
     content?: string | Array<{ text?: string }>;
   }>;
@@ -27,6 +33,7 @@ export function SessionPreview({ id }: { id: string }) {
   >([]);
   const [olderCursor, setOlderCursor] = useState<string>();
   const generation = useRef(0);
+  const scrolling = useRef<StickToBottomContext>(null);
   useEffect(() => {
     setTurns(undefined);
     setError(undefined);
@@ -38,6 +45,10 @@ export function SessionPreview({ id }: { id: string }) {
     };
   }, [id]);
   async function read(cursor?: string) {
+    const viewport = scrolling.current?.scrollRef.current;
+    const previousHeight = viewport?.scrollHeight ?? 0;
+    const previousTop = viewport?.scrollTop ?? 0;
+    if (cursor) scrolling.current?.stopScroll();
     return runOperation("sessions.preview", async (operation) => {
       const current = ++generation.current;
       setLoading(true);
@@ -64,6 +75,9 @@ export function SessionPreview({ id }: { id: string }) {
           );
           setWarnings(row.warnings ?? []);
           setOlderCursor(row.page?.hasMore ? row.page.nextCursor : undefined);
+          if (cursor) requestAnimationFrame(() => {
+            if (viewport) viewport.scrollTop = previousTop + viewport.scrollHeight - previousHeight;
+          });
         } else operation.cancel();
       } catch (reason) {
         operation.fail();
@@ -74,111 +88,131 @@ export function SessionPreview({ id }: { id: string }) {
     });
   }
   return (
-    <div
-      className="flex min-h-0 flex-col gap-3 px-4"
+    <StickToBottom
+      contextRef={scrolling}
+      key={id}
+      initial="instant"
+      resize="instant"
+      className="flex min-h-0 flex-1 flex-col"
       data-trace-region="session-preview"
       data-trace-target={traceTargets("sessions.preview")}
     >
-      {warnings.map((warning) => (
-        <p
-          key={warning.code}
-          role="status"
-          className="text-xs text-muted-foreground"
-        >
-          {warning.count} damaged source record(s) could not be decoded. The
-          remaining conversation is shown; the original snapshot is unchanged.
-        </p>
-      ))}
-      {error && (
-        <div>
-          <Button
-            variant="outline"
-            disabled={loading}
-            onClick={() => void read()}
+      <StickToBottom.Content
+        className="flex flex-col gap-3 px-4 pb-4"
+        scrollClassName="min-h-0 flex-1 overflow-y-auto"
+      >
+        {warnings.map((warning) => (
+          <p
+            key={warning.code}
+            role="status"
+            className="text-xs text-muted-foreground"
           >
-            {loading
-              ? "Loading preview…"
-              : turns
-                ? "Refresh preview"
-                : "Retry preview"}
-          </Button>
-        </div>
-      )}
-      {loading && (
-        <p className="text-sm text-muted-foreground">Loading conversation…</p>
-      )}
-      {error && (
-        <p role="alert" className="text-sm text-destructive">
-          {error}
-        </p>
-      )}
-      {turns && (
-        <div className="flex flex-col gap-4">
-          {olderCursor && (
+            {warning.count} damaged source record(s) could not be decoded. The
+            remaining conversation is shown; the original snapshot is unchanged.
+          </p>
+        ))}
+        {error && (
+          <div>
             <Button
-              variant="ghost"
+              variant="outline"
               disabled={loading}
-              onClick={() => void read(olderCursor)}
+              onClick={() => void read()}
             >
-              Load earlier messages
+              {loading
+                ? "Loading preview…"
+                : turns
+                  ? "Refresh preview"
+                  : "Retry preview"}
             </Button>
-          )}
-          {turns.flatMap((turn, turnIndex) =>
-            turn.items
-              .filter(
-                (item) =>
-                  typeof item.text === "string" ||
-                  typeof item.content === "string" ||
-                  Array.isArray(item.content),
-              )
-              .map((item, index) => (
-                <div
-                  key={`${turnIndex}:${index}`}
-                  className="flex flex-col gap-1"
-                >
-                  {item.type === "userMessage" ||
-                  item.type === "agentMessage" ? (
-                    <>
-                      <span className="text-xs text-muted-foreground">
-                        {item.type === "userMessage" ? "User" : "Agent"}
-                      </span>
-                      <div data-session-message>
-                        <PreviewMarkdown>
-                          {item.text ??
-                            (typeof item.content === "string"
-                              ? item.content
-                              : item.content
-                                  ?.map((block) => block.text ?? "")
-                                  .join("\n")) ??
-                            ""}
-                        </PreviewMarkdown>
-                      </div>
-                    </>
-                  ) : (
-                    <Collapsible>
-                      <CollapsibleTrigger
-                        render={<Button variant="ghost" size="sm" />}
-                      >
-                        {item.type ?? "Tool"}
-                      </CollapsibleTrigger>
-                      <CollapsibleContent>
-                        <PreviewMarkdown>
-                          {item.text ??
-                            (typeof item.content === "string"
-                              ? item.content
-                              : item.content
-                                  ?.map((block) => block.text ?? "")
-                                  .join("\n")) ??
-                            ""}
-                        </PreviewMarkdown>
-                      </CollapsibleContent>
-                    </Collapsible>
-                  )}
-                </div>
-              )),
-          )}
-        </div>
-      )}
-    </div>
+          </div>
+        )}
+        {loading && (
+          <p className="text-sm text-muted-foreground">Loading conversation…</p>
+        )}
+        {error && (
+          <p role="alert" className="text-sm text-destructive">
+            {error}
+          </p>
+        )}
+        {turns && (
+          <div className="flex flex-col gap-4">
+            {olderCursor && (
+              <Button
+                variant="ghost"
+                disabled={loading}
+                onClick={() => void read(olderCursor)}
+              >
+                Load earlier messages
+              </Button>
+            )}
+            {turns.flatMap((turn, turnIndex) =>
+              turn.items
+                .filter(
+                  (item) =>
+                    typeof item.text === "string" ||
+                    typeof item.content === "string" ||
+                    Array.isArray(item.content) ||
+                    item.type === "commandExecution" ||
+                    item.type === "mcpToolCall",
+                )
+                .map((item, index) => (
+                  <div
+                    key={`${turn.id ?? turnIndex}:${item.id ?? index}`}
+                    className="flex flex-col gap-1"
+                  >
+                    {item.type === "userMessage" ||
+                    item.type === "agentMessage" ? (
+                      <>
+                        <span className="text-xs text-muted-foreground">
+                          {item.type === "userMessage" ? "User" : "Agent"}
+                        </span>
+                        <div data-session-message>
+                          <PreviewMarkdown>
+                            {item.text ??
+                              (typeof item.content === "string"
+                                ? item.content
+                                : item.content
+                                    ?.map((block) => block.text ?? "")
+                                    .join("\n")) ??
+                              ""}
+                          </PreviewMarkdown>
+                        </div>
+                      </>
+                    ) : (
+                      <Collapsible>
+                        <CollapsibleTrigger
+                          render={<Button variant="ghost" size="sm" />}
+                        >
+                          {item.tool ??
+                            (item.type === "commandExecution"
+                              ? "Command"
+                              : (item.type ?? "Tool"))}
+                        </CollapsibleTrigger>
+                        <CollapsibleContent>
+                          <PreviewMarkdown>
+                            {item.text ??
+                              (typeof item.content === "string"
+                                ? item.content
+                                : item.content
+                                    ?.map((block) => block.text ?? "")
+                                    .join("\n")) ??
+                              (typeof item.command === "string"
+                                ? item.command
+                                : JSON.stringify(
+                                    item.arguments ?? item.command ?? {},
+                                    null,
+                                    2,
+                                  ))}
+                          </PreviewMarkdown>
+                        </CollapsibleContent>
+                      </Collapsible>
+                    )}
+                  </div>
+                )),
+            )}
+          </div>
+        )}
+      </StickToBottom.Content>
+    </StickToBottom>
   );
 }

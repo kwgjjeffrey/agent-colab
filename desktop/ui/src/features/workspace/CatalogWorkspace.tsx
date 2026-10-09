@@ -15,6 +15,11 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from "@/components/ui/resizable";
 import { Collapsible, CollapsibleContent } from "@/components/ui/collapsible";
 import {
   DropdownMenu,
@@ -91,6 +96,8 @@ type Props = {
   onAdd: (kind: AddKind, parentId?: string) => void;
   children: ReactNode;
   quickShare?: ReactNode;
+  heading?: ReactNode;
+  activity?: string;
 };
 export function CatalogWorkspace({
   channelId,
@@ -101,6 +108,8 @@ export function CatalogWorkspace({
   onAdd,
   children,
   quickShare,
+  heading,
+  activity,
 }: Props) {
   const [branches, setBranches] = useState<Record<string, CatalogItem[]>>({});
   const loadEpoch = useRef(0);
@@ -268,20 +277,22 @@ export function CatalogWorkspace({
       setForm({ parent, kind });
     } else onAdd(kind, parent);
   }
-  async function mutate(action: (operation: OperationScope) => Promise<unknown>) {
-    return runOperation("workspace.mutate", async operation => {
-    setWorking(true);
-    setError(undefined);
-    try {
-      await action(operation);
-      loadEpoch.current++;
-      window.dispatchEvent(new Event("colab:catalog-changed"));
-    } catch (reason) {
-      setError(String(reason));
-      throw reason;
-    } finally {
-      setWorking(false);
-    }
+  async function mutate(
+    action: (operation: OperationScope) => Promise<unknown>,
+  ) {
+    return runOperation("workspace.mutate", async (operation) => {
+      setWorking(true);
+      setError(undefined);
+      try {
+        await action(operation);
+        loadEpoch.current++;
+        window.dispatchEvent(new Event("colab:catalog-changed"));
+      } catch (reason) {
+        setError(String(reason));
+        throw reason;
+      } finally {
+        setWorking(false);
+      }
     });
   }
   async function drop(
@@ -389,9 +400,15 @@ export function CatalogWorkspace({
                   )}
                   title={item.name}
                   data-item-id={item.id}
-              data-item-kind={item.kind}
-              data-trace-nav="workspace.item"
-              data-trace-target={item.kind === "files" ? traceTargets("files.browse") : item.kind === "canvas" ? traceTargets("canvas.list") : undefined}
+                  data-item-kind={item.kind}
+                  data-trace-nav="workspace.item"
+                  data-trace-target={
+                    item.kind === "files"
+                      ? traceTargets("files.browse")
+                      : item.kind === "canvas"
+                        ? traceTargets("canvas.list")
+                        : undefined
+                  }
                   onClick={() => select(item)}
                   onDoubleClick={() => {
                     if (item.kind === "catalog" || item.kind === "canvas") {
@@ -449,380 +466,414 @@ export function CatalogWorkspace({
   }
   return (
     <WorkspaceActionProvider>
-      <div className="flex min-h-0 flex-1 border-t">
-        <aside
-          className="flex w-64 shrink-0 flex-col gap-1 border-r p-3"
-          aria-label="Channel items"
-          data-trace-region="catalog-items"
-          data-trace-target={traceTargets("workspace.mutate")}
+      <ResizablePanelGroup orientation="horizontal" className="min-h-0 flex-1">
+        <ResizablePanel
+          id="channel-sidebar"
+          defaultSize={
+            Number(localStorage.getItem("colab:sidebar-width")) || 350
+          }
+          minSize={260}
+          maxSize="50%"
+          onResize={(size) =>
+            localStorage.setItem(
+              "colab:sidebar-width",
+              String(Math.round(size.inPixels)),
+            )
+          }
         >
-          <Button
-            variant={view === "home" ? "secondary" : "ghost"}
-            className="justify-start"
-            onClick={() => {
-              setSelectedCatalog(undefined);
-              onSelect("add");
-            }}
+          <aside
+            className="flex h-full min-h-0 flex-col gap-1 p-3"
+            aria-label="Channel items"
+            data-trace-region="catalog-items"
+            data-trace-target={traceTargets("workspace.mutate")}
           >
-            <HouseIcon data-icon="inline-start" />
-            Home
-          </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              render={<Button variant="ghost" className="justify-start" />}
+            {heading && (
+              <div className="mb-2 flex h-12 shrink-0 items-center">
+                {heading}
+              </div>
+            )}
+            <Button
+              variant={view === "home" ? "secondary" : "ghost"}
+              className="justify-start"
+              onClick={() => {
+                setSelectedCatalog(undefined);
+                onSelect("add");
+              }}
             >
-              <PlusIcon />
-              Add
-            </DropdownMenuTrigger>
-            <DropdownMenuContent keepMounted align="start" className="w-52">
-              <DropdownMenuGroup>
-                {kinds.map(({ kind, label }) => (
-                  <DropdownMenuItem key={kind} onClick={() => add(kind)}>
-                    <ItemIcon kind={kind} name={label} />
-                    {label}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuGroup>
-              <DropdownMenuSeparator />
-              {quickShare}
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <Button
-            variant={view === "messages" ? "secondary" : "ghost"}
-            className="justify-start"
-            onClick={() => {
-              setSelectedCatalog(undefined);
-              onSelect("message");
-            }}
-          >
-            <MessageSquareIcon data-icon="inline-start" />
-            Message
-          </Button>
-          <ScrollArea className="min-h-0 flex-1">
-            <CatalogDragTarget
-              channelId={channelId}
-              disabled={working}
-              onDrop={(source) => void drop(source, undefined, "inside")}
+              <HouseIcon data-icon="inline-start" />
+              Home
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={<Button variant="ghost" className="justify-start" />}
+              >
+                <PlusIcon />
+                Add
+              </DropdownMenuTrigger>
+              <DropdownMenuContent keepMounted align="start" className="w-52">
+                <DropdownMenuGroup>
+                  {kinds.map(({ kind, label }) => (
+                    <DropdownMenuItem key={kind} onClick={() => add(kind)}>
+                      <ItemIcon kind={kind} name={label} />
+                      {label}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuGroup>
+                <DropdownMenuSeparator />
+                {quickShare}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Button
+              variant={view === "messages" ? "secondary" : "ghost"}
+              className="justify-start"
+              onClick={() => {
+                setSelectedCatalog(undefined);
+                onSelect("message");
+              }}
             >
-              <div className="min-h-[calc(100vh-240px)] pb-16">{rows()}</div>
-            </CatalogDragTarget>
-          </ScrollArea>
-        </aside>
-        <section className="flex min-h-0 min-w-0 flex-1 flex-col">
-          {selected && (
-            <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b px-6 py-3">
-              <div className="min-w-0 flex-1 basis-full overflow-hidden md:basis-0">
-                <Breadcrumb>
-                  <BreadcrumbList className="flex-nowrap whitespace-nowrap">
-                    <BreadcrumbItem>
-                      <BreadcrumbLink
-                        render={
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setSelectedCatalog(undefined);
-                              onSelect("add");
-                            }}
-                          />
-                        }
-                      >
-                        {channelName}
-                      </BreadcrumbLink>
-                    </BreadcrumbItem>
-                    {trail.map((item) => (
-                      <Fragment key={item.id}>
-                        <BreadcrumbSeparator />
-                        <BreadcrumbItem>
-                          <BreadcrumbLink
-                            render={
-                              <button
-                                type="button"
-                                onClick={() => select(item)}
-                              />
-                            }
-                          >
-                            {item.name}
-                          </BreadcrumbLink>
-                        </BreadcrumbItem>
-                      </Fragment>
-                    ))}
-                    <BreadcrumbSeparator />
-                    <BreadcrumbItem>
-                      {previewPath?.id === selected.id && previewPath.path ? (
+              <MessageSquareIcon data-icon="inline-start" />
+              Message
+            </Button>
+            <ScrollArea className="min-h-0 flex-1">
+              <CatalogDragTarget
+                channelId={channelId}
+                disabled={working}
+                onDrop={(source) => void drop(source, undefined, "inside")}
+              >
+                <div className="min-h-[calc(100vh-240px)] pb-16">{rows()}</div>
+              </CatalogDragTarget>
+            </ScrollArea>
+          </aside>
+        </ResizablePanel>
+        <ResizableHandle aria-label="Resize Channel sidebar" />
+        <ResizablePanel id="channel-content" minSize={300}>
+          <section className="flex h-full min-h-0 min-w-0 flex-col">
+            {activity && (
+              <span
+                role="status"
+                className="shrink-0 truncate px-6 py-1 text-xs text-muted-foreground"
+              >
+                {activity}
+              </span>
+            )}
+            {selected && (
+              <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b px-6 py-3">
+                <div className="min-w-0 flex-1 basis-full overflow-hidden md:basis-0">
+                  <Breadcrumb>
+                    <BreadcrumbList className="flex-nowrap whitespace-nowrap">
+                      <BreadcrumbItem>
                         <BreadcrumbLink
                           render={
                             <button
                               type="button"
-                              onClick={() =>
-                                window.dispatchEvent(
-                                  new CustomEvent("colab:preview-navigate", {
-                                    detail: { id: selected.id, path: "" },
-                                  }),
-                                )
-                              }
+                              onClick={() => {
+                                setSelectedCatalog(undefined);
+                                onSelect("add");
+                              }}
                             />
                           }
                         >
-                          {selected.name}
+                          {channelName}
                         </BreadcrumbLink>
-                      ) : (
-                        <BreadcrumbPage
-                          title={selected.name}
-                          className="truncate max-w-80"
-                        >
-                          {selected.name}
-                        </BreadcrumbPage>
-                      )}
-                    </BreadcrumbItem>
-                    {previewPath?.id === selected.id &&
-                      previewPath.path?.split("/").map((part, index, parts) => (
-                        <Fragment key={index}>
+                      </BreadcrumbItem>
+                      {trail.map((item) => (
+                        <Fragment key={item.id}>
                           <BreadcrumbSeparator />
                           <BreadcrumbItem>
-                            {index === parts.length - 1 ? (
-                              <BreadcrumbPage>{part}</BreadcrumbPage>
-                            ) : (
-                              <BreadcrumbLink
-                                render={
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      window.dispatchEvent(
-                                        new CustomEvent(
-                                          "colab:preview-navigate",
-                                          {
-                                            detail: {
-                                              id: selected.id,
-                                              path: parts
-                                                .slice(0, index + 1)
-                                                .join("/"),
-                                            },
-                                          },
-                                        ),
-                                      )
-                                    }
-                                  />
-                                }
-                              >
-                                {part}
-                              </BreadcrumbLink>
-                            )}
+                            <BreadcrumbLink
+                              render={
+                                <button
+                                  type="button"
+                                  onClick={() => select(item)}
+                                />
+                              }
+                            >
+                              {item.name}
+                            </BreadcrumbLink>
                           </BreadcrumbItem>
                         </Fragment>
                       ))}
-                  </BreadcrumbList>
-                </Breadcrumb>
-              </div>
-              <div className="flex items-center gap-2">
-                <div
-                  id="workspace-item-actions"
-                  className="flex items-center gap-2"
-                >
-                  <WorkspaceActionSlot primary />
-                </div>
-                <DropdownMenu>
-                  <DropdownMenuTrigger
-                    render={
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        aria-label="More item actions"
-                      />
-                    }
-                  >
-                    <EllipsisIcon />
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent keepMounted align="end">
-                    <DropdownMenuGroup>
-                      <WorkspaceActionSlot />
-                      <DropdownMenuItem
-                        disabled={selected.canMove === false}
-                        onClick={() => setMoving(true)}
-                      >
-                        Move
-                      </DropdownMenuItem>
-                      {selected.kind === "catalog" && (
-                        <>
-                          <DropdownMenuItem
-                            onClick={() => {
-                              setName(selected.name);
-                              setForm({ item: selected });
-                            }}
-                          >
-                            Rename
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            disabled={working}
-                            onClick={() =>
-                              void mutate(async (operation) => {
-                                await catalogRequest(
-                                  `/v1/channels/${channelId}/catalogs/${selected.id}`,
-                                  "DELETE",
-                                  undefined,
-                                  operation,
-                                );
-                                onSelect("add");
-                                setSelectedCatalog(undefined);
-                              }).catch(() => {})
+                      <BreadcrumbSeparator />
+                      <BreadcrumbItem>
+                        {previewPath?.id === selected.id && previewPath.path ? (
+                          <BreadcrumbLink
+                            render={
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  window.dispatchEvent(
+                                    new CustomEvent("colab:preview-navigate", {
+                                      detail: { id: selected.id, path: "" },
+                                    }),
+                                  )
+                                }
+                              />
                             }
                           >
-                            Remove empty catalog
-                          </DropdownMenuItem>
-                        </>
-                      )}
-                    </DropdownMenuGroup>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </div>
-          )}
-          {error && (
-            <p role="alert" className="px-6 py-2 text-sm text-destructive">
-              {error}
-            </p>
-          )}
-          {view === "catalog" ? (
-            <ScrollArea className="min-h-0 flex-1">
-              <div className="flex flex-col gap-4 p-6">
-                <div className="flex flex-wrap gap-2">
-                  {kinds.map(({ kind, label, icon: Icon }) => (
-                    <Button
-                      key={kind}
-                      size="sm"
-                      variant="outline"
-                      onClick={() => add(kind, selectedCatalog?.id)}
-                    >
-                      <Icon data-icon="inline-start" />
-                      {label}
-                    </Button>
-                  ))}
+                            {selected.name}
+                          </BreadcrumbLink>
+                        ) : (
+                          <BreadcrumbPage
+                            title={selected.name}
+                            className="truncate max-w-80"
+                          >
+                            {selected.name}
+                          </BreadcrumbPage>
+                        )}
+                      </BreadcrumbItem>
+                      {previewPath?.id === selected.id &&
+                        previewPath.path
+                          ?.split("/")
+                          .map((part, index, parts) => (
+                            <Fragment key={index}>
+                              <BreadcrumbSeparator />
+                              <BreadcrumbItem>
+                                {index === parts.length - 1 ? (
+                                  <BreadcrumbPage>{part}</BreadcrumbPage>
+                                ) : (
+                                  <BreadcrumbLink
+                                    render={
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          window.dispatchEvent(
+                                            new CustomEvent(
+                                              "colab:preview-navigate",
+                                              {
+                                                detail: {
+                                                  id: selected.id,
+                                                  path: parts
+                                                    .slice(0, index + 1)
+                                                    .join("/"),
+                                                },
+                                              },
+                                            ),
+                                          )
+                                        }
+                                      />
+                                    }
+                                  >
+                                    {part}
+                                  </BreadcrumbLink>
+                                )}
+                              </BreadcrumbItem>
+                            </Fragment>
+                          ))}
+                    </BreadcrumbList>
+                  </Breadcrumb>
                 </div>
-                {(branches[selectedCatalog?.id ?? "root"] ?? []).map((item) => (
-                  <Button
-                    key={item.id}
-                    variant="ghost"
-                    className="justify-start"
-                    onClick={() => select(item)}
+                <div className="flex items-center gap-2">
+                  <div
+                    id="workspace-item-actions"
+                    className="flex items-center gap-2"
                   >
-                    {item.name}
-                  </Button>
-                ))}
+                    <WorkspaceActionSlot primary />
+                  </div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger
+                      render={
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          aria-label="More item actions"
+                        />
+                      }
+                    >
+                      <EllipsisIcon />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent keepMounted align="end">
+                      <DropdownMenuGroup>
+                        <WorkspaceActionSlot />
+                        <DropdownMenuItem
+                          disabled={selected.canMove === false}
+                          onClick={() => setMoving(true)}
+                        >
+                          Move
+                        </DropdownMenuItem>
+                        {selected.kind === "catalog" && (
+                          <>
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setName(selected.name);
+                                setForm({ item: selected });
+                              }}
+                            >
+                              Rename
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              disabled={working}
+                              onClick={() =>
+                                void mutate(async (operation) => {
+                                  await catalogRequest(
+                                    `/v1/channels/${channelId}/catalogs/${selected.id}`,
+                                    "DELETE",
+                                    undefined,
+                                    operation,
+                                  );
+                                  onSelect("add");
+                                  setSelectedCatalog(undefined);
+                                }).catch(() => {})
+                              }
+                            >
+                              Remove empty catalog
+                            </DropdownMenuItem>
+                          </>
+                        )}
+                      </DropdownMenuGroup>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               </div>
-            </ScrollArea>
-          ) : (
-            children
-          )}
-        </section>
-        <Dialog
-          open={Boolean(form)}
-          onOpenChange={(open) => {
-            if (!open) setForm(undefined);
-          }}
-        >
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>
-                {form?.item
-                  ? "Rename catalog"
-                  : form?.kind === "canvas"
-                    ? "Create Canvas"
-                    : "Create catalog"}
-              </DialogTitle>
-            </DialogHeader>
-            <form
-              onSubmit={(event) => {
-                event.preventDefault();
-                void mutate(async (operation) => {
-                  const canvas = form?.kind === "canvas";
-                  const row = await catalogRequest<{
-                    id: string;
-                    title?: string;
-                    name?: string;
-                  }>(
-                    canvas
-                      ? `/v1/channels/${channelId}/canvases`
-                      : form?.item
-                        ? `/v1/channels/${channelId}/catalogs/${form.item.id}`
-                        : `/v1/channels/${channelId}/catalogs`,
-                    form?.item ? "PATCH" : "POST",
-                    canvas
-                      ? { title: name, folderId: form?.parent }
-                      : { name, parentId: form?.parent },
-                    operation,
-                  );
-                  if (canvas)
-                    onSelect({
-                      id: row.id,
-                      kind: "canvas",
-                      name: row.title ?? name,
-                      parentId: form?.parent ?? null,
-                      updatedAt: "",
-                    });
-                  setForm(undefined);
-                }).catch(() => {});
-              }}
-            >
-              <FieldGroup>
-                <Field>
-                  <FieldLabel htmlFor="catalog-name">Name</FieldLabel>
-                  <Input
-                    id="catalog-name"
-                    autoFocus
-                    value={name}
-                    onChange={(event) => setName(event.target.value)}
-                    maxLength={200}
-                  />
-                </Field>
-                <Button type="submit" disabled={working || !name.trim()}>
-                  Save
+            )}
+            {error && (
+              <p role="alert" className="px-6 py-2 text-sm text-destructive">
+                {error}
+              </p>
+            )}
+            {view === "catalog" ? (
+              <ScrollArea className="min-h-0 flex-1">
+                <div className="flex flex-col gap-4 p-6">
+                  <div className="flex flex-wrap gap-2">
+                    {kinds.map(({ kind, label, icon: Icon }) => (
+                      <Button
+                        key={kind}
+                        size="sm"
+                        variant="outline"
+                        onClick={() => add(kind, selectedCatalog?.id)}
+                      >
+                        <Icon data-icon="inline-start" />
+                        {label}
+                      </Button>
+                    ))}
+                  </div>
+                  {(branches[selectedCatalog?.id ?? "root"] ?? []).map(
+                    (item) => (
+                      <Button
+                        key={item.id}
+                        variant="ghost"
+                        className="justify-start"
+                        onClick={() => select(item)}
+                      >
+                        {item.name}
+                      </Button>
+                    ),
+                  )}
+                </div>
+              </ScrollArea>
+            ) : (
+              children
+            )}
+          </section>
+        </ResizablePanel>
+      </ResizablePanelGroup>
+      <Dialog
+        open={Boolean(form)}
+        onOpenChange={(open) => {
+          if (!open) setForm(undefined);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {form?.item
+                ? "Rename catalog"
+                : form?.kind === "canvas"
+                  ? "Create Canvas"
+                  : "Create catalog"}
+            </DialogTitle>
+          </DialogHeader>
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              void mutate(async (operation) => {
+                const canvas = form?.kind === "canvas";
+                const row = await catalogRequest<{
+                  id: string;
+                  title?: string;
+                  name?: string;
+                }>(
+                  canvas
+                    ? `/v1/channels/${channelId}/canvases`
+                    : form?.item
+                      ? `/v1/channels/${channelId}/catalogs/${form.item.id}`
+                      : `/v1/channels/${channelId}/catalogs`,
+                  form?.item ? "PATCH" : "POST",
+                  canvas
+                    ? { title: name, folderId: form?.parent }
+                    : { name, parentId: form?.parent },
+                  operation,
+                );
+                if (canvas)
+                  onSelect({
+                    id: row.id,
+                    kind: "canvas",
+                    name: row.title ?? name,
+                    parentId: form?.parent ?? null,
+                    updatedAt: "",
+                  });
+                setForm(undefined);
+              }).catch(() => {});
+            }}
+          >
+            <FieldGroup>
+              <Field>
+                <FieldLabel htmlFor="catalog-name">Name</FieldLabel>
+                <Input
+                  id="catalog-name"
+                  autoFocus
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                  maxLength={200}
+                />
+              </Field>
+              <Button type="submit" disabled={working || !name.trim()}>
+                Save
+              </Button>
+            </FieldGroup>
+          </form>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={moving} onOpenChange={setMoving}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Move to catalog</DialogTitle>
+          </DialogHeader>
+          <ScrollArea className="max-h-80">
+            <div className="flex flex-col gap-2">
+              {[
+                { id: null, name: channelName },
+                ...all.filter(
+                  (item) => item.kind === "catalog" && item.id !== selected?.id,
+                ),
+              ].map((item) => (
+                <Button
+                  key={item.id ?? "root"}
+                  variant="ghost"
+                  className="justify-start"
+                  disabled={working}
+                  onClick={() =>
+                    void mutate(async (operation) => {
+                      await catalogRequest(
+                        `/v1/channels/${channelId}/catalog-items/position`,
+                        "PATCH",
+                        {
+                          kind: selected?.kind,
+                          itemId: selected?.id,
+                          parentId: item.id,
+                        },
+                        operation,
+                      );
+                      setMoving(false);
+                    }).catch(() => {})
+                  }
+                >
+                  {item.name}
                 </Button>
-              </FieldGroup>
-            </form>
-          </DialogContent>
-        </Dialog>
-        <Dialog open={moving} onOpenChange={setMoving}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Move to catalog</DialogTitle>
-            </DialogHeader>
-            <ScrollArea className="max-h-80">
-              <div className="flex flex-col gap-2">
-                {[
-                  { id: null, name: channelName },
-                  ...all.filter(
-                    (item) =>
-                      item.kind === "catalog" && item.id !== selected?.id,
-                  ),
-                ].map((item) => (
-                  <Button
-                    key={item.id ?? "root"}
-                    variant="ghost"
-                    className="justify-start"
-                    disabled={working}
-                    onClick={() =>
-                      void mutate(async (operation) => {
-                        await catalogRequest(
-                          `/v1/channels/${channelId}/catalog-items/position`,
-                          "PATCH",
-                          {
-                            kind: selected?.kind,
-                            itemId: selected?.id,
-                            parentId: item.id,
-                          },
-                          operation,
-                        );
-                        setMoving(false);
-                      }).catch(() => {})
-                    }
-                  >
-                    {item.name}
-                  </Button>
-                ))}
-              </div>
-            </ScrollArea>
-          </DialogContent>
-        </Dialog>
-      </div>
+              ))}
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
     </WorkspaceActionProvider>
   );
 }

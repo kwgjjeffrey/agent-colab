@@ -1,5 +1,17 @@
 # Colab 实现计划
 
+### 2026-10-09 Conversation scrolling and compact Channel — in progress
+
+Rollback checkpoint `fd037f9`. Channel identity/members move into a shadcn
+resizable sidebar (350px default); the detail trail starts at the top of the
+right pane. Message cold reads use a bounded latest page with backward keyset
+pagination, retaining the existing forward realtime catch-up contract. Session
+and Message scrolling use use-stick-to-bottom; refreshed Session discovery no
+longer scrolls the selected preview back to its metadata. Tool envelopes are not
+user prose; mirrored provider records are deduplicated and tool calls collapse.
+GUI 125 / Core 99 / Server 1.2 are prepared for scoped real-browser validation.
+Publication and native update acceptance are not yet complete.
+
 ### 2026-10-09 Preview/actions hardening — verified and released
 
 Rollback checkpoint `d752304`. GUI 123 makes Give to Agent the solid primary,

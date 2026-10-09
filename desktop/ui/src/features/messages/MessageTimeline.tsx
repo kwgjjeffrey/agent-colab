@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useLayoutEffect, useRef } from "react";
+import { useStickToBottom } from "use-stick-to-bottom";
 import { Button } from "@/components/ui/button";
 import { CopyIcon, ForwardIcon, ListIcon, QuoteIcon } from "lucide-react";
 import {
@@ -33,7 +34,11 @@ export function MessageTimeline({
   onCopy,
   onStartSelection,
   onAddAgent,
+  onLoadEarlier,
+  loadingEarlier,
 }: {
+  onLoadEarlier?: () => Promise<void>;
+  loadingEarlier?: boolean;
   onAddAgent?: () => void;
   focusId?: string;
   channelId: string;
@@ -51,58 +56,99 @@ export function MessageTimeline({
   onCopy?: (message: ChannelMessage) => void;
   onStartSelection: (message: ChannelMessage) => void;
 }) {
-  const viewport = useRef<HTMLDivElement>(null),
-    restored = useRef(false),
-    atBottom = useRef(true);
+  const { scrollRef, contentRef, stopScroll } = useStickToBottom({
+    initial: "instant",
+    resize: "instant",
+  });
+  const focused = useRef<string | undefined>(undefined);
   useLayoutEffect(() => {
-    const element = viewport.current;
-    if (!element || restored.current) return;
-    const saved = sessionStorage.getItem(
-      `agent-colab:messages-scroll:${channelId}`,
-    );
-    element.scrollTop = saved === null ? element.scrollHeight : Number(saved);
-    atBottom.current = element.scrollHeight - element.scrollTop - element.clientHeight < 48;
-    restored.current = true;
-  }, [channelId, messages.length]);
-  useLayoutEffect(() => {
-    restored.current = false;
-  }, [channelId]);
-  useLayoutEffect(() => {
-    if (viewport.current && atBottom.current && !focusId) viewport.current.scrollTop = viewport.current.scrollHeight;
-  }, [messages.length, focusId]);
-  useLayoutEffect(() => {
-    if (focusId)
-      document
-        .getElementById(`message-${focusId}`)
-        ?.scrollIntoView({ block: "center" });
+    if (!focusId || focused.current === focusId) return;
+    const target = document.getElementById(`message-${focusId}`);
+    if (target) {
+      stopScroll();
+      target.scrollIntoView({ block: "center" });
+      focused.current = focusId;
+    }
   }, [focusId, messages]);
   const owners = new Map(agents.map((agent) => [agent.name, agent.ownerName])),
     messageById = new Map(messages.map((message) => [message.id, message]));
   return (
     <div
-      ref={viewport}
+      ref={scrollRef}
       className="min-h-0 flex-1 overflow-y-auto"
-      onScroll={(event) => {
-        const element = event.currentTarget;
-        atBottom.current = element.scrollHeight - element.scrollTop - element.clientHeight < 48;
-        sessionStorage.setItem(
-          `agent-colab:messages-scroll:${channelId}`,
-          String(event.currentTarget.scrollTop),
-        );
-      }}
+      data-message-timeline={channelId}
     >
-      <div className="flex min-h-full flex-col justify-end py-3">
+      <div
+        ref={contentRef}
+        className="flex min-h-full flex-col justify-end py-3"
+      >
+        {onLoadEarlier && (
+          <Button
+            variant="ghost"
+            disabled={loadingEarlier}
+            onClick={async () => {
+              const viewport = scrollRef.current;
+              const height = viewport?.scrollHeight ?? 0;
+              const top = viewport?.scrollTop ?? 0;
+              stopScroll();
+              await onLoadEarlier();
+              requestAnimationFrame(() => {
+                if (viewport)
+                  viewport.scrollTop = top + viewport.scrollHeight - height;
+              });
+            }}
+          >
+            Load earlier messages
+          </Button>
+        )}
         <div className="flex items-start gap-3 px-4 py-8 text-sm">
-          <img src="/colab-avatar.svg" alt="Agent Colab" className="size-8 shrink-0 rounded-lg" />
+          <img
+            src="/colab-avatar.svg"
+            alt="Agent Colab"
+            className="size-8 shrink-0 rounded-lg"
+          />
           <div className="min-w-0 flex-1">
-          <p className="mb-2 font-semibold">Agent Colab</p>
-          <h2 className="mb-4 text-lg font-semibold">Work together with your Agents</h2>
-          <div className="divide-y">
-            <div className="flex items-center justify-between gap-4 py-3"><div><strong>Add your Agent counterpart</strong><p className="mt-1 text-muted-foreground">Teammates can @mention your Agent to ask for help, even while you work on something else.</p></div>{onAddAgent && <Button variant="outline" size="sm" disabled={!currentMemberId} onClick={onAddAgent}>Add my Agent</Button>}</div>
-            <div className="py-3"><strong>Bring the right person into the discussion</strong><p className="mt-1 text-muted-foreground">Type @ in the composer to mention a teammate or their Agent and explain what you need.</p></div>
-            <div className="py-3"><strong>Turn a decision into action</strong><p className="mt-1 text-muted-foreground">Once you agree on a plan, @mention an Agent to carry it out. Quote a message or forward selected messages to give it the discussion context.</p></div>
+            <p className="mb-2 font-semibold">Agent Colab</p>
+            <h2 className="mb-4 text-lg font-semibold">
+              Work together with your Agents
+            </h2>
+            <div className="divide-y">
+              <div className="flex items-center justify-between gap-4 py-3">
+                <div>
+                  <strong>Add your Agent counterpart</strong>
+                  <p className="mt-1 text-muted-foreground">
+                    Teammates can @mention your Agent to ask for help, even
+                    while you work on something else.
+                  </p>
+                </div>
+                {onAddAgent && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={!currentMemberId}
+                    onClick={onAddAgent}
+                  >
+                    Add my Agent
+                  </Button>
+                )}
+              </div>
+              <div className="py-3">
+                <strong>Bring the right person into the discussion</strong>
+                <p className="mt-1 text-muted-foreground">
+                  Type @ in the composer to mention a teammate or their Agent
+                  and explain what you need.
+                </p>
+              </div>
+              <div className="py-3">
+                <strong>Turn a decision into action</strong>
+                <p className="mt-1 text-muted-foreground">
+                  Once you agree on a plan, @mention an Agent to carry it out.
+                  Quote a message or forward selected messages to give it the
+                  discussion context.
+                </p>
+              </div>
+            </div>
           </div>
-        </div>
         </div>
         {messages.map((message) => {
           const agent = message.senderKind === "agent",

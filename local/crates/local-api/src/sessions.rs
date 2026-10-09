@@ -979,6 +979,14 @@ fn project_codex(text: &str, include_outputs: bool, max_chars: usize) -> Vec<Val
         let row_type = v.get("type").and_then(Value::as_str);
         let payload = v.get("payload").unwrap_or(&Value::Null);
         let payload_type = payload.get("type").and_then(Value::as_str);
+        if row_type == Some("response_item") && payload_type == Some("message") {
+            for block in payload["content"].as_array().into_iter().flatten() {
+                if matches!(block["type"].as_str(), Some("tool_result" | "tool-result")) && include_outputs {
+                    let call = block["tool_use_id"].as_str().or_else(|| block["toolCallId"].as_str()).unwrap_or("");
+                    attach_result(&mut turns, call, &tool_result_text(block), max_chars);
+                }
+            }
+        }
         if row_type == Some("event_msg") && payload_type == Some("task_started") {
             turns.push(json!({"id":payload.get("turn_id").and_then(Value::as_str).unwrap_or("turn"),"items":[]}));
             continue;
@@ -1000,6 +1008,14 @@ fn project_codex(text: &str, include_outputs: bool, max_chars: usize) -> Vec<Val
             let Some(clean) = clean_user_text(&raw) else {
                 continue;
             };
+            // Codex records the same user input as both a response item and an event.
+            // These are two representations of one turn, not two user messages.
+            if turns.last().and_then(|t| t["items"].as_array()).is_some_and(|items| {
+                items.last().is_some_and(|item| item["type"] == "userMessage"
+                    && item.pointer("/content/0/text").and_then(Value::as_str) == Some(clean.as_str()))
+            }) {
+                continue;
+            }
             if turns
                 .last()
                 .and_then(|t| t["items"].as_array())
@@ -1216,10 +1232,12 @@ fn push_item(turns: &mut Vec<Value>, item: Value, index: usize) {
     if turns.is_empty() {
         turns.push(json!({"id":format!("turn-{index}"),"items":[]}))
     }
-    turns.last_mut().unwrap()["items"]
+    let items = turns.last_mut().unwrap()["items"]
         .as_array_mut()
-        .unwrap()
-        .push(item)
+        .unwrap();
+    // Mirrored Codex agent_message/response_item records must not duplicate prose.
+    if item["type"] == "agentMessage" && items.last().is_some_and(|last| last["type"] == "agentMessage" && last["text"] == item["text"]) { return; }
+    items.push(item)
 }
 fn attach_result(turns: &mut [Value], call: &str, output: &str, max: usize) {
     for turn in turns.iter_mut().rev() {
@@ -1266,6 +1284,11 @@ fn extract_user_text(v: &Value) -> Option<String> {
     None
 }
 fn text_value(v: &Value) -> Option<String> {
+    // Tool protocol blocks are not conversational text, even when providers wrap
+    // their results inside a user-role envelope. Dedicated adapters own them.
+    if matches!(v.get("type").and_then(Value::as_str), Some("tool_use" | "tool_result" | "tool-result" | "function_call" | "function_call_output" | "custom_tool_call" | "custom_tool_call_output")) {
+        return None;
+    }
     if let Some(s) = v.as_str() {
         return Some(s.into());
     }
@@ -1343,6 +1366,24 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn tool_envelopes_are_not_user_prose_and_mirrored_messages_are_one_turn() {
+        let rows = [
+            serde_json::json!({"type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"Question"}]}}),
+            serde_json::json!({"type":"event_msg","payload":{"type":"user_message","message":"Question"}}),
+            serde_json::json!({"type":"response_item","payload":{"type":"function_call","name":"shell","call_id":"call","arguments":"{}"}}),
+            serde_json::json!({"type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"tool_result","tool_use_id":"call","content":"Tool result, not user"}]}}),
+            serde_json::json!({"type":"response_item","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":"Answer"}]}}),
+            serde_json::json!({"type":"event_msg","payload":{"type":"agent_message","message":"Answer"}}),
+        ];
+        let text = rows.iter().map(ToString::to_string).collect::<Vec<_>>().join("\n");
+        let turns = super::project_codex(&text, true, 4000);
+        assert_eq!(turns.len(), 1);
+        let items = turns[0]["items"].as_array().unwrap();
+        assert_eq!(items.len(), 3);
+        assert_eq!(items[1]["type"], "commandExecution");
+        assert_eq!(items[1].pointer("/result/text").unwrap(), "Tool result, not user");
+    }
     #[test]
     fn damaged_utf8_record_does_not_erase_valid_conversation() {
         let path = std::env::temp_dir().join(format!("colab-utf8-{}.jsonl", uuid::Uuid::new_v4()));

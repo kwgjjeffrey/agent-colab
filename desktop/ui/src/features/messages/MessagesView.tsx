@@ -113,6 +113,8 @@ export function MessagesView({
     [channelId],
   );
   const cached = messageCache.get(channelId);
+  const [hasEarlier, setHasEarlier] = useState(true);
+  const [loadingEarlier, setLoadingEarlier] = useState(false);
   const [participants, setParticipants] = useState<Participant[]>([]),
     [messages, setMessages] = useState<ChannelMessage[]>(cached?.rows ?? []),
     [agents, setAgents] = useState<Record<string, Blueprint[]>>({}),
@@ -152,10 +154,11 @@ return runOperation("messages.list", async (operation) => {
 const messageRequest = operation.message;
 
     const rows = await messageRequest<ChannelMessage[]>(
-      `/v1/channels/${channelId}/messages?after=${after}&limit=200`,
+      `/v1/channels/${channelId}/messages?${after === 0 ? "latest=true" : `after=${after}`}&limit=200`,
       undefined,
       background,
     );
+    if (after === 0) setHasEarlier(rows.length === 200);
     setMessages((current) => {
       const next =
         after === 0
@@ -175,6 +178,18 @@ const messageRequest = operation.message;
 
 });
 }
+  async function loadEarlierMessages() {
+    if (loadingEarlier || !messages.length) return;
+    setLoadingEarlier(true);
+    try {
+      await runOperation("messages.list", async operation => {
+        const rows = await operation.message<ChannelMessage[]>(`/v1/channels/${channelId}/messages?before=${messages[0].seq}&limit=200`);
+        setHasEarlier(rows.length === 200);
+        setMessages(current => [...rows.filter(row => !current.some(item => item.id === row.id)), ...current].sort((a,b) => a.seq-b.seq));
+      });
+    } catch (reason) { onError(String(reason)); }
+    finally { setLoadingEarlier(false); }
+  }
   async function loadAgents(memberId: string) {
 return runOperation("agents.list", async (operation) => {
 const messageRequest = operation.message;
@@ -522,6 +537,9 @@ const messageRequest = operation.message;
     <div className="grid h-full min-h-0 grid-cols-[minmax(0,1fr)_20rem] overflow-hidden">
       <section data-trace-target={traceTargets("messages.list", "messages.focus")} className="flex min-h-0 min-w-0 flex-col">
         <MessageTimeline
+          key={channelId}
+          onLoadEarlier={hasEarlier && messages.length > 0 ? loadEarlierMessages : undefined}
+          loadingEarlier={loadingEarlier}
           onAddAgent={() => { if (me) void openManager("channel").catch(reason => onError(String(reason))); }}
           focusId={focusId}
           channelId={channelId}

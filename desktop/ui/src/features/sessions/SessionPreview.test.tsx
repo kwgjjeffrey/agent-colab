@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import "../../../tests/resize-observer";
 import {cleanup,render,screen,fireEvent} from "@testing-library/react";
 import {afterEach,it,expect,vi} from "vitest";
 import {SessionPreview} from "./SessionPreview";
@@ -10,7 +11,7 @@ it("keeps tool content collapsed while showing conversation messages",async()=>{
   vi.mocked(catalogRequest).mockResolvedValueOnce({turns:[{items:[{type:"commandExecution",text:"Tool output detail"},{type:"agentMessage",text:"Visible response"}]}]});
   render(<SessionPreview id="tools"/>);
   await screen.findByText("Visible response");
-  expect(screen.getByRole("button",{name:"commandExecution"}).getAttribute("aria-expanded")).toBe("false");
+  expect(screen.getByRole("button",{name:"Command"}).getAttribute("aria-expanded")).toBe("false");
   expect(screen.queryByText("Tool output detail")).toBeNull();
 });
 it("reads selected Session and renders structured user content without a list or preview trigger",async()=>{

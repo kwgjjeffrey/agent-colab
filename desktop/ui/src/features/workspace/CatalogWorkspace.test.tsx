@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import "../../../tests/resize-observer";
 import {
   act,
   cleanup,

@@ -399,6 +399,16 @@ Ok(sqlx::query_as::<_,ChannelMessage>("with recursive chain(id,reply_to_message_
         Ok(Some(rows))
     }
 
+    /// Reverse keyset query uses the existing (channel_id, seq) index. Return chronological
+    /// rows to preserve the client contract; realtime catch-up keeps its forward cursor.
+    pub async fn list_messages_before(&self, user: Uuid, channel: Uuid, before: i64, limit: i64) -> anyhow::Result<Option<Vec<ChannelMessage>>> {
+        if self.channel_actor(user, channel).await?.is_none() { return Ok(None); }
+        let mut rows = sqlx::query_as::<_,ChannelMessage>("select m.id,m.channel_id,m.seq,m.body,m.content,m.reply_to_message_id,m.sender_member_id,m.sender_blueprint_id,coalesce(u.display_name,u.email,ab.name) sender_name,coalesce(u.avatar_url,au.avatar_url) sender_avatar_url,case when m.sender_blueprint_id is null then 'member' else 'agent' end::text sender_kind,m.created_at::text created_at from channel_messages m left join organization_members om on om.id=m.sender_member_id left join users u on u.id=om.user_id left join agent_blueprints ab on ab.id=m.sender_blueprint_id left join organization_members aom on aom.id=ab.owner_member_id left join users au on au.id=aom.user_id where m.channel_id=$1 and m.seq<$2 order by m.seq desc limit $3")
+            .bind(channel).bind(before).bind(limit.clamp(1,200)).fetch_all(&self.pool).await?;
+        rows.reverse();
+        Ok(Some(rows))
+    }
+
     pub async fn message_by_id(&self, user: Uuid, channel: Uuid, id: Uuid) -> anyhow::Result<Option<ChannelMessage>> {
         if self.channel_actor(user, channel).await?.is_none() { return Ok(None); }
         let seq: Option<i64> = sqlx::query_scalar("select seq from channel_messages where id=$1 and channel_id=$2").bind(id).bind(channel).fetch_optional(&self.pool).await?;

@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import "../../../tests/resize-observer";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";

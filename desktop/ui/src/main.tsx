@@ -1147,12 +1147,7 @@ const api = operation.response;
             />
           ) : selected ? (
             <ChannelContextProvider key={selected.id} channelId={selected.id} navigate={resource => { setWorkspaceItem(resource.kind==="message"?undefined:resource);setContextFocus({ ...resource }); setWorkspaceTab(resource.kind === "session" ? "sessions" : resource.kind === "message" ? "messages" : resource.kind); }}><Tabs value={workspaceTab} onValueChange={setWorkspaceTab} className="flex min-h-0 flex-1 flex-col gap-0">
-              <div className="flex shrink-0 items-center gap-3 px-8 pt-5 pb-3">
-                <ChannelHeading channel={selected} members={members} onEdit={()=>setChannelDialog("identity")} onMembers={()=>setChannelDialog("members")} />
-                {agentActivity&&<span role="status" className="min-w-0 flex-1 truncate text-sm text-muted-foreground">{agentActivity}</span>}
-                {!agentActivity&&<span className="flex-1"/>}
-              </div>
-              <CatalogWorkspace key={selected.id} quickShare={<QuickShareControl submenu
+              <CatalogWorkspace key={selected.id} heading={<ChannelHeading channel={selected} members={members} onEdit={()=>setChannelDialog("identity")} onMembers={()=>setChannelDialog("members")} />} activity={agentActivity} quickShare={<QuickShareControl submenu
                   defaultAgent={installation?.defaultAgent ?? "codex"}
                   installedAgents={installation?.targets ?? {}}
                   onChoose={chooseFiles}
@@ -1164,7 +1159,7 @@ const api = operation.response;
               <TabsContent data-trace-target={traceTargets("context.people", "context.resources")} data-trace-region={"messages"} value="messages" className="min-h-0 flex-1 overflow-hidden">
                 <MessagesView focusId={contextFocus?.kind === "message" ? contextFocus.id : undefined} channelId={selected.id} channelName={selected.name} settingsOpenToken={agentSettingsOpenToken} onSettingsOpenConsumed={()=>setAgentSettingsOpenToken(0)} defaultAgent={installation?.defaultAgent ?? "codex"} installedAgents={installation?.targets ?? {}} onError={setError} onNotice={setNotice} onActivityChange={setAgentActivity}/>
               </TabsContent>
-              <TabsContent data-trace-target={traceTargets("sessions.list")} data-trace-region={"sessions"} value="sessions" className="min-h-0 flex-1 overflow-y-auto">
+              <TabsContent data-trace-target={traceTargets("sessions.list")} data-trace-region={"sessions"} value="sessions" className="min-h-0 flex-1 overflow-hidden">
                 <SessionsView
                   embedded
                   onCreated={id=>placedShare("session",id)}

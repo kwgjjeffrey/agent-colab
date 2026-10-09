@@ -30,6 +30,8 @@ pub(super) struct MessagePage {
     #[serde(default)]
     after: i64,
     limit: Option<i64>,
+    before: Option<i64>,
+    latest: Option<bool>,
 }
 
 #[derive(Deserialize)]
@@ -411,10 +413,12 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
 
     let user = authenticated_user(&state, &headers).await?;
     let limit = page.limit.unwrap_or(100).clamp(1, 200);
-    state
-        .database
-        .list_messages(user, channel, page.after, limit)
-        .await
+    let result = if page.latest == Some(true) || page.before.is_some() {
+        state.database.list_messages_before(user, channel, page.before.unwrap_or(i64::MAX), limit).await
+    } else {
+        state.database.list_messages(user, channel, page.after, limit).await
+    };
+    result
         .map_err(|_| ApiError::internal("message_list_failed"))?
         .map(Json)
         .ok_or_else(|| ApiError::forbidden("channel_access_forbidden"))

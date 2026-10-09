@@ -34,10 +34,11 @@ describe("compact Discord-style Messages layout", () => {
     expect(composer).not.toContain("rounded-xl border bg-background");
   });
 
-  it("keeps Channel identity and Quick Share in one compact header row", () => {
-    expect(shell).toContain('className="flex shrink-0 items-center gap-3 px-8 pt-5 pb-3"');
-    expect(shell).toContain('<ChannelHeading channel={selected}');
-    expect(shell).toContain('<QuickShareControl');
+  it("places Channel identity inside the resizable sidebar instead of a full-width header", () => {
+    expect(shell).toContain('heading={<ChannelHeading');
+    const workspace = readFileSync(new URL("../src/features/workspace/CatalogWorkspace.tsx", import.meta.url), "utf8");
+    expect(workspace).toContain("ResizablePanelGroup");
+    expect(workspace).toContain("colab:sidebar-width");
     expect(shell).toContain('<CatalogWorkspace');
     expect(shell).not.toContain('<TabsList');
   });
