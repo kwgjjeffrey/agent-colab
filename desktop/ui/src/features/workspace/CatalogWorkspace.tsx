@@ -580,7 +580,7 @@ export function CatalogWorkspace({
                 disabled={working}
                 onDrop={(source) => void drop(source, undefined, "inside")}
               >
-                <div className="min-h-[calc(100vh-240px)] pb-16">{rows()}</div>
+                <div className="min-h-[calc(100vh-240px)] pb-16 pr-3">{rows()}</div>
               </CatalogDragTarget>
             </ScrollArea>
           </aside>
