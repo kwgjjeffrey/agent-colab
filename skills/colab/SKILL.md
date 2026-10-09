@@ -67,6 +67,11 @@ the updater; it is not the business-tool output contract.
 - Consume Files: run `bin/colab-browser use --ref 'colab://channel/<channel>/<item>'`, then read the returned `localPath` with native file tools. The response already includes `tree`.
 - Consume a Session: run `bin/colab-session-reader read --ref 'colab://channel/<channel>/<item>' [--turn-limit N] [--include-outputs] [--cursor CURSOR]`.
 - Manage Channels or members: use `create-channel`, `update-channel`, `members`, `add-member`, `update-member`, or `remove-member` on `bin/colab-browser`.
+- Set a Channel icon from a generated image: `bin/colab-browser update-channel --channel '<channel-ref>' --icon-file '/absolute/icon.png'`.
+  Generate a real square PNG/JPEG/WebP first, optimized to 128–256px and at most 256 KiB.
+  This applies the image through Local Core with existing owner/admin permissions and preserves the Channel name.
+  The receipt confirms `iconUpdated` and the image's `iconSha256`; it never echoes image bytes.
+  This does not edit the account avatar or create a Files share. Do not claim completion just because an image was generated.
 - Read or send Channel messages: `bin/colab-messages messages list|send --channel '<name>' ...`.
 - Read an exact referenced message: `bin/colab-messages messages read --channel '<channel>' --id '<message-id>'`. Referenced context is returned as names/IDs and executable `readCommand` entries, not editor trees. Use only the context needed for the user's task.
 - List collaborative documents with `bin/colab-canvas list --channel '<name>'`; read the stable Markdown projection with `colab-canvas read --ref '<canvas-ref>'`, search it with `search`, and edit ordinary document content by piping a Codex `*** Update File: document.md` patch to `apply-patch`. Structured component fences require the dedicated component commands and must not be edited as text.

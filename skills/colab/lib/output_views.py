@@ -101,7 +101,7 @@ def project(tool, operation, value, args):
         elif operation == "members":
             data = rows(value, "displayName email role status")
         elif operation in ("create-channel", "update-channel", "share", "withdraw"):
-            data = pick(value, "ref state")
+            data = pick(value, "ref state iconUpdated iconSha256")
             data[{"create-channel": "created", "update-channel": "updated", "share": "shared", "withdraw": "withdrawn"}[operation]] = True
         elif operation == "add-member":
             data = {"user": args.user, "role": args.role, **pick(value, "status emailDelivery")}

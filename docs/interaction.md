@@ -1,5 +1,13 @@
 # Colab 交互设计
 
+Channel Icon (2026-10-09): Upload image, Generate icon from lib and Generate icon
+via agent use one horizontal row (wrap only on small viewports). Via agent opens
+the existing prompt Dialog immediately, with optional design request and copy/open
+actions. It targets the selected Channel, not the account avatar. It does not save
+the manual form or claim image generation/upload succeeded; the Agent performs
+the real image generation and authorized tool update. Authoritative icon changes
+refresh the still-open picker so Save does not restore a stale icon.
+
 ## Account avatar (2026-10-09)
 
 Global Account settings offers a compact avatar preview, Upload photo and Use

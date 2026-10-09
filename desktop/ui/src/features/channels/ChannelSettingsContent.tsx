@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectVa
 import { Trash2Icon } from "lucide-react";
 import { ChannelIconPicker } from "./ChannelIcon";
 import { isDeviceEmail } from "@/features/account/AccountProfile";
+import { type AgentTarget } from "@/features/agent/AgentPromptDialog";
 type Channel = {id: string; name: string; icon?: string | null; role: string};
 type Member = {memberId?: string; email: string; displayName?: string; avatarUrl?: string; role: string; status: "joined" | "pending"};
 type OrganizationPerson = {userId: string; email: string; displayName?: string};
@@ -27,6 +28,8 @@ export function ChannelSettingsContent({
   onRemove,
   onInvite,
   inviteBusy,
+  defaultAgent,
+  installedAgents,
 }: {
   mode: "identity" | "members";
   channel: Channel;
@@ -39,6 +42,8 @@ export function ChannelSettingsContent({
   onRemove: (m: Member) => void;
   onInvite: () => void;
   inviteBusy: boolean;
+  defaultAgent: AgentTarget;
+  installedAgents: Record<string, { installed: boolean }>;
 }) {
   const [people, setPeople] = useState<OrganizationPerson[]>([]);
   const [iconPreparing, setIconPreparing] = useState(false);
@@ -80,7 +85,7 @@ const trackedFetch = operation.fetch;
               </Field>
               <Field>
                 <FieldLabel>Icon</FieldLabel>
-                <ChannelIconPicker key={channel.id} icon={channel.icon} name={channel.name} disabled={!canManage} onPreparing={setIconPreparing} />
+                <ChannelIconPicker key={channel.id} channelId={channel.id} icon={channel.icon} name={channel.name} defaultAgent={defaultAgent} installedAgents={installedAgents} disabled={!canManage || busy} onPreparing={setIconPreparing} />
               </Field>
             </div>
             {canManage && (
@@ -198,4 +203,3 @@ const trackedFetch = operation.fetch;
     </div>
   );
 }
-

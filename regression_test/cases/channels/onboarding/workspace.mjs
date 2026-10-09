@@ -5,7 +5,7 @@ export const META={
   "surface": "gui",
   "priority": "critical",
   "origin": "bug",
-  "status": "active",
+  "status": "trial",
   "effects": "isolated-write",
   "cost": "normal",
   "requires": [
@@ -50,7 +50,7 @@ await ctx.page.getByRole('heading',{name:channel.name,exact:true}).dblclick();co
  const uploaded=await eventually(ctx,'Uploaded icon stored as an image',()=>core(ctx,'GET','/v1/channels'),rows=>rows.find(x=>x.id===channel.id)?.icon?.startsWith('data:image/png;'));
  ctx.assert('Uploaded icon is stored',uploaded.find(x=>x.id===channel.id).icon.startsWith('data:image/png;'),true);
  await ctx.page.getByRole('heading',{name:channel.name,exact:true}).dblclick();
- await form.getByRole('button',{name:'Generate icon',exact:true}).click();await form.getByRole('button',{name:'Save changes',exact:true}).click();
+ await form.getByRole('button',{name:'Generate icon from lib',exact:true}).click();await form.getByRole('button',{name:'Save changes',exact:true}).click();
  const generated=await eventually(ctx,'Generated icon saved as SVG image',()=>core(ctx,'GET','/v1/channels'),rows=>rows.find(x=>x.id===channel.id)?.icon?.startsWith('data:image/svg+xml;'));
  const source=generated.find(x=>x.id===channel.id).icon;const headerImage=ctx.page.getByRole('heading',{name:channel.name,exact:true}).locator('..').locator('img').first();await eventually(ctx,'Header shows the persisted icon',()=>headerImage.getAttribute('src'),src=>src===source);ctx.assert('Header image decodes',await headerImage.evaluate(img=>img.complete&&img.naturalWidth>0),true);ctx.assert('Rail uses the persisted image',await ctx.page.locator('[aria-label="Channels"]').getByRole('button',{name:channel.name,exact:true}).locator('img').getAttribute('src'),source);
  await ctx.screenshot('Image identity and generated icon');

@@ -1,5 +1,14 @@
 # Colab Browser response
 
+Channel icon: `update-channel --channel REF --icon-file /absolute/icon.png`
+reads at most 256 KiB of PNG/JPEG/WebP bytes, determines MIME from bytes and
+encodes them for the existing Local Core Channel PATCH. `--icon-file` and `--icon`
+are mutually exclusive. Omitted name remains unchanged. The authenticated Server
+still enforces owner/admin permissions. The compact receipt adds `iconUpdated`
+and `iconSha256` only after Server's response confirms the exact uploaded image;
+no data URI or image bytes appear in stdout. Generate/resize using native Agent
+image tools first; this thin client does not generate images or bypass Core.
+
 Files setup: `inspect-source --source PATH [--exclude dist]` returns included and
 excluded counts/bytes, transport-limit state and supported directory candidates.
 Use only candidates' exact names, not globs. `sync-scope --ref REF` reads an owned

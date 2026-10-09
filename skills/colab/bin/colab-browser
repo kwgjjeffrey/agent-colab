@@ -2,6 +2,8 @@
 """Browse canonical Colab resources through Local Core."""
 from __future__ import annotations
 import argparse
+import base64
+import hashlib
 import sys
 from pathlib import Path
 from typing import Optional
@@ -10,6 +12,7 @@ from urllib.parse import quote, unquote, urlparse
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "lib"))
 from local_api import DEFAULT_CORE, LocalApiError, request
 from output import failure, success
+from channel_icons import icon_file_data_uri
 
 class AmbiguousReference(ValueError):
     def __init__(self, message: str, candidates):
@@ -197,7 +200,10 @@ def main() -> int:
     using = operations.add_parser("use", help="Refresh and materialize a shared Files item"); using.add_argument("--ref", required=True)
     syncing = operations.add_parser("sync", help="Compatibility alias for Files use"); syncing.add_argument("--item", required=True)
     create = operations.add_parser("create-channel", help="Create a Channel"); create.add_argument("--name", required=True); create.add_argument("--icon")
-    update = operations.add_parser("update-channel", help="Update Channel identity"); update.add_argument("--channel", required=True); update.add_argument("--name"); update.add_argument("--icon")
+    update = operations.add_parser("update-channel", help="Update Channel identity"); update.add_argument("--channel", required=True); update.add_argument("--name")
+    icon = update.add_mutually_exclusive_group()
+    icon.add_argument("--icon", help="Existing icon data URI or HTTPS URL")
+    icon.add_argument("--icon-file", help="Absolute local PNG/JPEG/WebP path, maximum 256 KiB; uploads and applies the icon")
     member_list = operations.add_parser("members", help="List Channel members"); member_list.add_argument("--channel", required=True)
     add = operations.add_parser("add-member", help="Add or invite a Channel member"); add.add_argument("--channel", required=True); add.add_argument("--user", required=True); add.add_argument("--role", default="member", choices=["member", "admin"])
     change = operations.add_parser("update-member", help="Change a Channel member role"); change.add_argument("--channel", required=True); change.add_argument("--user", required=True); change.add_argument("--role", required=True, choices=["member", "admin"])
@@ -225,9 +231,14 @@ def main() -> int:
             row = request("POST", "/v1/channels", core=args.core, body={"name": args.name, "icon": args.icon})
             return success(public_result({"ref": named_ref(row["name"]), **row}))
         if args.operation == "update-channel":
+            image = icon_file_data_uri(args.icon_file) if args.icon_file else args.icon
             channel = resolve_channel_ref(args.core, args.channel)
             row = request("PATCH", f"/v1/channels/{channel['id']}", core=args.core,
-                          body={"name": args.name or channel["name"], "icon": args.icon if args.icon is not None else channel.get("icon")})
+                          body={"name": args.name or channel["name"], "icon": image if image is not None else channel.get("icon")})
+            if args.icon_file:
+                if row.get("icon") != image:
+                    raise LocalApiError("Channel update did not confirm the uploaded icon")
+                row = {**row, "iconUpdated": True, "iconSha256": hashlib.sha256(base64.b64decode(image.split(",", 1)[1])).hexdigest()}
             return success(public_result({"ref": named_ref(row["name"]), **row}))
         if args.operation in {"members", "add-member", "update-member", "remove-member"}:
             channel = resolve_channel_ref(args.core, args.channel)

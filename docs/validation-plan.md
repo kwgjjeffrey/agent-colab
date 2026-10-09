@@ -1,5 +1,15 @@
 # 技术验证计划
 
+### 2026-10-09 Channel icon Agent handoff — acceptance in progress
+
+Focused GUI prompt/form reconciliation tests pass (3). Python suite passes (47),
+covering bounded raster encoding, unsafe/missing paths, preserved name, confirmed
+compact receipt and argument exclusivity. Production TypeScript/Vite build passed.
+New trial `channels.icon-agent` executes the displayed command against a real
+owned Channel and checks persisted bytes/GUI decode/cleanup. Existing workspace
+case is trial again because the library action label changed. No model image
+generation or full Agent execution is claimed by the upload regression.
+
 ### 2026-10-09 Direct Canvas creation
 
 Canvas creation entrances now commit an Untitled document immediately, select its workspace identity, then focus and fully select the sidebar name after creation finishes. Native rename uses a transparent surface and subtle focus border. GUI 0.1.132-dev / promotion 0.1.184-dev published and normally installed; actual GUI metadata matches 132. TypeScript/build and public artifact readback passed (1317287 bytes; SHA-256 `b875a522dbb9040ff01fe4df963a13b11ba37c95633e6788a52d48eb2110dec7`). E2E `20261009T030939Z-401d5947` passed all eight assertions: no dialog, selected focused name, real rename with stable ID, reload persistence and owned archive; screenshot reviewed. Earlier failures `20261009T030455Z-9c8aa6d2` and `20261009T030709Z-4f035407` are preserved: candidate proxy served old GUI 129. Final scope uses an isolated temporary index pointing to daily GUI/Core with aligned actor, leaving the other task candidate unchanged.

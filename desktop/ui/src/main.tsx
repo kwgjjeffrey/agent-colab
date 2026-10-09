@@ -1213,9 +1213,9 @@ const api = operation.response;
               </TabsContent>
               </CatalogWorkspace>
               <Dialog open={Boolean(channelDialog)} onOpenChange={open=>{if(!open)setChannelDialog(undefined);}}>
-                <DialogContent data-trace-region="channel-settings" className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
+                <DialogContent data-trace-region="channel-settings" className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
                   <DialogHeader><DialogTitle>{channelDialog==="members"?"Members":"Edit Channel"}</DialogTitle></DialogHeader>
-                  {channelDialog && <ChannelSettingsContent key={`${selected.id}:${channelDialog}`} mode={channelDialog} channel={selected} members={members} busy={busy} onSave={saveChannel} onAdd={addMember} onLoad={()=>void loadMembers().catch(reason=>setError(String(reason)))} onRole={changeRole} onRemove={removeMember} onInvite={()=>void inviteToChannel()} inviteBusy={channelInviteBusy} />}
+                  {channelDialog && <ChannelSettingsContent key={`${selected.id}:${channelDialog}`} mode={channelDialog} channel={selected} members={members} busy={busy} onSave={saveChannel} onAdd={addMember} onLoad={()=>void loadMembers().catch(reason=>setError(String(reason)))} onRole={changeRole} onRemove={removeMember} onInvite={()=>void inviteToChannel()} inviteBusy={channelInviteBusy} defaultAgent={installation?.defaultAgent ?? "codex"} installedAgents={installation?.targets ?? {}} />}
                 </DialogContent>
               </Dialog>
             </Tabs></ChannelContextProvider>

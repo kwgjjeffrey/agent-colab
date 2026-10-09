@@ -1,5 +1,13 @@
 # Agent 脚手架与接口设计
 
+Channel icon handoff (2026-10-09): `colab-browser update-channel --channel REF
+--icon-file /absolute/icon.png` applies a bounded local PNG/JPEG/WebP (256 KiB
+maximum) using the existing authenticated Local Core/Server update capability.
+Name remains unchanged unless explicitly supplied. Receipt includes iconUpdated
+and SHA-256 of image bytes, never a data URI. GUI's Agent prompt uses the exact
+selected Channel identity, requests real image generation, then this upload;
+no account-avatar mutation, Files share or direct Server access is involved.
+
 ## Source configuration interface (2026-10-09)
 
 `colab-browser inspect-source --source '/absolute/path' [--exclude dist]` previews

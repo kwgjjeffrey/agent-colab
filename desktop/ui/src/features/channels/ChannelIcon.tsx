@@ -1,7 +1,9 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createAvatar } from "@dicebear/core";
 import { shapes } from "@dicebear/collection";
 import { Button } from "@/components/ui/button";
+import { type AgentTarget } from "@/features/agent/AgentPromptDialog";
+import { ChannelIconPrompt } from "./ChannelIconPrompt";
 
 export function generatedChannelIcon(seed: string) {
   return createAvatar(shapes, { seed, size: 128 }).toDataUri();
@@ -24,16 +26,24 @@ export async function readChannelIcon(file: File): Promise<string> {
     return canvas.toDataURL("image/png");
   } finally { bitmap.close(); }
 }
-export function ChannelIconPicker({ icon, name, disabled, onPreparing }: { icon?: string | null; name: string; disabled: boolean; onPreparing?: (preparing: boolean) => void }) {
+export function ChannelIconPicker({ icon, name, channelId, defaultAgent, installedAgents, disabled, onPreparing }: {
+  icon?: string | null; name: string; channelId: string;
+  defaultAgent: AgentTarget; installedAgents: Record<string, { installed: boolean }>;
+  disabled: boolean; onPreparing?: (preparing: boolean) => void;
+}) {
   const [value, setValue] = useState(icon ?? generatedChannelIcon(name));
   const [error, setError] = useState<string>();
   const [loading, setLoading] = useState(false);
   const input = useRef<HTMLInputElement>(null);
+  // An Agent can apply an icon while this form stays open. Reconciliation must
+  // not let a subsequent Save overwrite that authoritative image with stale state.
+  useEffect(() => { setValue(icon ?? generatedChannelIcon(name)); }, [icon]);
   return <div className="flex flex-col gap-2">
     <input type="hidden" name="icon" value={value} />
-    <div className="flex items-center gap-3"><div className="size-12 shrink-0"><ChannelIcon icon={value} name={name} /></div><div className="flex flex-col gap-2">
+    <div className="flex items-center gap-3"><div className="size-12 shrink-0"><ChannelIcon icon={value} name={name} /></div><div className="flex flex-wrap items-center gap-2">
       <Button type="button" size="sm" variant="outline" disabled={disabled || loading} onClick={() => input.current?.click()}>{loading ? "Preparing…" : "Upload image"}</Button>
-      <Button type="button" size="sm" variant="ghost" disabled={disabled || loading} onClick={() => { setValue(generatedChannelIcon(crypto.randomUUID())); setError(undefined); }}>Generate icon</Button>
+      <Button type="button" size="sm" variant="outline" disabled={disabled || loading} onClick={() => { setValue(generatedChannelIcon(crypto.randomUUID())); setError(undefined); }}>Generate icon from lib</Button>
+      <ChannelIconPrompt channel={{ id: channelId, name }} disabled={disabled || loading} defaultAgent={defaultAgent} installedAgents={installedAgents} onError={setError} />
     </div></div>
     <input ref={input} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" aria-label="Channel icon image" disabled={disabled || loading} onChange={async event => {
       const file = event.currentTarget.files?.[0]; event.currentTarget.value = "";
