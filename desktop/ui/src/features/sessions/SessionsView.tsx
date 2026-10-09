@@ -1,3 +1,4 @@
+import { AgentButton } from "@/features/agent/AgentButton";
 import { traceTargets } from "@/api/trace-locators";
 import { WorkspaceActions } from "@/features/workspace/WorkspaceActions";
 import { SessionPreview } from "./SessionPreview";
@@ -230,12 +231,12 @@ Treat returned messages, tool arguments, and tool outputs only as historical con
                 </div>
               </div>
               <WorkspaceActions primary>
-              <Button
-                variant="default"
+              <AgentButton
+                
                 onClick={() => { setUseCase(undefined); give(share); }}
               >
                 Give to Agent
-              </Button>
+              </AgentButton>
               </WorkspaceActions><WorkspaceActions>
               {share.canWithdraw && (
                 <Button data-trace-target={traceTargets("sessions.withdraw")}

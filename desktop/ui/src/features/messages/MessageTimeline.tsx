@@ -4,7 +4,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useLayoutEffect, useRef } from "react";
 import { useStickToBottom } from "use-stick-to-bottom";
 import { Button } from "@/components/ui/button";
-import { CopyIcon, ForwardIcon, ListIcon, QuoteIcon } from "lucide-react";
+import { CopyIcon, SparklesIcon, ListIcon, QuoteIcon } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -258,14 +258,15 @@ export function MessageTimeline({
                           render={
                             <Button
                               size="icon-xs"
-                              variant="ghost"
-                              title="Forward"
+                              variant="agent"
+                              data-agent-action="true"
+                              title="Forward to Agent"
                               aria-label={`Forward ${displayName}`}
                               onClick={() => onForward(message)}
                             />
                           }
                         >
-                          <ForwardIcon />
+                          <SparklesIcon aria-hidden="true" data-agent-icon="supernova" />
                         </TooltipTrigger>
                         <TooltipContent>Forward to Agent</TooltipContent>
                       </Tooltip>

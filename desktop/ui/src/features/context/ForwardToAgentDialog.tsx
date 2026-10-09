@@ -1,3 +1,4 @@
+import { AgentButton } from "@/features/agent/AgentButton";
 import { traceTargets } from "@/api/trace-locators";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -94,7 +95,7 @@ export function ForwardToAgentDialog({
           <Button variant="outline" disabled={sending} onClick={onClose}>
             Cancel
           </Button>
-          <Button data-trace-target={traceTargets("context.forward")}
+          <AgentButton data-trace-target={traceTargets("context.forward")}
             disabled={!chosen || sending}
             onClick={async () => {
               if (!chosen) return;
@@ -111,7 +112,7 @@ export function ForwardToAgentDialog({
             }}
           >
             {sending ? "Sending…" : "Send to Agent"}
-          </Button>
+          </AgentButton>
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -1,3 +1,4 @@
+import { AgentButton } from "@/features/agent/AgentButton";
 import { traceTargets } from "@/api/trace-locators";
 import { useAgentResultObservation } from "@/api/agent-result-observation";
 import { runOperation } from "@/api/operation-runner";
@@ -573,13 +574,13 @@ const messageRequest = operation.message;
           <div className="flex shrink-0 items-center justify-center gap-3 border-t bg-muted/40 p-2 text-sm">
             <strong>{selected.size} selected</strong>
             <Button size="sm" variant="outline" disabled={!selected.size} onClick={() => setCopyMessages(messages.filter(row => selected.has(row.id)))}>Copy to use in my agent</Button>
-            <Button data-trace-target={traceTargets("agents.forward")}
+            <AgentButton data-trace-target={traceTargets("agents.forward")}
               size="sm"
               disabled={!selected.size}
               onClick={() => setForwardOpen(true)}
             >
               Forward to Agent
-            </Button>
+            </AgentButton>
             <Button
               size="sm"
               variant="ghost"

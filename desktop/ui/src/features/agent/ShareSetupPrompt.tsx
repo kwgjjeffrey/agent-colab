@@ -1,3 +1,4 @@
+import { AgentButton } from "@/features/agent/AgentButton";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { AgentPromptDialog, agentSkillCommand, type AgentTarget } from "./AgentPromptDialog";
@@ -29,5 +30,5 @@ export function ShareSetupPrompt({ setup, defaultAgent, installedAgents, onError
   setup: ShareSetup; defaultAgent: AgentTarget; installedAgents: Record<string, {installed:boolean}>; onError: (message:string)=>void;
 }) {
   const [open, setOpen] = useState(false);
-  return <><Button variant="outline" onClick={()=>setOpen(true)}>Give to Agent</Button><AgentPromptDialog open={open} title={setup.existingRef ? "Configure Files with Agent" : `Share ${setup.kind === "files" ? "Files" : "a Skill"} with Agent`} description="Describe what you want to share; your Agent can select and configure the source." defaultAgent={defaultAgent} installedAgents={installedAgents} promptFor={agent=>shareSetupPrompt(agent,setup)} onClose={()=>setOpen(false)} onError={onError}/></>;
+  return <><AgentButton onClick={()=>setOpen(true)}>Give to Agent</AgentButton><AgentPromptDialog open={open} title={setup.existingRef ? "Configure Files with Agent" : `Share ${setup.kind === "files" ? "Files" : "a Skill"} with Agent`} description="Describe what you want to share; your Agent can select and configure the source." defaultAgent={defaultAgent} installedAgents={installedAgents} promptFor={agent=>shareSetupPrompt(agent,setup)} onClose={()=>setOpen(false)} onError={onError}/></>;
 }

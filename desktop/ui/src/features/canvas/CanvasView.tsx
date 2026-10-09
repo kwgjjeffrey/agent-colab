@@ -1,3 +1,4 @@
+import { AgentButton } from "@/features/agent/AgentButton";
 import { traceTargets } from "@/api/trace-locators";
 import { WorkspaceActions } from "@/features/workspace/WorkspaceActions";
 import { useAgentResultObservation } from "@/api/agent-result-observation";
@@ -495,10 +496,10 @@ return runOperation("canvas.title", async (operation) => {
                   : "Synced"}
           </span>
         </div>
-        <WorkspaceActions primary><Button data-trace-target={traceTargets("canvas.handoff")} size="sm" onClick={onGive}>
-          <SparklesIcon data-icon="inline-start" />
+        <WorkspaceActions primary><AgentButton data-trace-target={traceTargets("canvas.handoff")} size="sm" onClick={onGive}>
+          
           Give to Agent
-        </Button></WorkspaceActions>
+        </AgentButton></WorkspaceActions>
       </header>
       <div className="min-h-0 flex-1 overflow-auto">
         {ready ? (

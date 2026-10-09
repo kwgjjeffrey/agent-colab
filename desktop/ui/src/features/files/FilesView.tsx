@@ -1,3 +1,4 @@
+import { AgentButton } from "@/features/agent/AgentButton";
 import { traceTargets } from "@/api/trace-locators";
 import { WorkspaceActions } from "@/features/workspace/WorkspaceActions";
 import { operations } from "@/api/trace-operations";
@@ -298,7 +299,7 @@ const trackedFetch = operation.fetch;
       </Dialog>
       {!creationOnly && <>
       {focusedShare?.syncState === "failed" && <WorkspaceActions><Button data-trace-target={traceTargets("files.retry")} disabled={busy} onClick={()=>onRetry(focusedShare)}>Retry</Button></WorkspaceActions>}
-      {browsedShare ? <><WorkspaceActions primary><Button data-trace-target={traceTargets("files.handoff")} onClick={()=>void giveToAgent(browsedShare)}>Give to Agent</Button></WorkspaceActions><WorkspaceActions>{browsedShare.canWithdraw&&<><Button variant="ghost" onClick={()=>void editScope(browsedShare)}>Sync scope</Button><Button variant="destructive" onClick={()=>onWithdraw(browsedShare)}>Withdraw</Button></>}</WorkspaceActions><FileExplorer shareId={browsedShare.id} shareName={browsedShare.name} entries={entries} sourceKind={sourceKind} onClose={() => setOpenShare(undefined)}/></> : focusId ? <div className="flex flex-col gap-3 p-6"><p className="text-sm text-muted-foreground">{browseError ? "Couldn’t load file preview." : "Loading files…"}</p>{browseError && <Button variant="outline" onClick={() => {const row=shares.find(share=>share.id===focusId);if(row)void browse(row,true);}}>Retry preview</Button>}</div> : <><div className="flex justify-end">
+      {browsedShare ? <><WorkspaceActions primary><AgentButton data-trace-target={traceTargets("files.handoff")} onClick={()=>void giveToAgent(browsedShare)}>Give to Agent</AgentButton></WorkspaceActions><WorkspaceActions>{browsedShare.canWithdraw&&<><Button variant="ghost" onClick={()=>void editScope(browsedShare)}>Sync scope</Button><Button variant="destructive" onClick={()=>onWithdraw(browsedShare)}>Withdraw</Button></>}</WorkspaceActions><FileExplorer shareId={browsedShare.id} shareName={browsedShare.name} entries={entries} sourceKind={sourceKind} onClose={() => setOpenShare(undefined)}/></> : focusId ? <div className="flex flex-col gap-3 p-6"><p className="text-sm text-muted-foreground">{browseError ? "Couldn’t load file preview." : "Loading files…"}</p>{browseError && <Button variant="outline" onClick={() => {const row=shares.find(share=>share.id===focusId);if(row)void browse(row,true);}}>Retry preview</Button>}</div> : <><div className="flex justify-end">
         <Button data-trace-target={traceTargets("files.share")} disabled={busy} onClick={() => setSetupOpen(true)}>
           <PlusIcon /> Share files
         </Button>
@@ -343,14 +344,14 @@ const trackedFetch = operation.fetch;
                     Sync scope
                   </Button>
                 )}
-                <Button data-trace-target={traceTargets("files.handoff")}
-                  variant="outline"
+                <AgentButton data-trace-target={traceTargets("files.handoff")}
+                  
                   className="opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
                   disabled={busy || !share.currentRootOid}
                   onClick={() => void giveToAgent(share)}
                 >
                   Give to Agent
-                </Button>
+                </AgentButton>
                 {share.canWithdraw && (
                   <Button data-trace-target={traceTargets("files.withdraw")}
                     variant="destructive"

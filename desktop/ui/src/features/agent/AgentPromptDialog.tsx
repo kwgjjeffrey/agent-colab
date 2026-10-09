@@ -1,3 +1,4 @@
+import { AgentButton } from "@/features/agent/AgentButton";
 import { traceTargets } from "@/api/trace-locators";
 import { runOperation } from "@/api/operation-runner";
 import { useState } from "react";
@@ -132,19 +133,19 @@ const trackedFetch = operation.fetch;
           <Textarea id="agent-prompt-query" className="min-h-24 resize-y border-transparent bg-muted px-4 py-3 shadow-none focus-visible:border-ring/40 focus-visible:ring-0 dark:bg-muted" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Add an instruction for this task (optional)" />
         </div>
         <DialogFooter>
-          {onForward && <Button disabled={unavailable} variant="outline" onClick={() => onForward(query.trim())}>Forward to collaborators’ agent</Button>}
-          {onSend && <Button data-trace-target={sendTraceTarget} disabled={sending} onClick={async () => { setError(undefined); setSending(true); try { await onSend(query.trim()); onClose(); setQuery(""); } catch (reason) { reportError(String(reason)); } finally { setSending(false); } }}>{sending ? "Sending…" : "Send to Agent"}</Button>}
+          {onForward && <AgentButton disabled={unavailable} onClick={() => onForward(query.trim())}>Forward to collaborators’ agent</AgentButton>}
+          {onSend && <AgentButton data-trace-target={sendTraceTarget} disabled={sending} onClick={async () => { setError(undefined); setSending(true); try { await onSend(query.trim()); onClose(); setQuery(""); } catch (reason) { reportError(String(reason)); } finally { setSending(false); } }}>{sending ? "Sending…" : "Send to Agent"}</AgentButton>}
           <Button disabled={unavailable} data-trace-target={traceTargets("prompt.copy")} variant="outline" onClick={() => void copyPrompt()}>Copy prompt</Button>
           <ButtonGroup className="min-w-0 max-w-full">
-            <Button data-trace-target={traceTargets("prompt.open-agent")}
+            <AgentButton data-trace-target={traceTargets("prompt.open-agent")}
               className="min-w-0"
               disabled={unavailable || !installedAgents[defaultAgent]?.installed}
               onClick={() => void copyAndOpen(defaultAgent)}
             >
               <span className="truncate">Copy and open {agentLabels[defaultAgent]}</span>
-            </Button>
+            </AgentButton>
             <DropdownMenu>
-              <DropdownMenuTrigger render={<Button disabled={unavailable} size="icon" aria-label="Other Agents" />}>
+              <DropdownMenuTrigger render={<Button variant="agent" disabled={unavailable} size="icon" aria-label="Other Agents" />}>
                 <ChevronDownIcon />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">

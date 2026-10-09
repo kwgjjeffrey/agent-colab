@@ -1,3 +1,4 @@
+import { AgentButton } from "@/features/agent/AgentButton";
 import { useState } from "react";
 import { cn } from "cn";
 import { Badge } from "@/components/ui/badge";
@@ -67,7 +68,7 @@ export function AgentMemberItem({
             setOpen(false);
             showWork(request);
           }}
-        >{onGive && <Button size="sm" className="mt-3 w-full px-4" onClick={() => { setOpen(false); onGive(agent); }}>Give Messages to Agent</Button>}</AgentIdentityCard>
+        >{onGive && <AgentButton size="sm" className="mt-3 w-full px-4" onClick={() => { setOpen(false); onGive(agent); }}>Give Messages to Agent</AgentButton>}</AgentIdentityCard>
       </PopoverContent>
     </Popover>
   );
