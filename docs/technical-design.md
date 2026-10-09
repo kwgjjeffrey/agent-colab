@@ -31,7 +31,7 @@ Account profile is Server-owned at GET/PATCH /v1/auth/profile, exposed through t
 
 Activity 对象一致性（2026-10-07）：分页结果追加 actorMemberId、targetBlueprintId，不从可编辑姓名反推身份。仅在选定页之后关联触发消息，返回 160 字符/40 节点/20 层深度上限的摘要；mention 保持 kind/id/label 原子身份，label 上限 160 字符。GUI 不为每条活动再取一次消息，不预取 Session/File/Canvas 正文或 task 日志。消息、Canvas 节点与 Activity 复用同一胶囊组件。
 
-Home 近期动态（2026-10-06）：GUI → Local Core → Server 的 `/v1/channels/{id}/activity` 按 `(occurredAt,id)` 倒序游标分页，默认 20、最大 50，各来源先 limit 再合并。共享/Canvas/指令来自现有表；新增 `share_read_activity` 仅保存每位 reader 对每个 Share 的最新成功消费时间，Server 按账号和当前 Channel membership 鉴权。Files 物化、Session read 与 Skill 的 owner-local Files use 在成功后 best-effort 上报；失败不影响原任务，不能称为完整读取审计，历史读取无法补出。不给 GUI 预取正文或全量资产；刷新/翻页显式请求。
+Home 近期动态（2026-10-06）：GUI → Local Core → Server 的 `/v1/channels/{id}/activity` 按 `(occurredAt,id)` 倒序分页，默认 20、最大 50。Home 使用 `page` 数字页码，Server 返回当前页 `items`、`total`、`page`、`pageSize`，在 Channel 鉴权后按既有索引统计总数，各来源限制到页窗口再合并，仅当前页进入正文摘要投影。页码越界收敛到末页。旧调用仍可使用 `before/beforeId` 游标，不能与 `page` 混用；Local Core 原样转发，GUI 不预取所有活动。共享/Canvas/指令来自现有表；新增 `share_read_activity` 仅保存每位 reader 对每个 Share 的最新成功消费时间，Server 按账号和当前 Channel membership 鉴权。Files 物化、Session read 与 Skill 的 owner-local Files use 在成功后 best-effort 上报；失败不影响原任务，不能称为完整读取审计，历史读取无法补出。不给 GUI 预取正文或全量资产；刷新/翻页显式请求。
 
 Canvas 的 Markdown/CRDT 转换现由 Local Core 自有 ProseMirror Markdown +
 Tiptap Yjs binding helper 实现，替代原手写转换。能力边界、段尾硬换行映射及

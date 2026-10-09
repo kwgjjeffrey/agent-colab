@@ -68,3 +68,7 @@ Release documentation has a separate issue: the installed artifact-release skill
 ## Performance evidence
 
 The project telemetry section maps existing Colab attributes to the generic Trace collector. `traceQueryConfig` in the ignored environment points to the same private configuration used by Performance registry; `tracePythonDependencyPath` supplies the installed Skill's OTel dependencies for source CLI tests. GUI request Trace IDs and propagated command Trace IDs are resolved through Trace's existing query layer. Case records store registered terminal entrance-to-return durations and breakdowns; local timers remain diagnostics. Budgets call ctx.performance with the existing registry entry ID. Missing evidence blocks a declared budget; absent budgets do not invent a gate. Previous runs without captured IDs cannot be reliably backfilled.
+
+### Home numbered activity pagination
+
+`collaboration.home.activity` is a slow isolated-write case: it reuses the named Home pagination Channel, exercises a genuinely empty feed, creates 25 owned Canvases, checks bounded 20+5 pages and exact totals, then archives all owned documents. Use `--timeoutMs 180000` for both filtered plan and run; the default 60 seconds can interrupt its durable fixture cleanup. This is a case execution allowance, not a paging performance budget. The empty fixture Channel remains reusable, and existing unowned activity blocks the case rather than being deleted.

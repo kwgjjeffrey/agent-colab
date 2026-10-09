@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { useChannelContext } from "@/features/context/ChannelContext";
@@ -26,49 +26,46 @@ export type Activity = {
   source?: string;
   state?: string;
 };
-type Cursor = { before: string; beforeId: string };
-type Page = { items: Activity[]; nextCursor: Cursor | null };
+type Page = { items: Activity[]; total: number; page: number; pageSize: number };
+const PAGE_SIZE = 20;
 export function RecentActivity() {
   const context = useChannelContext();
   const channelId = context?.channelId;
   const [rows, setRows] = useState<Activity[]>([]);
   const [work, setWork] = useState<AgentWorkRequest>();
-  const [cursor, setCursor] = useState<Cursor | null>(null);
+  const [pageNumber, setPageNumber] = useState(1);
+  const [total, setTotal] = useState(0);
+  const generation = useRef(0);
   const [busy, setBusy] = useState(false),
     [error, setError] = useState<string>();
   const load = useCallback(
-    async (next?: Cursor) => {
+    async (number = 1) => {
       if (!channelId) return;
+      const request = ++generation.current;
       setBusy(true);
       setError(undefined);
       try {
-        const query = new URLSearchParams({ limit: "20", ...next });
-        const page = await messageRequest<Page>(
-          `/v1/channels/${channelId}/activity?${query}`,
-          undefined,
-          true,
-        );
-        setRows((previous) =>
-          next
-            ? [
-                ...new Map(
-                  [...previous, ...page.items].map((row) => [row.id, row]),
-                ).values(),
-              ]
-            : page.items,
-        );
-        setCursor(page.nextCursor);
+        const query = new URLSearchParams({ limit: String(PAGE_SIZE), page: String(number) });
+        const page = await messageRequest<Page>(`/v1/channels/${channelId}/activity?${query}`, undefined, true);
+        if (request !== generation.current) return;
+        setRows(page.items);
+        setTotal(page.total);
+        setPageNumber(page.page);
       } catch {
-        setError("Could not load recent activity.");
+        if (request === generation.current) setError("Could not load recent activity.");
       } finally {
-        setBusy(false);
+        if (request === generation.current) setBusy(false);
       }
     },
     [channelId],
   );
   useEffect(() => {
     setWork(undefined);
+    setRows([]);
+    setTotal(0);
+    setPageNumber(1);
     void load();
+    return () => { generation.current++; };
   }, [load]);
   const openActivity = (row: Activity) => {
     if (row.action === "requested")
@@ -85,15 +82,18 @@ export function RecentActivity() {
         channelId: channelId!,
       });
   };
+  if (!rows.length && !error) return null;
+  const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const numbers = pages <= 7 ? Array.from({ length: pages }, (_, index) => index + 1) : Array.from(new Set([1, pages, ...Array.from({ length: 5 }, (_, index) => pageNumber + index - 2).filter(number => number > 0 && number <= pages)])).sort((a, b) => a - b);
   return (
     <section className="flex flex-col gap-3" aria-label="Recent activity">
       <div className="flex items-center justify-between">
-        <h3 className="font-medium">Recent activity</h3>
+        <h3 className="font-medium">Recent activity <span className="ml-2 text-sm font-normal text-muted-foreground">{total} activities</span></h3>
         <Button
           size="sm"
           variant="ghost"
           disabled={busy}
-          onClick={() => void load()}
+          onClick={() => void load(pageNumber)}
         >
           Refresh
         </Button>
@@ -105,16 +105,11 @@ export function RecentActivity() {
             size="sm"
             variant="ghost"
             disabled={busy}
-            onClick={() => void load()}
+            onClick={() => void load(pageNumber)}
           >
             Retry
           </Button>
         </div>
-      )}
-      {!rows.length && !error && (
-        <p className="text-sm text-muted-foreground">
-          {busy ? "Loading activity…" : "No activity yet."}
-        </p>
       )}
       {rows.map((row, index) => (
         <div key={row.id}>
@@ -213,16 +208,14 @@ export function RecentActivity() {
           </div>
         </div>
       ))}
-      {cursor && (
-        <Button
-          variant="ghost"
-          size="sm"
-          disabled={busy}
-          onClick={() => void load(cursor)}
-        >
-          {busy ? "Loading…" : "Load more"}
-        </Button>
-      )}
+      {total > 0 && <nav aria-label="Recent activity pages" className="flex flex-wrap items-center justify-between gap-3 border-t pt-3 text-sm">
+        <span className="text-muted-foreground">{(pageNumber - 1) * PAGE_SIZE + 1}–{Math.min(pageNumber * PAGE_SIZE, total)} of {total}</span>
+        <div className="flex items-center gap-1">
+          <Button size="sm" variant="ghost" disabled={busy || pageNumber === 1} onClick={() => void load(pageNumber - 1)}>Previous</Button>
+          {numbers.map((number, index) => <span key={number} className="flex items-center gap-1">{index > 0 && number - numbers[index - 1] > 1 && <span aria-hidden="true" className="px-1 text-muted-foreground">…</span>}<Button size="sm" variant={number === pageNumber ? "secondary" : "ghost"} aria-label={`Activity page ${number}`} aria-current={number === pageNumber ? "page" : undefined} disabled={busy} onClick={() => void load(number)}>{number}</Button></span>)}
+          <Button size="sm" variant="ghost" disabled={busy || pageNumber === pages} onClick={() => void load(pageNumber + 1)}>Next</Button>
+        </div>
+      </nav>}
       <AgentWorkDrawer
         request={work}
         open={Boolean(work)}

@@ -45,7 +45,7 @@ it("the whole Tips section can be collapsed and stays collapsed after reopening"
   await userEvent.click(screen.getByRole("button", { name: "Use cases" }));
   expect(screen.getAllByRole("button", { name: "Try" })).toHaveLength(homeTips.length);
   expect(screen.queryByText("Your collaboration workspace")).toBeNull();
-  expect(screen.getByRole("region", { name: "Recent activity" })).toBeTruthy();
+  expect(screen.queryByRole("region", { name: "Recent activity" })).toBeNull();
 });
 it("long-ignored tips collapse but remain accessible", async () => {
   localStorage.setItem(

@@ -45,9 +45,9 @@ it("fetches one bounded page and locates the clicked shared object", async () =>
           occurredAt: "2026-10-06T10:00:00Z",
         },
       ],
-      nextCursor: { before: "2026-10-06T10:00:00Z", beforeId: "share:1" },
+      total: 21, page: 1, pageSize: 20,
     })
-    .mockResolvedValueOnce({ items: [], nextCursor: null });
+    .mockResolvedValueOnce({ items: [{id:"share:2",action:"shared",actorName:"Bob",resourceKind:"files",resourceId:"2",resourceName:"Notes",occurredAt:"2026-10-05T10:00:00Z"}], total:21, page:2, pageSize:20 });
   render(<RecentActivity />);
   await userEvent.click(
     await screen.findByRole("link", { name: "Alice shared Design" }),
@@ -60,21 +60,23 @@ it("fetches one bounded page and locates the clicked shared object", async () =>
   });
   expect(request).toHaveBeenCalledTimes(1);
   expect(request.mock.calls[0][0]).toBe(
-    "/v1/channels/channel/activity?limit=20",
+    "/v1/channels/channel/activity?limit=20&page=1",
   );
-  await userEvent.click(screen.getByRole("button", { name: "Load more" }));
+  await userEvent.click(screen.getByRole("button", { name: "Activity page 2" }));
   await waitFor(() => expect(request).toHaveBeenCalledTimes(2));
-  expect(request.mock.calls[1][0]).toContain("beforeId=share%3A1");
+  expect(request.mock.calls[1][0]).toContain("page=2");
+  expect(await screen.findByRole("link", {name:"Bob shared Notes"})).toBeTruthy();
+  expect(screen.queryByRole("link", {name:"Alice shared Design"})).toBeNull();
 });
 it("a failed request is a visible retry, not an empty success", async () => {
   request
     .mockRejectedValueOnce(new Error("offline"))
-    .mockResolvedValueOnce({ items: [], nextCursor: null });
+    .mockResolvedValueOnce({ items: [], total: 0, page: 1, pageSize: 20 });
   render(<RecentActivity />);
   expect(await screen.findByRole("alert")).toBeTruthy();
   expect(screen.queryByText("No activity yet.")).toBeNull();
   await userEvent.click(screen.getByRole("button", { name: "Retry" }));
-  expect(await screen.findByText("No activity yet.")).toBeTruthy();
+  await waitFor(() => expect(screen.queryByRole("region", { name: "Recent activity" })).toBeNull());
 });
 it.each(["Messages", "Canvas"])(
   "%s activity opens its exact task, not the message or newest task",
@@ -94,7 +96,7 @@ it.each(["Messages", "Canvas"])(
           state: "succeeded",
         },
       ],
-      nextCursor: null,
+      total: 1, page: 1, pageSize: 20,
     });
     render(<RecentActivity />);
     expect(screen.queryByRole("dialog")).toBeNull();
@@ -132,7 +134,7 @@ it("object capsules retain their stable identities without opening the activity"
         },
       },
     ],
-    nextCursor: null,
+    total: 1, page: 1, pageSize: 20,
   });
   render(<RecentActivity />);
   const target = await screen.findByRole("button", { name: "Builder" });

@@ -76,7 +76,7 @@ Home 收口（2026-10-06）：Tips 展示名称改为 Use cases，保留已有�
 
 Tips 角色场景（2026-10-06）：每条显示角色 Badge，顶部可按 Individual / Collaborator / Team lead / Reviewer / Skill sharing 筛选；这是使用视角，不是账号权限。新增求助、接手、团队总结、决策评审、远端检查、Skill 复用六条。共享类 Try 复用 Quick Share；Session 消费类只在 Try 时读取当前 Channel 的 Session 元数据，用户选择来源后得到任务预填的标准提示词，可追加 User query、复制或转发。未同步的 Session 不可选择；缺少同事 Session 进入已有邀请分享流程。远端检查复用选择 Agent + 可编辑指令，必须显式发送；缺少 Agent 有明确提示。Skill 复用进入已有安装界面。保留折叠、dismiss 和恢复，不新建工作流、调度或权限系统。
 
-Home（2026-10-06）：紧凑横向协作网络并列 before agent / with agent / with Agent Colab；正向三角形，协作主体位于内环，人与 Agent 的独立频率为 1:30。价值陈述为 “Your team is about to work at agentic speed”，位于右侧紧邻 Agent Colab 图，无强调底色。Tips 条目只由分隔线区分，整体可折叠且按账号记忆；不重复提供已有 Tab 的功能按钮。下方 Recent activity 用分页真实元数据展示共享、最近消费、Canvas 创建和 Messages/Canvas Agent 指令，资源可跳至既有详情。它不是完整安全审计，也不展示资源正文或工具日志。
+Home（2026-10-06）：紧凑横向协作网络并列 before agent / with agent / with Agent Colab；正向三角形，协作主体位于内环，人与 Agent 的独立频率为 1:30。价值陈述为 “Your team is about to work at agentic speed”，位于右侧紧邻 Agent Colab 图，无强调底色。Tips 条目只由分隔线区分，整体可折叠且按账号记忆；不重复提供已有 Tab 的功能按钮。动效 banner 下方的 Recent activity 用数字分页真实元数据展示共享、最近消费、Canvas 创建和 Messages/Canvas Agent 指令，资源可跳至既有详情。它不是完整安全审计，也不展示资源正文或工具日志。
 
 状态：首版结构稿  
 范围：Channel、Messages、Session、Files、Skills、Settings
@@ -339,3 +339,5 @@ Share Session, Files and Skill creation dialogs are Channel-level workflows inde
 Manual primary actions use the existing lime-green identity. Buttons that give context or work to an Agent use the shared purple AgentButton with a supernova/starburst icon: Give, Forward, Send, source setup through Agent and Coding Agent launch. Agent styles have dedicated light/dark and hover/focus tokens; copy-only and cancel actions remain manual. Icon-only message forwarding uses the same Agent identity and retains its accessible label.
 
 The shared Agent handoff dialog gives Copy prompt the green manual-primary style alongside purple Agent execution/launch actions. Agent generation/setup entrances, including Channel icon generation, Home Call, Create by my agent and session Prepare prompt, use the same purple supernova component. Ordinary manual setup, upload, save and cancel controls preserve their GUI action styles.
+
+Home 的顺序为动效 banner、Recent activity、操作引导、场景引导。活动成功返回空数据时，整个模块（含标题和占位）不展示。有数据时显示总条数、当前条目范围、数字页码和 Previous/Next，每页最多 20 条；翻页替换当前列表，不追加、不使用底部加载。页码较多时显示首尾页和当前页附近页码；刷新保留当前页，删除使页码越界时 Server 收敛到末页。读失败保留明确的重试入口，不伪装成空数据。

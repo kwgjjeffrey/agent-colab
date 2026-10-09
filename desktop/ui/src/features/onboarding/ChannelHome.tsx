@@ -75,6 +75,7 @@ export function ChannelHome({
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 p-8">
       <CollaborationNetwork />
+      <RecentActivity />
       {actions && <HomeActions {...actions} defaultAgent={defaultAgent} installedAgents={installedAgents} />}
       <Collapsible
         open={tipsOpen}
@@ -153,8 +154,6 @@ export function ChannelHome({
           </section>
         </CollapsibleContent>
       </Collapsible>
-      <Separator />
-      <RecentActivity />
       {flow && <TipFlow key={flow} id={flow} defaultAgent={defaultAgent} installedAgents={installedAgents} onClose={() => setFlow(undefined)} onMissingSessions={() => { setFlow(undefined); onTry("working-style"); }} onNavigate={id => { setFlow(undefined); onTry(id); }} />}
     </div>
   );
