@@ -151,7 +151,7 @@ def move(core, ref, parent_ref):
     return {"moved": True, **entry(channel, path, item)}
 
 
-def share(core, parent_ref, item_type, source, name=None):
+def share(core, parent_ref, item_type, source, name=None, excludes=None):
     # Reuse the existing registration protocol. Browser itself remains unchanged.
     import importlib.machinery
     import importlib.util
@@ -161,7 +161,7 @@ def share(core, parent_ref, item_type, source, name=None):
     spec = importlib.util.spec_from_loader(loader.name, loader)
     browser = importlib.util.module_from_spec(spec)
     loader.exec_module(browser)
-    row = browser.share_item(core, path_ref(channel["id"]), item_type, source, name)
+    row = browser.share_item(core, path_ref(channel["id"]), item_type, source, name, excludes)
     stable = path_ref(channel["id"], [row["id"]])
     if parent:
         try:

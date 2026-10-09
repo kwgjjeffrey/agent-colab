@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverTrigger, PopoverContent, PopoverTitle } from "@/components/ui/popover";
 import { trackedFetch } from "@/api/request-activity";
 import { PreviewMarkdown } from "@/features/workspace/PreviewMarkdown";
+import { ShareSetupPrompt } from "@/features/agent/ShareSetupPrompt";
 import {
   Dialog,
   DialogContent,
@@ -54,6 +55,7 @@ type Installation = {
 };
 
 type Props = {
+  creationParentRef: string;
   focusId?: string;
   shareOpenToken?: number;
   onShareOpenConsumed?: () => void;
@@ -77,7 +79,7 @@ function initials(name: string) {
 }
 
 /** Shared Skills owns discovery and installation presentation; all mutations go through Local Core. */
-export function SkillsView({ focusId, shareOpenToken, onShareOpenConsumed, onCreated, channelId, channelName, busy, defaultAgent, installedAgents, onChoose }: Props) {
+export function SkillsView({ creationParentRef, focusId, shareOpenToken, onShareOpenConsumed, onCreated, channelId, channelName, busy, defaultAgent, installedAgents, onChoose }: Props) {
   const [shares, setShares] = useState<SkillShare[]>([]);
   const [sources, setSources] = useState<SkillSource[]>([]);
   const [installations, setInstallations] = useState<Record<string, Installation[]>>({});
@@ -249,7 +251,7 @@ const trackedFetch = operation.fetch;
           <DialogHeader><DialogTitle>Share a Skill</DialogTitle><DialogDescription>Recently created or changed Agent Skills are shown first. You can also choose any folder containing SKILL.md.</DialogDescription></DialogHeader>
           <div className="relative"><SearchIcon className="absolute left-3 top-3 size-4 text-muted-foreground" /><Input className="pl-9" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search by name or path" /></div>
           <div className="max-h-80 overflow-auto rounded-lg border">{sourceRows.map((source) => <button type="button" key={source.sourceId} className="flex w-full cursor-pointer items-center gap-3 border-b p-3 text-left last:border-b-0 hover:bg-muted" disabled={Boolean(working)} onClick={() => void share({ sourceId: source.sourceId })}><span className="min-w-0 flex-1"><strong className="block truncate">{source.name}</strong><small className="block truncate text-muted-foreground">{source.sourcePath}</small></span>{source.discoveredTargets.map((target) => <Badge key={target} variant="secondary">{target}</Badge>)}</button>)}</div>
-          <DialogFooter><Button variant="outline" onClick={() => void chooseSource()} disabled={Boolean(working)}>Choose Skill folder</Button><Button variant="outline" onClick={() => setShowShare(false)}>Cancel</Button></DialogFooter>
+          <DialogFooter><ShareSetupPrompt setup={{kind:"skill",parentRef:creationParentRef}} defaultAgent={defaultAgent} installedAgents={installedAgents} onError={setError}/><Button variant="outline" onClick={() => void chooseSource()} disabled={Boolean(working)}>Choose Skill folder</Button><Button variant="outline" onClick={() => setShowShare(false)}>Cancel</Button></DialogFooter>
         </DialogContent>
       </Dialog>
       <AgentPromptDialog open={Boolean(agentPrompt)} title={`Give “${agentPrompt?.share.name ?? ""}” to Agent`} description="Copy this instruction and continue the task in your coding Agent." defaultAgent={defaultAgent} installedAgents={installedAgents} promptFor={promptFor} onClose={() => setAgentPrompt(undefined)} onError={setError} />

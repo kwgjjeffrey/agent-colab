@@ -33,13 +33,15 @@ def main():
     sharing.add_argument("--item-type", required=True, choices=["files","session","skill"])
     sharing.add_argument("--source", required=True)
     sharing.add_argument("--name")
+    sharing.add_argument("--exclude", action="append", default=[], help="Files-only supported directory name from inspect-source candidates; repeat as needed")
     args = parser.parse_args()
+    __import__("telemetry").select_operation(args)
     try:
         if args.operation == "create-catalog": return success(create_catalog(args.core, args.parent, args.name))
         if args.operation == "rename-catalog": return success(mutate_catalog(args.core, args.ref, args.name))
         if args.operation == "remove-catalog": return success(mutate_catalog(args.core, args.ref, remove=True))
         if args.operation == "move": return success(move(args.core, args.ref, args.parent))
-        if args.operation == "share": return success(share(args.core, args.parent, args.item_type, args.source, args.name))
+        if args.operation == "share": return success(share(args.core, args.parent, args.item_type, args.source, args.name, args.exclude))
         if args.offset < 0 or not 1 <= args.limit <= 199:
             raise ValueError("offset must be nonnegative; limit must be 1–199")
         result = open_ref(args.core, args.ref, args.offset, args.limit)
@@ -52,4 +54,4 @@ def main():
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(__import__("telemetry").run(main))

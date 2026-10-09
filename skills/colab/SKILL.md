@@ -37,6 +37,13 @@ the updater; it is not the business-tool output contract.
   or `remove-catalog --ref '<ref>'`. Non-empty removal is refused.
 - Move an item: `bin/colab-explorer move --ref '<ref>' --parent '<channel-or-catalog-ref>'`.
 - Share into a Catalog: `bin/colab-explorer share --parent '<ref>' --item-type files|session|skill --source '<source>' [--name '<name>']`.
+  For Files, preview with `bin/colab-browser inspect-source --source '/absolute/path' [--exclude dist]`.
+  Only exact supported directory names in `candidates` are accepted (not arbitrary globs).
+  Pass the confirmed complete list using repeated `--exclude` on Explorer/Browser share.
+  Configure an existing owned Files item with `bin/colab-browser sync-scope --ref '<stableRef>'`;
+  replace its list with `sync-scope --ref '<stableRef>' --set [--exclude dist]`.
+  `--set` without exclusions clears them. Source `.gitignore` is read-only; these rules
+  belong to Colab's shadow repository. Registration receipts are not completed publication.
   Discover sources with the existing tools below. If registration succeeds but
   placement fails, the error identifies the existing asset at root; move it rather
   than sharing it again.

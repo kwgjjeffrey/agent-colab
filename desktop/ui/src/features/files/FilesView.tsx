@@ -30,6 +30,7 @@ import {
   type AgentTarget,
 } from "@/features/agent/AgentPromptDialog";
 import { FileExplorer, type LocalFileEntry } from "@/features/files/FileExplorer";
+import { ShareSetupPrompt } from "@/features/agent/ShareSetupPrompt";
 
 export type FileShare = {
   id: string;
@@ -48,6 +49,7 @@ export type FileShare = {
 };
 
 type Props = {
+  creationParentRef: string;
   shareOpenToken?: number;
   onShareOpenConsumed?: () => void;
   focusId?: string;
@@ -80,6 +82,7 @@ type SourceInspection = {
 
 /** Files owns only presentation and local browsing; synchronization remains a Local Core use case. */
 export function FilesView({
+  creationParentRef,
   shareOpenToken,
   onShareOpenConsumed,
   focusId,
@@ -385,6 +388,7 @@ const trackedFetch = operation.fetch;
             </div>
           ) : null}
           <DialogFooter>
+            {inspection && <ShareSetupPrompt setup={{kind:"files",parentRef:creationParentRef,sourcePath:inspection.localPath,excludes:selectedExcludes,existingRef:scopeShareId && context ? `colab://channel/${context.channelId}/${scopeShareId}` : undefined}} defaultAgent={defaultAgent} installedAgents={installedAgents} onError={setBrowseError} />}
             <Button variant="outline" disabled={inspecting || busy} onClick={() => setInspection(undefined)}>Cancel</Button>
             <Button data-trace-target={traceTargets("files.scope.commit")} disabled={!inspection || inspecting || busy || inspection.exceedsTransportLimit} onClick={() => void confirmShare()}>{scopeShareId ? "Save scope" : "Share"}</Button>
           </DialogFooter>

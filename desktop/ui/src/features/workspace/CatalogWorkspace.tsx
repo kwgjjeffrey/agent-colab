@@ -49,6 +49,7 @@ import { cn } from "cn";
 import { trackedFetch } from "@/api/request-activity";
 import type { OperationScope } from "@/api/operation-runner";
 import { ItemIcon } from "./ItemIcon";
+import { CreationHint } from "./CreationHint";
 import { CatalogDragTarget, type DropPosition } from "./CatalogDragTarget";
 import {
   WorkspaceActionProvider,
@@ -441,13 +442,13 @@ export function CatalogWorkspace({
                   <DropdownMenuContent>
                     <DropdownMenuGroup>
                       {kinds.map(({ kind, label }) => (
-                        <DropdownMenuItem
+                        <CreationHint kind={kind} trigger={<DropdownMenuItem
                           key={kind}
                           onClick={() => add(kind, item.id)}
-                        >
+                        />} key={kind}>
                           <ItemIcon kind={kind} name={label} />
                           {label}
-                        </DropdownMenuItem>
+                        </CreationHint>
                       ))}
                     </DropdownMenuGroup>
                   </DropdownMenuContent>
@@ -502,10 +503,10 @@ export function CatalogWorkspace({
               <DropdownMenuContent keepMounted align="start" className="w-52">
                 <DropdownMenuGroup>
                   {kinds.map(({ kind, label }) => (
-                    <DropdownMenuItem key={kind} onClick={() => add(kind)}>
+                    <CreationHint key={kind} kind={kind} trigger={<DropdownMenuItem onClick={() => add(kind)} />}>
                       <ItemIcon kind={kind} name={label} />
                       {label}
-                    </DropdownMenuItem>
+                    </CreationHint>
                   ))}
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />

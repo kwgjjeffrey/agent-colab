@@ -1178,6 +1178,7 @@ const api = operation.response;
               </TabsContent>
               <TabsContent data-trace-target={traceTargets("files.list")} data-trace-region={"files"} value="files" className="flex min-h-0 flex-1 flex-col overflow-hidden">
                 <FilesView
+                  creationParentRef={catalogDestination ? `colab://resource/${selected.id}/catalog/${catalogDestination}` : `colab://channel/${encodeURIComponent(selected.name)}`}
                   shareOpenToken={shareFilesToken}
                   onShareOpenConsumed={()=>setShareFilesToken(0)}
                   focusId={contextFocus?.kind === "files" ? contextFocus.id : undefined}
@@ -1194,6 +1195,7 @@ const api = operation.response;
               </TabsContent>
               <TabsContent data-trace-target={traceTargets("skills.list")} data-trace-region={"skills"} value="skills" className="min-h-0 flex-1 overflow-y-auto">
                 <SkillsView
+                  creationParentRef={catalogDestination ? `colab://resource/${selected.id}/catalog/${catalogDestination}` : `colab://channel/${encodeURIComponent(selected.name)}`}
                   focusId={workspaceItem?.kind==="skill"?workspaceItem.id:undefined}
                   shareOpenToken={shareSkillToken}
                   onShareOpenConsumed={()=>setShareSkillToken(0)}

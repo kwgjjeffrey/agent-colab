@@ -149,11 +149,13 @@ def use_ref(core: str, ref: str):
             pass
     return result
 
-def share_item(core: str, channel_ref: str, item_type: str, source: str, name: Optional[str]):
+def share_item(core: str, channel_ref: str, item_type: str, source: str, name: Optional[str], excludes=None):
+    if excludes and item_type != "files":
+        raise ValueError("--exclude is only supported for Files")
     channel = resolve_channel_ref(core, channel_ref)
     if item_type == "files":
         row = request("POST", f"/v1/channels/{channel['id']}/files/share", core=core,
-                      body={"localPath": source, "name": name}, timeout=900)
+                      body={"localPath": source, "name": name, "syncExcludes": excludes or []}, timeout=900)
         return {"ref": named_ref(channel["name"], row["name"]), "itemType": "files", **row}
     if item_type == "session":
         # Session source discovery is backed by the Local Core SQLite catalog. An exact id/path
@@ -203,6 +205,14 @@ def main() -> int:
     share = operations.add_parser("share", help="Share local Files, an indexed Session, or a Skill source"); share.add_argument("--channel", required=True); share.add_argument("--item-type", required=True, choices=["files", "session", "skill"]); share.add_argument("--source", required=True); share.add_argument("--name")
     withdraw = operations.add_parser("withdraw", help="Withdraw an owned Files, Session, or Skill item"); withdraw.add_argument("--item", required=True)
     source_list = operations.add_parser("session-sources", help="Search the local indexed Session catalog"); source_list.add_argument("--query", default=""); source_list.add_argument("--limit", type=int, default=200)
+    share.add_argument("--exclude", action="append", default=[], help="Files-only supported directory name from inspect-source candidates; repeat as needed")
+    inspect = operations.add_parser("inspect-source", help="Preview Files synchronization scope without sharing")
+    inspect.add_argument("--source", required=True)
+    inspect.add_argument("--exclude", action="append", default=[])
+    scope = operations.add_parser("sync-scope", help="Read or replace an owned Files item's synchronization exclusions")
+    scope.add_argument("--ref", required=True)
+    scope.add_argument("--set", action="store_true", help="Replace exclusions; with no --exclude, clears them")
+    scope.add_argument("--exclude", action="append", default=[])
     args = parser.parse_args()
     __import__("telemetry").select_operation(args)
     success = __import__("output_views").writer("browser", args)
@@ -228,7 +238,17 @@ def main() -> int:
             request("DELETE", f"{path}/{quote(args.user, safe='')}", core=args.core)
             return success({"user": args.user, "state": "removed"})
         if args.operation == "share":
-            return success(public_result(share_item(args.core, args.channel, args.item_type, args.source, args.name)))
+            return success(public_result(share_item(args.core, args.channel, args.item_type, args.source, args.name, args.exclude)))
+        if args.operation == "inspect-source":
+            return success(request("POST", "/v1/files/inspect-source", core=args.core, body={"localPath": args.source, "syncExcludes": args.exclude}))
+        if args.operation == "sync-scope":
+            if args.exclude and not args.set:
+                raise ValueError("--exclude requires --set; updates replace the complete exclusion list")
+            item = open_ref(args.core, args.ref)
+            if not isinstance(item, dict) or item.get("item_type") != "files" or not item.get("canWithdraw"):
+                raise ValueError("sync-scope requires an owned Files item")
+            path = f"/v1/files/{item['id']}/sync-scope"
+            return success(request("PATCH" if args.set else "GET", path, core=args.core, **({"body": {"syncExcludes": args.exclude}} if args.set else {})))
         if args.operation == "withdraw":
             return success(public_result(withdraw_item(args.core, args.item)))
         if args.operation == "session-sources":

@@ -81,7 +81,12 @@ def project(tool, operation, value, args):
         if cursor:
             page = {"nextCursor": cursor}
     elif tool == "browser":
-        if operation in ("open",):
+        if operation in ("inspect-source", "sync-scope"):
+            data = pick(value, "localPath includedFiles includedBytes excludedFiles excludedBytes projectIgnoreApplied exceedsTransportLimit")
+            data["candidates"] = rows(value.get("candidates", []), "pattern fileCount byteSize selected")
+            if operation == "sync-scope" and args.set:
+                data["saved"] = True
+        elif operation in ("open",):
             def entry(row):
                 return pick(row, "ref kind item_type name role contributorName state capabilities description")
             data = [entry(row) for row in value] if isinstance(value, list) else entry(value)
