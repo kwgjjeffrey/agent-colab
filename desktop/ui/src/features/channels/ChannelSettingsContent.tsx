@@ -30,6 +30,7 @@ export function ChannelSettingsContent({
   inviteBusy,
   defaultAgent,
   installedAgents,
+  onRefresh,
 }: {
   mode: "identity" | "members";
   channel: Channel;
@@ -44,10 +45,26 @@ export function ChannelSettingsContent({
   inviteBusy: boolean;
   defaultAgent: AgentTarget;
   installedAgents: Record<string, { installed: boolean }>;
+  onRefresh: () => Promise<void>;
 }) {
   const [people, setPeople] = useState<OrganizationPerson[]>([]);
   const [iconPreparing, setIconPreparing] = useState(false);
   useEffect(() => { if (mode === "members") onLoad(); }, [channel.id, mode]);
+  useEffect(() => {
+    if (mode !== "identity") return;
+    let pending = false;
+    const reconcile = () => {
+      if (pending || document.visibilityState === "hidden") return;
+      pending = true;
+      void onRefresh().finally(() => { pending = false; });
+    };
+    window.addEventListener("focus", reconcile);
+    document.addEventListener("visibilitychange", reconcile);
+    return () => {
+      window.removeEventListener("focus", reconcile);
+      document.removeEventListener("visibilitychange", reconcile);
+    };
+  }, [channel.id, mode, onRefresh]);
   async function searchPeople(query: string) {
 return runOperation("members.search", async (operation) => {
 const trackedFetch = operation.fetch;
