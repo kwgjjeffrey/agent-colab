@@ -10,6 +10,10 @@ pub struct CatalogItem {
     pub parent_id: Option<Uuid>,
     pub updated_at: String,
     pub can_move: bool,
+    pub child_count: Option<i64>,
+    pub contributor_member_id: Option<Uuid>,
+    pub contributor_name: Option<String>,
+    pub contributor_avatar_url: Option<String>,
 }
 
 #[cfg(test)]
@@ -58,7 +62,7 @@ impl Database {
         ), trail as (
             select *,0 depth from items where id=$2 and kind=$3
             union all select i.*,t.depth+1 from items i join trail t on i.id=t.parent_id and i.kind='catalog' where t.depth<64
-        ) select id,kind,name,parent_id,updated_at::text updated_at,can_move from trail order by depth desc")
+        ) select items.id,items.kind,items.name,items.parent_id,items.updated_at::text updated_at,items.can_move,case when items.kind='catalog' then (select count(*) from canvas_folders f where f.channel_id=$1 and f.parent_folder_id=items.id)+(select count(*) from canvases c where c.channel_id=$1 and c.folder_id=items.id and c.archived_at is null)+(select count(*) from channel_shares s where s.channel_id=$1 and s.catalog_id=items.id and s.state='active') else null end child_count,share.contributor_member_id,coalesce(u.display_name,u.email) contributor_name,u.avatar_url contributor_avatar_url from trail items left join channel_shares share on share.id=items.id and share.channel_id=$1 and share.kind=items.kind and share.state='active' left join organization_members om on om.id=share.contributor_member_id left join users u on u.id=om.user_id order by items.depth desc")
             .bind(channel).bind(item).bind(kind).bind(member).fetch_all(&self.pool).await?;
         Ok(Some(rows))
     }
@@ -89,7 +93,7 @@ impl Database {
             if !local { return Ok(None); }
         }
         let rows = sqlx::query_as(
-            "select id,kind,name,parent_id,updated_at::text updated_at,can_move from (
+            "select items.id,items.kind,items.name,items.parent_id,items.updated_at::text updated_at,items.can_move,case when items.kind='catalog' then (select count(*) from canvas_folders f where f.channel_id=$1 and f.parent_folder_id=items.id)+(select count(*) from canvases c where c.channel_id=$1 and c.folder_id=items.id and c.archived_at is null)+(select count(*) from channel_shares s where s.channel_id=$1 and s.catalog_id=items.id and s.state='active') else null end child_count,share.contributor_member_id,coalesce(u.display_name,u.email) contributor_name,u.avatar_url contributor_avatar_url from (
                 select id,'catalog'::text kind,name,parent_folder_id parent_id,updated_at,true can_move,catalog_position
                 from canvas_folders where channel_id=$1 and parent_folder_id is not distinct from $2
                 union all
@@ -98,7 +102,7 @@ impl Database {
                 union all
                 select id,'canvas'::text kind,title name,folder_id parent_id,updated_at,true,catalog_position
                 from canvases where channel_id=$1 and folder_id is not distinct from $2 and archived_at is null
-            ) items order by catalog_position,(kind='catalog') desc,lower(name),id limit $3 offset $4"
+            ) items left join channel_shares share on share.id=items.id and share.channel_id=$1 and share.kind=items.kind and share.state='active' left join organization_members om on om.id=share.contributor_member_id left join users u on u.id=om.user_id order by items.catalog_position,(items.kind='catalog') desc,lower(items.name),items.id limit $3 offset $4"
         ).bind(channel).bind(parent).bind(limit.clamp(1, 200)).bind(offset.max(0)).bind(member)
             .fetch_all(&self.pool).await?;
         Ok(Some(rows))

@@ -48,6 +48,8 @@ import { Input } from "@/components/ui/input";
 import { cn } from "cn";
 import { trackedFetch } from "@/api/request-activity";
 import type { OperationScope } from "@/api/operation-runner";
+import { UserIdentity } from "@/features/context/UserIdentity";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { ItemIcon } from "./ItemIcon";
 import { CreationHint } from "./CreationHint";
 import { CatalogDragTarget, type DropPosition } from "./CatalogDragTarget";
@@ -63,6 +65,10 @@ export type CatalogItem = {
   parentId: string | null;
   updatedAt: string;
   canMove?: boolean;
+  childCount?: number | null;
+  contributorMemberId?: string | null;
+  contributorName?: string | null;
+  contributorAvatarUrl?: string | null;
 };
 export type AddKind = CatalogItem["kind"];
 const kinds: Array<{ kind: AddKind; label: string; icon: typeof FolderIcon }> =
@@ -447,6 +453,16 @@ export function CatalogWorkspace({
                   )}
                   <span className="truncate">{item.name}</span>
                 </Button>
+              )}
+              {item.kind === "catalog" && item.childCount != null && (
+                <span className="shrink-0 px-1 text-xs tabular-nums text-muted-foreground" aria-label={`${item.childCount} items in ${item.name}`}>{item.childCount}</span>
+              )}
+              {["files", "session", "skill"].includes(item.kind) && item.contributorMemberId && (
+                <UserIdentity id={item.contributorMemberId} name={item.contributorName ?? "Channel member"} className="ml-2 inline-flex shrink-0 cursor-pointer rounded-full focus-visible:outline-2 focus-visible:outline-ring">
+                  <span aria-label={`Uploaded by ${item.contributorName ?? "Channel member"}`} title={item.contributorName ?? "Channel member"}>
+                    <Avatar className="size-5"><AvatarImage src={item.contributorAvatarUrl ?? undefined} /><AvatarFallback className="text-[9px]">{(item.contributorName ?? "?").slice(0, 1).toUpperCase()}</AvatarFallback></Avatar>
+                  </span>
+                </UserIdentity>
               )}
               {item.kind === "catalog" && (
                 <DropdownMenu>

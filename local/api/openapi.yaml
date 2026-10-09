@@ -3,6 +3,18 @@ info:
   title: Colab Local API
   version: 0.1.0
 paths:
+  /v1/channels/{channelId}/catalog-items:
+    get:
+      operationId: listCatalogItems
+      description: Authorized mixed direct children, ordered and paginated. Catalog childCount counts only direct visible Catalogs, non-archived Canvas and active shared items. Shared items include contributorMemberId, contributorName and contributorAvatarUrl from account identity. Stable item IDs are unchanged.
+      parameters:
+        - {name: channelId, in: path, required: true, schema: {type: string, format: uuid}}
+        - {name: parentId, in: query, schema: {type: string, format: uuid}}
+        - {name: limit, in: query, schema: {type: integer, maximum: 200}}
+        - {name: offset, in: query, schema: {type: integer, minimum: 0}}
+      responses:
+        '200': {description: Mixed children with nullable childCount and contributor metadata}
+        '403': {description: Not authorized}
   /v1/channels/{channelId}/catalog-items/position:
     patch:
       operationId: positionCatalogItem
