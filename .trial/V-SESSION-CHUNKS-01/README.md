@@ -1,5 +1,22 @@
 # Session independent compressed chunks — 2026-10-09
 
+## Production Reader implementation measurement
+
+`reader-production-index.json` records a release-mode, read-only run of the actual
+Core locator/page implementation, not the mechanically extracted experiment.
+Initial 1.75 GB index took 9.974 s; extending it to a frozen 1.79 GB source took
+217 ms. Recent five turns read in 4 ms with 322,178 selected record bytes and exact
+equality to the frozen full projector. The index bundle was 3,334,183 bytes before
+Zstd. No complete reconstructed transcript was created. This single warm-I/O run
+does not measure network latency or RSS. The source grows during this chat;
+freeze both implementation and reference to the same extent before comparing.
+
+Reproduce using `COLAB_TRIAL_SESSION=/absolute/path/to/native.jsonl` and optional
+`COLAB_TRIAL_BASE_EXTENT=1752630485`, then `cargo test --release --manifest-path
+local/Cargo.toml -p colab-local-api native_large_index_measurement --lib --
+--ignored --nocapture`. Only metadata is printed. Base extent must end at a
+complete record boundary in that source generation.
+
 ## Question and scope
 
 Verify whether independently compressed JSONL chunks are worth adopting and preserve the

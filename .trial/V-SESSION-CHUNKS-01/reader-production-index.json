@@ -1,0 +1,17 @@
+{
+  "date": "2026-10-09",
+  "mode": "release, read-only native Codex, warm local IO, single run",
+  "base_extent_bytes": 1752630485,
+  "frozen_extent_bytes": 1786504615,
+  "base_index_build_ms": 9974,
+  "incremental_index_build_ms": 217,
+  "locator_bundle_uncompressed_bytes": 3334183,
+  "tail_turns": 5,
+  "tail_selected_record_bytes": 322178,
+  "tail_page_ms": 4,
+  "full_reference_projection_ms": 1072,
+  "total_turns": 286,
+  "exact_frozen_projection_equality": true,
+  "whole_transcript_reconstruction": false,
+  "network_latency_or_rss_claimed": false
+}
