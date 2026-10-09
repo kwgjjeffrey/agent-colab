@@ -3,6 +3,9 @@
   "unit": "local-core",
   "operations": [],
   "spans": [
+    {"id":"core.assets.register-source","description":"Register an owned source and reuse one publication across Channel references","source":{"path":"local/crates/local-api/src/assets.rs","function":"register"}},
+    {"id":"core.assets.binding","description":"Resolve the authorized asset behind one Channel reference","source":{"path":"local/crates/local-api/src/assets.rs","function":"binding"}},
+    {"id":"core.assets.consolidate-sources","description":"Consolidate proven equal historical local publishers without resurrecting withdrawn references","source":{"path":"local/crates/local-api/src/assets.rs","function":"consolidate_sources"}},
     {
       "id": "core.auth.start-google",
       "description": "core 层 auth 的 start_google 承接点",

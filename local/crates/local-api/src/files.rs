@@ -4,6 +4,7 @@
 //! infrastructure, which keeps Files changes from coupling authentication and Channel handlers.
 
 use super::*;
+use rusqlite::OptionalExtension;
 use axum::body::Body;
 use notify::{RecommendedWatcher, RecursiveMode, Watcher};
 use std::collections::HashSet;
@@ -86,7 +87,7 @@ pub(super) async fn enqueue_job(
     delay_seconds: i64,
 ) -> Result<(), LocalError> {
 colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.files.enqueue-job", async {
-
+    if kind.starts_with("publish_") && !assets::enabled_for_user(state,share_id,user_id).await? { return Ok(()); }
     let dedupe_key = format!("{kind}:{user_id}:{share_id}");
     let store = state.inner.store.lock().await;
     store.execute(
@@ -232,18 +233,27 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
                     Err(_) => { sources.clear(); continue; }
                 };
                 if active_user.as_deref() != Some(&user_id) {
+                    if let Err(error)=assets::consolidate_sources(&state).await {
+                        eprintln!("Account source asset consolidation deferred: {}",error.message);
+                    }
                     active_user = Some(user_id.clone());
                     watched_shares.clear();
                 }
                 let next = {
                     let store = state.inner.store.lock().await;
-                    let mut statement = store.prepare("select share_id,source_path from local_file_sources where user_id=?1")?;
-                    statement.query_map([user_id.clone()], |row| Ok((row.get::<_,String>(0)?,PathBuf::from(row.get::<_,String>(1)?))))?.filter_map(Result::ok).collect::<Vec<_>>()
+                    let mut statement = store.prepare("select share_id,source_path from local_file_sources where user_id=?1 and not exists(select 1 from local_settings where key='asset_stopped:'||?1||':'||share_id)")?;
+                    statement.query_map([user_id.clone()], |row| Ok((row.get::<_,String>(0)?,PathBuf::from(row.get::<_,String>(1)?))))?.filter_map(Result::ok).filter(|(_,path)|path.exists()).collect::<Vec<_>>()
                 };
+                let needed=next.iter().map(|(_,source)|if source.is_dir(){source.clone()}else{source.parent().unwrap_or(source).to_path_buf()}).collect::<HashSet<_>>();
+                for obsolete in watched.difference(&needed).cloned().collect::<Vec<_>>(){let _=watcher.unwatch(&obsolete);watched.remove(&obsolete);}
+                watched_shares.retain(|id|next.iter().any(|(active,_)|active==id));
                 for (share_id, source) in &next {
                     let target = if source.is_dir() { source.clone() } else { source.parent().unwrap_or(source).to_path_buf() };
-                    if watched.insert(target.clone()) {
-                        watcher.watch(&target, RecursiveMode::Recursive)?;
+                    if !watched.contains(&target) {
+                        if let Err(error)=watcher.watch(&target, RecursiveMode::Recursive){
+                            eprintln!("Source watch deferred: {error}");continue;
+                        }
+                        watched.insert(target.clone());
                     }
                     // A startup/account-switch scan closes the gap left while Local Core was not
                     // running (or while another account was active). Unchanged trees are a cheap
@@ -299,20 +309,20 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
         store.execute("insert into file_share_cache(share_id,name,contributor_name,contributor_avatar_url,remote_updated_at) values(?1,?2,?3,?4,?5) on conflict(share_id) do update set name=excluded.name,contributor_name=excluded.contributor_name,contributor_avatar_url=excluded.contributor_avatar_url,remote_updated_at=excluded.remote_updated_at,updated_at=current_timestamp",rusqlite::params![share.id,share.name,share.contributor_name,share.contributor_avatar_url,share.updated_at]).map_err(LocalError::internal)?;
         share.local_path = store
             .query_row(
-                "select source_path from local_file_sources where share_id=?1 and user_id=?2",
+                "select source_path from local_file_sources where share_id=coalesce((select publication_id from local_asset_references where reference_id=?1 and user_id=?2),?1) and user_id=?2",
                 [&share.id, &user_id],
                 |row| row.get(0),
             )
             .or_else(|_| {
                 store.query_row(
-                    "select local_path from file_materializations where share_id=?1 and user_id=?2",
+                    "select local_path from file_materializations where share_id=coalesce((select asset_id from local_asset_references where reference_id=?1 and user_id=?2),?1) and user_id=?2",
                     [&share.id, &user_id],
                     |row| row.get(0),
                 )
             })
             .ok();
         let job: Option<(String, Option<String>)> = store.query_row(
-            "select state,last_error from local_jobs where share_id=?1 and user_id=?2 order by updated_at desc limit 1",
+            "select state,last_error from local_jobs where share_id=coalesce((select publication_id from local_asset_references where reference_id=?1 and user_id=?2),?1) and user_id=?2 order by updated_at desc limit 1",
             [&share.id, &user_id],
             |row| Ok((row.get(0)?, row.get(1)?)),
         ).ok();
@@ -414,7 +424,7 @@ pub(super) async fn get_sync_scope(
     AxumPath(share_id): AxumPath<String>,
 ) -> Result<Json<SourceInspection>, LocalError> {
 colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.files.get-sync-scope", async {
-
+    let share_id=assets::local_id(&state,&share_id).await?;
     let user_id = current_user_id(&state).await?;
     let (source, shadow): (String, String) = {
         let store = state.inner.store.lock().await;
@@ -432,7 +442,7 @@ pub(super) async fn update_sync_scope(
     Json(body): Json<UpdateScopeRequest>,
 ) -> Result<Json<SourceInspection>, LocalError> {
 colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.files.update-sync-scope", async {
-
+    let share_id=assets::local_id(&state,&share_id).await?;
     validate_sync_excludes(&body.sync_excludes)?;
     let user_id = current_user_id(&state).await?;
     let (source, shadow): (String, String) = {
@@ -480,40 +490,31 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
                 .unwrap_or("Shared files")
                 .to_owned()
         });
-    let token = access_token(&state).await?;
-    let response = state
-        .inner
-        .http
-        .post(format!(
-            "{}/v1/channels/{channel_id}/files",
-            state.inner.server_url
-        ))
-        .bearer_auth(&token)
-        .json(&serde_json::json!({"name":name}))
-        .send()
-        .await
-        .map_err(LocalError::internal)?;
-    if !response.status().is_success() {
-        return Err(remote_error(response).await);
-    }
-    let mut share: FileShare = response.json().await.map_err(LocalError::internal)?;
-    let shadow = state
+    let binding = assets::register(&state,&channel_id,"files",&source,&name,None,"shadow-git-v1").await?;
+    let mut share = list_file_shares(State(state.clone()),AxumPath(channel_id.clone())).await?.0
+        .into_iter().find(|share|share.id==binding.reference_id)
+        .ok_or_else(||LocalError::bad_request("Registered Files reference was not returned"))?;
+    let user_id = current_user_id(&state).await?;
+    let existing_shadow: Option<String> = state.inner.store.lock().await.query_row(
+        "select shadow_git_path from local_file_sources where share_id=?1 and user_id=?2",
+        [&binding.publication_id,&user_id],|row|row.get(0)).optional().map_err(LocalError::internal)?;
+    let shadow = existing_shadow.as_ref().map(PathBuf::from).unwrap_or_else(||state
         .inner
         .data_root
         .join("shadows")
-        .join(format!("{}.git", share.id));
+        .join(format!("{}.git", binding.publication_id)));
     init_shadow(&shadow, source_work_tree(&source))?;
-    write_shadow_excludes(&shadow, &body.sync_excludes)?;
+    if existing_shadow.is_none(){write_shadow_excludes(&shadow, &body.sync_excludes)?;}
     {
         let user_id = current_user_id(&state).await?;
         let store = state.inner.store.lock().await;
-        store.execute("insert into local_file_sources(share_id,channel_id,source_path,shadow_git_path,user_id) values(?1,?2,?3,?4,?5)",rusqlite::params![share.id,channel_id,source.to_string_lossy(),shadow.to_string_lossy(),user_id]).map_err(LocalError::internal)?;
+        store.execute("insert into local_file_sources(share_id,channel_id,source_path,shadow_git_path,user_id) values(?1,?2,?3,?4,?5) on conflict(share_id) do nothing",rusqlite::params![binding.publication_id,channel_id,source.to_string_lossy(),shadow.to_string_lossy(),user_id]).map_err(LocalError::internal)?;
     }
     // First registration is still synchronous from the user's perspective, but it goes through
     // the same durable job path as every later publication. A crash after this point leaves a
     // recoverable pending/running row instead of losing the accepted work.
     let user_id = current_user_id(&state).await?;
-    enqueue_job(&state, JOB_PUBLISH, &share.id, &user_id, 0).await?;
+    enqueue_job(&state, JOB_PUBLISH, &binding.publication_id, &user_id, 0).await?;
     // Registration succeeds once the durable job exists. Publishing can outlive one GUI request;
     // the list reports preparing/syncing/failed instead of inventing a second timeout error.
     share.local_path = Some(source.to_string_lossy().into_owned());
@@ -538,13 +539,14 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
     // the correctness boundary and performs a complete Git index scan, so coalescing or watcher
     // overflow cannot silently omit changes.
     let user_id = current_user_id(&state).await?;
-    enqueue_job(&state, JOB_PUBLISH, &share_id, &user_id, 0).await?;
-    wait_for_job(&state, JOB_PUBLISH, &share_id, &user_id).await?;
+    let publication_id=assets::local_id(&state,&share_id).await?;
+    enqueue_job(&state, JOB_PUBLISH, &publication_id, &user_id, 0).await?;
+    wait_for_job(&state, JOB_PUBLISH, &publication_id, &user_id).await?;
     let channel_id = {
         let store = state.inner.store.lock().await;
         store
             .query_row(
-                "select channel_id from local_file_sources where share_id=?1 and user_id=?2",
+                "select channel_id from local_asset_references where reference_id=?1 and user_id=?2 and channel_id<>'' union all select channel_id from local_file_sources where share_id=?1 and user_id=?2 limit 1",
                 [&share_id, &user_id],
                 |row| row.get::<_, String>(0),
             )
@@ -567,7 +569,7 @@ pub(super) async fn retry_file_sync(
     AxumPath(share_id): AxumPath<String>,
 ) -> Result<StatusCode, LocalError> {
 colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.files.retry-file-sync", async {
-
+    let share_id=assets::local_id(&state,&share_id).await?;
     let user_id = current_user_id(&state).await?;
     let kind: String = {
         let store = state.inner.store.lock().await;
@@ -583,6 +585,8 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
 }).await
 }
 async fn publish_source(state: &AppState, share_id: &str) -> Result<(), LocalError> {
+    let _publication_guard=assets::publication_guard(state,"files",share_id).await;
+    if !assets::enabled(state,share_id).await? { return Ok(()); }
 colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.files.publish-source", async {
 
     // Publication protocol:
@@ -847,7 +851,7 @@ async fn cached_materialization(
 ) -> Option<FileShare> {
     let store = state.inner.store.lock().await;
     let (local_path, root_oid): (String, String) = store.query_row(
-        "select local_path,last_root_oid from file_materializations where share_id=?1 and user_id=?2",
+        "select local_path,last_root_oid from file_materializations where share_id=coalesce((select asset_id from local_asset_references where reference_id=?1 and user_id=?2),?1) and user_id=?2",
         [share_id, user_id],
         |row| Ok((row.get(0)?, row.get(1)?)),
     ).ok()?;
@@ -904,11 +908,15 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
     let latest = revisions
         .last()
         .ok_or_else(|| LocalError::bad_request("No file snapshot has been published"))?;
+    let user_id=current_user_id(state).await?;
+    let asset_id=assets::binding(state,share_id).await?.asset_id;
+    let _materialization_guard=assets::publication_guard(state,"materialize_files",&format!("{user_id}:{asset_id}")).await;
     let repo = state
         .inner
         .data_root
         .join("materialized-repos")
-        .join(format!("{share_id}.git"));
+        .join(&user_id)
+        .join(format!("{asset_id}.git"));
     let (display_name, contributor_name): (String, String) = {
         let store = state.inner.store.lock().await;
         store
@@ -919,7 +927,7 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
             )
             .unwrap_or_else(|_| {
                 (
-                    format!("shared-files-{}", &share_id[..8]),
+                    format!("shared-files-{}", &asset_id[..8]),
                     "Channel member".into(),
                 )
             })
@@ -928,14 +936,16 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
         .inner
         .data_root
         .join("materialized")
+        .join(&user_id)
+        .join(&asset_id)
         .join(safe_path_component(&contributor_name))
         .join(safe_path_component(&display_name));
     let previous_target = {
         let store = state.inner.store.lock().await;
         store
             .query_row(
-                "select local_path from file_materializations where share_id=?1",
-                [&share_id],
+                "select local_path from file_materializations where share_id=?1 and user_id=?2",
+                [&asset_id,&user_id],
                 |row| row.get::<_, String>(0),
             )
             .ok()
@@ -960,6 +970,7 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
         }
     }
     for revision in &revisions {
+        if Command::new("git").arg(format!("--git-dir={}",repo.display())).args(["cat-file","-e",&format!("{}^{{commit}}",revision.root_oid)]).output().map_err(LocalError::internal)?.status.success(){continue;}
         let response = state
             .inner
             .http
@@ -1007,7 +1018,7 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
     {
         let user_id = current_user_id(&state).await?;
         let store = state.inner.store.lock().await;
-        store.execute("insert into file_materializations(share_id,local_path,last_root_oid,user_id) values(?1,?2,?3,?4) on conflict(share_id) do update set local_path=excluded.local_path,last_root_oid=excluded.last_root_oid,user_id=excluded.user_id,updated_at=current_timestamp",rusqlite::params![share_id,target.to_string_lossy(),latest.root_oid,user_id]).map_err(LocalError::internal)?;
+        store.execute("insert into file_materializations(share_id,local_path,last_root_oid,user_id) values(?1,?2,?3,?4) on conflict(share_id) do update set local_path=excluded.local_path,last_root_oid=excluded.last_root_oid,user_id=excluded.user_id,updated_at=current_timestamp",rusqlite::params![asset_id,target.to_string_lossy(),latest.root_oid,user_id]).map_err(LocalError::internal)?;
     }
     let mut share = FileShare {
         contributor_member_id: None,
@@ -1038,14 +1049,7 @@ pub(super) async fn withdraw_file_share(
 colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.files.withdraw-file-share", async {
 
     withdraw_remote(&state, &share_id).await?;
-    let user_id = current_user_id(&state).await?;
-    let store = state.inner.store.lock().await;
-    store
-        .execute(
-            "delete from local_file_sources where share_id=?1 and user_id=?2",
-            [&share_id, &user_id],
-        )
-        .map_err(LocalError::internal)?;
+    assets::after_withdraw(&state,&share_id,"files").await?;
     Ok(StatusCode::NO_CONTENT)
 
 }).await
@@ -1168,18 +1172,18 @@ fn resolve_local_file(root: &Path, relative: &str) -> Result<PathBuf, LocalError
 }
 async fn local_file_root(state: &AppState, share_id: &str) -> Result<PathBuf, LocalError> {
 colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.files.local-file-root", async {
-
+    let canonical_id = assets::local_id(state,share_id).await?;
     let user_id = current_user_id(state).await?;
     let store = state.inner.store.lock().await;
     let value: String = store
         .query_row(
             "select source_path from local_file_sources where share_id=?1 and user_id=?2",
-            [share_id, &user_id],
+            [canonical_id.as_str(), &user_id],
             |row| row.get(0),
         )
         .or_else(|_| {
             store.query_row(
-                "select local_path from file_materializations where share_id=?1 and user_id=?2",
+                "select local_path from file_materializations where share_id=coalesce((select asset_id from local_asset_references where reference_id=?1 and user_id=?2),?1) and user_id=?2",
                 [share_id, &user_id],
                 |row| row.get(0),
             )

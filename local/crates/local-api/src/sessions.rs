@@ -88,6 +88,9 @@ pub(super) fn start_session_sync(state: &AppState) {
 // The original share trace is retained only until first successful publication. Later transcript
 // updates are independent background work, not forever children of the original share action.
 async fn sync_initial_source(state: &AppState, id: &str, envelope: Option<String>) -> Result<(), LocalError> {
+    let canonical_id = assets::local_id(state,id).await?;
+    let id = canonical_id.as_str();
+    if !assets::enabled(state,id).await? { return Ok(()); }
     let context=envelope.as_deref().and_then(|raw|serde_json::from_str(raw).ok()).unwrap_or_default();
     let result=colab_observability::resume(&context,sync_source(state,id)).await;
     record_sync_state(state, id, if result.is_ok() { "synced" } else { "failed" }, result.as_ref().err().map(|error| error.message.as_str())).await?;
@@ -140,6 +143,7 @@ async fn record_sync_state(state: &AppState, id: &str, status: &str, error: Opti
 
 /// Reads progress only; polling cannot start, cancel or wait on a publication job.
 pub(super) async fn session_sync_status(State(state): State<AppState>, AxumPath(id): AxumPath<String>) -> Result<Json<Value>, LocalError> {
+    let id = assets::local_id(&state,&id).await?;
     let user = current_user_id(&state).await?;
     let store = state.inner.store.lock().await;
     let source: Option<(String,i64)> = store.query_row("select source_path,last_byte_offset from local_session_sources where share_id=?1 and user_id=?2",rusqlite::params![id,user],|row|Ok((row.get(0)?,row.get(1)?))).optional().map_err(LocalError::internal)?;
@@ -497,34 +501,21 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
                 .to_string_lossy()
                 .into()
         });
-    let token = access_token(&state).await?;
-    let response = state
-        .inner
-        .http
-        .post(format!(
-            "{}/v1/channels/{channel_id}/sessions",
-            state.inner.server_url
-        ))
-        .bearer_auth(token)
-        .json(&json!({"name":name,"sourceAdapter":body.source_adapter}))
-        .send()
-        .await
-        .map_err(LocalError::internal)?;
-    if !response.status().is_success() {
-        return Err(remote_error(response).await);
-    }
-    let share: SessionShare = response.json().await.map_err(LocalError::internal)?;
+    let binding = assets::register(&state, &channel_id, "session", &path, &name, None, &body.source_adapter).await?;
+    let share = list_session_shares(State(state.clone()), AxumPath(channel_id.clone())).await?.0
+        .into_iter().find(|share|share.id==binding.reference_id)
+        .ok_or_else(||LocalError::bad_request("Registered Session reference was not returned"))?;
     let user = current_user_id(&state).await?;
     let trace_context = colab_observability::context_json();
     {
         let store = state.inner.store.lock().await;
-        store.execute("insert into local_session_sources(share_id,channel_id,user_id,source_path,source_adapter,source_thread_id,trace_context) values(?1,?2,?3,?4,?5,?6,?7)",rusqlite::params![share.id,channel_id,user,path.to_string_lossy(),body.source_adapter,path.file_stem().and_then(|x|x.to_str()), if trace_context.is_null(){None}else{Some(trace_context.to_string())}]).map_err(LocalError::internal)?;
+        store.execute("insert into local_session_sources(share_id,channel_id,user_id,source_path,source_adapter,source_thread_id,trace_context) values(?1,?2,?3,?4,?5,?6,?7) on conflict(share_id) do nothing",rusqlite::params![binding.publication_id,channel_id,user,path.to_string_lossy(),body.source_adapter,path.file_stem().and_then(|x|x.to_str()), if trace_context.is_null(){None}else{Some(trace_context.to_string())}]).map_err(LocalError::internal)?;
     }
     // Registration is accepted immediately. Initial publication uses the same background path as
     // later increments so a large existing transcript never makes the GUI guess whether a timed
     // out request actually created the share.
     let sync_state = state.clone();
-    let sync_share_id = share.id.clone();
+    let sync_share_id = binding.publication_id;
     tokio::spawn(async move {
         if let Err(error) = sync_initial_source(&sync_state, &sync_share_id, if trace_context.is_null(){None}else{Some(trace_context.to_string())}).await {
             eprintln!("Initial Session synchronization failed: {}", error.message);
@@ -543,9 +534,10 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
 
     sync_initial_source(&state, &share_id, None).await?;
     let user = current_user_id(&state).await?;
+    let publication_id=assets::local_id(&state,&share_id).await?;
     let local: Option<String> = state.inner.store.lock().await.query_row(
         "select source_path from local_session_sources where share_id=?1 and user_id=?2",
-        rusqlite::params![share_id,user],|row|row.get(0)).optional().map_err(LocalError::internal)?;
+        rusqlite::params![publication_id,user],|row|row.get(0)).optional().map_err(LocalError::internal)?;
     if let Some(path) = local.filter(|path|Path::new(path).is_file()) {
         return Ok(Json(json!({"shareId":share_id,"rawPath":path,"syncState":"synced"})));
     }
@@ -727,6 +719,7 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
         return Err(remote_error(response).await);
     }
     let value: Value = response.json().await.map_err(LocalError::internal)?;
+    let asset_id = assets::binding(state,share_id).await?.asset_id;
     let snapshot = value["snapshot"]["id"]
         .as_str()
         .ok_or_else(|| LocalError::internal("Session has no synchronized snapshot"))?
@@ -736,14 +729,14 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
         .data_root
         .join("sessions")
         .join(&user)
-        .join(share_id);
+        .join(&asset_id);
     fs::create_dir_all(&dir).map_err(LocalError::internal)?;
     let final_path = dir.join(format!("{snapshot}.jsonl"));
     if !final_path.exists() {
         let temporary = final_path.with_extension("jsonl.partial");
         let previous: Option<(String, PathBuf)> = {
             let store = state.inner.store.lock().await;
-            store.query_row("select snapshot_id,raw_path from session_materializations where share_id=?1 and user_id=?2",[share_id,&user],|row|Ok((row.get(0)?,PathBuf::from(row.get::<_,String>(1)?)))).ok()
+            store.query_row("select snapshot_id,raw_path from session_materializations where share_id=?1 and user_id=?2",[&asset_id,&user],|row|Ok((row.get(0)?,PathBuf::from(row.get::<_,String>(1)?)))).ok()
         };
         let segments = value["segments"].as_array().cloned().unwrap_or_default();
         let start_index = previous
@@ -807,7 +800,7 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
         }
     }
     let store = state.inner.store.lock().await;
-    store.execute("insert into session_materializations(share_id,user_id,snapshot_id,raw_path) values(?1,?2,?3,?4) on conflict(share_id,user_id) do update set snapshot_id=excluded.snapshot_id,raw_path=excluded.raw_path,updated_at=current_timestamp",rusqlite::params![share_id,user,snapshot,final_path.to_string_lossy()]).map_err(LocalError::internal)?;
+    store.execute("insert into session_materializations(share_id,user_id,snapshot_id,raw_path) values(?1,?2,?3,?4) on conflict(share_id,user_id) do update set snapshot_id=excluded.snapshot_id,raw_path=excluded.raw_path,updated_at=current_timestamp",rusqlite::params![asset_id,user,snapshot,final_path.to_string_lossy()]).map_err(LocalError::internal)?;
     Ok(final_path.to_string_lossy().into())
 
 }).await
@@ -817,7 +810,7 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
 /// bytes; a background job repairs it. Explicit permission denials never fall back to cache.
 async fn cached_preview(state: &AppState, id: &str, user: &str) -> Result<Option<(String,String,&'static str)>,LocalError> {
     let cached: Option<(String,String)> = state.inner.store.lock().await.query_row(
-        "select raw_path,snapshot_id from session_materializations where share_id=?1 and user_id=?2",
+        "select raw_path,snapshot_id from session_materializations where share_id=coalesce((select asset_id from local_asset_references where reference_id=?1 and user_id=?2),?1) and user_id=?2",
         [id,user],|row|Ok((row.get(0)?,row.get(1)?))).optional().map_err(LocalError::internal)?;
     let Some((path,snapshot)) = cached.filter(|(path,_)|Path::new(path).is_file()) else { return Ok(None); };
     let token = access_token_for_user(state,user).await?;
@@ -851,11 +844,11 @@ pub(super) async fn read_session(
     Json(body): Json<ReadSession>,
 ) -> Result<Json<Value>, LocalError> {
 colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.sessions.read-session", async {
-
+    let source_id = assets::local_id(&state,&share_id).await?;
     let user = current_user_id(&state).await?;
     let source: Option<(String,String)> = state.inner.store.lock().await.query_row(
         "select source_path,source_adapter from local_session_sources where share_id=?1 and user_id=?2",
-        rusqlite::params![share_id,user],|row|Ok((row.get(0)?,row.get(1)?))).optional().map_err(LocalError::internal)?;
+        rusqlite::params![source_id,user],|row|Ok((row.get(0)?,row.get(1)?))).optional().map_err(LocalError::internal)?;
     // Local preview owns a frozen extent, never the uploader's cursor/lock/cache. An issued
     // pagination cursor keeps that view even while source appends and publication proceeds.
     let local_view = if let Some((source, _)) = source.as_ref().filter(|(path,_)|Path::new(path).is_file()) {
@@ -1463,13 +1456,7 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
     if !response.status().is_success() {
         return Err(remote_error(response).await);
     }
-    let store = state.inner.store.lock().await;
-    store
-        .execute(
-            "delete from local_session_sources where share_id=?1",
-            [share_id],
-        )
-        .map_err(LocalError::internal)?;
+    assets::after_withdraw(&state,&share_id,"session").await?;
     Ok(StatusCode::NO_CONTENT)
 
 }).await

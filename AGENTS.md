@@ -20,6 +20,8 @@ The independently released or deployed units are Electron Shell, Desktop GUI res
 
 Session preview and synchronization are independent use cases. Contributor preview reads an account-scoped frozen local extent without awaiting publication; recipient preview reads validated committed snapshots and may refresh an existing cache in the background, never bypassing explicit authorization denial. Progress polling is read-only. Upload streams must validate bounded bytes/digest before snapshot CAS; partial upload files must never become preview data.
 
+Read `docs/shared-assets-design.md` before changing shared-source ownership. One owned canonical source has one asset/publication/cursor; Channel shares are independent stable references with their own Catalog placement and authorization. Asset metadata and Files scope are global. Withdrawing one reference must not delete the source or stop another reference's publication. Last withdrawal stops publishing and retains remote bytes for 24 hours; GC clears durable heads before reclaiming bytes. Reads authorize the requested Channel reference, not the legacy publication Channel. Quick Share remains a separate fixed snapshot.
+
 The release channel has its own promotion identifier, while every client artifact has an independent version read from its owning directory. Never advance Electron Shell merely because Core, GUI, or Skill changed. A single user-facing update operation compares all artifact versions and installs only changed artifacts.
 
 Keep provider-specific release credentials and endpoints in ignored configuration. Checked-in release code may define provider adapters and examples, but must remain usable by an open-source fork with a different artifact store, signer, domain, or deployment host.

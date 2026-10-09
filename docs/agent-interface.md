@@ -1,5 +1,14 @@
 # Agent 脚手架与接口设计
 
+Shared Files/Session/Skill references remain Channel-scoped and stable. The same
+owned source can resolve to one asset through several different reference IDs;
+sharing and withdrawal still operate on the selected Channel reference. Explorer
+and legacy Browser keep their existing protocols; consumers must never substitute
+the opaque publication anchor for the requested reference to bypass membership.
+Core `GET /v1/shares/{reference-id}/asset` returns authorized asset/publication IDs,
+current root/snapshot and active-reference count, not local source paths or other
+Channel membership data. Implementation status: `docs/shared-assets-design.md`.
+
 Channel icon handoff (2026-10-09): `colab-browser update-channel --channel REF
 --icon-file /absolute/icon.png` applies a bounded local PNG/JPEG/WebP (256 KiB
 maximum) using the existing authenticated Local Core/Server update capability.

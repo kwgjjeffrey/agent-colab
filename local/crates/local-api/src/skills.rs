@@ -317,7 +317,7 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
     let store = state.inner.store.lock().await;
     for share in &mut shares {
         store.execute("insert into skill_share_cache(share_id,name,description,contributor_name,contributor_avatar_url,remote_updated_at) values(?1,?2,?3,?4,?5,?6) on conflict(share_id) do update set name=excluded.name,description=excluded.description,contributor_name=excluded.contributor_name,contributor_avatar_url=excluded.contributor_avatar_url,remote_updated_at=excluded.remote_updated_at,updated_at=current_timestamp",rusqlite::params![share.id,share.name,share.description,share.contributor_name,share.contributor_avatar_url,share.updated_at]).map_err(LocalError::internal)?;
-        share.local_path=store.query_row("select source_path from local_skill_sources where share_id=?1 and user_id=?2",[&share.id,&user_id],|row|row.get(0)).or_else(|_|store.query_row("select local_path from skill_materializations where share_id=?1 and user_id=?2",[&share.id,&user_id],|row|row.get(0))).ok();
+        share.local_path=store.query_row("select source_path from local_skill_sources where share_id=coalesce((select publication_id from local_asset_references where reference_id=?1 and user_id=?2),?1) and user_id=?2",[&share.id,&user_id],|row|row.get(0)).or_else(|_|store.query_row("select local_path from skill_materializations where share_id=coalesce((select asset_id from local_asset_references where reference_id=?1 and user_id=?2),?1) and user_id=?2",[&share.id,&user_id],|row|row.get(0))).ok();
     }
     Ok(Json(shares))
 
@@ -366,28 +366,16 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
         .name
         .filter(|v| !v.trim().is_empty())
         .unwrap_or_else(|| metadata.0.clone());
-    let token = access_token(&state).await?;
-    let response = state
-        .inner
-        .http
-        .post(format!(
-            "{}/v1/channels/{channel_id}/skills",
-            state.inner.server_url
-        ))
-        .bearer_auth(token)
-        .json(&serde_json::json!({"name":name,"description":metadata.1}))
-        .send()
-        .await
-        .map_err(LocalError::internal)?;
-    if !response.status().is_success() {
-        return Err(remote_error(response).await);
-    }
-    let mut share: SkillShare = response.json().await.map_err(LocalError::internal)?;
+    let source = fs::canonicalize(source).map_err(LocalError::internal)?;
+    let binding=assets::register(&state,&channel_id,"skill",&source,&name,metadata.1.as_deref(),"shadow-git-v1").await?;
+    let mut share=list_skill_shares(State(state.clone()),AxumPath(channel_id.clone())).await?.0
+        .into_iter().find(|share|share.id==binding.reference_id)
+        .ok_or_else(||LocalError::bad_request("Registered Skill reference was not returned"))?;
     let shadow = state
         .inner
         .data_root
         .join("skill-shadows")
-        .join(format!("{}.git", share.id));
+        .join(format!("{}.git", binding.publication_id));
     files::init_shadow(&shadow, &source)?;
     let user_id = current_user_id(&state).await?;
     let source_id = stable_source_id(&source);
@@ -396,10 +384,10 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
             directory_fingerprint(&source).map_err(LocalError::internal)?;
         let store = state.inner.store.lock().await;
         store.execute("insert into local_skill_catalog(source_id,source_path,name,description,discovered_targets,last_changed_at,content_fingerprint) values(?1,?2,?3,?4,'[]',?5,?6) on conflict(source_path) do update set name=excluded.name,description=excluded.description,last_changed_at=excluded.last_changed_at,content_fingerprint=excluded.content_fingerprint",rusqlite::params![source_id,source.to_string_lossy(),metadata.0,metadata.1,last_changed,fingerprint]).map_err(LocalError::internal)?;
-        store.execute("insert into local_skill_sources(share_id,channel_id,user_id,source_id,source_path,shadow_git_path) values(?1,?2,?3,?4,?5,?6)",rusqlite::params![share.id,channel_id,user_id,source_id,source.to_string_lossy(),shadow.to_string_lossy()]).map_err(LocalError::internal)?;
+        store.execute("insert into local_skill_sources(share_id,channel_id,user_id,source_id,source_path,shadow_git_path) values(?1,?2,?3,?4,?5,?6) on conflict(share_id) do nothing",rusqlite::params![binding.publication_id,channel_id,user_id,source_id,source.to_string_lossy(),shadow.to_string_lossy()]).map_err(LocalError::internal)?;
     }
-    files::enqueue_job(&state, JOB_PUBLISH, &share.id, &user_id, 0).await?;
-    files::wait_for_job(&state, JOB_PUBLISH, &share.id, &user_id).await?;
+    files::enqueue_job(&state, JOB_PUBLISH, &binding.publication_id, &user_id, 0).await?;
+    files::wait_for_job(&state, JOB_PUBLISH, &binding.publication_id, &user_id).await?;
     share.local_path = Some(source.to_string_lossy().into_owned());
     Ok((StatusCode::CREATED, Json(share)))
 
@@ -407,6 +395,8 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
 }
 
 pub(super) async fn publish_source(state: &AppState, share_id: &str) -> Result<(), LocalError> {
+    let _publication_guard=assets::publication_guard(state,"skill",share_id).await;
+    if !assets::enabled(state,share_id).await? { return Ok(()); }
 colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.skills.publish-source", async {
 
     let user_id = current_user_id(state).await?;
@@ -575,6 +565,9 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
         return Err(remote_error(response).await);
     }
     let revisions: Vec<Revision> = response.json().await.map_err(LocalError::internal)?;
+    let user_id=current_user_id(state).await?;
+    let asset_id=assets::binding(state,share_id).await?.asset_id;
+    let _materialization_guard=assets::publication_guard(state,"materialize_skill",&format!("{user_id}:{asset_id}")).await;
     let latest = revisions
         .last()
         .ok_or_else(|| LocalError::bad_request("No Skill snapshot has been published"))?;
@@ -582,7 +575,8 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
         .inner
         .data_root
         .join("skill-materialized-repos")
-        .join(format!("{share_id}.git"));
+        .join(&user_id)
+        .join(format!("{asset_id}.git"));
     if !repo.exists() {
         fs::create_dir_all(repo.parent().unwrap()).map_err(LocalError::internal)?;
         let output = Command::new("git")
@@ -596,6 +590,7 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
         }
     }
     for revision in &revisions {
+        if Command::new("git").arg(format!("--git-dir={}",repo.display())).args(["cat-file","-e",&format!("{}^{{commit}}",revision.root_oid)]).output().map_err(LocalError::internal)?.status.success(){continue;}
         let response = state
             .inner
             .http
@@ -645,6 +640,8 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
         .inner
         .data_root
         .join("skills")
+        .join(&user_id)
+        .join(&asset_id)
         .join(files::safe_path_component(&contributor))
         .join(files::safe_path_component(&name));
     fs::create_dir_all(&target).map_err(LocalError::internal)?;
@@ -656,7 +653,7 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
     let user_id = current_user_id(state).await?;
     {
         let store = state.inner.store.lock().await;
-        store.execute("insert into skill_materializations(share_id,user_id,local_path,last_root_oid) values(?1,?2,?3,?4) on conflict(share_id,user_id) do update set local_path=excluded.local_path,last_root_oid=excluded.last_root_oid,updated_at=current_timestamp",rusqlite::params![share_id,user_id,target.to_string_lossy(),latest.root_oid]).map_err(LocalError::internal)?;
+        store.execute("insert into skill_materializations(share_id,user_id,local_path,last_root_oid) values(?1,?2,?3,?4) on conflict(share_id,user_id) do update set local_path=excluded.local_path,last_root_oid=excluded.last_root_oid,updated_at=current_timestamp",rusqlite::params![asset_id,user_id,target.to_string_lossy(),latest.root_oid]).map_err(LocalError::internal)?;
     }
     materialized_share(state, share_id, &user_id).await
 
@@ -671,7 +668,7 @@ async fn materialized_share(
 colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.skills.materialized-share", async {
 
     let store = state.inner.store.lock().await;
-    let (local_path,root):(String,String)=store.query_row("select local_path,last_root_oid from skill_materializations where share_id=?1 and user_id=?2",[share_id,user_id],|row|Ok((row.get(0)?,row.get(1)?))).map_err(LocalError::internal)?;
+    let (local_path,root):(String,String)=store.query_row("select local_path,last_root_oid from skill_materializations where share_id=coalesce((select asset_id from local_asset_references where reference_id=?1 and user_id=?2),?1) and user_id=?2",[share_id,user_id],|row|Ok((row.get(0)?,row.get(1)?))).map_err(LocalError::internal)?;
     let (name,description,contributor,avatar,updated):(String,Option<String>,String,Option<String>,String)=store.query_row("select name,description,contributor_name,contributor_avatar_url,remote_updated_at from skill_share_cache where share_id=?1",[share_id],|row|Ok((row.get(0)?,row.get(1)?,row.get(2)?,row.get(3)?,row.get(4)?))).map_err(LocalError::internal)?;
     Ok(SkillShare {
         id: share_id.into(),
@@ -701,7 +698,7 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
     let store = state.inner.store.lock().await;
     let mut result = Vec::new();
     for target in ["codex", "claude", "myflicker"] {
-        let receipt:Option<(String,String,String)>=store.query_row("select installed_path,installed_root_oid,content_hash from skill_installations where share_id=?1 and user_id=?2 and target_agent=?3",[&share_id,&user_id,target],|row|Ok((row.get(0)?,row.get(1)?,row.get(2)?))).ok();
+        let receipt:Option<(String,String,String)>=store.query_row("select installed_path,installed_root_oid,content_hash from skill_installations where share_id=coalesce((select asset_id from local_asset_references where reference_id=?1 and user_id=?2),?1) and user_id=?2 and target_agent=?3",[&share_id,&user_id,target],|row|Ok((row.get(0)?,row.get(1)?,row.get(2)?))).ok();
         let item = match receipt {
             None => Installation {
                 target_agent: target.into(),
@@ -749,7 +746,7 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
     files::wait_for_job(&state, JOB_MATERIALIZE, &share_id, &user_id).await?;
     let (source, current_root) = {
         let store = state.inner.store.lock().await;
-        let (path,oid):(String,String)=store.query_row("select local_path,last_root_oid from skill_materializations where share_id=?1 and user_id=?2",[&share_id,&user_id],|row|Ok((row.get(0)?,row.get(1)?))).map_err(LocalError::internal)?;
+        let (path,oid):(String,String)=store.query_row("select local_path,last_root_oid from skill_materializations where share_id=coalesce((select asset_id from local_asset_references where reference_id=?1 and user_id=?2),?1) and user_id=?2",[&share_id,&user_id],|row|Ok((row.get(0)?,row.get(1)?))).map_err(LocalError::internal)?;
         (PathBuf::from(path), oid)
     };
     // A Shared Item's display name is user-facing and may differ from the package identity.
@@ -760,7 +757,7 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
     let destination = root.join(files::safe_path_component(&name));
     let prior = {
         let store = state.inner.store.lock().await;
-        store.query_row("select content_hash from skill_installations where share_id=?1 and user_id=?2 and target_agent=?3",[&share_id,&user_id,&target],|row|row.get::<_,String>(0)).ok()
+        store.query_row("select content_hash from skill_installations where share_id=coalesce((select asset_id from local_asset_references where reference_id=?1 and user_id=?2),?1) and user_id=?2 and target_agent=?3",[&share_id,&user_id,&target],|row|row.get::<_,String>(0)).ok()
     };
     if destination.exists() {
         match prior {
@@ -776,7 +773,7 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
     let hash = directory_hash(&destination).map_err(LocalError::internal)?;
     {
         let store = state.inner.store.lock().await;
-        store.execute("insert into skill_installations(share_id,user_id,target_agent,installed_path,installed_root_oid,content_hash) values(?1,?2,?3,?4,?5,?6) on conflict(share_id,user_id,target_agent) do update set installed_path=excluded.installed_path,installed_root_oid=excluded.installed_root_oid,content_hash=excluded.content_hash,installed_at=current_timestamp",rusqlite::params![share_id,user_id,target,destination.to_string_lossy(),current_root,hash]).map_err(LocalError::internal)?;
+        store.execute("insert into skill_installations(share_id,user_id,target_agent,installed_path,installed_root_oid,content_hash) values(coalesce((select asset_id from local_asset_references where reference_id=?1 and user_id=?2),?1),?2,?3,?4,?5,?6) on conflict(share_id,user_id,target_agent) do update set installed_path=excluded.installed_path,installed_root_oid=excluded.installed_root_oid,content_hash=excluded.content_hash,installed_at=current_timestamp",rusqlite::params![share_id,user_id,target,destination.to_string_lossy(),current_root,hash]).map_err(LocalError::internal)?;
     }
     Ok(Json(Installation {
         target_agent: target,
@@ -799,7 +796,7 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
     let user_id = current_user_id(&state).await?;
     let (path, expected): (String, String) = {
         let store = state.inner.store.lock().await;
-        store.query_row("select installed_path,content_hash from skill_installations where share_id=?1 and user_id=?2 and target_agent=?3",[&share_id,&user_id,&target],|row|Ok((row.get(0)?,row.get(1)?))).map_err(|_|LocalError::bad_request("This Skill is not installed by Colab"))?
+        store.query_row("select installed_path,content_hash from skill_installations where share_id=coalesce((select asset_id from local_asset_references where reference_id=?1 and user_id=?2),?1) and user_id=?2 and target_agent=?3",[&share_id,&user_id,&target],|row|Ok((row.get(0)?,row.get(1)?))).map_err(|_|LocalError::bad_request("This Skill is not installed by Colab"))?
     };
     let path = PathBuf::from(path);
     if path.exists() && directory_hash(&path).map_err(LocalError::internal)? != expected {
@@ -812,7 +809,7 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
     }
     {
         let store = state.inner.store.lock().await;
-        store.execute("delete from skill_installations where share_id=?1 and user_id=?2 and target_agent=?3",[&share_id,&user_id,&target]).map_err(LocalError::internal)?;
+        store.execute("delete from skill_installations where share_id=coalesce((select asset_id from local_asset_references where reference_id=?1 and user_id=?2),?1) and user_id=?2 and target_agent=?3",[&share_id,&user_id,&target]).map_err(LocalError::internal)?;
     }
     Ok(StatusCode::NO_CONTENT)
 
@@ -837,14 +834,7 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
     if !response.status().is_success() {
         return Err(remote_error(response).await);
     }
-    let user_id = current_user_id(&state).await?;
-    let store = state.inner.store.lock().await;
-    store
-        .execute(
-            "delete from local_skill_sources where share_id=?1 and user_id=?2",
-            [&share_id, &user_id],
-        )
-        .map_err(LocalError::internal)?;
+    assets::after_withdraw(&state,&share_id,"skill").await?;
     Ok(StatusCode::NO_CONTENT)
 
 }).await
@@ -861,7 +851,7 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
         let store = state.inner.store.lock().await;
         store
             .query_row(
-                "select last_root_oid from skill_materializations where share_id=?1 and user_id=?2",
+                "select last_root_oid from skill_materializations where share_id=coalesce((select asset_id from local_asset_references where reference_id=?1 and user_id=?2),?1) and user_id=?2",
                 [share_id, &user_id],
                 |row| row.get(0),
             )

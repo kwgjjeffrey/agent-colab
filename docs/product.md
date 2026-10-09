@@ -1,5 +1,15 @@
 # Colab 产品定义草案
 
+## Source-owned sharing (2026-10-09)
+
+The same owned local Session, Files source or Skill is one asset even when shared
+into several Channels. Its name, description, current content and Files scope
+are global; each Channel independently controls membership, Catalog placement,
+ordering and withdrawal. Removing one placement does not remove the other ones.
+The final withdrawal stops publication and retains remote content for 24 hours;
+local source files are never deleted. Quick Share remains a fixed snapshot.
+Implementation/release evidence: `docs/shared-assets-design.md`.
+
 ## 2026-10-08 Catalog workspace (supersedes type-tab navigation below)
 
 Channel identity, members and Quick Share remain in the persistent header.

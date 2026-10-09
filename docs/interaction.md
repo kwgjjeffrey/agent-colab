@@ -1,5 +1,12 @@
 # Colab 交互设计
 
+Sharing the same local source again adds a Channel reference, not a second
+uploader. Repeating the action in the same Channel returns its existing item.
+Second-reference registration must not wait for the first upload or overwrite
+Files scope with selection defaults. Preview/progress reflect the shared asset;
+withdrawal acts only on the selected Channel reference. See
+`docs/shared-assets-design.md` for current implementation acceptance.
+
 Channel Icon (2026-10-09): Upload image, Generate icon from lib and Generate icon
 via agent use one horizontal row (wrap only on small viewports). Via agent opens
 the existing prompt Dialog immediately, with optional design request and copy/open

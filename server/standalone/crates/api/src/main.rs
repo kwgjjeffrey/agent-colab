@@ -21,6 +21,7 @@ use tower_http::{
 
 mod blobs;
 mod session_upload;
+mod assets;
 mod canvas;
 mod catalog;
 mod observability;
@@ -258,6 +259,8 @@ fn router(state: AppState) -> Router {
             get(list_session_segments),
         )
         .route("/v1/sessions/{share_id}", delete(withdraw_session_share))
+        .route("/v1/channels/{channel_id}/assets",post(assets::register))
+        .route("/v1/shares/{share_id}/asset",get(assets::binding))
         .route(
             "/v1/session-segments/{segment_id}/content",
             get(download_session_segment),

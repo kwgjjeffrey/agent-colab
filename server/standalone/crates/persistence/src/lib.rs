@@ -22,6 +22,8 @@ fn unix_time_after(seconds: i64) -> i64 {
 
 mod canvas;
 mod catalog;
+mod assets;
+pub use assets::{RegisterAsset,AssetBinding};
 pub use catalog::CatalogItem;
 mod account_profile;
 pub use account_profile::AccountProfile;
@@ -746,11 +748,11 @@ let rows=sqlx::query_as::<_,FileShare>("select fs.id,fs.channel_id,fs.name,fs.co
         user_id: Uuid,
         share_id: Uuid,
     ) -> anyhow::Result<Option<Vec<FileRevision>>> {
-        let allowed:bool=sqlx::query_scalar("select exists(select 1 from channel_shares fs join channel_members cm on cm.channel_id=fs.channel_id join organization_members om on om.id=cm.organization_member_id where fs.id=$1 and fs.kind='files' and om.user_id=$2 and fs.state='active')").bind(share_id).bind(user_id).fetch_one(&self.pool).await?;
+        let allowed=self.asset_can_read(user_id,share_id,"files").await?;
         if !allowed {
             return Ok(None);
         };
-        Ok(Some(sqlx::query_as::<_,FileRevision>("select id,share_id,root_oid,parent_root_oid,byte_size,created_at::text created_at from file_revisions where share_id=$1 order by created_at").bind(share_id).fetch_all(&self.pool).await?))
+        Ok(Some(sqlx::query_as::<_,FileRevision>("select id,share_id,root_oid,parent_root_oid,byte_size,created_at::text created_at from file_revisions where share_id=(select a.publication_share_id from channel_shares s join shared_assets a on a.id=s.asset_id where s.id=$1) order by created_at").bind(share_id).fetch_all(&self.pool).await?))
     }
 
     pub async fn file_revision_blob_key(
@@ -758,7 +760,7 @@ let rows=sqlx::query_as::<_,FileShare>("select fs.id,fs.channel_id,fs.name,fs.co
         user_id: Uuid,
         revision_id: Uuid,
     ) -> anyhow::Result<Option<String>> {
-        sqlx::query_scalar("select fr.blob_key from file_revisions fr join channel_shares fs on fs.id=fr.share_id join channel_members cm on cm.channel_id=fs.channel_id join organization_members om on om.id=cm.organization_member_id where fr.id=$1 and fs.kind='files' and om.user_id=$2 and fs.state='active'").bind(revision_id).bind(user_id).fetch_optional(&self.pool).await.map_err(Into::into)
+        self.git_revision_blob_key(user_id,revision_id,"files").await
     }
 
     pub async fn withdraw_file_share(&self, user_id: Uuid, share_id: Uuid) -> anyhow::Result<bool> {
@@ -849,6 +851,7 @@ let rows=sqlx::query_as::<_,FileShare>("select fs.id,fs.channel_id,fs.name,fs.co
         blob_key: &str,
         byte_size: i64,
     ) -> anyhow::Result<Option<FileRevision>> {
+        let Some(share_id)=self.asset_publication(user_id,share_id,kind).await? else{return Ok(None)};
         let mut tx = self.pool.begin().await?;
         // Serialize quota accounting per user. Without the advisory lock, concurrent uploads can
         // both observe spare capacity and exceed the limit after committing.
@@ -856,19 +859,19 @@ let rows=sqlx::query_as::<_,FileShare>("select fs.id,fs.channel_id,fs.name,fs.co
             .bind(user_id)
             .execute(&mut *tx)
             .await?;
-        let allowed:bool=sqlx::query_scalar("select exists(select 1 from channel_shares s join organization_members om on om.id=s.contributor_member_id where s.id=$1 and s.kind=$2 and om.user_id=$3 and s.state='active' and s.current_root_oid is not distinct from $4)").bind(share_id).bind(kind).bind(user_id).bind(parent_root_oid).fetch_one(&mut *tx).await?;
-        if !allowed {
+        let allowed:Option<Uuid>=sqlx::query_scalar("select a.id from shared_assets a where a.publication_share_id=$1 and a.kind=$2 and a.owner_user_id=$3 and a.current_root_oid is not distinct from $4 and exists(select 1 from channel_shares s where s.asset_id=a.id and s.state='active') for update").bind(share_id).bind(kind).bind(user_id).bind(parent_root_oid).fetch_optional(&mut *tx).await?;
+        if allowed.is_none() {
             return Ok(None);
         }
         const USER_GIT_QUOTA_BYTES: i64 = 2 * 1024 * 1024 * 1024;
-        let used: i64 = sqlx::query_scalar("select coalesce(sum(r.byte_size),0)::bigint from file_revisions r join channel_shares s on s.id=r.share_id join organization_members om on om.id=s.contributor_member_id where om.user_id=$1 and s.state='active' and s.kind in ('files','skill')")
+        let used: i64 = sqlx::query_scalar("select coalesce(sum(r.byte_size),0)::bigint from file_revisions r join shared_assets a on a.publication_share_id=r.share_id where a.owner_user_id=$1 and a.kind in ('files','skill') and (a.retained_until is null or a.retained_until>now())")
             .bind(user_id).fetch_one(&mut *tx).await?;
         if byte_size < 0 || used.saturating_add(byte_size) > USER_GIT_QUOTA_BYTES {
             anyhow::bail!("storage quota exceeded");
         }
         let id = Uuid::new_v4();
         let revision=sqlx::query_as::<_,FileRevision>("insert into file_revisions(id,share_id,root_oid,parent_root_oid,blob_key,byte_size) values($1,$2,$3,$4,$5,$6) returning id,share_id,root_oid,parent_root_oid,byte_size,created_at::text created_at").bind(id).bind(share_id).bind(root_oid).bind(parent_root_oid).bind(blob_key).bind(byte_size).fetch_one(&mut *tx).await?;
-        sqlx::query("update channel_shares set current_root_oid=$2,updated_at=now() where id=$1 and kind=$3").bind(share_id).bind(root_oid).bind(kind).execute(&mut *tx).await?;
+        sqlx::query("update shared_assets set current_root_oid=$2,updated_at=now() where publication_share_id=$1 and kind=$3").bind(share_id).bind(root_oid).bind(kind).execute(&mut *tx).await?;
         tx.commit().await?;
         Ok(Some(revision))
     }
@@ -877,7 +880,7 @@ let rows=sqlx::query_as::<_,FileShare>("select fs.id,fs.channel_id,fs.name,fs.co
     /// shares and expired/revoked Quick Shares are intentionally absent and become collectible.
     pub async fn referenced_blob_keys(&self) -> anyhow::Result<Vec<String>> {
         sqlx::query_scalar(
-            "select r.blob_key from file_revisions r join channel_shares s on s.id=r.share_id where s.state='active' and s.kind in ('files','skill') union select sg.blob_key from session_segments sg join session_snapshots ss on ss.id=sg.snapshot_id join channel_shares s on s.id=ss.share_id where s.state='active' and s.kind='session' union select qi.blob_key from quick_transfer_items qi join quick_transfers qt on qt.id=qi.transfer_id where qi.blob_key is not null and qt.state in ('uploading','ready') and qt.expires_at>now()"
+            "select r.blob_key from file_revisions r join shared_assets a on a.publication_share_id=r.share_id where a.retained_until is null or a.retained_until>now() union select sg.blob_key from session_segments sg join session_snapshots ss on ss.id=sg.snapshot_id join shared_assets a on a.publication_share_id=ss.share_id where a.retained_until is null or a.retained_until>now() union select qi.blob_key from quick_transfer_items qi join quick_transfers qt on qt.id=qi.transfer_id where qi.blob_key is not null and qt.state in ('uploading','ready') and qt.expires_at>now()"
         ).fetch_all(&self.pool).await.map_err(Into::into)
     }
 
@@ -887,11 +890,11 @@ let rows=sqlx::query_as::<_,FileShare>("select fs.id,fs.channel_id,fs.name,fs.co
         share_id: Uuid,
         kind: &str,
     ) -> anyhow::Result<Option<Vec<FileRevision>>> {
-        let allowed:bool=sqlx::query_scalar("select exists(select 1 from channel_shares s join channel_members cm on cm.channel_id=s.channel_id join organization_members om on om.id=cm.organization_member_id where s.id=$1 and s.kind=$2 and om.user_id=$3 and s.state='active')").bind(share_id).bind(kind).bind(user_id).fetch_one(&self.pool).await?;
+        let allowed=self.asset_can_read(user_id,share_id,kind).await?;
         if !allowed {
             return Ok(None);
         }
-        Ok(Some(sqlx::query_as("select id,share_id,root_oid,parent_root_oid,byte_size,created_at::text created_at from file_revisions where share_id=$1 order by created_at").bind(share_id).fetch_all(&self.pool).await?))
+        Ok(Some(sqlx::query_as("select id,share_id,root_oid,parent_root_oid,byte_size,created_at::text created_at from file_revisions where share_id=(select a.publication_share_id from channel_shares s join shared_assets a on a.id=s.asset_id where s.id=$1) order by created_at").bind(share_id).fetch_all(&self.pool).await?))
     }
 
     async fn git_revision_blob_key(
@@ -900,7 +903,7 @@ let rows=sqlx::query_as::<_,FileShare>("select fs.id,fs.channel_id,fs.name,fs.co
         revision_id: Uuid,
         kind: &str,
     ) -> anyhow::Result<Option<String>> {
-        sqlx::query_scalar("select r.blob_key from file_revisions r join channel_shares s on s.id=r.share_id join channel_members cm on cm.channel_id=s.channel_id join organization_members om on om.id=cm.organization_member_id where r.id=$1 and s.kind=$2 and om.user_id=$3 and s.state='active'").bind(revision_id).bind(kind).bind(user_id).fetch_optional(&self.pool).await.map_err(Into::into)
+        sqlx::query_scalar("select r.blob_key from file_revisions r join shared_assets a on a.publication_share_id=r.share_id where r.id=$1 and a.kind=$2 and exists(select 1 from channel_shares s join channel_members cm on cm.channel_id=s.channel_id join organization_members om on om.id=cm.organization_member_id where s.asset_id=a.id and s.state='active' and om.user_id=$3)").bind(revision_id).bind(kind).bind(user_id).fetch_optional(&self.pool).await.map_err(Into::into)
     }
 
     async fn withdraw_git_share(
@@ -949,9 +952,10 @@ let rows=sqlx::query_as::<_,FileShare>("select fs.id,fs.channel_id,fs.name,fs.co
         digest: &str,
         byte_size: i64,
     ) -> anyhow::Result<Option<(SessionSnapshot, SessionSegment)>> {
+        let Some(share_id)=self.asset_publication(user_id,share_id,"session").await? else{return Ok(None)};
         let mut tx = self.pool.begin().await?;
-        let allowed:bool=sqlx::query_scalar("select exists(select 1 from channel_shares s join organization_members om on om.id=s.contributor_member_id where s.id=$1 and s.kind='session' and om.user_id=$2 and s.state='active' and s.current_snapshot_id is not distinct from $3)").bind(share_id).bind(user_id).bind(parent).fetch_one(&mut *tx).await?;
-        if !allowed {
+        let allowed:Option<Uuid>=sqlx::query_scalar("select a.id from shared_assets a where a.publication_share_id=$1 and a.kind='session' and a.owner_user_id=$2 and a.current_snapshot_id is not distinct from $3 and exists(select 1 from channel_shares s where s.asset_id=a.id and s.state='active') for update").bind(share_id).bind(user_id).bind(parent).fetch_optional(&mut *tx).await?;
+        if allowed.is_none() {
             return Ok(None);
         };
         let snapshot_id = Uuid::new_v4();
@@ -960,7 +964,7 @@ let rows=sqlx::query_as::<_,FileShare>("select fs.id,fs.channel_id,fs.name,fs.co
         let snapshot:SessionSnapshot=sqlx::query_as("insert into session_snapshots(id,share_id,parent_snapshot_id,source_cursor) values($1,$2,$3,$4) returning id,share_id,parent_snapshot_id,source_cursor,created_at::text created_at").bind(snapshot_id).bind(share_id).bind(snapshot_parent).bind(source_cursor).fetch_one(&mut *tx).await?;
         let segment:SessionSegment=sqlx::query_as("insert into session_segments(id,snapshot_id,position,blob_key,digest,byte_size) values($1,$2,0,$3,$4,$5) returning id,snapshot_id,position,digest,byte_size,created_at::text created_at").bind(segment_id).bind(snapshot_id).bind(blob_key).bind(digest).bind(byte_size).fetch_one(&mut *tx).await?;
         sqlx::query(
-            "update channel_shares set current_snapshot_id=$2,updated_at=now() where id=$1",
+            "update shared_assets set current_snapshot_id=$2,updated_at=now() where publication_share_id=$1",
         )
         .bind(share_id)
         .bind(snapshot_id)
@@ -975,7 +979,7 @@ let rows=sqlx::query_as::<_,FileShare>("select fs.id,fs.channel_id,fs.name,fs.co
         user_id: Uuid,
         share_id: Uuid,
     ) -> anyhow::Result<Option<Vec<(SessionSnapshot, SessionSegment)>>> {
-        let allowed:bool=sqlx::query_scalar("select exists(select 1 from channel_shares s join channel_members cm on cm.channel_id=s.channel_id join organization_members om on om.id=cm.organization_member_id where s.id=$1 and s.kind='session' and om.user_id=$2 and s.state='active')").bind(share_id).bind(user_id).fetch_one(&self.pool).await?;
+        let allowed=self.asset_can_read(user_id,share_id,"session").await?;
         if !allowed {
             return Ok(None);
         };
@@ -1010,7 +1014,7 @@ let rows=sqlx::query_as::<_,FileShare>("select fs.id,fs.channel_id,fs.name,fs.co
         user_id: Uuid,
         segment_id: Uuid,
     ) -> anyhow::Result<Option<String>> {
-        sqlx::query_scalar("select sg.blob_key from session_segments sg join session_snapshots ss on ss.id=sg.snapshot_id join channel_shares s on s.id=ss.share_id join channel_members cm on cm.channel_id=s.channel_id join organization_members om on om.id=cm.organization_member_id where sg.id=$1 and om.user_id=$2 and s.state='active'").bind(segment_id).bind(user_id).fetch_optional(&self.pool).await.map_err(Into::into)
+        sqlx::query_scalar("select sg.blob_key from session_segments sg join session_snapshots ss on ss.id=sg.snapshot_id join shared_assets a on a.publication_share_id=ss.share_id where sg.id=$1 and exists(select 1 from channel_shares s join channel_members cm on cm.channel_id=s.channel_id join organization_members om on om.id=cm.organization_member_id where s.asset_id=a.id and om.user_id=$2 and s.state='active')").bind(segment_id).bind(user_id).fetch_optional(&self.pool).await.map_err(Into::into)
     }
 
     pub async fn withdraw_session_share(

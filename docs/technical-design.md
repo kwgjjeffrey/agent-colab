@@ -1,5 +1,14 @@
 # Colab 技术设计
 
+Source-owned assets use additive migration 0042. `shared_assets` owns global
+metadata/current head/retention; `channel_shares.asset_id` owns stable authorized
+Channel references. Existing revision foreign keys retain an opaque publication
+anchor. Core hashes account/device/canonical source/adapter identity, consolidates
+only proven source matches and keeps one source/cursor/job. Revision reads check
+the requested reference; byte reachability and quota use assets, not the original
+Channel. Last-reference GC clears heads/revision metadata before removing bytes.
+See `docs/shared-assets-design.md` for migration and verified rollout status.
+
 Channel icon Agent upload (2026-10-09): the Skill's optional `--icon-file` reads
 a bounded regular local PNG/JPEG/WebP, MIME-sniffs raster headers and encodes a
 data URI for the existing authenticated Channel PATCH. It does not perform image

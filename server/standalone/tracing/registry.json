@@ -3,6 +3,8 @@
   "unit": "server",
   "operations": [],
   "spans": [
+    {"id":"server.assets.register","description":"Accept an authorized Channel reference to one source-owned asset","source":{"path":"server/standalone/crates/api/src/assets.rs","function":"register"}},
+    {"id":"server.assets.binding","description":"Return an authorized source asset binding","source":{"path":"server/standalone/crates/api/src/assets.rs","function":"binding"}},
     {
       "id": "server.blobs.write-bounded",
       "description": "server 层 blobs 的 write_bounded 承接点",

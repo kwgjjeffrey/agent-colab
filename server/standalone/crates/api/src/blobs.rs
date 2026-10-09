@@ -131,7 +131,7 @@ async fn collect_orphans(
     root: &Path,
 ) -> anyhow::Result<()> {
 colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.blobs.collect-orphans", async {
-
+    database.reclaim_expired_assets().await?;
     let referenced: HashSet<String> = database.referenced_blob_keys().await?.into_iter().collect();
     let cutoff = std::time::SystemTime::now() - Duration::from_secs(60 * 60);
     let mut prefixes = match tokio::fs::read_dir(root).await {
