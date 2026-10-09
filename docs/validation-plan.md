@@ -948,6 +948,12 @@ Compact Channel E2E Run 20261008T083723Z-1179256b first round exercised both dia
 
 ## Home action guidance — 2026-10-09
 
+## Canvas rename handoff — 2026-10-09
+
+- 123 GUI unit tests and production build passed. Run 20261009T040252Z-328e51b6 retains an initial obsolete creation-dialog selector failure and a later preflight timeout. The Canvas creation helper now follows the real inline-name interaction; its exact leftover Untitled fixture was archived after confirming its creation timestamp.
+- Round 20261009T040625Z-d410b84c passed 18 real assertions: sidebar rename without navigating away, current prompt/dialog title, no initial-title residue, stable document reference, successful actual colab-canvas content read, a second rename while dialog stays open, previously issued reference still readable, and owned document archive.
+- Uses real Core 99 and Server. No model execution or latency-budget claim. GUI 137 publication acceptance follows separately.
+
 - `desktop/ui`: production build passed; Vitest 45 files / 123 tests passed.
 - New tests verify all seven actions in order, dispatch of the five creation kinds, primary Call my Agent styling, installed Skill / exact Channel prompt targeting, and Files configuration opening without invoking a chooser. Chooser cancellation retains configuration.
 - Read-only GUI/Core acceptance passed in Run 20261009T035505Z-9762f851: seven ordered vertically aligned actions, installed Skill/exact Channel prompt, successful real explorer read, pre-choice Files configuration and Agent prompt. Screenshots are retained in that Run. This does not claim an Agent model run or a new Files synchronization mutation; native chooser cancellation is separately unit-tested. The ambient localhost:5199 tab shows the website, so acceptance instead used the independently authenticated owned Core 99 client.

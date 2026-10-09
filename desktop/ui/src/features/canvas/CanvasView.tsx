@@ -113,6 +113,7 @@ export function CanvasView({
   const [promptLoading, setPromptLoading] = useState(false);
   const [promptError, setPromptError] = useState<string>();
   const promptGeneration = useRef(0);
+  const metadataGeneration = useRef(0);
   const [deleting, setDeleting] = useState<CanvasDocument>();
   const [removing, setRemoving] = useState(false);
   const [items, setItems] = useState<CanvasDocument[]>([]),
@@ -125,11 +126,13 @@ export function CanvasView({
   async function load(parent?: OperationScope) {
 return runOperation("canvas.list", async (operation) => {
 const canvasJson = operation.json;
+    const generation = ++metadataGeneration.current;
 
     const [documents, directories] = await Promise.all([
       canvasJson<CanvasDocument[]>(`/v1/channels/${channelId}/canvases`),
       canvasJson<CanvasFolder[]>(`/v1/channels/${channelId}/canvas-folders`),
     ]);
+    if (generation !== metadataGeneration.current) { operation.cancel(); return; }
     setItems(documents);
     setFolders(directories);
     setSelected((current) =>
@@ -161,23 +164,13 @@ const canvasJson=operation.json;
 
 });})().catch((reason) => setError(String(reason)));
   }, [channelId]);
-  const folderById = useMemo(
-    () => new Map(folders.map((folder) => [folder.id, folder])),
-    [folders],
-  );
-  function folderPath(folderId: string | null) {
-    const parts: string[] = [],
-      seen = new Set<string>();
-    let current = folderId;
-    while (current && !seen.has(current)) {
-      seen.add(current);
-      const folder = folderById.get(current);
-      if (!folder) break;
-      parts.unshift(folder.name);
-      current = folder.parentFolderId;
-    }
-    return parts;
-  }
+  useEffect(() => {
+    // Catalog rename/move updates the same asset; refresh its presentation metadata
+    // without replacing the editor replica or treating its original name as identity.
+    const refresh = () => { void load().catch(reason => setError(String(reason))); };
+    window.addEventListener("colab:catalog-changed", refresh);
+    return () => window.removeEventListener("colab:catalog-changed", refresh);
+  }, [channelId]);
   const current = items.find((item) => item.id === selected);
   useEffect(() => { promptGeneration.current++; setPromptOpen(false); }, [current?.id]);
   function preparePrompt() {
@@ -187,6 +180,8 @@ const canvasJson=operation.json;
     setPromptLoading(true);
     setPromptOpen(true);
     void runOperation("canvas.handoff", async operation => {
+      // Reconcile titles even when another client renamed the document since opening it.
+      await load(operation);
       const row = await operation.json<{content:string}>(`/v1/canvases/${current.id}/document`);
       if(generation !== promptGeneration.current) {operation.cancel(); return;}
       setPromptResources(projectionResources(row.content, channelId, context?.resources ?? []));
@@ -198,7 +193,7 @@ const canvasJson=operation.json;
       setSelected(focusId);
   }, [focusId, items]);
   function canvasRef(document: CanvasDocument) {
-    return `colab://channel/${[channelName, "canvas", ...folderPath(document.folderId), document.title].map(encodeURIComponent).join("/")}`;
+    return `colab://channel/${encodeURIComponent(channelId)}/canvas/${encodeURIComponent(document.id)}`;
   }
   function promptFor(agent: AgentTarget) {
     if (!current) return "";

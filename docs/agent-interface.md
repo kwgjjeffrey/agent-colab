@@ -471,3 +471,6 @@ GUI sibling order. Existing `move --parent` remains compatible and appends at
 the destination; no new consumer-reference protocol is required. The Local API
 placement endpoint also accepts `before: {kind,itemId}` for GUI drag ordering.
 Legacy browser remains usable; only Explorer exposes the Catalog hierarchy.
+# Canvas handoff identity (2026-10-09)
+
+GUI handoff text names the current Canvas title, reconciled from Local Core before preparation. Executable Canvas commands use `colab://channel/<channel-id>/canvas/<canvas-id>`, already supported by the Canvas consumer. Names and Catalog paths are presentation/discovery metadata, never immutable keys. Previously copied stable references continue resolving after rename or move; newly generated prompts must not retain the initial document title. Human-readable current-name references remain supported by existing discovery.

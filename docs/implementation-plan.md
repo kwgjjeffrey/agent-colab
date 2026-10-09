@@ -1092,6 +1092,10 @@ Implemented global account display-name editing and Google linking for existing 
 - Candidate GUI 120 / Core 96 / promotion 172; release acceptance pending.
 # Workspace detail repair and IA regression audit (2026-10-09)
 
+## Canvas rename handoff repair (2026-10-09)
+
+Canvas preview now refreshes authoritative metadata after mixed-tree rename/move and before preparing Agent handoff. Latest metadata requests supersede older responses. Dialog and prompt display the current document title; executable read/edit references use stable Channel/document identity rather than an initial mutable title or folder path. Editor replicas are not recreated by metadata refresh. Real rename/handoff Round 20261009T040625Z-d410b84c passed 18 assertions, including actual CLI content reads and owned cleanup. GUI 137 / promotion 189 packaging follows; Core/Skill/Shell remain unchanged.
+
 ## Home action guidance (2026-10-09)
 
 - Implemented seven vertical action/explanation rows, with primary Call my Agent using the shared AgentPromptDialog and exact Channel identity / installed Skill path. Existing collaboration illustration, recoverable use cases and Recent activity are retained.
