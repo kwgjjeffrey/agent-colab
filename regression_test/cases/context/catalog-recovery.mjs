@@ -1,5 +1,27 @@
 export const USECASE={name:'Recover a transient Catalog read failure',description:'Abort one background root Catalog read in an existing disposable Channel. Verify the visible failure, restore network and verify next successful refresh clears it without reloading or losing the workspace.'};
-export const META={id:'context.catalog.read-recovery',module:'context/catalog',surface:'gui',priority:'normal',origin:'bug',status:'trial',effects:'read-only',locks:['read:client.primary','read:channel.shared'],cost:'normal',requires:['local-core'],affectedPaths:['desktop/ui/src/features/workspace'],suite:'business',testLevel:'end-to-end'};
+export const META={
+  "id": "context.catalog.read-recovery",
+  "module": "context/catalog",
+  "surface": "gui",
+  "priority": "normal",
+  "origin": "bug",
+  "status": "active",
+  "effects": "read-only",
+  "locks": [
+    "read:client.primary",
+    "read:channel.shared"
+  ],
+  "cost": "normal",
+  "requires": [
+    "local-core"
+  ],
+  "affectedPaths": [
+    "desktop/ui/src/features/workspace"
+  ],
+  "suite": "business",
+  "testLevel": "end-to-end",
+  "statusReason": "Reviewed 20261009T033459Z-e3887140 on installed GUI 134: actual background request abort exposes error, restored request clears it without reload, workspace remains mounted; three assertions passed."
+};
 export const REQUIREMENTS={channel:{permission:'read'}};
 import {resource} from '../../support/client.mjs';
 export async function run(ctx){const c=resource(ctx,'channel');await ctx.page.locator('[aria-label="Channels"]').getByRole('button',{name:c.name,exact:true}).click();await ctx.page.getByRole('button',{name:'Home',exact:true}).click();const pattern='**/v1/channels/'+c.id+'/catalog-items?limit=200&offset=0';let aborted=false;const handler=async route=>{if(!aborted){aborted=true;await route.abort('failed');}else await route.continue();};await ctx.page.route(pattern,handler);try{const alert=ctx.page.getByRole('alert').filter({hasText:'Failed to fetch'});await alert.waitFor({timeout:25000});ctx.assert('Transient failure is visible',await alert.isVisible(),true);await ctx.page.unroute(pattern,handler);await alert.waitFor({state:'hidden',timeout:25000});ctx.assert('Successful refresh clears stale failure',await alert.count(),0);ctx.assert('Workspace remains mounted',await ctx.page.locator('[aria-label="Channel items"]').isVisible(),true);await ctx.screenshot('Catalog recovered without reload');}finally{await ctx.page.unroute(pattern,handler);}}

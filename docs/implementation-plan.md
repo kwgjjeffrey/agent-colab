@@ -1,5 +1,9 @@
 # Colab 实现计划
 
+### 2026-10-09 Recover Catalog read errors
+
+Native OKR editor was mounted and Synced while Catalog displayed a stale Failed to fetch. Catalog read errors are now separate from mutation errors; successful background refresh clears only read errors. The initiating historical transport interruption is not established by retained logs. GUI 0.1.134-dev / promotion 0.1.186-dev published and normally installed; actual ui.json verified. Production build passed and public readback verified 2439669 bytes / SHA-256 `3ec58f2668c9ed66c4b619695eb8481c3092dae447badd46f9775747723d1370`. E2E `20261009T033459Z-e3887140` passed three assertions using actual background request abort and recovery without reload. Test used a temporary index aligned to daily GUI/Core, and did not mutate Channel data. Extra owner/receiver/revocable/Trace runtimes are isolated test-installation registrations retained under the user account, not a required same-machine multi-Core product feature or an authentication bypass.
+
 ### 2026-10-09 Channel icon Agent handoff — acceptance in progress
 
 Three horizontal shadcn buttons replace stacked icon controls. Agent generation
