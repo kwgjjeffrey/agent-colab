@@ -23,3 +23,8 @@ NAME; remove-catalog --ref REF (empty only); move --ref REF --parent REF; share
 --parent REF --item-type files|session|skill --source SOURCE [--name NAME]. They
 return short committed receipts. Shared asset movement requires its contributor;
 Catalog/Canvas organization follows existing Channel-member editing permissions.
+
+Files share accepts repeated `--exclude` directory names from Browser
+`inspect-source` candidates. The list is passed to Core at registration, before
+initial publication. Other item types reject Files exclusions. Source configuration
+and eventual publication remain Core-owned; Explorer only coordinates placement.

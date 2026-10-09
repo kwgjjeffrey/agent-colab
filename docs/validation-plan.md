@@ -1,5 +1,16 @@
 # 技术验证计划
 
+### 2026-10-09 Creation hints / sharing setup — validation in progress
+
+GUI 128 production build and 115 tests pass. Skill 56: 43 tests pass, including
+Files exclusion forwarding and rejection on Skill, packaged entrypoints and CLI
+registry coverage (48 leaf commands). Registry check: 142 operations valid. These
+are not E2E claims. New trial `gui.sharing.agent-setup` obtains real GUI prompts
+and executes their arguments against isolated sources using the candidate package.
+Run `20261009T022759Z-82283a05` preserves selector repairs and the discovered
+Quick Share Tooltip/submenu hover conflict; the latter is repaired in `ba67e66`.
+Real command, publication/consumer bytes and cleanup acceptance is still pending.
+
 ### 2026-10-09 Immediate handoff Dialog — verified and released
 
 Implementation `a71419c`; GUI 127 production type check/build and 112 GUI tests

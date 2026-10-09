@@ -1,5 +1,12 @@
 # Colab Browser response
 
+Files setup: `inspect-source --source PATH [--exclude dist]` returns included and
+excluded counts/bytes, transport-limit state and supported directory candidates.
+Use only candidates' exact names, not globs. `sync-scope --ref REF` reads an owned
+local Files scope; `--set [--exclude dist]` replaces the complete list (empty clears).
+Its successful save receipt means publication was queued, not remotely completed.
+Browser/Explorer Files share also accepts repeated `--exclude` values.
+
 Browser is legacy; use Explorer for mixed Catalog discovery. Every command writes
 one JSON envelope. Success uses `{ "ok": true, "data": ... }`; no universal null
 cursor is emitted. Failure uses `{ "ok": false, "error": { "code": ...,
