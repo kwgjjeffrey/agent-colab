@@ -1008,3 +1008,8 @@ GUI 0.1.147-dev / promotion 0.1.199-dev reuses the official website network comp
 ### Softer Home gradient — 2026-10-09
 
 GUI 0.1.148-dev / promotion 0.1.200-dev lightens the hero base to gray-green #303a33 and starts the fade at 38% of banner height with an intermediate theme mix at 68%. GUI build and immutable public readback passed (1322279 bytes; SHA-256 `deed0cb58f2941546dd6a612960e484c1dfd168e77c949da0ef3aededb0760a3`). Normal installation confirmed active ui.json 0.1.148-dev. Read-only E2E `channels.home.hero` Run `20261009T070009Z-33f24127` passed all seven assertions. Desktop/narrow screenshots reviewed; card contrast, particle movement and reduced-motion pause retained.
+
+
+### Home card alignment — 2026-10-09
+
+Removed the official hero third-card lift at both desktop and narrow container sizes. All three card tops/bottoms, SVG regions, multipliers and captions now share geometry. GUI 0.1.149-dev / promotion 0.1.201-dev built, publicly verified (1322253 bytes; SHA-256 `553ad9b4cb26e507ad41368523d3e0ab38c7fcbf2c35e163a2736f7eaa1b13fa`) and normally installed; active ui.json confirmed 0.1.149-dev. Read-only E2E `channels.home.hero` Run `20261009T072613Z-c5d6512f` passed nine assertions including explicit desktop/narrow geometry alignment, animation, gradient and reduced motion. Narrow screenshot reviewed.
