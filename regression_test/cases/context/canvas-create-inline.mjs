@@ -1,5 +1,27 @@
 export const USECASE={name:'Create Canvas directly and rename inline',description:'Create a real Canvas in the disposable Channel via Add. Verify no dialog, selected Untitled inline name and matching preview, rename and read back the same durable identity. Archive only the owned Canvas.'};
-export const META={id:'context.canvas.create-inline',module:'context/canvas',surface:'gui',priority:'normal',origin:'requirement',status:'trial',effects:'isolated-write',locks:['read:client.primary','write:channel.shared'],cost:'normal',requires:['local-core'],affectedPaths:['desktop/ui/src/features/workspace'],suite:'business',testLevel:'end-to-end'};
+export const META={
+  "id": "context.canvas.create-inline",
+  "module": "context/canvas",
+  "surface": "gui",
+  "priority": "normal",
+  "origin": "requirement",
+  "status": "active",
+  "effects": "isolated-write",
+  "locks": [
+    "read:client.primary",
+    "write:channel.shared"
+  ],
+  "cost": "normal",
+  "requires": [
+    "local-core"
+  ],
+  "affectedPaths": [
+    "desktop/ui/src/features/workspace"
+  ],
+  "suite": "business",
+  "testLevel": "end-to-end",
+  "statusReason": "Reviewed 20261009T030939Z-401d5947 on installed GUI 132 and aligned Core: no dialog, focused fully selected Untitled, same-ID durable rename/reload and owned archive; eight assertions and screenshot passed."
+};
 export const REQUIREMENTS={channel:{permission:'read'},parameters:{keys:['disposable']}};
 import {core,resource,disposable,eventually} from '../../support/client.mjs';
 export async function run(ctx){disposable(ctx);const channel=resource(ctx,'channel');let id;try{
