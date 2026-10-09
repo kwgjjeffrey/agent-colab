@@ -1,0 +1,9 @@
+{
+  "maxRecordBytes": 18421203,
+  "recordsExceedProduction32MiBLimit": 0,
+  "maxChunkBytes": 26420810,
+  "utf8AndPartialTail": true,
+  "replayRangeAndDigest": true,
+  "truncatedCompressionRejected": true,
+  "rewriteProtection": "requires generation identity; byte cursor alone insufficient"
+}

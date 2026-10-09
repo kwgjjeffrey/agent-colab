@@ -1,5 +1,14 @@
 # 技术验证计划
 
+### 2026-10-09 Rust codec comparison — verified, product migration pending
+
+`.trial/V-SESSION-CHUNKS-01/rust-codecs-full.json`: same frozen 1,752,630,485 bytes,
+101 record-aligned chunks; Zstd 1/3/6/9/12/15, Gzip 6/9 and Brotli 6/9 all exact
+roundtrip checks passed. Zstd 3: 907,195,781 encoded bytes, 10.234 s compression,
+2.525 s decompression, block compression P95 0.144 s, on this host in one run.
+User approved level 3. Results do not prove read-adapter/provider compatibility,
+S3 integration, network throughput or GUI/release acceptance; those remain pending.
+
 ### 2026-10-09 Source-owned assets — released and daily App accepted
 
 Checkpoint `aa3efdd`; implementation `dc26762` / `94486af`, populated migration

@@ -1,5 +1,13 @@
 # Colab 实现计划
 
+### 2026-10-09 Compressed Session chunks — in progress
+
+User selected Zstd 3 after ten Rust full-source codec comparisons. Implementation
+contract and acceptance gates: `docs/session-chunk-storage-design.md`. Disk/S3
+Blob support, negotiated immutable frames and indexed on-demand Core reading are
+pending implementation/acceptance. Do not deploy a write-only compressed protocol.
+Enterprise integration remains untouched; existing production data is preserved.
+
 ### 2026-10-09 Catalog counts and uploader identity
 
 Server catalog children/trails now return nullable childCount and contributorMemberId/contributorName/contributorAvatarUrl. Counts include only direct Catalogs, non-archived Canvas and active shares; existing parent indexes support the counts and stable IDs/placement remain unchanged. GUI shows counts even when collapsed (including zero), and Files/Session/Skill uploader avatars open the existing UserIdentity profile without changing selection. Added sidebar right padding after real pointer acceptance found the scrollbar intercepting the Skill avatar.

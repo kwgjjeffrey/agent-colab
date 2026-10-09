@@ -1,0 +1,27 @@
+{
+  "frozenBytes": 1752630485,
+  "completeBytes": 1752630485,
+  "incompleteTailBytes": 0,
+  "chunks": 101,
+  "records": 55440,
+  "invalidRecords": 0,
+  "roundtripAndResume": true,
+  "codecs": {
+    "zstd-1": {
+      "bytes": 1025173943,
+      "compressSeconds": 14.122982498999978,
+      "decompressSeconds": 8.913719206000021
+    },
+    "zstd-3": {
+      "bytes": 906671030,
+      "compressSeconds": 15.035948379999954,
+      "decompressSeconds": 8.08023533200004
+    },
+    "gzip-1": {
+      "bytes": 1031892016,
+      "compressSeconds": 25.807655124000064,
+      "decompressSeconds": 4.790708584000052
+    }
+  },
+  "wallSeconds": 84.442889375
+}

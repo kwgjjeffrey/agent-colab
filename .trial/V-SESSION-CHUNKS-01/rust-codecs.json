@@ -1,0 +1,65 @@
+[
+  {
+    "codec": "zstd",
+    "compressSeconds": 0.176137916,
+    "compressedBytes": 16617674,
+    "decompressSeconds": 0.039294540999999995,
+    "exactRoundtrip": true,
+    "level": 3,
+    "sampleBytes": 30601018
+  },
+  {
+    "codec": "zstd",
+    "compressSeconds": 0.533495291,
+    "compressedBytes": 12783586,
+    "decompressSeconds": 0.042310875,
+    "exactRoundtrip": true,
+    "level": 9,
+    "sampleBytes": 30601018
+  },
+  {
+    "codec": "zstd",
+    "compressSeconds": 3.4393995840000002,
+    "compressedBytes": 12584342,
+    "decompressSeconds": 0.041558541000000004,
+    "exactRoundtrip": true,
+    "level": 15,
+    "sampleBytes": 30601018
+  },
+  {
+    "codec": "gzip",
+    "compressSeconds": 0.6161902079999999,
+    "compressedBytes": 17645872,
+    "decompressSeconds": 0.102675708,
+    "exactRoundtrip": true,
+    "level": 6,
+    "sampleBytes": 30601018
+  },
+  {
+    "codec": "gzip",
+    "compressSeconds": 0.641875209,
+    "compressedBytes": 17639296,
+    "decompressSeconds": 0.102278458,
+    "exactRoundtrip": true,
+    "level": 9,
+    "sampleBytes": 30601018
+  },
+  {
+    "codec": "brotli",
+    "compressSeconds": 1.50601875,
+    "compressedBytes": 14946580,
+    "decompressSeconds": 0.132427,
+    "exactRoundtrip": true,
+    "level": 6,
+    "sampleBytes": 30601018
+  },
+  {
+    "codec": "brotli",
+    "compressSeconds": 5.708262124,
+    "compressedBytes": 12589999,
+    "decompressSeconds": 0.100292583,
+    "exactRoundtrip": true,
+    "level": 9,
+    "sampleBytes": 30601018
+  }
+]
