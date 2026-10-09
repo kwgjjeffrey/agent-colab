@@ -385,7 +385,7 @@ export function CatalogWorkspace({
             <div
               data-catalog-row={item.id}
               data-selected={selected?.id === item.id ? "true" : "false"}
-              className={cn("group relative flex min-w-0 items-center gap-0 rounded-lg pr-8 transition-colors hover:bg-muted", selected?.id === item.id && "bg-secondary")}
+              className={cn("group relative flex min-w-0 items-center gap-0 rounded-lg pr-1 transition-colors hover:bg-muted", selected?.id === item.id && "bg-secondary")}
             >
               {item.kind === "catalog" && (
                 <Button
@@ -430,7 +430,7 @@ export function CatalogWorkspace({
                   variant="ghost"
                   className={cn(
                     "min-w-0 flex-1 justify-start bg-transparent hover:bg-transparent dark:hover:bg-transparent aria-expanded:bg-transparent",
-                    item.kind === "catalog" && "pl-1",
+                    item.kind === "catalog" && "pl-1 group-hover:pr-7 group-focus-within:pr-7",
                   )}
                   title={item.name}
                   data-item-id={item.id}
@@ -477,7 +477,7 @@ export function CatalogWorkspace({
                       <Button
                         variant="ghost"
                         size="icon-xs"
-                        className="absolute right-1 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"
+                        className="absolute right-7 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"
                         aria-label={`Add to ${item.name}`}
                       />
                     }
@@ -586,7 +586,7 @@ export function CatalogWorkspace({
                 disabled={working}
                 onDrop={(source) => void drop(source, undefined, "inside")}
               >
-                <div className="min-h-[calc(100vh-240px)] pb-16 pr-3">{rows()}</div>
+                <div className="min-h-[calc(100vh-240px)] pb-16">{rows()}</div>
               </CatalogDragTarget>
             </ScrollArea>
           </aside>

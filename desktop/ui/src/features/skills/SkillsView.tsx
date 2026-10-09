@@ -55,6 +55,8 @@ type Installation = {
 };
 
 type Props = {
+  creationOnly?: boolean;
+  onCreationClose?: () => void;
   creationParentRef: string;
   focusId?: string;
   shareOpenToken?: number;
@@ -79,11 +81,12 @@ function initials(name: string) {
 }
 
 /** Shared Skills owns discovery and installation presentation; all mutations go through Local Core. */
-export function SkillsView({ creationParentRef, focusId, shareOpenToken, onShareOpenConsumed, onCreated, channelId, channelName, busy, defaultAgent, installedAgents, onChoose }: Props) {
+export function SkillsView({ creationOnly, onCreationClose, creationParentRef, focusId, shareOpenToken, onShareOpenConsumed, onCreated, channelId, channelName, busy, defaultAgent, installedAgents, onChoose }: Props) {
   const [shares, setShares] = useState<SkillShare[]>([]);
   const [sources, setSources] = useState<SkillSource[]>([]);
   const [installations, setInstallations] = useState<Record<string, Installation[]>>({});
-  const [showShare, setShowShare] = useState(false);
+  const [showShare, setShowShare] = useState(Boolean(creationOnly));
+  useEffect(() => { if (creationOnly && !showShare) onCreationClose?.(); }, [creationOnly, showShare]);
   useEffect(()=>{if(shareOpenToken){setShowShare(true);onShareOpenConsumed?.();}},[shareOpenToken]);
   const [query, setQuery] = useState("");
   const [working, setWorking] = useState<string>();
@@ -132,6 +135,7 @@ const trackedFetch = operation.fetch;
 }
 
   useEffect(() => {
+    if (creationOnly) return;
     void loadShares().catch((reason) => setError(String(reason)));
     const timer = window.setInterval(() => void loadShares(true).catch(() => undefined), 3_000);
     return () => window.clearInterval(timer);
@@ -213,7 +217,8 @@ const trackedFetch = operation.fetch;
 
   const sourceRows = useMemo(() => sources, [sources]);
   return (
-    <div className="mx-auto flex max-w-4xl flex-col gap-5 px-4 py-6">
+    <div className={creationOnly ? "contents" : "mx-auto flex max-w-4xl flex-col gap-5 px-4 py-6"}>
+      {!creationOnly && <>
       {!focusId && <div className="flex justify-end"><Button data-trace-target={traceTargets("skills.share", "skills.sources")} onClick={() => setShowShare(true)}><PlusIcon />Share skill</Button></div>}
       {shares.length === 0 && focusId ? <p className="text-sm text-muted-foreground">Loading Skill preview…</p> : shares.length === 0 ? (
         <Empty><EmptyHeader><EmptyTitle>No shared skills yet</EmptyTitle><EmptyDescription>Share a recently changed Agent Skill or choose its source folder.</EmptyDescription></EmptyHeader></Empty>
@@ -246,6 +251,7 @@ const trackedFetch = operation.fetch;
         </div>
       )}
       {error && <p className="text-sm text-destructive">{error}</p>}
+      </>}
       <Dialog open={showShare} onOpenChange={setShowShare}>
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader><DialogTitle>Share a Skill</DialogTitle><DialogDescription>Recently created or changed Agent Skills are shown first. You can also choose any folder containing SKILL.md.</DialogDescription></DialogHeader>

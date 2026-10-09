@@ -49,6 +49,8 @@ export type FileShare = {
 };
 
 type Props = {
+  creationOnly?: boolean;
+  onCreationClose?: () => void;
   creationParentRef: string;
   shareOpenToken?: number;
   onShareOpenConsumed?: () => void;
@@ -82,6 +84,8 @@ type SourceInspection = {
 
 /** Files owns only presentation and local browsing; synchronization remains a Local Core use case. */
 export function FilesView({
+  creationOnly,
+  onCreationClose,
   creationParentRef,
   shareOpenToken,
   onShareOpenConsumed,
@@ -98,7 +102,7 @@ export function FilesView({
 }: Props) {
   const context = useChannelContext();
   useEffect(()=>{if(shareOpenToken){setSetupOpen(true);onShareOpenConsumed?.();}},[shareOpenToken]);
-  const [setupOpen, setSetupOpen] = useState(false);
+  const [setupOpen, setSetupOpen] = useState(Boolean(creationOnly));
   const [choosing, setChoosing] = useState(false);
   const focusAvailable = shares.some(row => row.id === focusId);
   useEffect(() => { const row = shares.find(row => row.id === focusId); if (row) void browse(row, true); }, [focusId, focusAvailable]);
@@ -112,6 +116,8 @@ export function FilesView({
   const [inspecting, setInspecting] = useState(false);
   const [selectedExcludes, setSelectedExcludes] = useState<string[]>([]);
   const [scopeShareId, setScopeShareId] = useState<string>();
+
+  useEffect(() => { if (creationOnly && !setupOpen && !choosing && !inspection && !inspecting) onCreationClose?.(); }, [creationOnly, setupOpen, choosing, inspection, inspecting]);
 
   async function localShare(share: FileShare) {
     return share.localPath ? share : await onEnsureLocal(share);
@@ -195,6 +201,7 @@ const trackedFetch = operation.fetch;
       setInspection(value);
     } catch (reason) { operation.fail();
       setBrowseError(String(reason));
+      if (creationOnly) setSetupOpen(true);
     } finally {
       setInspecting(false);
     }
@@ -278,7 +285,7 @@ const trackedFetch = operation.fetch;
   const browsedShare = shares.find((share) => share.id === openShare && (!focusId || share.id === focusId));
   const focusedShare = shares.find(share => share.id === focusId);
   return (
-    <div className={browsedShare?"flex min-h-0 flex-1 flex-col":"mx-auto flex max-w-4xl flex-col gap-5 py-6"}>
+    <div className={creationOnly ? "contents" : browsedShare?"flex min-h-0 flex-1 flex-col":"mx-auto flex max-w-4xl flex-col gap-5 py-6"}>
       <Dialog open={setupOpen} onOpenChange={open => { if (!choosing) setSetupOpen(open); }}>
         <DialogContent>
           <DialogHeader><DialogTitle>Share files</DialogTitle><DialogDescription>Choose a local file or directory, or let your Agent select and configure the source.</DialogDescription></DialogHeader>
@@ -289,6 +296,7 @@ const trackedFetch = operation.fetch;
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {!creationOnly && <>
       {focusedShare?.syncState === "failed" && <WorkspaceActions><Button data-trace-target={traceTargets("files.retry")} disabled={busy} onClick={()=>onRetry(focusedShare)}>Retry</Button></WorkspaceActions>}
       {browsedShare ? <><WorkspaceActions primary><Button data-trace-target={traceTargets("files.handoff")} onClick={()=>void giveToAgent(browsedShare)}>Give to Agent</Button></WorkspaceActions><WorkspaceActions>{browsedShare.canWithdraw&&<><Button variant="ghost" onClick={()=>void editScope(browsedShare)}>Sync scope</Button><Button variant="destructive" onClick={()=>onWithdraw(browsedShare)}>Withdraw</Button></>}</WorkspaceActions><FileExplorer shareId={browsedShare.id} shareName={browsedShare.name} entries={entries} sourceKind={sourceKind} onClose={() => setOpenShare(undefined)}/></> : focusId ? <div className="flex flex-col gap-3 p-6"><p className="text-sm text-muted-foreground">{browseError ? "Couldn’t load file preview." : "Loading files…"}</p>{browseError && <Button variant="outline" onClick={() => {const row=shares.find(share=>share.id===focusId);if(row)void browse(row,true);}}>Retry preview</Button>}</div> : <><div className="flex justify-end">
         <Button data-trace-target={traceTargets("files.share")} disabled={busy} onClick={() => setSetupOpen(true)}>
@@ -357,6 +365,7 @@ const trackedFetch = operation.fetch;
           ))}
         </div>
       )}
+      </>}
       </>}
       <AgentPromptDialog
         loading={agentPrompt?.loading}
