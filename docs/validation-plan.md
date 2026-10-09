@@ -1,5 +1,29 @@
 # 技术验证计划
 
+### 2026-10-10 Private chunk storage rollout — verified
+
+After public stable213 acceptance, the isolated integration completed real Rust
+20MiB multipart exact readback, frozen historical migration and independent
+Server/Core release. Initial 10 historical objects/51,808,828 bytes were copied
+and fully hash-verified; final recutover verified 28 objects/51,871,933 bytes,
+including owned acceptance objects/new writes. Original files and database backups
+remain intact. Scope guard tests passed4; no unrelated namespace access occurred.
+
+Actual installed Core publishes a >20MiB owned Session into two Zstd3 frames.
+An isolated authorized consumer downloads only one selected frame, does not
+reconstruct JSONL, reads exact recent turns after restart, and reads two existing
+historical Sessions. Installed Skill also reads the new Session correctly. Same
+functional path passed on compatible disk rollback, then restored S3. Rollback
+hydration independently downloaded/hash-verified24 SQL-referenced objects before
+activating disk. Final S3 deployment disables permanent new-write disk mirrors;
+source retention and disabled remote GC are intentional rollback/safety boundaries.
+
+Independent enterprise candidate installed, authenticated and promoted after
+acceptance; public App/service hashes remained unchanged. Detailed versions,
+provider evidence and private Git checkpoints belong to ignored integration docs.
+No production enterprise endpoint, native Windows, company notarization, remote
+DELETE or general garbage collection acceptance is claimed.
+
 ### 2026-10-10 Chunk release candidate — verified
 
 Actual packaged Core 0.1.106-dev with GUI 0.1.157-dev and deployed Server 0.1.11:

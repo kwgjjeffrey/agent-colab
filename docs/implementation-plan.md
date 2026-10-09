@@ -13,11 +13,14 @@ Full public Core107 readback and actual packaged compressed-sharing Round
 
 Completed: candidate cross-Channel, delayed independent-preview, old/current-client
 and restart acceptance, committed guards, public component availability and updater
-discovery. Remaining order: private
-integration's actual Rust Blob multipart/read acceptance; (4) freeze/back up and
-copy/hash-verify historical Blob objects before backend activation, with no source
-deletion and an explicit rollback serving path; (5) enterprise client/server
-release, post-restart functional verification and independent release records.
+discovery. Private integration also completed real Rust multipart/read acceptance,
+frozen migration, compatible disk rollback and restored-Blob acceptance. Its
+independent Server/Core release is installed and promoted; provider code, evidence,
+configuration and code-only Git checkpoints remain exclusively in the ignored
+integration tree. New Blob writes retain no permanent disk mirror; rollback
+hydrates and hash-verifies exact SQL-referenced objects before backend switching.
+Historical disk sources/database backups are retained; remote collection remains
+disabled. Acceptance is staging/macOS arm64, not enterprise production or Windows.
 
 No historical Session byte rewrite is required for protocol 2. Missing codec is
 identity; default Server manifest/content responses preserve raw sizes/digests for

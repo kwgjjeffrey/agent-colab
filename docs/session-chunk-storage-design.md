@@ -1,6 +1,6 @@
 # Session compressed chunk storage
 
-Status: public stable213/Core107 verified; private integration pending. User selected Zstd level 3 on
+Status: public stable213/Core107 verified; private integration released and verified. User selected Zstd level 3 on
 2026-10-09 after the full Rust comparison in `.trial/V-SESSION-CHUNKS-01/README.md`.
 
 Foundation implemented: Server `blob_store.rs` wraps standard object_store S3
