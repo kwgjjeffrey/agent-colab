@@ -1,5 +1,14 @@
 # Colab 实现计划
 
+### 2026-10-09 Primary Add entrance
+
+Add precedes Home in the Channel sidebar and uses the existing shadcn default
+primary Button variant. Existing creation/Quick Share menu remains unchanged.
+GUI-only 126; Core, Skill, Shell and Server unchanged. Workspace component tests
+(6) and production TypeScript/Vite build passed. Promotion 178 is published and
+normally installed; native acceptance confirms the primary Add above Home and
+the unchanged item/Quick Share menu.
+
 ### 2026-10-09 Conversation scrolling and compact Channel — verified and released
 
 Rollback checkpoint `fd037f9`. Channel identity/members move into a shadcn

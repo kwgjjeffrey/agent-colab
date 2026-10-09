@@ -261,7 +261,8 @@ Updater state belongs to the backend operation, not the browser's button state. 
 Sessions 的 onboarding 仅用于空列表；已有任意 Session 时隐藏整块引导，让实际内容占据页面。Messages 的引导仍按既定规则位于消息流开始处，随对话增长自然滚出视口。
 # Compact Channel management
 
-The Catalog workspace replaces type tabs with Home, Add, Message and mixed items.
+The Catalog workspace replaces type tabs with Add, Home, Message and mixed items.
+Add is a filled primary button above Home and opens the existing item/Quick Share menu.
 Channel identity and the right-aligned member entrance live inside the left
 sidebar. Its default width is 350px, with a shadcn resize handle and persisted
 width. The name stays bold, truncates on one line and reveals its full text in a

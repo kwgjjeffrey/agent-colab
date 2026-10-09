@@ -1,5 +1,16 @@
 # 技术验证计划
 
+### 2026-10-09 Primary Add entrance
+
+Six CatalogWorkspace tests pass, including DOM order Add → Home, `bg-primary`
+variant and opening the existing Catalog menu. GUI 126 production type check and
+build pass. These component assertions are not backend/E2E coverage. Promotion
+178 publicly verified GUI 126 (1,315,457 bytes; SHA-256
+`d15fe5ccd1be18a3b2d9b287360a1467258290407066183f33dbcd55fad8d869`).
+Normal native Check updates → Update installed it; `/ui.json` reports 126.
+Native screenshot confirms filled primary Add above Home; clicking it retains
+Catalog, Canvas, Session, Files, Skill and Quick Share entrances.
+
 ### 2026-10-09 Conversation tail/scroll and compact Channel — verified and released
 
 Checkpoint `fd037f9`; implementation `4a6a372`. GUI type check, production build
