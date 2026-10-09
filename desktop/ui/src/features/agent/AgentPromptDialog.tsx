@@ -3,6 +3,7 @@ import { runOperation } from "@/api/operation-runner";
 import { useState } from "react";
 import { ChevronDownIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 import { trackedFetch } from "@/api/request-activity";
 import { ButtonGroup } from "@/components/ui/button-group";
 import { Textarea } from "@/components/ui/textarea";
@@ -43,6 +44,9 @@ export function agentSkillCommand(agent: AgentTarget, command: string) {
 }
 
 type Props = {
+  loading?: boolean;
+  preparationError?: string;
+  onRetry?: () => void;
   open: boolean;
   title: string;
   description: string;
@@ -62,6 +66,9 @@ type Props = {
  * only their prompt body; target selection, clipboard behavior and Agent launch stay consistent.
  */
 export function AgentPromptDialog({
+  loading = false,
+  preparationError,
+  onRetry,
   open,
   title,
   description,
@@ -78,6 +85,7 @@ export function AgentPromptDialog({
   const [query, setQuery] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string>();
+  const unavailable = loading || Boolean(preparationError);
   function reportError(message: string) {
     setError(message);
     onError(message);
@@ -116,27 +124,27 @@ const trackedFetch = operation.fetch;
           <DialogTitle className="min-w-0 break-words">{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
-        <pre className="max-h-[50vh] min-w-0 max-w-full overflow-auto whitespace-pre-wrap break-words rounded-lg bg-muted p-4 text-sm">
+        {loading ? <div role="status" className="flex items-center gap-2 py-6 text-sm text-muted-foreground"><Spinner />Preparing Agent prompt…</div> : preparationError ? <div className="flex flex-col gap-3"><p role="alert" className="text-sm text-destructive">{preparationError}</p>{onRetry && <Button variant="outline" onClick={onRetry}>Retry</Button>}</div> : <pre className="max-h-[50vh] min-w-0 max-w-full overflow-auto whitespace-pre-wrap break-words rounded-lg bg-muted p-4 text-sm">
           {completePrompt(defaultAgent)}
-        </pre>
+        </pre>}
         <div className="flex flex-col gap-3">
           <label htmlFor="agent-prompt-query" className="text-sm font-medium">User query</label>
           <Textarea id="agent-prompt-query" className="min-h-24 resize-y border-transparent bg-muted px-4 py-3 shadow-none focus-visible:border-ring/40 focus-visible:ring-0 dark:bg-muted" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Add an instruction for this task (optional)" />
         </div>
         <DialogFooter>
-          {onForward && <Button variant="outline" onClick={() => onForward(query.trim())}>Forward to collaborators’ agent</Button>}
+          {onForward && <Button disabled={unavailable} variant="outline" onClick={() => onForward(query.trim())}>Forward to collaborators’ agent</Button>}
           {onSend && <Button data-trace-target={sendTraceTarget} disabled={sending} onClick={async () => { setError(undefined); setSending(true); try { await onSend(query.trim()); onClose(); setQuery(""); } catch (reason) { reportError(String(reason)); } finally { setSending(false); } }}>{sending ? "Sending…" : "Send to Agent"}</Button>}
-          <Button data-trace-target={traceTargets("prompt.copy")} variant="outline" onClick={() => void copyPrompt()}>Copy prompt</Button>
+          <Button disabled={unavailable} data-trace-target={traceTargets("prompt.copy")} variant="outline" onClick={() => void copyPrompt()}>Copy prompt</Button>
           <ButtonGroup className="min-w-0 max-w-full">
             <Button data-trace-target={traceTargets("prompt.open-agent")}
               className="min-w-0"
-              disabled={!installedAgents[defaultAgent]?.installed}
+              disabled={unavailable || !installedAgents[defaultAgent]?.installed}
               onClick={() => void copyAndOpen(defaultAgent)}
             >
               <span className="truncate">Copy and open {agentLabels[defaultAgent]}</span>
             </Button>
             <DropdownMenu>
-              <DropdownMenuTrigger render={<Button size="icon" aria-label="Other Agents" />}>
+              <DropdownMenuTrigger render={<Button disabled={unavailable} size="icon" aria-label="Other Agents" />}>
                 <ChevronDownIcon />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">

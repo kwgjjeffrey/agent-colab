@@ -110,6 +110,9 @@ export function CanvasView({
 }: Props) {
   const context = useChannelContext();
   const [promptResources, setPromptResources] = useState<ContextResource[]>([]);
+  const [promptLoading, setPromptLoading] = useState(false);
+  const [promptError, setPromptError] = useState<string>();
+  const promptGeneration = useRef(0);
   const [deleting, setDeleting] = useState<CanvasDocument>();
   const [removing, setRemoving] = useState(false);
   const [items, setItems] = useState<CanvasDocument[]>([]),
@@ -176,6 +179,20 @@ const canvasJson=operation.json;
     return parts;
   }
   const current = items.find((item) => item.id === selected);
+  useEffect(() => { promptGeneration.current++; setPromptOpen(false); }, [current?.id]);
+  function preparePrompt() {
+    if (!current) return;
+    const generation = ++promptGeneration.current;
+    setPromptError(undefined);
+    setPromptLoading(true);
+    setPromptOpen(true);
+    void runOperation("canvas.handoff", async operation => {
+      const row = await operation.json<{content:string}>(`/v1/canvases/${current.id}/document`);
+      if(generation !== promptGeneration.current) {operation.cancel(); return;}
+      setPromptResources(projectionResources(row.content, channelId, context?.resources ?? []));
+      setPromptLoading(false);
+    }).catch(reason => { if(generation === promptGeneration.current) {setPromptLoading(false);setPromptError(String(reason));} });
+  }
   useEffect(() => {
     if (focusId && items.some((row) => row.id === focusId))
       setSelected(focusId);
@@ -247,13 +264,7 @@ const canvasJson=operation.json;
               await load(operation);
 
 });}}
-            onGive={() => {
-              void runOperation("canvas.handoff", async operation => operation.json<{content:string}>(`/v1/canvases/${current.id}/document`).then(row => {
-                  setPromptResources(projectionResources(row.content,channelId,context?.resources ?? []));
-                  setPromptOpen(true);
-                }))
-                .catch((reason) => setError(String(reason)));
-            }}
+            onGive={preparePrompt}
           />
         ) : (
           <div className="grid h-full place-items-center text-sm text-muted-foreground">
@@ -291,12 +302,15 @@ const canvasJson=operation.json;
           }
         }}
         open={promptOpen}
+        loading={promptLoading}
+        preparationError={promptError}
+        onRetry={preparePrompt}
         title={`Give “${current?.title ?? ""}” to Agent`}
         description="Copy these Canvas commands and continue the task in your coding Agent."
         defaultAgent={defaultAgent}
         installedAgents={installedAgents}
         promptFor={promptFor}
-        onClose={() => setPromptOpen(false)}
+        onClose={() => { promptGeneration.current++; setPromptOpen(false); }}
         onError={setError}
       />
     </div>

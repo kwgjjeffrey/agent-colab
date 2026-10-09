@@ -2,7 +2,7 @@ import { traceTargets } from "@/api/trace-locators";
 import { WorkspaceActions } from "@/features/workspace/WorkspaceActions";
 import { operations } from "@/api/trace-operations";
 import { runOperation, type OperationScope } from "@/api/operation-runner";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useChannelContext } from "@/features/context/ChannelContext";
 import { UserIdentity } from "@/features/context/UserIdentity";
 import { FileTypeIcon } from "@/features/context/ContextIcon";
@@ -100,7 +100,8 @@ export function FilesView({
   const [openShare, setOpenShare] = useState<string>();
   const [entries, setEntries] = useState<LocalFileEntry[]>([]);
   const [sourceKind, setSourceKind] = useState<string>();
-  const [agentPrompt, setAgentPrompt] = useState<{ id: string; ref: string; shareName: string }>();
+  const [agentPrompt, setAgentPrompt] = useState<{ id: string; ref: string; shareName: string; loading?: boolean; error?: string }>();
+  const promptGeneration = useRef(0);
   const [browseError, setBrowseError] = useState<string>();
   const [inspection, setInspection] = useState<SourceInspection>();
   const [inspecting, setInspecting] = useState(false);
@@ -136,6 +137,8 @@ const trackedFetch = operation.fetch;
 }
 
   async function giveToAgent(share: FileShare) {
+    const generation = ++promptGeneration.current;
+    setAgentPrompt({ id: share.id, ref: "", shareName: share.name, loading: true });
 return runOperation("files.handoff", async (operation) => {
 const trackedFetch = operation.fetch;
 
@@ -146,9 +149,10 @@ const trackedFetch = operation.fetch;
       if (!channel) throw new Error("Channel is unavailable");
       const segment = (value: string) => encodeURIComponent(value);
       const ref = `colab://channel/${segment(channel.name)}/${segment(share.name)}`;
-      setAgentPrompt({ id: share.id, ref, shareName: share.name });
+      if(generation !== promptGeneration.current) {operation.cancel(); return;}
+      setAgentPrompt(current => current?.id === share.id ? { id: share.id, ref, shareName: share.name } : current);
     } catch (reason) { operation.fail();
-      setBrowseError(String(reason));
+      if(generation === promptGeneration.current) setAgentPrompt(current => current?.id === share.id ? {...current, loading: false, error: String(reason)} : current);
     }
 
 });
@@ -334,13 +338,16 @@ const trackedFetch = operation.fetch;
       )}
       </>}
       <AgentPromptDialog
+        loading={agentPrompt?.loading}
+        preparationError={agentPrompt?.error}
+        onRetry={() => { const share=shares.find(row=>row.id===agentPrompt?.id); if(share) void giveToAgent(share); }}
         open={Boolean(agentPrompt)}
         title={`Give “${agentPrompt?.shareName ?? ""}” to Agent`}
         description="Copy this instruction and continue the task in your coding Agent."
         defaultAgent={defaultAgent}
         installedAgents={installedAgents}
         promptFor={promptFor}
-        onClose={() => setAgentPrompt(undefined)}
+        onClose={() => {promptGeneration.current++; setAgentPrompt(undefined);}}
         onError={setBrowseError}
         onForward={context ? () => { const share = shares.find(row => row.id === agentPrompt?.id); if (!share) return setBrowseError("This context is no longer available."); setAgentPrompt(undefined); context.forward([{ kind: "files", ...share }]); } : undefined}
       />
