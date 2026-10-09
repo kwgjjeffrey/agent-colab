@@ -14,6 +14,8 @@ Implementation stages:
 2. Register an opaque account/device/canonical-source identity through Local Core.
    New references reuse the asset. Existing local registrations are consolidated
    only from explicit equal canonical source/adapter ownership evidence, never names.
+   A managed Skill's final symlink identifies its live installation slot, not its
+   immutable version target; upgrading that slot preserves publication identity.
 3. Core owns one source row, shadow repository, publication cursor/job and lock per
    asset. Reference mapping feeds GUI, Explorer, legacy Browser and consumers.
 4. Reads authorize the requested active Channel reference before accessing shared
@@ -30,16 +32,22 @@ proven local duplicates. No migration guesses identities from names or content.
 Reclamation is delayed until references and retention both permit it; old binaries
 must not be reactivated after consolidation unless the asset-aware Server remains.
 
-Checkpoint: `aa3efdd`. Status: implementation, not released or accepted.
+Checkpoint: `aa3efdd`. Implementation commits: `dc26762`, `94486af`.
+Status: packaged acceptance passed; public rollout pending.
 
 Verified in isolated PostgreSQL 14: all migrations through 0042; projection,
 legacy rename, independent withdrawal and 24-hour retention SQL assertions;
 Files/Skill/Session registration, shared revision/snapshot reads, forbidden
 outsider access, withdrawn publication-anchor continuation and expiry/re-share
 contract test. Core Session unit tests retain all nine preview/parser checks.
-The first real Core/Server cross-Channel case passed after correcting an invalid
-fixture exclusion: Run `20261009T080837Z-c94ad994`, Round
-`20261009T081051Z-86238ee9`. Packaged artifacts and public deployment are pending.
+Packaged Core 101 cross-Channel case passed 124 assertions, including concurrent
+receiver materialization and exact initial/updated bytes: Run
+`20261009T080837Z-c94ad994`, Round `20261009T091734Z-1cd6014b`.
+Earlier fixture, cache-alias and watcher failures remain in the same Run.
+Core: 31 passing unit tests, one explicitly ignored native-machine probe. Server:
+10 passing API tests plus the opt-in PostgreSQL multi-reference contract test.
+Withdrawals lock the asset before reference rows, matching publication lock order.
+Retired merged assets lose their source key and cannot be rediscovered as publishers.
 
 Normal re-sharing must not wait on an in-progress large upload. Cursor locks are
 required only while consolidating multiple historical publishers. Consolidation

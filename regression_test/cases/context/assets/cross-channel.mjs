@@ -3,7 +3,29 @@ import path from 'node:path';
 import {core,resource,parameter,disposable,eventually} from '../../../support/client.mjs';
 import {fixtures} from '../../../support/fixtures.mjs';
 export const USECASE={name:'Reuse one owned source across Channels',description:'Register the same owned Files, Skill and Session sources in two disposable Channels. Assert one asset/publication identity and one current version, idempotent re-sharing, shared synchronization scope, local preview without uploading again, continued publication after withdrawing the original reference, and last-reference stop/re-share. Own only the created references and restore them in finally. Server contract tests independently verify byte reachability and authorization.'};
-export const META={id:'context.assets.cross-channel',module:'context/assets/sync',surface:'integration',priority:'critical',origin:'requirement',status:'trial',effects:'isolated-write',cost:'slow',suite:'business',testLevel:'end-to-end',locks:['write:client.owner','write:channel.shared','write:channel.secondary'],affectedPaths:['local/crates/local-api/src/assets.rs','server/standalone/crates/persistence/src/assets.rs','server/standalone/migrations/0042_shared_assets.sql']};
+export const META={
+  "id": "context.assets.cross-channel",
+  "module": "context/assets/sync",
+  "surface": "integration",
+  "priority": "critical",
+  "origin": "requirement",
+  "status": "active",
+  "effects": "isolated-write",
+  "cost": "slow",
+  "suite": "business",
+  "testLevel": "end-to-end",
+  "locks": [
+    "write:client.owner",
+    "write:channel.shared",
+    "write:channel.secondary"
+  ],
+  "affectedPaths": [
+    "local/crates/local-api/src/assets.rs",
+    "server/standalone/crates/persistence/src/assets.rs",
+    "server/standalone/migrations/0042_shared_assets.sql"
+  ],
+  "statusReason": "Reviewed packaged Core 101 Round 20261009T091734Z-1cd6014b in Run 20261009T080837Z-c94ad994: 124 assertions cover concurrent receiver reads, exact initial and updated bytes, one publication/cache, scope preservation, independent withdrawal and final re-share; finally withdrew only owned fixtures. Prior failures retained; B-only authorization and legacy merge separately passed PostgreSQL contract tests."
+};
 export const REQUIREMENTS={channel:{permission:'read'},parameters:{keys:['disposable','secondDisposableChannelId','secondCoreDiscoveryFile']}};
 export async function run(ctx){
  disposable(ctx);const a=resource(ctx,'channel').id,b=parameter(ctx,'secondDisposableChannelId');
