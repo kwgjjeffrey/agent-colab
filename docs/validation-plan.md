@@ -8,7 +8,9 @@ Run `20261009T060217Z-7f0f33de`, final Round `20261009T060810Z-d0b8d152`, passes
 
 Packaged GUI 145/Core 100 Round `20261009T061214Z-81f987e3` passes three cases / 52 assertions: real CLI revision-pinned pagination (16), Session/Message tail, typed tools, manual scrolling, older-page anchor and sidebar resizing (24), and receiver-created remote share / offline committed-cache reading (12). Cache case now explicitly exercises a consumer device, not a contributor local source; both reviewed cases are active. No full repository regression or invented performance budget is claimed. Exact trace IDs were retained, but the isolated fixture's provider ingestion returned unavailable; functional results do not claim provider timing or trace-child assertions.
 
-Client promotion/install verification is pending below until the signed manifest and running components are checked. Shell and Skill remain unchanged.
+Promotion 197 published Core 100 / GUI 145 with exact public size/hash verification: Core 44,985,147 bytes, SHA-256 `ebfe45a779016f8c3d70b93b89cefe611aca7b822674ea7bf03b25757a207c14`; GUI 2,445,153 bytes, SHA-256 `034b07b83bbd60e9354784155ec524cbb77dae33a5018742a6e829a14ba3f82b`. Normal daily App update and managed restart succeeded; new PID 4716 and authenticated ui.json confirm GUI 145, installed Core 100. Shell 23 and Skill 57 unchanged, Windows Core 62 retained.
+
+The actual reported Session `c035918e-34f7-4409-b902-17c14de643ca` has since grown to approximately 1.7 GB. Running Core 100 returned one recent turn from its independent local preview in approximately 5 seconds, no decoding warnings. Background accepted-byte progress advanced from 969,463,992 to 985,540,925 while total source continued growing; upload remains in progress, not claimed complete. No content was copied to another Channel during this check.
 
 ### 2026-10-09 Catalog counts and uploader identity
 
