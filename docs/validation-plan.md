@@ -1,5 +1,50 @@
 # 技术验证计划
 
+### 2026-10-09 Source-owned assets — released and daily App accepted
+
+Checkpoint `aa3efdd`; implementation `dc26762` / `94486af`, populated migration
+repair `c356dca`. Isolated PostgreSQL checks pass projection, global legacy rename,
+B-only authorization, outsider denial, shared Files/Skill/Session publication,
+concurrent registration, old IDs (including duplicate same-Channel placements),
+independent withdrawal, 24-hour retention and expiry/re-share. Core 102: 32 unit tests
+pass, one native-machine test explicitly ignored; Server: 10 API tests pass.
+Packaged Core 101 Trace case `context.assets.cross-channel` passed 124 assertions
+in Run `20261009T080837Z-c94ad994`, Round `20261009T091734Z-1cd6014b`: concurrent
+A/B consumer reads use one cache, exact initial and updated bytes match, scope is
+preserved, and B continues after A withdrawal. Script/cleanup reviewed and case
+qualified active; prior failed rounds remain. Registry check passes 142 operations;
+binding audit passes GUI 94/Core 149/Server 88; CLI parser audit passes 48 commands.
+These static checks do not claim cloud trace delivery or a performance budget.
+
+Consistent pre-migration backup: `/var/backups/agent-colab/before-source-assets-20261009T0845`.
+Server 7 rollout failed on populated deferred FK queues, rolled back without schema
+changes, then fixed Server 8 passed production-backup rehearsal (127 old IDs) and
+deployed migration 42. Running Server binary SHA-256:
+`8438e20c90f1df0f33e2da7b336ea104b8cb033bb523ab35f33292fb87905106`.
+Authenticated historical Session readback retained 84 segments; latest segment
+8,408,841 bytes passed exact size/digest verification. Contributor preview still
+reads its local source independently. This does not claim the entire 1.7 GB upload
+is complete; the pre-update uploader reported a retryable snapshot conflict.
+Promotion 203 public Core archive: 45,111,561 bytes, SHA-256
+`37f10613a8c45c830d7326cbc3f731a647ffb3e208e95c35c92a2c715ec7cf0b`.
+Only macOS Core changed; Windows/GUI/Skill/Shell retained. Daily App normal update
+to Core 101 passed: active executable SHA-256
+`ec672ccadd7672238ed2190f6aa5e027dbc26b5c3fe2d9c88e1e5df5c0f162de`,
+PID 7822, 26 asset reference mappings and independent local preview confirmed.
+Follow-up Core 102 source `c1fbbf9` was isolated from concurrent enterprise drafts.
+Its packaged cross-Channel Round `20261009T094007Z-18f68241` passed 126 assertions.
+Lost-ack boundary tests reject mismatched parent/offset/digest/size/snapshot linkage.
+Core 102 archive: 45,118,589 bytes, SHA-256
+`4847e9b1439e1501ca561816fd4d86a9bd0857598694dfafff18076d5f2ac7f2`;
+Promotion 204 public integrity verification and normal daily App update passed.
+PID 37516 runs Core 102; executable SHA-256
+`4ab96461149ced8eea3872b8f0436575516614c7d4ff066d1191858e052336ed`.
+The actual large Session cursor advanced from 1,482,637,821 to 1,491,046,662 bytes,
+matching the previously accepted lost-ack segment. State is syncing with no error;
+whole-source completion is not claimed. Case-owned references in both isolated
+Channels are all inactive; three isolated test processes stopped, records retained.
+No user local source, unrelated draft, or production backup was deleted.
+
 ### 2026-10-09 Session preview / synchronization separation
 
 Server 0.1.5 deployed through the canonical Linux build/deploy scripts; readiness passes. Its streaming receive tests cover multi-frame digest/bytes, size/digest rejection, interrupted streams, idle expiry and partial-file cleanup (3 tests). Core 100 Session tests pass (9); GUI suite passes (124 across 45 files), with focused independent failed-sync status/readable-content tests passing after the final wording change. Production GUI 145 and Core 100 builds pass.
