@@ -946,13 +946,13 @@ Compact Channel E2E Run 20261008T083723Z-1179256b first round exercised both dia
 - No new performance budget is claimed. Icon and DnD libraries are reused;
   broader trace-catalog restructuring is separate from this product correction.
 
-## Home action guidance — 2026-10-09
-
 ## Canvas rename handoff — 2026-10-09
 
 - 123 GUI unit tests and production build passed. Run 20261009T040252Z-328e51b6 retains an initial obsolete creation-dialog selector failure and a later preflight timeout. The Canvas creation helper now follows the real inline-name interaction; its exact leftover Untitled fixture was archived after confirming its creation timestamp.
 - Round 20261009T040625Z-d410b84c passed 18 real assertions: sidebar rename without navigating away, current prompt/dialog title, no initial-title residue, stable document reference, successful actual colab-canvas content read, a second rename while dialog stays open, previously issued reference still readable, and owned document archive.
-- Uses real Core 99 and Server. No model execution or latency-budget claim. GUI 137 publication acceptance follows separately.
+- Uses real Core 99 and Server. No model execution or latency-budget claim. Canonical R2 GUI-only publisher promoted 189 / GUI 137 after exact public size/hash verification: 1,319,075 bytes; SHA-256 e4a893acf29935951a6c603dbb5018cc417614cec5ec868c058796e49a577958. Isolated owner serves packaged GUI 137; daily App activation remains user-triggered. Other components unchanged.
+
+## Home action guidance — 2026-10-09
 
 - `desktop/ui`: production build passed; Vitest 45 files / 123 tests passed.
 - New tests verify all seven actions in order, dispatch of the five creation kinds, primary Call my Agent styling, installed Skill / exact Channel prompt targeting, and Files configuration opening without invoking a chooser. Chooser cancellation retains configuration.

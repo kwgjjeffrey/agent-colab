@@ -2,7 +2,28 @@ import {isolated} from '../../../support/controls.mjs';
 import {resource,core,cli,data,disposable,eventually} from '../../../support/client.mjs';
 import {createDocument,deleteDocument} from '../../../support/canvas.mjs';
 export const USECASE={name:'Renamed Canvas handoff uses current title and readable stable identity',description:'Create an owned Canvas, rename from the mixed sidebar without leaving its preview, open Give to Agent and execute the displayed read reference. Verify current title and actual document content, then rename again while the prompt is open and verify title reconciliation and retained reference. Archive the owned document.'};
-export const META={id:'canvas.documents.rename-handoff',module:'canvas/documents',surface:'gui',priority:'critical',origin:'bug',status:'trial',effects:'isolated-write',cost:'normal',suite:'business',testLevel:'end-to-end',locks:['write:client.owner','write:browser.loopback-auth','write:canvas.collection'],affectedPaths:['desktop/ui/src/features/canvas/CanvasView.tsx','desktop/ui/src/features/workspace/CatalogWorkspace.tsx']};
+export const META={
+  "id": "canvas.documents.rename-handoff",
+  "module": "canvas/documents",
+  "surface": "gui",
+  "priority": "critical",
+  "origin": "bug",
+  "status": "active",
+  "effects": "isolated-write",
+  "cost": "normal",
+  "suite": "business",
+  "testLevel": "end-to-end",
+  "locks": [
+    "write:client.owner",
+    "write:browser.loopback-auth",
+    "write:canvas.collection"
+  ],
+  "affectedPaths": [
+    "desktop/ui/src/features/canvas/CanvasView.tsx",
+    "desktop/ui/src/features/workspace/CatalogWorkspace.tsx"
+  ],
+  "statusReason": "Reviewed Round 20261009T040625Z-d410b84c: 18 real assertions, current sidebar/dialog/prompt titles, two actual CLI reads around a second rename, stable identity and owned cleanup; initial script failure and preflight timeout retained."
+};
 export const REQUIREMENTS={channel:{permission:'read'},parameters:{keys:['disposable','isolationConfirmed','isolatedCoreDiscoveryFile','isolatedClientBaseUrl','testUserId','testOrganizationId']}};
 export async function run(ctx){
   disposable(ctx);
