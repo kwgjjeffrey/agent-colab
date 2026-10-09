@@ -1,5 +1,12 @@
 # Colab 实现计划
 
+### 2026-10-09 Catalog counts and uploader identity
+
+Server catalog children/trails now return nullable childCount and contributorMemberId/contributorName/contributorAvatarUrl. Counts include only direct Catalogs, non-archived Canvas and active shares; existing parent indexes support the counts and stable IDs/placement remain unchanged. GUI shows counts even when collapsed (including zero), and Files/Session/Skill uploader avatars open the existing UserIdentity profile without changing selection. Added sidebar right padding after real pointer acceptance found the scrollbar intercepting the Skill avatar.
+
+Server 0.1.4 production build/deployment/readiness passed. GUI 0.1.139-dev / promotion 0.1.191-dev published and normally installed; actual ui.json verified. TypeScript/build passed. Public readback verified 1319883 bytes / SHA-256 `aeca5e8c1bc94d24cab5a788c8aa818f0f167a38c790858b0509f12654172ee8`. Core, Skill and Electron were not rebuilt. Round 3 `20261009T042902Z-c7350753` in Run `20261009T042513Z-c3ff7f2b` passed all 23 assertions: direct versus recursive count, collapsed label, all three uploader identities/profiles, selection preservation and owned cleanup. Four screenshots reviewed. Earlier selector-animation and scrollbar failures remain recorded. Case qualified active; temporary daily-client index removed. No full-suite acceptance is claimed.
+
+
 ### 2026-10-09 Recover Catalog read errors
 
 Native OKR editor was mounted and Synced while Catalog displayed a stale Failed to fetch. Catalog read errors are now separate from mutation errors; successful background refresh clears only read errors. The initiating historical transport interruption is not established by retained logs. GUI 0.1.134-dev / promotion 0.1.186-dev published and normally installed; actual ui.json verified. Production build passed and public readback verified 2439669 bytes / SHA-256 `3ec58f2668c9ed66c4b619695eb8481c3092dae447badd46f9775747723d1370`. E2E `20261009T033459Z-e3887140` passed three assertions using actual background request abort and recovery without reload. Test used a temporary index aligned to daily GUI/Core, and did not mutate Channel data. Extra owner/receiver/revocable/Trace runtimes are isolated test-installation registrations retained under the user account, not a required same-machine multi-Core product feature or an authentication bypass.

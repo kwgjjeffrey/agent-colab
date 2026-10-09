@@ -1,0 +1,41 @@
+export const USECASE={name:'Show direct Catalog counts and shared-item contributor profiles',description:'Create an owned Catalog containing a nested Catalog and one Canvas, plus a Canvas inside the nested Catalog. Verify the collapsed count is two, never three descendants. For real Files, Session and Skill fixtures inspect contributor metadata, click the sidebar avatar, and verify the existing member profile appears without navigating away. Remove only owned test documents and empty catalogs.'};
+export const META={
+  "id": "context.catalog.metadata",
+  "module": "context/catalog",
+  "surface": "gui",
+  "priority": "normal",
+  "origin": "requirement",
+  "status": "active",
+  "effects": "isolated-write",
+  "locks": [
+    "read:client.primary",
+    "write:channel.shared"
+  ],
+  "cost": "normal",
+  "requires": [
+    "local-core"
+  ],
+  "affectedPaths": [
+    "desktop/ui/src/features/workspace",
+    "server/standalone/crates/persistence/src/catalog.rs"
+  ],
+  "suite": "business",
+  "testLevel": "end-to-end",
+  "statusReason": "Reviewed Round 3 20261009T042902Z-c7350753: collapsed count excludes grandchildren; real Files, Session and Skill uploader avatars open member profiles via normal pointer clicks without navigation; owned Canvas/catalog cleanup and all 23 assertions passed. Prior selector/scrollbar failures preserved."
+};
+export const REQUIREMENTS={channel:{permission:'read'},parameters:{keys:['disposable','filesName','sessionName','skillName']}};
+import {core,resource,parameter,disposable,eventually} from '../../support/client.mjs';
+export async function run(ctx){disposable(ctx);const c=resource(ctx,'channel'),base='/v1/channels/'+c.id;let folder,nested;const docs=[];try{
+ folder=await core(ctx,'POST',base+'/catalogs',{name:'Count '+ctx.runId});nested=await core(ctx,'POST',base+'/catalogs',{name:'Nested '+ctx.runId,parentId:folder.id});
+ for(const id of [folder.id,nested.id])docs.push(await core(ctx,'POST',base+'/canvases',{title:'Count fixture',folderId:id}));
+ const rows=await core(ctx,'GET',base+'/catalog-items?limit=200');ctx.assert('Catalog counts direct children only',rows.find(x=>x.id===folder.id)?.childCount,2);
+ await ctx.page.locator('[aria-label="Channels"]').getByRole('button',{name:c.name,exact:true}).click();await ctx.page.reload();await ctx.page.locator('[aria-label="Channel items"]').waitFor();
+ ctx.assert('Collapsed Catalog shows its count',await ctx.page.getByLabel('2 items in '+folder.name,{exact:true}).innerText(),'2');
+ for(const [kind,key] of [['files','filesName'],['session','sessionName'],['skill','skillName']]){
+  const row=rows.find(x=>x.kind===kind&&x.name===parameter(ctx,key));ctx.assert(kind+' carries uploader identity',Boolean(row?.contributorMemberId&&row?.contributorName),true);
+  const button=ctx.page.locator('[data-item-id="'+row.id+'"][data-item-kind="'+kind+'"]');await button.click();const crumb=ctx.page.locator('nav[aria-label="breadcrumb"]');await crumb.getByText(row.name,{exact:true}).waitFor();
+  const avatar=button.locator('..').getByRole('button',{name:'Uploaded by '+row.contributorName,exact:true});ctx.assert(kind+' has clickable uploader avatar',await avatar.isVisible(),true);await avatar.click();
+  const profile=ctx.page.locator('[data-slot="popover-content"][data-open]').getByText('Agents in this Channel',{exact:true});await profile.waitFor();ctx.assert(kind+' opens the member profile',await profile.isVisible(),true);ctx.assert(kind+' avatar does not navigate away',await crumb.getByText(row.name,{exact:true}).isVisible(),true);await ctx.page.waitForFunction(()=>{const node=document.querySelector('[data-slot="popover-content"][data-open]');return node&&Number(getComputedStyle(node).opacity)===1;});await ctx.screenshot(kind+' uploader profile');await ctx.page.keyboard.press('Escape');
+ }
+ await ctx.screenshot('Catalog counts and contributor avatars');
+ }finally{for(const doc of docs)await core(ctx,'DELETE','/v1/canvases/'+doc.id);if(nested)await core(ctx,'DELETE',base+'/catalogs/'+nested.id);if(folder)await core(ctx,'DELETE',base+'/catalogs/'+folder.id);}}

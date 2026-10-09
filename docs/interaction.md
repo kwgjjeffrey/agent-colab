@@ -326,3 +326,6 @@ icon. Content file icons follow Material Icon Theme filename/extension mappings.
 Home retains the collaboration illustration and Recent activity. Its guidance is a vertical list of left-aligned action buttons with purpose text on the right: primary Call my Agent, Share my Session, Share my Files, Share my Skills, Add a Canvas, Catalog, Quick Share. Call my Agent opens the shared handoff dialog immediately, locating the installed Skill and exact Channel; the user supplies their requirements. Existing use cases remain recoverable in a collapsible section.
 
 Files creation opens a configuration dialog before invoking the native chooser. Users can choose manually or Give to Agent without first supplying a path. Cancelling native selection keeps configuration available; a chosen source continues through the existing Core-backed scope inspection/review before sharing.
+
+
+Catalog sidebar metadata: Catalog rows show their Server-provided direct visible child count, including zero, even while collapsed. Files, Sessions and Skills show their uploader avatar on the right; clicking it opens the existing member profile without navigating or invoking the item action. Counts exclude archived Canvas and withdrawn shares; descendants are not accumulated.
