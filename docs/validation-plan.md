@@ -1,5 +1,15 @@
 # 技术验证计划
 
+### 2026-10-09 Session preview / synchronization separation
+
+Server 0.1.5 deployed through the canonical Linux build/deploy scripts; readiness passes. Its streaming receive tests cover multi-frame digest/bytes, size/digest rejection, interrupted streams, idle expiry and partial-file cleanup (3 tests). Core 100 Session tests pass (9); GUI suite passes (124 across 45 files), with focused independent failed-sync status/readable-content tests passing after the final wording change. Production GUI 145 and Core 100 builds pass.
+
+Run `20261009T060217Z-7f0f33de`, final Round `20261009T060810Z-d0b8d152`, passes all 27 assertions: real owned 16 MiB transcript, publication-only failure with usable GUI preview, zero falsely accepted bytes, throttled multi-segment upload lasting over 100 seconds, navigation away during upload, read during upload, full accepted-byte equality, exact final marker on a second device, distinct published/local snapshot identities and stable old local cursor. Earlier rounds preserve the test bridge's 15-second waits for upload/initial receiver download; explicit operation waits repair the script without changing product deadlines. Fixture shares and source directories are withdrawn/removed, transport restored. This is same-owner cross-device evidence, not distinct-member or the user's specific 161 MiB Session acceptance.
+
+Packaged GUI 145/Core 100 Round `20261009T061214Z-81f987e3` passes three cases / 52 assertions: real CLI revision-pinned pagination (16), Session/Message tail, typed tools, manual scrolling, older-page anchor and sidebar resizing (24), and receiver-created remote share / offline committed-cache reading (12). Cache case now explicitly exercises a consumer device, not a contributor local source; both reviewed cases are active. No full repository regression or invented performance budget is claimed. Exact trace IDs were retained, but the isolated fixture's provider ingestion returned unavailable; functional results do not claim provider timing or trace-child assertions.
+
+Client promotion/install verification is pending below until the signed manifest and running components are checked. Shell and Skill remain unchanged.
+
 ### 2026-10-09 Catalog counts and uploader identity
 
 Server catalog children/trails now return nullable childCount and contributorMemberId/contributorName/contributorAvatarUrl. Counts include only direct Catalogs, non-archived Canvas and active shares; existing parent indexes support the counts and stable IDs/placement remain unchanged. GUI shows counts even when collapsed (including zero), and Files/Session/Skill uploader avatars open the existing UserIdentity profile without changing selection. Added sidebar right padding after real pointer acceptance found the scrollbar intercepting the Skill avatar.

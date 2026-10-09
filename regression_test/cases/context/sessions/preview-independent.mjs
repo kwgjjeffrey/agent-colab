@@ -3,7 +3,30 @@ import path from 'node:path';
 import {isolated,control} from '../../../support/controls.mjs';
 import {core,resource,parameter,disposable,eventually} from '../../../support/client.mjs';
 export const USECASE={name:'Session preview survives failed and slow independent publication',description:'Use an owned 16 MiB provider transcript and dedicated real-forwarding fault proxy. Fail only publication, read local preview and report failed sync without advancing upload. Resume a throttled upload exceeding the old 30-second metadata deadline, navigate away from preview, and verify full durable progress and receiver content. Withdraw the owned share and restore the dedicated proxy. Injected delay is functional timeout-policy evidence, not a performance budget.'};
-export const META={id:'sessions.sync.preview-independent',module:'context/sessions/sync',surface:'gui',priority:'critical',origin:'bug',status:'trial',effects:'isolated-write',cost:'slow',suite:'business',testLevel:'end-to-end',locks:['write:client.owner','write:browser.loopback-auth','write:session.fixture','write:transport.session-fault'],affectedPaths:['local/crates/local-api/src/sessions.rs','server/standalone/crates/api/src/session_upload.rs','desktop/ui/src/features/sessions/SessionPreview.tsx']};
+export const META={
+  "id": "sessions.sync.preview-independent",
+  "module": "context/sessions/sync",
+  "surface": "gui",
+  "priority": "critical",
+  "origin": "bug",
+  "status": "active",
+  "effects": "isolated-write",
+  "cost": "slow",
+  "suite": "business",
+  "testLevel": "end-to-end",
+  "locks": [
+    "write:client.owner",
+    "write:browser.loopback-auth",
+    "write:session.fixture",
+    "write:transport.session-fault"
+  ],
+  "affectedPaths": [
+    "local/crates/local-api/src/sessions.rs",
+    "server/standalone/crates/api/src/session_upload.rs",
+    "desktop/ui/src/features/sessions/SessionPreview.tsx"
+  ],
+  "statusReason": "Reviewed Round 20261009T060810Z-d0b8d152 in Run 20261009T060217Z-7f0f33de: real 16 MiB failed publication with readable GUI; throttled multi-segment upload exceeds 30s, continues off-preview, durable byte receipt equals source, receiver exact final marker and independent snapshot, pinned local cursor and owned cleanup. Earlier script wait failures retained; no provider performance budget claimed."
+};
 export const REQUIREMENTS={channel:{permission:'read'},parameters:{keys:['disposable','isolationConfirmed','isolatedCoreDiscoveryFile','isolatedClientBaseUrl','testUserId','testOrganizationId','secondCoreDiscoveryFile']}};
 export async function run(ctx){
   disposable(ctx); const target=await isolated(ctx),channel=resource(ctx,'channel');

@@ -9,7 +9,7 @@ export const META = {
   "surface": "skill",
   "priority": "normal",
   "origin": "requirement",
-  "status": "trial",
+  "status": "active",
   "effects": "isolated-write",
   "cost": "normal",
   "requires": [],
@@ -19,16 +19,16 @@ export const META = {
   ],
   "suite": "business",
   "testLevel": "end-to-end",
-  "statusReason": "Revalidating contributor/recipient distinction after independent local previews; receiver-created share exercises the consumer cache.",
+  "statusReason": "Reviewed Round 20261009T061214Z-81f987e3: receiver-created real share avoids contributor-local shortcut; candidate Core reads committed cache, offline read returns identical turns and stale freshness, transport restored and owned share withdrawn. All 12 assertions passed.",
   "locks": [
-  "read:client.primary",
-  "write:channel.shared",
-  "write:client.owner",
-  "write:transport.owner",
-  "write:session.fixture",
-  "write:client.receiver",
-  "write:browser.loopback-auth"
-]
+    "read:client.primary",
+    "write:channel.shared",
+    "write:client.owner",
+    "write:transport.owner",
+    "write:session.fixture",
+    "write:client.receiver",
+    "write:browser.loopback-auth"
+  ]
 };
 
 import fs from "node:fs/promises";import path from "node:path";

@@ -1101,7 +1101,7 @@ Implemented global account display-name editing and Google linking for existing 
 
 ## Session streaming and preview independence (2026-10-09)
 
-In progress: Server 5 streaming segment ingestion, Core 100 independent contributor preview and read-only synchronization progress, GUI status presentation. Stream integrity/size/interruption cleanup tests and existing Session adapter tests passed. Pending: slow upload and interrupted-upload real GUI/Core/Server regression, client release and deployment acceptance. Preserve concurrent Catalog/creation UI work in this shared checkout; do not claim it as this task's changes.
+Implemented: Server 5 streaming segment ingestion is deployed; Core 100 contributor preview never awaits publication, receiver cached preview refreshes independently, and GUI 145 polls read-only sync progress without resetting conversation state. Server 3/Core 9/GUI 124 unit tests pass. Real failed/slow-upload Round 20261009T060810Z-d0b8d152 passes 27 assertions; packaged reading/cache/scrolling Round 20261009T061214Z-81f987e3 passes 52 assertions. Client promotion/install acceptance is the remaining step. Concurrent Catalog/creation/Agent button work is retained, not claimed as this task's changes. See validation-plan.md for exact scope and trace evidence limitation.
 
 ## Canvas rename handoff repair (2026-10-09)
 

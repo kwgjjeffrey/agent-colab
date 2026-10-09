@@ -325,6 +325,8 @@ icon. Content file icons follow Material Icon Theme filename/extension mappings.
 
 Home retains the collaboration illustration and Recent activity. Its guidance is a vertical list of left-aligned action buttons with purpose text on the right: primary Call my Agent, Share my Session, Share my Files, Share my Skills, Add a Canvas, Catalog, Quick Share. Call my Agent opens the shared handoff dialog immediately, locating the installed Skill and exact Channel; the user supplies their requirements. Existing use cases remain recoverable in a collapsible section.
 
+Session preview reports synchronization independently: accepted upload bytes and pending/syncing/synced/failed state for contributors; cached-preview/download state for consumers. A sync error does not replace readable content with a preview error, and status polling does not reset scroll or cancel background work. A share without a published snapshot says “Not published yet”, not “synced”.
+
 Files creation opens a configuration dialog before invoking the native chooser. Users can choose manually or Give to Agent without first supplying a path. Cancelling native selection keeps configuration available; a chosen source continues through the existing Core-backed scope inspection/review before sharing.
 
 
