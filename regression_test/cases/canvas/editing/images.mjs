@@ -24,7 +24,7 @@ export async function run(ctx){disposable(ctx);const doc=await createDocument(ct
  const projection=await eventually(ctx,'Image handle is durable in projection',()=>core(ctx,'GET','/v1/canvases/'+doc.id+'/document'),v=>v.content.includes('colab-image:'+id));
  ctx.assert('Projection never embeds binary image bytes',projection.content.includes('data:image'),false);
  const interpretation='One pixel test fixture '+ctx.runId;
- await core(ctx,'PATCH','/v1/canvas-images/'+id,{image_interpretation:interpretation});
+ const interpreted=data(await cli(ctx,'colab-canvas',['image-interpret','--id',id,'--text',interpretation]));ctx.assert('Agent saves hidden interpretation',interpreted.imageInterpretation,interpretation);
  await ctx.page.reload();await openTab(ctx,'Canvas');await ctx.page.locator(`[data-item-id="${doc.id}"]`).click();await image.waitFor();
  ctx.assert('Hidden interpretation is absent from GUI',await editor.innerText().then(text=>text.includes(interpretation)),false);
  const result=data(await cli(ctx,'colab-canvas',['image-read','--id',id,'--output',output]));
