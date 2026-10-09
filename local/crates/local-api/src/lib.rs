@@ -764,6 +764,7 @@ pub fn router(state: AppState, security: LocalSecurity) -> Router {
             "/v1/sessions/{share_id}/sync",
             axum::routing::post(sessions::sync_session),
         )
+        .route("/v1/sessions/{share_id}/sync-status", get(sessions::session_sync_status))
         .route(
             "/v1/sessions/{share_id}/read",
             axum::routing::post(sessions::read_session),

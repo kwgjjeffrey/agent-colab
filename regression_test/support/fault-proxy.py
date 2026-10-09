@@ -9,7 +9,7 @@ class Handler(socketserver.BaseRequestHandler):
    while b'\r\n\r\n' not in raw:
     raw+=self.request.recv(65536)
     if not raw:return
-   path=raw.split(b' ',2)[1].decode();websocket=b'upgrade: websocket' in raw.lower();publication=any(x in path for x in ['/sync-','/file-revisions','/git-objects','/session-segments']) or '/files/' in path and '/revisions' in path
+   path=raw.split(b' ',2)[1].decode();websocket=b'upgrade: websocket' in raw.lower();session_upload=raw.startswith(b'POST ') and '/sessions/' in path and path.split('?')[0].endswith('/segments');publication=session_upload or any(x in path for x in ['/sync-','/file-revisions','/git-objects','/session-segments']) or '/files/' in path and '/revisions' in path
    def blocked():
     mode=state.read_text().strip() if state.exists() else 'on'
     return mode=='off' or mode=='publication-off' and publication or mode=='work-events-off' and '/agent-requests/' in path and path.endswith('/events') and raw.startswith(b'POST ') or mode=='realtime-off' and websocket
@@ -23,6 +23,7 @@ class Handler(socketserver.BaseRequestHandler):
     for source in ready:
      b=source.recv(65536)
      if not b:return
+     if source is self.request and session_upload and state.exists() and state.read_text().strip()=='session-slow':time.sleep(.35)
      (self.request if source is up else up).sendall(b)
   except (OSError,IndexError) as e:print(type(e).__name__,flush=True)
   finally:

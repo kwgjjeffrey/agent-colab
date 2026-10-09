@@ -67,7 +67,7 @@ pub(super) fn start_session_sync(state: &AppState) {
     let state = state.clone();
     tokio::spawn(async move {
         // Agent transcripts can append several records per second. A one-minute continuous-sync
-        // window coalesces those writes; explicit share/read still calls `sync_source` immediately.
+        // window coalesces writes. Preview never awaits or owns this publication job.
         let mut tick = tokio::time::interval(std::time::Duration::from_secs(60));
         loop {
             tick.tick().await;
@@ -90,6 +90,7 @@ pub(super) fn start_session_sync(state: &AppState) {
 async fn sync_initial_source(state: &AppState, id: &str, envelope: Option<String>) -> Result<(), LocalError> {
     let context=envelope.as_deref().and_then(|raw|serde_json::from_str(raw).ok()).unwrap_or_default();
     let result=colab_observability::resume(&context,sync_source(state,id)).await;
+    record_sync_state(state, id, if result.is_ok() { "synced" } else { "failed" }, result.as_ref().err().map(|error| error.message.as_str())).await?;
     if result.is_ok() && envelope.is_some() {
         state.inner.store.lock().await.execute("update local_session_sources set trace_context=null where share_id=?1 and trace_context=?2",rusqlite::params![id,envelope]).map_err(LocalError::internal)?;
     }
@@ -128,6 +129,27 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
     Ok(Json(rows))
 
 }).await
+}
+
+async fn record_sync_state(state: &AppState, id: &str, status: &str, error: Option<&str>) -> Result<(), LocalError> {
+    let user = current_user_id(state).await?;
+    let value = json!({"state":status,"error":error}).to_string();
+    state.inner.store.lock().await.execute("insert into local_settings(key,value) values(?1,?2) on conflict(key) do update set value=excluded.value", rusqlite::params![format!("session_sync:{user}:{id}"),value]).map_err(LocalError::internal)?;
+    Ok(())
+}
+
+/// Reads progress only; polling cannot start, cancel or wait on a publication job.
+pub(super) async fn session_sync_status(State(state): State<AppState>, AxumPath(id): AxumPath<String>) -> Result<Json<Value>, LocalError> {
+    let user = current_user_id(&state).await?;
+    let store = state.inner.store.lock().await;
+    let source: Option<(String,i64)> = store.query_row("select source_path,last_byte_offset from local_session_sources where share_id=?1 and user_id=?2",rusqlite::params![id,user],|row|Ok((row.get(0)?,row.get(1)?))).optional().map_err(LocalError::internal)?;
+    let Some((path, uploaded)) = source else { return Ok(Json(json!({"state":"unknown","contributor":false}))); };
+    let total = fs::metadata(path).map(|file|file.len()).unwrap_or(uploaded.max(0) as u64);
+    let raw: Option<String> = store.query_row("select value from local_settings where key=?1",[format!("session_sync:{user}:{id}")],|row|row.get(0)).optional().map_err(LocalError::internal)?;
+    let mut status: Value = raw.and_then(|raw|serde_json::from_str(&raw).ok()).unwrap_or(json!({"state":"pending"}));
+    if status["state"] == "synced" && (uploaded.max(0) as u64) != total { status["state"] = json!("pending"); }
+    status["uploadedBytes"] = json!(uploaded.max(0)); status["totalBytes"] = json!(total); status["contributor"] = json!(true);
+    Ok(Json(status))
 }
 
 /// Maintain a disposable metadata index independently of listing requests. A refresh stats every
@@ -514,7 +536,7 @@ pub(super) async fn sync_session(
 ) -> Result<Json<Value>, LocalError> {
 colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.sessions.sync-session", async {
 
-    sync_source(&state, &share_id).await?;
+    sync_initial_source(&state, &share_id, None).await?;
     let path = materialize(&state, &share_id).await?;
     Ok(Json(json!({"shareId":share_id,"rawPath":path})))
 
@@ -551,6 +573,7 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
     let Some((path, offset, mut parent)) = source else {
         return Ok(());
     };
+    record_sync_state(state, share_id, "syncing", None).await?;
     let length = match fs::metadata(&path) {
         Ok(metadata) => metadata.len() as i64,
         // The immutable published snapshot remains readable after its source is moved/deleted.
@@ -602,8 +625,17 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
         if let Some(ref snapshot) = parent {
             request = request.query(&[("parentSnapshotId", snapshot)])
         }
+        // Send a bounded file range with reqwest/Tokio backpressure. The digest computed
+        // above also rejects a source rewritten between scanning and streaming.
+        let mut range = tokio::fs::File::open(&path).await.map_err(LocalError::internal)?;
+        tokio::io::AsyncSeekExt::seek(&mut range, SeekFrom::Start(published as u64)).await.map_err(LocalError::internal)?;
+        let size = bytes.len() as u64;
+        drop(bytes);
+        let stream = tokio_util::io::ReaderStream::new(tokio::io::AsyncReadExt::take(range, size));
         let response = request
-            .body(bytes)
+            .timeout(std::time::Duration::from_secs(15 * 60))
+            .header(reqwest::header::CONTENT_LENGTH, size)
+            .body(reqwest::Body::wrap_stream(stream))
             .send()
             .await
             .map_err(LocalError::internal)?;
@@ -776,13 +808,46 @@ pub(super) async fn read_session(
 ) -> Result<Json<Value>, LocalError> {
 colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.sessions.read-session", async {
 
-    // Contributors publish pending bytes before reading; consumers pull the current immutable
-    // snapshot. Both then execute the same adapter projection over a local raw cache.
-    // This is a no-op for consumers. For the contributor it must succeed; hiding the upload
-    // error would replace the actionable cause with a misleading "no synchronized snapshot".
-    sync_source(&state, &share_id).await?;
     let user = current_user_id(&state).await?;
-    let (mut path, cache_state) = match materialize(&state, &share_id).await {
+    let source: Option<(String,String)> = state.inner.store.lock().await.query_row(
+        "select source_path,source_adapter from local_session_sources where share_id=?1 and user_id=?2",
+        rusqlite::params![share_id,user],|row|Ok((row.get(0)?,row.get(1)?))).optional().map_err(LocalError::internal)?;
+    // Local preview owns a frozen extent, never the uploader's cursor/lock/cache. An issued
+    // pagination cursor keeps that view even while source appends and publication proceeds.
+    let local_view = if let Some((source, _)) = source.as_ref().filter(|(path,_)|Path::new(path).is_file()) {
+        let dir = state.inner.data_root.join("session-previews").join(&user).join(&share_id);
+        let pinned = body.cursor.as_deref().map(|cursor| -> Result<String,LocalError> {
+            let raw = URL_SAFE_NO_PAD.decode(cursor).map_err(|_|LocalError::bad_request("Invalid Session cursor"))?;
+            let value: Value = serde_json::from_slice(&raw).map_err(|_|LocalError::bad_request("Invalid Session cursor"))?;
+            let id = value["snapshot"].as_str().ok_or_else(||LocalError::bad_request("Invalid Session snapshot"))?;
+            uuid::Uuid::parse_str(id).map_err(|_|LocalError::bad_request("Invalid Session snapshot"))?;
+            Ok(id.to_owned())
+        }).transpose()?;
+        let snapshot = pinned.clone().unwrap_or_else(||uuid::Uuid::new_v4().to_string());
+        let path = dir.join(format!("{snapshot}.jsonl"));
+        if pinned.is_none() {
+            let source = source.clone(); let output = path.clone();
+            tokio::task::spawn_blocking(move || -> Result<(),LocalError> {
+                fs::create_dir_all(&dir).map_err(LocalError::internal)?;
+                let input = fs::File::open(source).map_err(LocalError::internal)?;
+                let size = input.metadata().map_err(LocalError::internal)?.len();
+                let temporary = output.with_extension("reading");
+                let mut file = fs::File::create(&temporary).map_err(LocalError::internal)?;
+                std::io::copy(&mut input.take(size), &mut file).map_err(LocalError::internal)?;
+                drop(file);
+                fs::rename(temporary, &output).map_err(LocalError::internal)?;
+                let mut views: Vec<_> = fs::read_dir(&dir).map_err(LocalError::internal)?.filter_map(Result::ok)
+                    .filter(|entry|entry.path().extension().is_some_and(|extension|extension == "jsonl")).collect();
+                views.sort_by_key(|entry|entry.metadata().and_then(|metadata|metadata.modified()).ok());
+                let excess = views.len().saturating_sub(8);
+                for entry in views.into_iter().take(excess) { if entry.path() != output { let _ = fs::remove_file(entry.path()); } }
+                Ok(())
+            }).await.map_err(LocalError::internal)??;
+        }
+        if !path.is_file() { return Err(LocalError::bad_request("Pinned Session preview expired; restart pagination")); }
+        Some((path.to_string_lossy().into_owned(),snapshot))
+    } else { None };
+    let (mut path, cache_state) = if let Some((path,_)) = &local_view { (path.clone(),"local") } else { match materialize(&state, &share_id).await {
         Ok(path) => (path, "current"),
         Err(error) if matches!(error.status, StatusCode::BAD_GATEWAY | StatusCode::SERVICE_UNAVAILABLE | StatusCode::GATEWAY_TIMEOUT) => {
             // Offline reads may reuse only this authenticated user's previously materialized
@@ -793,7 +858,7 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
             match cached.filter(|path|Path::new(path).is_file()) { Some(path)=>(path,"stale"), None=>return Err(error) }
         }
         Err(error) => return Err(error),
-    };
+    }};
     let (adapter, name, mut snapshot) = {
         let store = state.inner.store.lock().await;
         let cached: Option<(String, String)> = store
@@ -803,14 +868,14 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
                 |r| Ok((r.get(0)?, r.get(1)?)),
             )
             .ok();
-        let snapshot: String = store
+        let snapshot: String = if let Some((_,snapshot)) = &local_view { snapshot.clone() } else { store
             .query_row(
                 "select snapshot_id from session_materializations where share_id=?1 and user_id=?2",
                 [&share_id, &user],
                 |r| r.get(0),
             )
-            .map_err(LocalError::internal)?;
-        let (adapter, name) = cached.unwrap_or_else(|| ("codex-jsonl-v1".into(), share_id.clone()));
+            .map_err(LocalError::internal)? };
+        let (adapter, name) = cached.unwrap_or_else(|| (source.as_ref().map(|(_,adapter)|adapter.clone()).unwrap_or_else(||"codex-jsonl-v1".into()), share_id.clone()));
         (adapter, name, snapshot)
     };
     if let Some(cursor) = body.cursor.as_deref() {
@@ -826,12 +891,12 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
             snapshot = pinned.to_string();
         }
     }
-    let (mut turns, invalid_records) = project_jsonl(
-        Path::new(&path),
-        &adapter,
-        body.include_outputs.unwrap_or(false),
-        body.max_output_chars_per_item.unwrap_or(4000),
-    )?;
+    let projection_path = path.clone(); let projection_adapter = adapter.clone();
+    let outputs = body.include_outputs.unwrap_or(false); let max_chars = body.max_output_chars_per_item.unwrap_or(4000);
+    // Transcript decoding cannot occupy an async runtime worker needed by upload/progress.
+    let (mut turns, invalid_records) = tokio::task::spawn_blocking(move ||
+        project_jsonl(Path::new(&projection_path), &projection_adapter, outputs, max_chars)
+    ).await.map_err(LocalError::internal)??;
     let before = decode_cursor(body.cursor.as_deref(), &snapshot, turns.len())?;
     let limit = body.turn_limit.unwrap_or(20).clamp(1, 100);
     let start = before.saturating_sub(limit);

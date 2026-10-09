@@ -25,6 +25,20 @@ type Turn = {
 };
 /** Selecting a Session reads a bounded page; discovery never reads conversations. */
 export function SessionPreview({ id }: { id: string }) {
+  const [sync, setSync] = useState<{state:string; contributor?:boolean; uploadedBytes?:number; totalBytes?:number; error?:string}>();
+  useEffect(() => {
+    let stopped = false;
+    let timer: ReturnType<typeof setTimeout>;
+    setSync(undefined);
+    async function poll() {
+      try {
+        const response = await fetch(`/v1/sessions/${id}/sync-status`);
+        if (response.ok && !stopped) setSync(await response.json());
+      } finally { if (!stopped) timer = setTimeout(() => void poll().catch(() => {}), 3000); }
+    }
+    void poll().catch(() => {});
+    return () => { stopped = true; clearTimeout(timer); };
+  }, [id]);
   const [turns, setTurns] = useState<Turn[]>();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>();
@@ -101,6 +115,10 @@ export function SessionPreview({ id }: { id: string }) {
         className="flex flex-col gap-3 px-4 pb-4"
         scrollClassName="min-h-0 flex-1 overflow-y-auto"
       >
+        {sync?.contributor && <p role="status" className="text-sm text-muted-foreground">
+          {sync.state === "synced" ? "Synced" : sync.state === "failed" ? "Sync failed — local preview is still available. Background sync will retry." : "Syncing"}
+          {sync.state !== "synced" && sync.totalBytes !== undefined && ` · ${((sync.uploadedBytes ?? 0) / 1048576).toFixed(1)} / ${(sync.totalBytes / 1048576).toFixed(1)} MiB uploaded`}
+        </p>}
         {warnings.map((warning) => (
           <p
             key={warning.code}

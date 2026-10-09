@@ -3,7 +3,7 @@ use std::{net::SocketAddr, path::PathBuf, sync::Arc, time::Duration};
 use anyhow::Context;
 use axum::{
     Json, Router,
-    body::{Body, Bytes},
+    body::Body,
     extract::{DefaultBodyLimit, Path, Query, State},
     http::{HeaderMap, StatusCode, header},
     response::{Html, IntoResponse, Response},
@@ -11,7 +11,6 @@ use axum::{
 };
 use colab_server_persistence::Database;
 use serde::{Deserialize, Serialize};
-use sha2::Digest;
 use tokio::net::TcpListener;
 use tokio_util::io::ReaderStream;
 use tower_http::{
@@ -21,6 +20,7 @@ use tower_http::{
 };
 
 mod blobs;
+mod session_upload;
 mod canvas;
 mod catalog;
 mod observability;
@@ -255,7 +255,7 @@ fn router(state: AppState) -> Router {
         )
         .route(
             "/v1/sessions/{share_id}/segments",
-            get(list_session_segments).post(upload_session_segment),
+            get(list_session_segments),
         )
         .route("/v1/sessions/{share_id}", delete(withdraw_session_share))
         .route(
@@ -270,6 +270,8 @@ fn router(state: AppState) -> Router {
             Duration::from_secs(30),
         ));
     standard
+        // Upload owns a per-chunk idle timeout, not the metadata request deadline.
+        .merge(Router::new().route("/v1/sessions/{share_id}/segments", post(upload_session_segment)))
         .merge(messaging::routes())
         .merge(canvas::routes())
         .merge(catalog::routes())
@@ -1076,32 +1078,20 @@ async fn upload_session_segment(
     headers: HeaderMap,
     Path(share_id): Path<uuid::Uuid>,
     Query(query): Query<UploadSessionSegmentQuery>,
-    body: Bytes,
+    body: Body,
 ) -> Result<(StatusCode, Json<serde_json::Value>), ApiError> {
 colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.main.upload-session-segment", async {
 
     let user = authenticated_user(&state, &headers).await?;
-    if body.is_empty()
-        || query.source_cursor.len() > 4096
+    if query.source_cursor.len() > 4096
         || query.digest.len() != 64
         || !query.digest.chars().all(|c| c.is_ascii_hexdigit())
     {
         return Err(ApiError::bad_request("invalid_session_segment"));
     }
-    let actual = hex::encode(sha2::Sha256::digest(&body));
-    if actual != query.digest {
-        return Err(ApiError::bad_request("session_segment_digest_mismatch"));
-    }
     let key = uuid::Uuid::new_v4().simple().to_string();
     let path = blob_path(&state.blob_root, &key);
-    if let Some(parent) = path.parent() {
-        tokio::fs::create_dir_all(parent)
-            .await
-            .map_err(|_| ApiError::internal("blob_write_failed"))?
-    }
-    tokio::fs::write(&path, &body)
-        .await
-        .map_err(|_| ApiError::internal("blob_write_failed"))?;
+    let size = session_upload::receive(&state.blob_root, &key, body, &query.digest).await?;
     match state
         .database
         .append_session_segment(
@@ -1112,19 +1102,20 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
             &query.source_cursor,
             &key,
             &query.digest,
-            body.len() as i64,
+            size as i64,
         )
         .await
-        .map_err(|_| ApiError::internal("session_segment_creation_failed"))?
+        .map_err(|_| ApiError::internal("session_segment_creation_failed"))
     {
-        Some((snapshot, segment)) => Ok((
+        Ok(Some((snapshot, segment))) => Ok((
             StatusCode::CREATED,
             Json(serde_json::json!({"snapshot":snapshot,"segment":segment})),
         )),
-        None => {
+        Ok(None) => {
             let _ = tokio::fs::remove_file(path).await;
             Err(ApiError::conflict("session_snapshot_conflict"))
         }
+        Err(error) => { let _ = tokio::fs::remove_file(path).await; Err(error) }
     }
 
 }).await

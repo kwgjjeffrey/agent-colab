@@ -894,3 +894,8 @@ bulk updates preserve stable item identities and consumer references. Without
 an anchor, placement appends. Discovery sorts by persisted position, then the
 legacy catalog/name/id order for untouched records. Core remains the proxy;
 GUI does not call Server directly.
+# Session upload / preview independence (2026-10-09)
+
+Contributor preview reads an account-scoped, frozen local source extent, not the publication cursor or synchronization lock. Preview snapshots have their own bounded retention and pagination identity, never replacing a published/receiver cache. Background synchronization owns durable accepted-byte progress and failure/retry status. GET sync-status is read-only and cannot trigger or cancel publication. Transcript decoding runs outside async runtime workers.
+
+Session segments are streamed with reqwest/Tokio file-range backpressure. Server accepts Body data frames into a temporary file with a 60-second idle bound and 256 MiB byte bound, hashes incrementally, and publishes only after digest validation and disk synchronization. Segment POST is outside the ordinary 30-second metadata deadline. Existing snapshot CAS and per-segment durable cursor remain authoritative; partial uploads are never preview data. Receiver cache/download still follows authorization and immutable published snapshots.

@@ -6,7 +6,15 @@ import {SessionPreview} from "./SessionPreview";
 import {catalogRequest} from "@/features/workspace/CatalogWorkspace";
 vi.mock("@/features/workspace/CatalogWorkspace",()=>({catalogRequest:vi.fn(async()=>({turns:[{items:[{type:"userMessage",content:[{text:"Actual user question"}]},{type:"agentMessage",text:"Actual answer"}]}]}))}));
 vi.mock("@/api/operation-runner",()=>({runOperation:(_id:string,fn:(scope:unknown)=>unknown)=>fn({fail:vi.fn()})}));
-afterEach(cleanup);
+afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
+it("shows failed synchronization independently of a readable local conversation",async()=>{
+  vi.stubGlobal("fetch",vi.fn(async()=>new Response(JSON.stringify({state:"failed",contributor:true,uploadedBytes:8388608,totalBytes:16777216}),{status:200})));
+  render(<SessionPreview id="local-preview"/>);
+  expect(await screen.findByText("Actual user question")).toBeTruthy();
+  expect(await screen.findByText(/Sync failed — local preview is still available/)).toBeTruthy();
+  expect(screen.getByText(/8.0 \/ 16.0 MiB uploaded/)).toBeTruthy();
+  expect(catalogRequest).toHaveBeenCalledWith("/v1/sessions/local-preview/read","POST",expect.any(Object),expect.any(Object));
+});
 it("keeps tool content collapsed while showing conversation messages",async()=>{
   vi.mocked(catalogRequest).mockResolvedValueOnce({turns:[{items:[{type:"commandExecution",text:"Tool output detail"},{type:"agentMessage",text:"Visible response"}]}]});
   render(<SessionPreview id="tools"/>);
