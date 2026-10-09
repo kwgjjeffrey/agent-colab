@@ -1,4 +1,5 @@
 use serde::Serialize;
+pub mod session_chunks;
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]

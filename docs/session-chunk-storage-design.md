@@ -3,6 +3,14 @@
 Status: implementation in progress, not deployed. User selected Zstd level 3 on
 2026-10-09 after the full Rust comparison in `.trial/V-SESSION-CHUNKS-01/README.md`.
 
+Foundation implemented: Server `blob_store.rs` wraps standard object_store S3
+with bounded upload staging and private namespace GC; disk preserves its old
+layout. Core `session_chunks.rs` verifies independently compressed frames and
+provides a lazy seekable byte view holding one decoded block. Existing production
+Session read/write paths still use the legacy raw protocol until negotiation,
+provider indexes and compatibility acceptance are complete. This is not a
+compressed Session release. Live test evidence is in `validation-plan.md`.
+
 ## Boundaries and compatibility
 
 Core owns source scanning, record-aligned chunking, compression and provider read

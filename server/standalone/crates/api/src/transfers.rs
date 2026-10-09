@@ -5,14 +5,14 @@ use axum::{
     body::Body,
     extract::{ConnectInfo, Path, State},
     http::{HeaderMap, StatusCode, header},
-    response::{IntoResponse, Response},
+    response::Response,
     routing::{get, post, put},
 };
 use futures_util::TryStreamExt;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use tokio_util::io::{ReaderStream, StreamReader};
+use tokio_util::io::StreamReader;
 use uuid::Uuid;
 
 use crate::{ApiError, AppState, blob_path};
@@ -224,13 +224,14 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
         .await
         .map_err(|_| ApiError::internal("blob_write_failed"))?;
     let digest = hex::encode(hasher.finalize());
+    state.blob_store.publish_staged(&key).await?;
     let accepted = state
         .database
         .commit_transfer_item(transfer_id, item_id, token, &key, &digest, size)
         .await
         .map_err(|_| ApiError::internal("transfer_item_commit_failed"))?;
     if !accepted {
-        let _ = tokio::fs::remove_file(path).await;
+        let _ = state.blob_store.delete(&key).await;
         return Err(ApiError::forbidden("transfer_upload_forbidden"));
     }
     Ok(StatusCode::NO_CONTENT)
@@ -365,17 +366,9 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
         .await
         .map_err(|_| ApiError::internal("transfer_item_lookup_failed"))?
         .ok_or_else(|| ApiError::forbidden("transfer_unavailable"))?;
-    let file = tokio::fs::File::open(blob_path(&state.blob_root, &key))
-        .await
-        .map_err(|_| ApiError::internal("blob_read_failed"))?;
-    Ok((
-        [
-            (header::CONTENT_TYPE, "application/octet-stream"),
-            (header::X_CONTENT_TYPE_OPTIONS, "nosniff"),
-        ],
-        Body::from_stream(ReaderStream::new(file)),
-    )
-        .into_response())
+    let mut response = state.blob_store.response(&key, "application/octet-stream").await?;
+    response.headers_mut().insert(header::X_CONTENT_TYPE_OPTIONS, "nosniff".parse().unwrap());
+    Ok(response)
 
 }).await
 }
@@ -404,11 +397,11 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
 
 pub(super) fn spawn_expired_transfer_gc(
     database: colab_server_persistence::Database,
-    blob_root: std::path::PathBuf,
+    store: crate::blob_store::BlobStore,
 ) {
     tokio::spawn(async move {
         loop {
-            if let Err(error) = collect_expired(&database, &blob_root).await {
+            if let Err(error) = collect_expired(&database, &store).await {
                 eprintln!("quick transfer garbage collection failed: {error:#}");
             }
             tokio::time::sleep(Duration::from_secs(15 * 60)).await;
@@ -418,7 +411,7 @@ pub(super) fn spawn_expired_transfer_gc(
 
 async fn collect_expired(
     database: &colab_server_persistence::Database,
-    blob_root: &std::path::Path,
+    store: &crate::blob_store::BlobStore,
 ) -> anyhow::Result<()> {
 colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.transfers.collect-expired", async {
 
@@ -427,9 +420,8 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
     for transfer in database.expired_transfers(100).await? {
         let mut all_removed = true;
         for key in transfer.blob_keys {
-            match tokio::fs::remove_file(blob_path(blob_root, &key)).await {
+            match store.delete(&key).await {
                 Ok(()) => {}
-                Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
                 Err(error) => {
                     all_removed = false;
                     eprintln!("cannot remove expired transfer blob {key}: {error}");

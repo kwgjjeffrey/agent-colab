@@ -26,3 +26,4 @@ base64.workspace = true
 colab-observability = { path = "../../../../observability/rust" }
 
 percent-encoding = "2.3"
+object_store = { version = "0.14.2", features = ["aws"] }

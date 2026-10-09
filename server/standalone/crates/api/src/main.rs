@@ -12,7 +12,6 @@ use axum::{
 use colab_server_persistence::Database;
 use serde::{Deserialize, Serialize};
 use tokio::net::TcpListener;
-use tokio_util::io::ReaderStream;
 use tower_http::{
     catch_panic::CatchPanicLayer,
     request_id::{MakeRequestUuid, PropagateRequestIdLayer, SetRequestIdLayer},
@@ -34,6 +33,7 @@ mod device_auth;
 mod external_auth;
 mod directory;
 mod activity;
+mod blob_store;
 mod invite_links;
 
 #[derive(Clone)]
@@ -43,6 +43,7 @@ struct AppState {
     google_client_id: String,
     external_auth: Option<external_auth::Config>,
     blob_root: PathBuf,
+    blob_store: blob_store::BlobStore,
     message_events: tokio::sync::broadcast::Sender<messaging::MessageInvalidation>,
     agent_status_events: tokio::sync::broadcast::Sender<messaging::AgentRequestInvalidation>,
     canvas_events: tokio::sync::broadcast::Sender<canvas::CanvasInvalidation>,
@@ -112,6 +113,7 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
     let _ = dotenvy::from_filename(".env.local");
     let _telemetry = colab_observability::init("colab-server", option_env!("COLAB_SERVER_VERSION").unwrap_or("development"));
     let config = Config::from_env()?;
+    let blob_store = blob_store::BlobStore::from_env(config.blob_root.clone())?;
     let external_auth = external_auth::Config::load()?;
     let google =
         colab_server_auth::GoogleDesktopCredentials::load(&config.google_oauth_credentials_file)?;
@@ -146,8 +148,8 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
         .await
         .with_context(|| format!("bind Colab server to {}", config.address))?;
     println!("colab-server listening on http://{}", config.address);
-    transfers::spawn_expired_transfer_gc(database.clone(), config.blob_root.clone());
-    blobs::spawn_orphan_gc(database.clone(), config.blob_root.clone());
+    transfers::spawn_expired_transfer_gc(database.clone(), blob_store.clone());
+    blobs::spawn_orphan_gc(database.clone(), blob_store.clone());
     if let Some(sender) = email.clone() {
         email_outbox::spawn(database.clone(), sender, config.public_url.clone());
     }
@@ -163,6 +165,7 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
             google_client_id: google.client_id,
             external_auth,
             blob_root: config.blob_root,
+            blob_store,
             message_events,
             agent_status_events,
             agent_request_events,
@@ -773,8 +776,8 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
         return Err(ApiError::bad_request("invalid_git_oid"));
     }
     let blob_key = uuid::Uuid::new_v4().simple().to_string();
-    let path = blobs::path(&state.blob_root, &blob_key);
     let byte_size = blobs::write_bounded(&state.blob_root, &blob_key, body).await?;
+    state.blob_store.publish_staged(&blob_key).await?;
     // `create_file_revision` checks parent_root_oid and advances current_root_oid in one database
     // transaction. The blob is written first, then removed if CAS fails. Accepted but later
     // withdrawn/replaced blobs require the planned garbage-collection job.
@@ -792,7 +795,7 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
     {
         Ok(value) => value,
         Err(error) => {
-            let _ = tokio::fs::remove_file(&path).await;
+            let _ = state.blob_store.delete(&blob_key).await;
             return Err(if error.to_string().contains("storage quota exceeded") {
                 ApiError::payload_too_large("storage_quota_exceeded")
             } else {
@@ -803,7 +806,7 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
     match revision {
         Some(value) => Ok((StatusCode::CREATED, Json(value))),
         None => {
-            let _ = tokio::fs::remove_file(path).await;
+            let _ = state.blob_store.delete(&blob_key).await;
             Err(ApiError::conflict("file_revision_conflict"))
         }
     }
@@ -842,7 +845,7 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
         .await
         .map_err(|_| ApiError::internal("file_revision_lookup_failed"))?
         .ok_or_else(|| ApiError::forbidden("file_share_access_forbidden"))?;
-    blobs::response(&state.blob_root, &key, "application/x-git-packed-objects").await
+    state.blob_store.response(&key, "application/x-git-packed-objects").await
 
 }).await
 }
@@ -946,8 +949,8 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
     // Skill packages deliberately use the same opaque Git-pack transport as Files. The Server
     // authorizes and persists bytes but never parses SKILL.md or invents another version model.
     let blob_key = uuid::Uuid::new_v4().simple().to_string();
-    let path = blobs::path(&state.blob_root, &blob_key);
     let byte_size = blobs::write_bounded(&state.blob_root, &blob_key, body).await?;
+    state.blob_store.publish_staged(&blob_key).await?;
     let revision = match state
         .database
         .create_skill_revision(
@@ -962,7 +965,7 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
     {
         Ok(value) => value,
         Err(error) => {
-            let _ = tokio::fs::remove_file(&path).await;
+            let _ = state.blob_store.delete(&blob_key).await;
             return Err(if error.to_string().contains("storage quota exceeded") {
                 ApiError::payload_too_large("storage_quota_exceeded")
             } else {
@@ -973,7 +976,7 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
     match revision {
         Some(value) => Ok((StatusCode::CREATED, Json(value))),
         None => {
-            let _ = tokio::fs::remove_file(path).await;
+            let _ = state.blob_store.delete(&blob_key).await;
             Err(ApiError::conflict("skill_revision_conflict"))
         }
     }
@@ -1014,7 +1017,7 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
         .await
         .map_err(|_| ApiError::internal("skill_revision_lookup_failed"))?
         .ok_or_else(|| ApiError::forbidden("skill_share_access_forbidden"))?;
-    blobs::response(&state.blob_root, &key, "application/x-git-packed-objects").await
+    state.blob_store.response(&key, "application/x-git-packed-objects").await
 
 }).await
 }
@@ -1111,8 +1114,8 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
         return Err(ApiError::bad_request("invalid_session_segment"));
     }
     let key = uuid::Uuid::new_v4().simple().to_string();
-    let path = blob_path(&state.blob_root, &key);
     let size = session_upload::receive(&state.blob_root, &key, body, &query.digest).await?;
+    state.blob_store.publish_staged(&key).await?;
     match state
         .database
         .append_session_segment(
@@ -1133,10 +1136,10 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
             Json(serde_json::json!({"snapshot":snapshot,"segment":segment})),
         )),
         Ok(None) => {
-            let _ = tokio::fs::remove_file(path).await;
+            let _ = state.blob_store.delete(&key).await;
             Err(ApiError::conflict("session_snapshot_conflict"))
         }
-        Err(error) => { let _ = tokio::fs::remove_file(path).await; Err(error) }
+        Err(error) => { let _ = state.blob_store.delete(&key).await; Err(error) }
     }
 
 }).await
@@ -1176,14 +1179,7 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
         .await
         .map_err(|_| ApiError::internal("session_segment_lookup_failed"))?
         .ok_or_else(|| ApiError::forbidden("session_share_access_forbidden"))?;
-    let file = tokio::fs::File::open(blob_path(&state.blob_root, &key))
-        .await
-        .map_err(|_| ApiError::internal("blob_read_failed"))?;
-    Ok((
-        [(header::CONTENT_TYPE, "application/x-ndjson")],
-        Body::from_stream(ReaderStream::new(file)),
-    )
-        .into_response())
+    state.blob_store.response(&key, "application/x-ndjson").await
 
 }).await
 }

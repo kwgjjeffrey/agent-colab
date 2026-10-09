@@ -114,12 +114,12 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
 }).await
 }
 
-pub(crate) fn spawn_orphan_gc(database: colab_server_persistence::Database, root: PathBuf) {
+pub(crate) fn spawn_orphan_gc(database: colab_server_persistence::Database, store: crate::blob_store::BlobStore) {
     tokio::spawn(async move {
         let mut tick = tokio::time::interval(Duration::from_secs(60 * 60));
         loop {
             tick.tick().await;
-            if let Err(error) = collect_orphans(&database, &root).await {
+            if let Err(error) = collect_orphans(&database, &store).await {
                 eprintln!("blob orphan GC failed: {error:#}");
             }
         }
@@ -128,11 +128,13 @@ pub(crate) fn spawn_orphan_gc(database: colab_server_persistence::Database, root
 
 async fn collect_orphans(
     database: &colab_server_persistence::Database,
-    root: &Path,
+    store: &crate::blob_store::BlobStore,
 ) -> anyhow::Result<()> {
 colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.blobs.collect-orphans", async {
     database.reclaim_expired_assets().await?;
     let referenced: HashSet<String> = database.referenced_blob_keys().await?.into_iter().collect();
+    store.collect_remote_orphans(&referenced).await?;
+    let root = store.staging_root();
     let cutoff = std::time::SystemTime::now() - Duration::from_secs(60 * 60);
     let mut prefixes = match tokio::fs::read_dir(root).await {
         Ok(value) => value,

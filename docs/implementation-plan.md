@@ -4,8 +4,11 @@
 
 User selected Zstd 3 after ten Rust full-source codec comparisons. Implementation
 contract and acceptance gates: `docs/session-chunk-storage-design.md`. Disk/S3
-Blob support, negotiated immutable frames and indexed on-demand Core reading are
-pending implementation/acceptance. Do not deploy a write-only compressed protocol.
+Blob support now has a disk-compatible/S3 adapter wired into all four asset
+transports and GC. Core has bounded Zstd-3 frame verification and a seekable
+one-block read view. These foundations passed unit checks; negotiated manifests,
+provider boundary/dependency indexes and end-to-end Reader wiring remain pending.
+Do not deploy a write-only compressed protocol. Rollback checkpoint: `6b85fc4`.
 Enterprise integration remains untouched; existing production data is preserved.
 
 ### 2026-10-09 Catalog counts and uploader identity

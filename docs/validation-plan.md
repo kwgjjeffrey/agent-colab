@@ -9,6 +9,18 @@ roundtrip checks passed. Zstd 3: 907,195,781 encoded bytes, 10.234 s compression
 User approved level 3. Results do not prove read-adapter/provider compatibility,
 S3 integration, network throughput or GUI/release acceptance; those remain pending.
 
+Foundation acceptance: `cargo test --manifest-path local/Cargo.toml -p
+colab-local-core` passed 4 tests (exact Zstd/identity bytes, corruption/truncation/
+multiple-frame/false-size rejection, tail-only lazy loading and cross-block seeks,
+failed load position). `cargo test --manifest-path server/standalone/Cargo.toml
+-p colab-server` passed all 13 unit tests, including 3 storage-port cases (disk
+layout, 10 MiB multipart-like buffered object roundtrip, GC reference/grace/path
+isolation). Remote-port tests use object_store InMemory, NOT real S3 acceptance.
+Server and Local API compile checks pass; Local API retains an unrelated existing
+dead-code warning for proxy_json. `git diff --check` passed. Docker daemon was
+unavailable locally, so no MinIO/R2 integration or migration is claimed. No
+component version advanced, production backend switched, or artifact released.
+
 ### 2026-10-09 Source-owned assets — released and daily App accepted
 
 Checkpoint `aa3efdd`; implementation `dc26762` / `94486af`, populated migration
