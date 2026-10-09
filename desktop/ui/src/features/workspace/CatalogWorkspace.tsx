@@ -273,7 +273,28 @@ export function CatalogWorkspace({
     }
   }
   function add(kind: AddKind, parent?: string) {
-    if (kind === "catalog" || kind === "canvas") {
+    if (working) return;
+    if (kind === "canvas") {
+      let created: CatalogItem;
+      void mutate(async (operation) => {
+        const row = await catalogRequest<{ id: string; title: string }>(
+          `/v1/channels/${channelId}/canvases`, "POST",
+          { title: "Untitled", folderId: parent }, operation,
+        );
+        const item: CatalogItem = {
+          id: row.id, kind: "canvas", name: row.title,
+          parentId: parent ?? null, updatedAt: "",
+        };
+        if (parent) setExpanded((current) => ({ ...current, [parent]: true }));
+        await load(parent);
+        select(item);
+        created = item;
+      }).then(() => {
+        renameCancelled.current = false;
+        setName(created.name);
+        setRenaming(created);
+      }).catch(() => {});
+    } else if (kind === "catalog") {
       setName("");
       setForm({ parent, kind });
     } else onAdd(kind, parent);
@@ -377,6 +398,7 @@ export function CatalogWorkspace({
               {renaming?.id === item.id ? (
                 <Input
                   aria-label="Item name"
+                  className="bg-transparent shadow-none dark:bg-transparent focus-visible:ring-0 focus-visible:border-ring/40"
                   value={name}
                   autoFocus
                   disabled={working}
