@@ -720,6 +720,9 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
     }
     let value: Value = response.json().await.map_err(LocalError::internal)?;
     let asset_id = assets::binding(state,share_id).await?.asset_id;
+    // Different Channel references can request the same snapshot concurrently. Serialize
+    // its one partial-file writer, without blocking an already available preview.
+    let _materialization_guard=assets::publication_guard(state,"materialize_session",&format!("{user}:{asset_id}")).await;
     let snapshot = value["snapshot"]["id"]
         .as_str()
         .ok_or_else(|| LocalError::internal("Session has no synchronized snapshot"))?

@@ -366,7 +366,6 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
         .name
         .filter(|v| !v.trim().is_empty())
         .unwrap_or_else(|| metadata.0.clone());
-    let source = fs::canonicalize(source).map_err(LocalError::internal)?;
     let binding=assets::register(&state,&channel_id,"skill",&source,&name,metadata.1.as_deref(),"shadow-git-v1").await?;
     let mut share=list_skill_shares(State(state.clone()),AxumPath(channel_id.clone())).await?.0
         .into_iter().find(|share|share.id==binding.reference_id)

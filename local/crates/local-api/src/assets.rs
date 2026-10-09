@@ -22,6 +22,34 @@ fn table(kind: &str) -> Result<&'static str, LocalError> {
         _ => Err(LocalError::bad_request("Unsupported asset type")),
     }
 }
+fn source_identity(source:&Path,kind:&str)->Result<PathBuf,LocalError>{
+    // A managed Skill symlink is a live installation slot, not the immutable version
+    // it currently points to. Keep that slot stable while normalizing its parent.
+    if kind=="skill" && fs::symlink_metadata(source).map_err(LocalError::internal)?.file_type().is_symlink(){
+        let parent=source.parent().filter(|path|!path.as_os_str().is_empty()).unwrap_or_else(||Path::new("."));
+        return Ok(fs::canonicalize(parent).map_err(LocalError::internal)?.join(source.file_name().ok_or_else(||LocalError::bad_request("Missing Skill source name"))?));
+    }
+    fs::canonicalize(source).map_err(LocalError::internal)
+}
+#[cfg(all(test,unix))]
+mod identity_tests {
+    use super::*;
+    #[test]
+    fn managed_skill_slot_survives_version_updates() {
+        let root=std::env::temp_dir().join(format!("colab-asset-slot-{}",uuid::Uuid::new_v4()));
+        fs::create_dir_all(root.join("v1")).unwrap();
+        fs::create_dir_all(root.join("v2")).unwrap();
+        let slot=root.join("live");
+        std::os::unix::fs::symlink(root.join("v1"),&slot).unwrap();
+        let first=source_identity(&slot,"skill").unwrap();
+        assert_ne!(first,source_identity(&root.join("v1"),"skill").unwrap());
+        fs::remove_file(&slot).unwrap();
+        std::os::unix::fs::symlink(root.join("v2"),&slot).unwrap();
+        assert_eq!(first,source_identity(&slot,"skill").unwrap());
+        assert_eq!(source_identity(&slot,"files").unwrap(),fs::canonicalize(root.join("v2")).unwrap());
+        fs::remove_dir_all(&root).unwrap();
+    }
+}
 pub(super) async fn publication_guard(
     state: &AppState,
     kind: &str,
@@ -75,7 +103,8 @@ async fn register_impl(
 ) -> Result<Binding, LocalError> {
     let user = current_user_id(state).await?;
     let table = table(kind)?;
-    let path = source.to_string_lossy();
+    let identity=source_identity(source,kind)?;
+    let path = identity.to_string_lossy();
     let (device, candidates): (String, Vec<String>) = {
         let store = state.inner.store.lock().await;
         store
@@ -117,7 +146,7 @@ async fn register_impl(
         .map_err(LocalError::internal)?;
         let ids = rows
             .into_iter()
-            .filter(|(_, candidate)| fs::canonicalize(candidate).ok().as_deref() == Some(source))
+            .filter(|(_, candidate)| source_identity(Path::new(candidate),kind).ok().as_deref() == Some(identity.as_path()))
             .map(|(id, _)| id)
             .collect();
         (device, ids)
@@ -332,7 +361,7 @@ async fn consolidate_sources_impl(state: &AppState) -> Result<(), LocalError> {
         if mapped {
             continue;
         }
-        let Ok(path) = fs::canonicalize(path) else {
+        let Ok(path) = source_identity(Path::new(&path),&kind) else {
             continue;
         };
         let key = (channel.clone(), kind.clone());

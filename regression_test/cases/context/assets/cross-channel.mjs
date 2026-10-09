@@ -32,9 +32,12 @@ export async function run(ctx){
    ctx.assert(kind+' repeated registration is idempotent',(await create(b)).id,second.id);
    await core(ctx,'GET',`/v1/channels/${a}/${plural}`,undefined,receiver);
    await core(ctx,'GET',`/v1/channels/${b}/${plural}`,undefined,receiver);
-   const remoteA=await core(ctx,'POST',`/v1/${plural}/${first.id}/${kind==='session'?'sync':'materialize'}`,undefined,receiver);
-   const remoteB=await core(ctx,'POST',`/v1/${plural}/${second.id}/${kind==='session'?'sync':'materialize'}`,undefined,receiver);
+   const [remoteA,remoteB]=await Promise.all([first,second].map(reference=>core(ctx,'POST',`/v1/${plural}/${reference.id}/${kind==='session'?'sync':'materialize'}`,undefined,receiver)));
    ctx.assert(kind+' receiving Core reuses one materialized copy',kind==='session'?remoteB.rawPath:remoteB.localPath,kind==='session'?remoteA.rawPath:remoteA.localPath);
+   const receivedFile=kind==='files'?path.join(remoteB.localPath,'hello.txt'):kind==='skill'?path.join(remoteB.localPath,'SKILL.md'):remoteB.rawPath;
+   const sourceFile=kind==='files'?path.join(f.files,'hello.txt'):kind==='skill'?path.join(f.skill,'SKILL.md'):f.session;
+   ctx.assert(kind+' receiver obtains the exact source bytes',await fs.readFile(receivedFile,'utf8'),await fs.readFile(sourceFile,'utf8'));
+   if(kind==='files')ctx.assert('Excluded dependencies are not published',await fs.access(path.join(remoteB.localPath,'node_modules','owned-fixture.txt')).then(()=>true,()=>false),false);
    if(kind==='files'){
     const scope=await core(ctx,'GET',`/v1/files/${second.id}/sync-scope`);
     ctx.assert('Second reference preserves owned synchronization exclusions',scope.candidates.some(row=>row.pattern==='node_modules'&&row.selected),true);
@@ -54,6 +57,11 @@ export async function run(ctx){
    if(kind==='session')await core(ctx,'POST',`/v1/sessions/${second.id}/sync`,undefined,{timeoutSeconds:90});
    const advanced=await eventually(ctx,'Remaining Channel receives the next shared version',()=>core(ctx,'GET',`/v1/shares/${second.id}/asset`),row=>kind==='session'?row.currentSnapshotId!==remaining.currentSnapshotId:row.currentRootOid!==remaining.currentRootOid,{timeoutMs:90000});
    ctx.assert(kind+' new version still belongs to same asset',advanced.assetId,remaining.assetId);
+   // Files deliberately serve their existing preview immediately; this assertion asks for
+   // the separately committed refresh rather than mistaking stale-while-revalidate for failure.
+   const updatedCopy=await core(ctx,'POST',`/v1/${plural}/${second.id}/${kind==='session'?'sync':kind==='files'?'materialize?wait=true':'materialize'}`,undefined,receiver);
+   const updatedFile=kind==='files'?path.join(updatedCopy.localPath,'hello.txt'):kind==='skill'?path.join(updatedCopy.localPath,'SKILL.md'):updatedCopy.rawPath;
+   ctx.assert(kind+' receiver obtains updated bytes after original withdrawal',(await fs.readFile(updatedFile,'utf8')).includes(marker),true);
    await core(ctx,'DELETE',`/v1/${plural}/${second.id}`);owned.splice(owned.findIndex(row=>row.id===second.id),1);
    ctx.assert(kind+' last withdrawal leaves no active reference',(await core(ctx,'GET',`/v1/shares/${second.id}/asset`)).referenceCount,0);
    const restored=await create(b);owned.push({plural,id:restored.id});

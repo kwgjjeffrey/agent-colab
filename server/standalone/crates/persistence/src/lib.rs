@@ -764,8 +764,7 @@ let rows=sqlx::query_as::<_,FileShare>("select fs.id,fs.channel_id,fs.name,fs.co
     }
 
     pub async fn withdraw_file_share(&self, user_id: Uuid, share_id: Uuid) -> anyhow::Result<bool> {
-        let result=sqlx::query("update channel_shares fs set state='withdrawn',updated_at=now() from organization_members om where fs.id=$1 and fs.kind='files' and om.id=fs.contributor_member_id and om.user_id=$2 and fs.state='active'").bind(share_id).bind(user_id).execute(&self.pool).await?;
-        Ok(result.rows_affected() == 1)
+        self.withdraw_asset_reference(user_id, share_id, "files").await
     }
 
     /// Lists active Skill Shared Items. Skill package bytes remain opaque to the Server and use
@@ -912,8 +911,7 @@ let rows=sqlx::query_as::<_,FileShare>("select fs.id,fs.channel_id,fs.name,fs.co
         share_id: Uuid,
         kind: &str,
     ) -> anyhow::Result<bool> {
-        let result=sqlx::query("update channel_shares s set state='withdrawn',updated_at=now() from organization_members om where s.id=$1 and s.kind=$2 and om.id=s.contributor_member_id and om.user_id=$3 and s.state='active'").bind(share_id).bind(kind).bind(user_id).execute(&self.pool).await?;
-        Ok(result.rows_affected() == 1)
+        self.withdraw_asset_reference(user_id, share_id, kind).await
     }
 
     pub async fn list_session_shares(
@@ -1022,7 +1020,7 @@ let rows=sqlx::query_as::<_,FileShare>("select fs.id,fs.channel_id,fs.name,fs.co
         user_id: Uuid,
         share_id: Uuid,
     ) -> anyhow::Result<bool> {
-        Ok(sqlx::query("update channel_shares s set state='withdrawn',updated_at=now() from organization_members om where s.id=$1 and s.kind='session' and om.id=s.contributor_member_id and om.user_id=$2 and s.state='active'").bind(share_id).bind(user_id).execute(&self.pool).await?.rows_affected()==1)
+        self.withdraw_asset_reference(user_id, share_id, "session").await
     }
 }
 

@@ -267,6 +267,18 @@ pub struct AssetBinding {
     pub reference_count: i64,
 }
 impl Database {
+    pub(crate) async fn withdraw_asset_reference(&self, user: Uuid, reference: Uuid, kind: &str) -> anyhow::Result<bool> {
+        let mut tx = self.pool.begin().await?;
+        // Publication also locks the asset before projecting reference rows. Keep that order
+        // during withdrawal so its retention trigger cannot deadlock with an active upload.
+        let asset: Option<Uuid> = sqlx::query_scalar("select a.id from shared_assets a join channel_shares s on s.asset_id=a.id where s.id=$1 and a.owner_user_id=$2 and s.kind=$3 and s.state='active' for update of a")
+            .bind(reference).bind(user).bind(kind).fetch_optional(&mut *tx).await?;
+        if asset.is_none() { return Ok(false); }
+        let changed = sqlx::query("update channel_shares set state='withdrawn',updated_at=now() where id=$1 and state='active'")
+            .bind(reference).execute(&mut *tx).await?.rows_affected() == 1;
+        tx.commit().await?;
+        Ok(changed)
+    }
     pub async fn register_asset(
         &self,
         user: Uuid,
@@ -321,6 +333,9 @@ impl Database {
             // Historical references remain authorized under their original IDs, including
             // multiple old placements in one Channel. Only their shared publication changes.
             sqlx::query("update channel_shares s set asset_id=a.id,name=a.name,description=a.description,source_adapter=a.source_adapter,current_root_oid=a.current_root_oid,current_snapshot_id=a.current_snapshot_id,updated_at=now() from shared_assets a where s.asset_id=$1 and a.id=$2").bind(candidate).bind(asset).execute(&mut *tx).await?;
+            // A retired publication anchor now points at the canonical asset. It must not
+            // remain discoverable as an independent source on later registration.
+            sqlx::query("update shared_assets set source_key=null where id=$1").bind(candidate).execute(&mut *tx).await?;
         }
         let reference: Option<Uuid> = sqlx::query_scalar(
             "select id from channel_shares where asset_id=$1 and channel_id=$2 and state='active' order by created_at,id limit 1",
