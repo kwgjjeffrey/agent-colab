@@ -573,7 +573,7 @@ const messageRequest = operation.message;
         {selectionMode && (
           <div className="flex shrink-0 items-center justify-center gap-3 border-t bg-muted/40 p-2 text-sm">
             <strong>{selected.size} selected</strong>
-            <Button size="sm" variant="outline" disabled={!selected.size} onClick={() => setCopyMessages(messages.filter(row => selected.has(row.id)))}>Copy to use in my agent</Button>
+            <AgentButton size="sm" disabled={!selected.size} onClick={() => setCopyMessages(messages.filter(row => selected.has(row.id)))}>Copy to use in my agent</AgentButton>
             <AgentButton data-trace-target={traceTargets("agents.forward")}
               size="sm"
               disabled={!selected.size}
@@ -694,13 +694,7 @@ const messageRequest = operation.message;
             <aside className="min-h-0 overflow-y-auto border-r p-3">
               {managingOwn && (
                 <>
-                  <Button
-                    className="mb-2 w-full"
-                    onClick={() => setPromptOpen(true)}
-                  >
-                    <BotIcon />
-                    Create by my agent
-                  </Button>
+                  <AgentButton className="mb-2 w-full" onClick={() => setPromptOpen(true)}>Create by my agent</AgentButton>
                   <Button
                     variant="outline"
                     className="mb-3 w-full"

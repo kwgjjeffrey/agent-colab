@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { AgentButton } from "@/features/agent/AgentButton";
 import { AgentPromptDialog, agentSkillCommand, type AgentTarget } from "@/features/agent/AgentPromptDialog";
 import { shellQuote } from "@/features/agent/ShareSetupPrompt";
 
@@ -34,7 +34,7 @@ export function ChannelIconPrompt({ channel, disabled, defaultAgent, installedAg
 }) {
   const [open, setOpen] = useState(false);
   return <>
-    <Button type="button" size="sm" variant="outline" disabled={disabled} onClick={() => setOpen(true)}>Generate icon via agent</Button>
+    <AgentButton type="button" size="sm" disabled={disabled} onClick={() => setOpen(true)}>Generate icon via agent</AgentButton>
     <AgentPromptDialog open={open} title="Generate Channel icon" description="Your Agent generates an image and applies it to this Channel." defaultAgent={defaultAgent} installedAgents={installedAgents} promptFor={agent => channelIconPrompt(agent, channel)} onClose={() => setOpen(false)} onError={onError} />
   </>;
 }

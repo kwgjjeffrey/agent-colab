@@ -1,3 +1,4 @@
+import { AgentButton } from "@/features/agent/AgentButton";
 import { useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { AgentPromptDialog, agentSkillRoots, agentSkillCommand, type AgentTarget } from "@/features/agent/AgentPromptDialog";
@@ -28,7 +29,7 @@ export function HomeActions({ channel, onAdd, quickShare, defaultAgent, installe
   return <>
     <section aria-label="Channel actions" className="flex flex-col gap-4">
       <div className="grid items-center gap-3 sm:grid-cols-[190px_minmax(0,1fr)] sm:gap-6">
-        <Button className="w-full justify-start" onClick={() => setOpen(true)}>Call my Agent</Button>
+        <AgentButton className="w-full justify-start" onClick={() => setOpen(true)}>Call my Agent</AgentButton>
         <p className="text-sm text-muted-foreground">Ask your Agent to set up this Channel workspace and share context according to your requirements.</p>
       </div>
       {actions.map(action => <div key={action.kind} className="grid items-center gap-3 sm:grid-cols-[190px_minmax(0,1fr)] sm:gap-6">

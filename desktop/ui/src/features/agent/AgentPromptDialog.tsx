@@ -135,7 +135,7 @@ const trackedFetch = operation.fetch;
         <DialogFooter>
           {onForward && <AgentButton disabled={unavailable} onClick={() => onForward(query.trim())}>Forward to collaborators’ agent</AgentButton>}
           {onSend && <AgentButton data-trace-target={sendTraceTarget} disabled={sending} onClick={async () => { setError(undefined); setSending(true); try { await onSend(query.trim()); onClose(); setQuery(""); } catch (reason) { reportError(String(reason)); } finally { setSending(false); } }}>{sending ? "Sending…" : "Send to Agent"}</AgentButton>}
-          <Button disabled={unavailable} data-trace-target={traceTargets("prompt.copy")} variant="outline" onClick={() => void copyPrompt()}>Copy prompt</Button>
+          <Button disabled={unavailable} data-trace-target={traceTargets("prompt.copy")} onClick={() => void copyPrompt()}>Copy prompt</Button>
           <ButtonGroup className="min-w-0 max-w-full">
             <AgentButton data-trace-target={traceTargets("prompt.open-agent")}
               className="min-w-0"

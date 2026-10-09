@@ -11,7 +11,7 @@ it("orders guidance rows and dispatches each real creation kind", async () => {
   expect(within(region).getAllByRole("button").map(button => button.textContent)).toEqual(["Call my Agent", "Share my Session", "Share my Files", "Share my Skills", "Add a Canvas", "Catalog", "Quick Share"]);
   for (const label of ["Share my Session", "Share my Files", "Share my Skills", "Add a Canvas", "Catalog"]) await userEvent.click(screen.getByRole("button", {name:label}));
   expect(onAdd.mock.calls.map(call => call[0])).toEqual(["session","files","skill","canvas","catalog"]);
-  expect(screen.getByRole("button", {name:"Call my Agent"}).className).toContain("bg-primary");
+  expect(screen.getByRole("button", {name:"Call my Agent"}).className).toContain("bg-agent");
 });
 it("locates the selected Agent Skill and exact Channel, without inventing mutations", () => {
   const prompt = workspaceSetupPrompt("claude", {id:"channel-id",name:"Team's workspace"});
