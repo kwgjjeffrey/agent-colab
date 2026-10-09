@@ -40,7 +40,8 @@ Promotion 204 public integrity verification and normal daily App update passed.
 PID 37516 runs Core 102; executable SHA-256
 `4ab96461149ced8eea3872b8f0436575516614c7d4ff066d1191858e052336ed`.
 The actual large Session cursor advanced from 1,482,637,821 to 1,491,046,662 bytes,
-matching the previously accepted lost-ack segment. State is syncing with no error;
+matching the previously accepted lost-ack segment, then continued new publication
+to 1,522,105,857 bytes. State is syncing with no error;
 whole-source completion is not claimed. Case-owned references in both isolated
 Channels are all inactive; three isolated test processes stopped, records retained.
 No user local source, unrelated draft, or production backup was deleted.

@@ -61,7 +61,8 @@ concurrent uncommitted enterprise login integration. Lost acknowledgements recov
 only when parent, offset, snapshot-linked segment digest and size all match; no
 arbitrary remote head adoption or source-byte skipping is permitted.
 Daily App PID 37516 runs the verified Core 102 binary. The user's large Session
-cursor recovered from 1,482,637,821 to 1,491,046,662 bytes and synchronization
+cursor recovered from 1,482,637,821 to 1,491,046,662 bytes, then advanced to
+1,522,105,857 bytes with new publication; synchronization
 continues independently of local preview; full source synchronization is not
 claimed complete. Owned regression references were all withdrawn and the three
 isolated Core/Server test processes stopped; private evidence/backup retained.
