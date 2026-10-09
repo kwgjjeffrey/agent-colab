@@ -1306,6 +1306,9 @@ async fn remote_error(response: reqwest::Response) -> LocalError {
         .text()
         .await
         .unwrap_or_else(|_| "Colab Server request failed".to_owned());
+    let message = if message.trim().is_empty() {
+        format!("Colab Server returned HTTP {} with an empty error response", status.as_u16())
+    } else { message };
     LocalError { status, message }
 }
 #[derive(Debug)]

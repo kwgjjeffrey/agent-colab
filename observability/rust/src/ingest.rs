@@ -104,6 +104,18 @@ fn allowed(k: &str) -> bool {
             | "colab.request_id"
             | "colab.attempt"
             | "colab.coverage"
+            | "canvas.id"
+            | "canvas.update.id"
+            | "canvas.update.bytes"
+            | "canvas.sync.trigger"
+            | "canvas.sync.stage"
+            | "canvas.sync.http_status"
+            | "canvas.sync.cursor.before"
+            | "canvas.sync.cursor.after"
+            | "canvas.sync.pending"
+            | "canvas.sync.update_count"
+            | "canvas.sync.state"
+            | "canvas.sync.recovered"
     )
 }
 #[cfg(test)]
@@ -113,6 +125,15 @@ mod tests {
         common::v1::KeyValue,
         trace::v1::{ResourceSpans, ScopeSpans, Span},
     };
+    #[test]
+    fn retains_canvas_diagnostics_without_document_content() {
+        assert!(allowed("canvas.id"));
+        assert!(allowed("canvas.sync.stage"));
+        assert!(allowed("canvas.sync.http_status"));
+        assert!(allowed("canvas.sync.recovered"));
+        assert!(!allowed("canvas.content"));
+        assert!(!allowed("canvas.image_interpretation"));
+    }
     #[test]
     fn rejects_invalid_and_strips_secrets() {
         let mut span = Span {

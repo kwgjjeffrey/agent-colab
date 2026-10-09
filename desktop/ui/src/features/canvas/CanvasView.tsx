@@ -371,7 +371,7 @@ const canvasJson=operation.json;
       );
       operation.operation.span.setAttribute("canvas.sync.http_status", response.status);
       if (!response.ok) {
-        operation.operation.span.addEvent("canvas.sync.failed", {"http.status_code": response.status});
+        operation.operation.span.setAttribute("canvas.sync.stage", "request-failed");
         if (![500, 502, 503, 504].includes(response.status)) throw new Error(await response.text());
         const cached = await canvasJson<{update: string; lastServerSeq: number; pending: number}>(
           `/v1/canvases/${canvasId}/local-replica`,
@@ -389,7 +389,7 @@ const canvasJson=operation.json;
       operation.operation.span.setAttribute("canvas.sync.stage", "apply-updates");
       const rows = await response.json() as CanvasUpdate[];
       operation.operation.span.setAttributes({"canvas.sync.update_count": rows.length, "canvas.sync.state": "synced"});
-      operation.operation.span.addEvent("canvas.sync.reconciled", {"canvas.sync.cursor": seq.current});
+      
       for (const row of rows) {
         Y.applyUpdate(document, decode(row.update), REMOTE);
         seq.current = Math.max(seq.current, row.serverSeq);
@@ -906,14 +906,14 @@ const canvasJson=operation.json;
               }),
             },
           );
-          operation.operation.span.addEvent("canvas.sync.edit_acked", {"canvas.sync.server_seq": row.serverSeq});
+          operation.operation.span.setAttributes({"canvas.sync.stage": "edit-acked", "canvas.sync.cursor.after": row.serverSeq});
           seq.current = Math.max(seq.current, row.serverSeq);
           if (mounted.current) {
             setState("synced");
             setError(undefined);
           }
         } catch (reason) {operation.fail();
-          operation.operation.span.addEvent("canvas.sync.edit_failed", {"canvas.sync.state": "offline"});
+          operation.operation.span.setAttributes({"canvas.sync.stage": "edit-failed", "canvas.sync.state": "offline"});
           if (mounted.current) {
             setState("offline");
             setError(String(reason));
