@@ -1238,3 +1238,7 @@ Public implementation released and accepted: bounded validated uploads to R2, di
 ### Canvas image paste feedback (2026-10-09)
 
 Implemented immediate inline skeleton blocks at pending image insertion positions. ProseMirror decorations track edits locally; unfinished uploads do not enter Yrs or durable Markdown. Success replaces the skeleton with the stored image; failure retains feedback and existing Retry/Dismiss controls. Public promotion 0.1.209-dev releases only GUI 0.1.155-dev; installed acceptance passed.
+
+### Canvas local image preview through render (2026-10-09)
+
+Supersedes upload-only placeholders: paste/drop/picker immediately render a local object-URL preview with busy feedback. The preview remains through upload, remote image fetch/decode, and the editor image decode/frame handoff. Only stable attachment identity/content URL enters the replica. Object URLs are reclaimed on completed handoff, dismissal and editor teardown; failed remote loading retries the existing uploaded attachment. Public GUI 0.1.156-dev accepted under promotion 0.1.210-dev.
