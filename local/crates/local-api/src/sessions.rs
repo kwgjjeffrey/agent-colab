@@ -643,10 +643,20 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
             .send()
             .await
             .map_err(LocalError::internal)?;
-        if !response.status().is_success() {
-            return Err(remote_error(response).await);
-        }
-        let value: Value = response.json().await.map_err(LocalError::internal)?;
+        let value: Value = if response.status() == StatusCode::CONFLICT {
+            // The Server may commit an append whose acknowledgement is lost on restart.
+            // Adopt only that exact segment, never an arbitrary newer remote cursor.
+            let probe = state.inner.http.get(format!("{}/v1/sessions/{share_id}/segments",state.inner.server_url))
+                .bearer_auth(&token).send().await.map_err(LocalError::internal)?;
+            let recovered = if probe.status().is_success() {
+                acknowledged_append(&probe.json::<Value>().await.map_err(LocalError::internal)?,parent.as_deref(),reset_chain && first_segment,next,&digest,size)
+            } else { None };
+            let Some(snapshot)=recovered else { return Err(remote_error(response).await); };
+            json!({"snapshot":{"id":snapshot}})
+        } else {
+            if !response.status().is_success() { return Err(remote_error(response).await); }
+            response.json().await.map_err(LocalError::internal)?
+        };
         let snapshot = value["snapshot"]["id"]
             .as_str()
             .ok_or_else(|| LocalError::internal("Server omitted Session snapshot id"))?
@@ -699,6 +709,37 @@ fn read_session_segment(reader: &mut impl BufRead) -> Result<Option<Vec<u8>>, Lo
     Ok((!segment.is_empty()).then_some(segment))
 }
 
+fn acknowledged_append(value: &Value, parent: Option<&str>, reset: bool, next: i64, digest: &str, size: u64) -> Option<String> {
+    let snapshot=value.get("snapshot")?;
+    let id=snapshot.get("id")?.as_str()?;
+    let expected_parent=if reset {None} else {parent};
+    if snapshot.get("parentSnapshotId")?.as_str()!=expected_parent {return None;}
+    let cursor:Value=serde_json::from_str(snapshot.get("sourceCursor")?.as_str()?).ok()?;
+    let segment=value.get("segments")?.as_array()?.last()?;
+    if cursor.get("byteOffset")?.as_i64()!=Some(next)
+        || segment.get("snapshotId")?.as_str()!=Some(id)
+        || segment.get("digest")?.as_str()!=Some(digest)
+        || segment.get("byteSize")?.as_u64()!=Some(size) {return None;}
+    Some(id.to_owned())
+}
+#[cfg(test)]
+mod append_ack_tests {
+    use super::*;
+    #[test]
+    fn lost_ack_requires_exact_parent_offset_digest_and_size() {
+        let mut response=json!({"snapshot":{"id":"accepted","parentSnapshotId":"parent","sourceCursor":"{\"byteOffset\":100,\"sourceSize\":200}"},"segments":[{"snapshotId":"accepted","digest":"digest","byteSize":10}]});
+        assert_eq!(acknowledged_append(&response,Some("parent"),false,100,"digest",10).as_deref(),Some("accepted"));
+        assert!(acknowledged_append(&response,Some("other"),false,100,"digest",10).is_none());
+        assert!(acknowledged_append(&response,Some("parent"),false,101,"digest",10).is_none());
+        assert!(acknowledged_append(&response,Some("parent"),false,100,"other",10).is_none());
+        assert!(acknowledged_append(&response,Some("parent"),false,100,"digest",11).is_none());
+        response["snapshot"]["parentSnapshotId"]=Value::Null;
+        assert!(acknowledged_append(&response,Some("parent"),false,100,"digest",10).is_none());
+        assert_eq!(acknowledged_append(&response,Some("parent"),true,100,"digest",10).as_deref(),Some("accepted"));
+        response["segments"][0]["snapshotId"]=json!("unrelated");
+        assert!(acknowledged_append(&response,Some("parent"),true,100,"digest",10).is_none());
+    }
+}
 async fn materialize(state: &AppState, share_id: &str) -> Result<String, LocalError> {
 colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.sessions.materialize", async {
 
