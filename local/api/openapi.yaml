@@ -63,9 +63,12 @@ paths:
             schema:
               type: object
               additionalProperties: false
-              required: [displayName]
+              minProperties: 1
               properties:
                 displayName: { type: string, minLength: 1, maxLength: 80 }
+                avatarUrl: { type: string, maxLength: 90000, pattern: '^data:image/jpeg;base64,' }
+                resetAvatar: { type: boolean }
+              description: Exactly one action per request; avatar upload/reset is proxied to the authenticated Server account.
       responses:
         "200": { description: Updated account profile }
         "400": { description: Empty, overlong or control-character name }

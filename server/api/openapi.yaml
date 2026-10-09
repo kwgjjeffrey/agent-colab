@@ -45,9 +45,12 @@ paths:
             schema:
               type: object
               additionalProperties: false
-              required: [displayName]
+              minProperties: 1
               properties:
                 displayName: { type: string, minLength: 1, maxLength: 80 }
+                avatarUrl: { type: string, maxLength: 90000, pattern: '^data:image/jpeg;base64,' }
+                resetAvatar: { type: boolean }
+              description: Exactly one action per request; set name, upload bounded JPEG data, or resetAvatar true. Explicit avatar choices survive Google login.
       responses:
         "200": { description: Updated current-account profile; explicit name survives provider logins }
         "400": { description: Invalid display name }

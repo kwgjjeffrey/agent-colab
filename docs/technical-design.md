@@ -1,5 +1,13 @@
 # Colab 技术设计
 
+Account avatar updates (2026-10-09): existing authenticated profile PATCH accepts
+one name or avatar action. avatarUrl is bounded JPEG data (64KiB decoded); arbitrary
+URLs and SVG uploads are rejected. resetAvatar=true clears the stored image but
+sets users.avatar_customized, as does upload. Google link/login preserves that
+flag and returns the actual persisted avatar, not the provider input. Core's
+existing account-locked profile proxy updates its session/account projection.
+GUI performs center crop/resize locally; no image is sent to a third-party service.
+
 ## Catalog workspace migration (2026-10-08)
 
 Migration 0039 generalizes existing canvas_folders without renaming the physical

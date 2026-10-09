@@ -2,8 +2,22 @@
 import { afterEach, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { AccountProfile, needsAccountSetup, type AccountProfileData } from "./AccountProfile";
+vi.mock("./avatar-upload", () => ({ prepareAvatar: vi.fn(async () => "data:image/jpeg;base64,/9j//9k=") }));
 const device: AccountProfileData = { id: "device-owner", email: "private@device.invalid", displayName: "My device", nameCustomized: false, googleLinked: false };
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
+it("uploads and resets the current account avatar with explicit success", async () => {
+  const onSaved = vi.fn(), fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ ...device, avatarUrl: "data:image/jpeg;base64,/9j//9k=" }) });
+  vi.stubGlobal("fetch", fetch);
+  const view = render(<AccountProfile profile={{...device, avatarUrl: "https://example.test/photo.jpg"}} onSaved={onSaved} linking={false} onLinkGoogle={vi.fn()} googleDismissed onDismissGoogle={vi.fn()} />);
+  fireEvent.change(screen.getByLabelText("Upload avatar"), {target: {files: [new File(["image"], "photo.png", {type: "image/png"})]}});
+  await waitFor(() => expect(onSaved).toHaveBeenCalled());
+  expect(JSON.parse(fetch.mock.calls[0][1].body)).toEqual({avatarUrl: "data:image/jpeg;base64,/9j//9k="});
+  expect(screen.getByText("Avatar saved.")).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", {name: "Use initials"}));
+  await waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
+  expect(JSON.parse(fetch.mock.calls[1][1].body)).toEqual({resetAvatar: true});
+  view.unmount();
+});
 it("reminds device accounts, not established Google accounts, and respects optional Google dismissal", () => {
   expect(needsAccountSetup(device, false)).toBe(true);
   expect(needsAccountSetup(device, true)).toBe(true);

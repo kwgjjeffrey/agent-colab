@@ -1,5 +1,13 @@
 # 技术验证计划
 
+### 2026-10-09 Account avatar — acceptance in progress
+
+117 GUI tests / 42 files and production build pass. Includes avatar upload/reset
+contract and deterministic eight-colour fallback contrast >= 4.5:1 against white.
+Server avatar envelope validation test and cargo check pass. These do not prove
+durable GUI-to-Server behavior. Isolated persistence tests and real-browser
+upload/reset/reload acceptance must pass before claiming availability.
+
 ### 2026-10-09 Creation hints / sharing setup — verified and published
 
 GUI 128 production build and 115 tests pass. Skill 56: 43 tests pass, including

@@ -1,5 +1,14 @@
 # Colab 交互设计
 
+## Account avatar (2026-10-09)
+
+Global Account settings offers a compact avatar preview, Upload photo and Use
+initials. Local PNG/JPEG/WebP images are center-cropped to 256px JPEG, maximum
+5MB input. Saving reports progress, confirmed success or failure; initials reset
+is an explicit persistent choice. Initials across the app use the same muted
+eight-colour palette and white text with minimum 4.5:1 contrast. No new onboarding
+requirement or Badge is introduced. Google login preserves explicit choices.
+
 ## 2026-10-09 Creation guidance and Agent-assisted source configuration
 
 Add and Catalog Add items reveal one-sentence explanations on hover/focus using

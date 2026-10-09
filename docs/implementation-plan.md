@@ -1,5 +1,15 @@
 # Colab 实现计划
 
+### 2026-10-09 Account avatar — implementation and acceptance
+
+Checkpoint db8825a. Account settings adds upload and explicit initials reset;
+shadcn Avatar fallbacks share an eight-colour, white-text contrast-safe palette.
+GUI crops local PNG/JPEG/WebP to a 256px JPEG; Server accepts bounded JPEG data
+through the existing authenticated profile route. Core remains unchanged as the
+profile proxy. Migration 0041 preserves customized photos and explicit initials
+across Google link/login. GUI/build and Server checks pass; isolated persistence,
+GUI-to-Server acceptance and publication remain pending.
+
 ### 2026-10-09 Creation hints and Agent-assisted sharing — verified and published
 
 Rollback baseline `1670fa5`. Add/Catalog menus use shadcn hover explanations;
