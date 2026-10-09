@@ -9,11 +9,27 @@ export const USECASE = {
   description: 'An owned Channel opens Edit Channel. Verify three horizontal icon buttons and immediate standard Agent prompt, exact Channel targeting and supported upload command. Execute that displayed command with an owned decodable PNG through packaged Skill → Core → Server; verify exact persisted bytes, unchanged name, compact hash receipt, decoded GUI image and still-open form reconciliation. Restore original icon. This tests the handoff and upload tools, not a mocked image-generation model.',
 };
 export const META = {
-  id:'channels.icon-agent', module:'channels/identity', surface:'gui', priority:'critical',
-  origin:'requirement', status:'trial', effects:'isolated-write', cost:'normal',
-  suite:'business', testLevel:'end-to-end',
-  locks:['write:client.owner','write:channel.shared','write:browser.loopback-auth'],
-  affectedPaths:['desktop/ui/src/features/channels','skills/colab/bin/colab-browser','skills/colab/lib/channel_icons.py'],
+  "id": "channels.icon-agent",
+  "module": "channels/identity",
+  "surface": "gui",
+  "priority": "critical",
+  "origin": "requirement",
+  "status": "active",
+  "effects": "isolated-write",
+  "cost": "normal",
+  "suite": "business",
+  "testLevel": "end-to-end",
+  "locks": [
+    "write:client.owner",
+    "write:channel.shared",
+    "write:browser.loopback-auth"
+  ],
+  "affectedPaths": [
+    "desktop/ui/src/features/channels",
+    "skills/colab/bin/colab-browser",
+    "skills/colab/lib/channel_icons.py"
+  ],
+  "statusReason": "Reviewed Round 20261009T034014Z-23f572c9 on GUI 135/Core 99: displayed packaged upload command, exact persisted bytes, unchanged name, digest receipt, image decode/reload, form reconciliation and owned restoration; 23 assertions passed."
 };
 export const REQUIREMENTS = {channel:{permission:'read'},parameters:{keys:['disposable','isolationConfirmed','isolatedCoreDiscoveryFile','isolatedClientBaseUrl','testUserId','testOrganizationId']}};
 

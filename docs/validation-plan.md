@@ -4,15 +4,28 @@
 
 Native OKR editor was mounted and Synced while Catalog displayed a stale Failed to fetch. Catalog read errors are now separate from mutation errors; successful background refresh clears only read errors. The initiating historical transport interruption is not established by retained logs. GUI 0.1.134-dev / promotion 0.1.186-dev published and normally installed; actual ui.json verified. Production build passed and public readback verified 2439669 bytes / SHA-256 `3ec58f2668c9ed66c4b619695eb8481c3092dae447badd46f9775747723d1370`. E2E `20261009T033459Z-e3887140` passed three assertions using actual background request abort and recovery without reload. Test used a temporary index aligned to daily GUI/Core, and did not mutate Channel data. Extra owner/receiver/revocable/Trace runtimes are isolated test-installation registrations retained under the user account, not a required same-machine multi-Core product feature or an authentication bypass.
 
-### 2026-10-09 Channel icon Agent handoff — acceptance in progress
+### 2026-10-09 Channel icon Agent handoff — verified and published
 
-Focused GUI prompt/form reconciliation tests pass (3). Python suite passes (47),
+GUI suite passes (120 across 43 files), including 3 focused prompt/form tests. Python suite passes (47),
 covering bounded raster encoding, unsafe/missing paths, preserved name, confirmed
 compact receipt and argument exclusivity. Production TypeScript/Vite build passed.
-New trial `channels.icon-agent` executes the displayed command against a real
-owned Channel and checks persisted bytes/GUI decode/cleanup. Existing workspace
-case is trial again because the library action label changed. No model image
-generation or full Agent execution is claimed by the upload regression.
+`channels.icon-agent` is now active: Round 20261009T034014Z-23f572c9 on actual
+GUI 135/Core 99 executes the displayed packaged Skill 57 command against a real
+owned Channel, verifies byte digest, preserved name, GUI decode/reload, external
+form reconciliation and restoration (23 assertions). Retained manual upload and
+library generator pass workspace Round 20261009T033717Z-7a5a64e0 (20 assertions),
+also reviewed/active. Run 20261009T033140Z-432473f0 preserves the missing-refresh
+defect, obsolete Core 94 fixture, shared-browser contention and default case
+timeout evidence; the final bounded run uses its own profile and 180s operational
+timeout, not a performance budget. No model image generation or full Agent
+execution is claimed by this upload regression.
+
+Promotion 187 publishes GUI 135 (1,317,866 bytes, SHA-256
+1db18174d208c56d6681c5e122a2335ee4372693fddf94449f5fd6c0b25d6961)
+and Skill 57 (1,728,817 bytes, SHA-256
+7d3126661af16827cdab18e2d398ae11c75351404a7e7746da08331b83234fa5).
+Canonical publisher verifies public immutable bytes and signed stable readback;
+Core/Server/Shell stay unchanged. Daily installation is not claimed.
 
 ### 2026-10-09 Direct Canvas creation
 

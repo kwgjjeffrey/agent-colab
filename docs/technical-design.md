@@ -1,5 +1,13 @@
 # Colab 技术设计
 
+Channel icon Agent upload (2026-10-09): the Skill's optional `--icon-file` reads
+a bounded regular local PNG/JPEG/WebP, MIME-sniffs raster headers and encodes a
+data URI for the existing authenticated Channel PATCH. It does not perform image
+generation/resizing or call Server directly. The receipt confirms Server's exact
+returned image and exposes only a SHA-256 digest, never image bytes. GUI refreshes
+identity on focus/visibility return while editing and reconciles the picker value.
+No schema, backend protocol, Blob store or artifact-boundary change is needed.
+
 Account avatar updates (2026-10-09): existing authenticated profile PATCH accepts
 one name or avatar action. avatarUrl is bounded JPEG data (64KiB decoded); arbitrary
 URLs and SVG uploads are rejected. resetAvatar=true clears the stored image but

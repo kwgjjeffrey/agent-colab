@@ -5,21 +5,21 @@ export const META={
   "surface": "gui",
   "priority": "critical",
   "origin": "bug",
-  "status": "trial",
+  "status": "active",
   "effects": "isolated-write",
   "cost": "normal",
   "requires": [
     "local-core"
   ],
   "affectedPaths": [
-  "desktop/ui/src/main.tsx",
-  "desktop/ui/src/features/channels",
-  "desktop/ui/src/features/skills",
-  "desktop/ui/src/features/workspace"
-],
+    "desktop/ui/src/main.tsx",
+    "desktop/ui/src/features/channels",
+    "desktop/ui/src/features/skills",
+    "desktop/ui/src/features/workspace"
+  ],
   "suite": "business",
   "testLevel": "end-to-end",
-  "statusReason": "Reviewed October 9 IA migration: exact mixed-item GUI actions, real Core/Server readback, captured traces where enabled and owned cleanup verified; run evidence in docs/validation-plan.md.",
+  "statusReason": "Reviewed Round 20261009T033717Z-7a5a64e0 on GUI 134/Core 99: manual image upload and Generate icon from lib remain real persisted workflows, focus navigation and cleanup verified; 20 assertions passed.",
   "locks": [
     "read:client.primary",
     "write:channel.shared",
