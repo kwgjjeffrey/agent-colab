@@ -26,10 +26,12 @@ export async function run(ctx){
   for(const [name,text]of [['Catalog','Group and organize context documents.'],['Canvas','A shared document people and Agents can edit simultaneously.'],['Session','Share your local Agent conversation so teammates can help or explore it with their own Agents.'],['Files','Share your local files or directories.'],['Skill','Share a reusable Skill that teammates can install in their Agents.']]){
    await ctx.page.getByRole('menuitem',{name,exact:true}).hover();const hint=ctx.page.locator('[data-slot="tooltip-content"]').filter({hasText:text});await hint.waitFor();ctx.assert(name+' hover explanation',await hint.innerText(),text);
   }
+  await ctx.page.getByRole('menuitem',{name:'Quick Share',exact:true}).hover();await ctx.page.locator('[data-slot="tooltip-content"]').filter({hasText:'Share Sessions and Files with teammates without adding them to the Channel.'}).waitFor();
+  await ctx.page.getByRole('menuitem',{name:'Share a Session',exact:true}).waitFor();ctx.assert('Quick Share hover explanation preserves the cascade',true,true);
   await ctx.page.keyboard.press('Escape');
   // Use Catalog's own Add so the prompt must retain its exact destination.
   await ctx.page.reload();const row=ctx.page.locator(`[data-item-id="${catalog.explorerRef.split('/').at(-1)}"]`);await row.waitFor();await row.hover();
-  await row.getByRole('button',{name:'Add to Setup '+ctx.runId,exact:true}).click();
+  await ctx.page.getByRole('button',{name:'Add to Setup '+ctx.runId,exact:true}).click();
   await withPathSelection(ctx,f.files,async()=>{await ctx.page.getByRole('menuitem',{name:'Files',exact:true}).click();await ctx.page.getByRole('dialog').getByRole('button',{name:'Give to Agent',exact:true}).click();});
   const dialog=ctx.page.getByRole('dialog').filter({has:ctx.page.getByRole('heading',{name:'Share Files with Agent',exact:true})});
   const prompt=await dialog.locator('pre').innerText();ctx.assert('Files prompt is bounded to selected source',prompt.includes(f.files),true);ctx.assert('Files prompt uses selected Catalog',prompt.includes(catalog.explorerRef),true);
@@ -43,6 +45,13 @@ export async function run(ctx){
   const snapshot=await core(ctx,'POST',`/v1/files/${fileId}/materialize`,undefined,{discoveryFile:parameter(ctx,'secondCoreDiscoveryFile')});
   ctx.assert('Published snapshot excludes generated file',await fs.access(path.join(snapshot.localPath,'dist/excluded.txt')).then(()=>true,()=>false),false);
   ctx.assert('Published bytes retain allowed content',await fs.readFile(path.join(snapshot.localPath,'hello.txt'),'utf8'),'OWNED_TEST_'+ctx.runId);
+  await ctx.page.reload();await ctx.page.getByRole('button',{name:'Expand Setup '+ctx.runId,exact:true}).click();await ctx.page.locator(`[data-item-id="${fileId}"]`).click();
+  await ctx.page.getByRole('button',{name:'More item actions',exact:true}).click();await ctx.page.getByRole('menuitem',{name:'Sync scope',exact:true}).click();
+  await ctx.page.getByRole('dialog').getByRole('button',{name:'Give to Agent',exact:true}).click();
+  const scopeDialog=ctx.page.getByRole('dialog').filter({has:ctx.page.getByRole('heading',{name:'Configure Files with Agent',exact:true})});const scopePrompt=await scopeDialog.locator('pre').innerText();
+  ctx.assert('Existing scope prompt never re-registers Files',scopePrompt.includes(' --item-type files'),false);
+  for(const line of scopePrompt.split('\n').filter(line=>line.startsWith('~/.agents/')))await invoke(line);
+  await ctx.page.keyboard.press('Escape');await ctx.page.keyboard.press('Escape');
   await cli(ctx,'colab-browser',['sync-scope','--ref',files.stableRef]);
   await cli(ctx,'colab-browser',['sync-scope','--ref',files.stableRef,'--set']);
   const scope=data(await cli(ctx,'colab-browser',['sync-scope','--ref',files.stableRef]));ctx.assert('Replacing with empty list clears exclusion',scope.excludedFiles,0);

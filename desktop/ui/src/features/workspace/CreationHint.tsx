@@ -1,4 +1,4 @@
-import type { ReactElement, ReactNode } from "react";
+import { cloneElement, type ReactElement, type ReactNode } from "react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 export const creationHints = {
@@ -11,5 +11,8 @@ export const creationHints = {
 };
 
 export function CreationHint({ kind, trigger, children }: { kind: keyof typeof creationHints; trigger: ReactElement; children: ReactNode }) {
+  // A submenu trigger owns hover intent; merging Tooltip's trigger handlers into
+  // it suppresses that intent. Keep its handlers intact and observe the wrapper.
+  if (kind === "quickShare") return <Tooltip><TooltipTrigger render={<span className="block" />}>{cloneElement(trigger, undefined, children)}</TooltipTrigger><TooltipContent side="right">{creationHints[kind]}</TooltipContent></Tooltip>;
   return <Tooltip><TooltipTrigger render={trigger}>{children}</TooltipTrigger><TooltipContent side="right">{creationHints[kind]}</TooltipContent></Tooltip>;
 }
