@@ -945,3 +945,9 @@ Compact Channel E2E Run 20261008T083723Z-1179256b first round exercised both dia
   direct Add menu, Quick Share cascade, colored assets and retained Channel header.
 - No new performance budget is claimed. Icon and DnD libraries are reused;
   broader trace-catalog restructuring is separate from this product correction.
+
+## Home action guidance — 2026-10-09
+
+- `desktop/ui`: production build passed; Vitest 45 files / 123 tests passed.
+- New tests verify all seven actions in order, dispatch of the five creation kinds, primary Call my Agent styling, installed Skill / exact Channel prompt targeting, and Files configuration opening without invoking a chooser. Chooser cancellation retains configuration.
+- Read-only GUI/Core acceptance passed in Run 20261009T035505Z-9762f851: seven ordered vertically aligned actions, installed Skill/exact Channel prompt, successful real explorer read, pre-choice Files configuration and Agent prompt. Screenshots are retained in that Run. This does not claim an Agent model run or a new Files synchronization mutation; native chooser cancellation is separately unit-tested. The ambient localhost:5199 tab shows the website, so acceptance instead used the independently authenticated owned Core 99 client.

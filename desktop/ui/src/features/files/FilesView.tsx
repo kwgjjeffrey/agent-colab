@@ -97,7 +97,9 @@ export function FilesView({
   installedAgents,
 }: Props) {
   const context = useChannelContext();
-  useEffect(()=>{if(shareOpenToken){void choose();onShareOpenConsumed?.();}},[shareOpenToken]);
+  useEffect(()=>{if(shareOpenToken){setSetupOpen(true);onShareOpenConsumed?.();}},[shareOpenToken]);
+  const [setupOpen, setSetupOpen] = useState(false);
+  const [choosing, setChoosing] = useState(false);
   const focusAvailable = shares.some(row => row.id === focusId);
   useEffect(() => { const row = shares.find(row => row.id === focusId); if (row) void browse(row, true); }, [focusId, focusAvailable]);
   const [openShare, setOpenShare] = useState<string>();
@@ -201,11 +203,17 @@ const trackedFetch = operation.fetch;
 }
 
   async function choose() {
-    const path = await onChoose();
-    if (path) {
-      setScopeShareId(undefined);
-      await inspect(path, [], true);
-    }
+    setChoosing(true);
+    setBrowseError(undefined);
+    try {
+      const path = await onChoose();
+      if (path) {
+        setSetupOpen(false);
+        setScopeShareId(undefined);
+        await inspect(path, [], true);
+      }
+    } catch (reason) { setBrowseError(String(reason)); }
+    finally { setChoosing(false); }
   }
 
   async function editScope(share: FileShare) {
@@ -271,9 +279,19 @@ const trackedFetch = operation.fetch;
   const focusedShare = shares.find(share => share.id === focusId);
   return (
     <div className={browsedShare?"flex min-h-0 flex-1 flex-col":"mx-auto flex max-w-4xl flex-col gap-5 py-6"}>
+      <Dialog open={setupOpen} onOpenChange={open => { if (!choosing) setSetupOpen(open); }}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Share files</DialogTitle><DialogDescription>Choose a local file or directory, or let your Agent select and configure the source.</DialogDescription></DialogHeader>
+          {browseError && <p role="alert" className="text-sm text-destructive">{browseError}</p>}
+          <DialogFooter>
+            <ShareSetupPrompt setup={{kind: "files", parentRef: creationParentRef}} defaultAgent={defaultAgent} installedAgents={installedAgents} onError={setBrowseError} />
+            <Button disabled={busy || choosing} data-trace-target={traceTargets("files.choose", "system.choose-path")} onClick={() => void choose()}>{choosing ? "Choosing…" : "Choose files"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       {focusedShare?.syncState === "failed" && <WorkspaceActions><Button data-trace-target={traceTargets("files.retry")} disabled={busy} onClick={()=>onRetry(focusedShare)}>Retry</Button></WorkspaceActions>}
       {browsedShare ? <><WorkspaceActions primary><Button data-trace-target={traceTargets("files.handoff")} onClick={()=>void giveToAgent(browsedShare)}>Give to Agent</Button></WorkspaceActions><WorkspaceActions>{browsedShare.canWithdraw&&<><Button variant="ghost" onClick={()=>void editScope(browsedShare)}>Sync scope</Button><Button variant="destructive" onClick={()=>onWithdraw(browsedShare)}>Withdraw</Button></>}</WorkspaceActions><FileExplorer shareId={browsedShare.id} shareName={browsedShare.name} entries={entries} sourceKind={sourceKind} onClose={() => setOpenShare(undefined)}/></> : focusId ? <div className="flex flex-col gap-3 p-6"><p className="text-sm text-muted-foreground">{browseError ? "Couldn’t load file preview." : "Loading files…"}</p>{browseError && <Button variant="outline" onClick={() => {const row=shares.find(share=>share.id===focusId);if(row)void browse(row,true);}}>Retry preview</Button>}</div> : <><div className="flex justify-end">
-        <Button data-trace-target={traceTargets("files.share", "files.choose", "system.choose-path")} disabled={busy} onClick={() => void choose()}>
+        <Button data-trace-target={traceTargets("files.share")} disabled={busy} onClick={() => setSetupOpen(true)}>
           <PlusIcon /> Share files
         </Button>
       </div>

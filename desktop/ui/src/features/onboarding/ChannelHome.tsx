@@ -14,6 +14,8 @@ import { Badge } from "@/components/ui/badge";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { TipFlow } from "./TipFlow";
 import type { AgentTarget } from "@/features/agent/AgentPromptDialog";
+import { HomeActions } from "./HomeActions";
+import type { ComponentProps } from "react";
 export { homeTips } from "./home-tips";
 
 export function ChannelHome({
@@ -22,12 +24,14 @@ export function ChannelHome({
   busyTip,
   defaultAgent = "codex",
   installedAgents = {},
+  actions,
 }: {
   accountId: string;
   busyTip?: string;
   onTry: (id: string) => void;
   defaultAgent?: AgentTarget;
   installedAgents?: Record<string, { installed: boolean }>;
+  actions?: Omit<ComponentProps<typeof HomeActions>, "defaultAgent" | "installedAgents">;
 }) {
   const key = `colab:onboarding:${accountId}`;
   const [hidden, setHidden] = useState<string[]>(() => {
@@ -42,7 +46,10 @@ export function ChannelHome({
   const [flow, setFlow] = useState<string>();
   const [ignored, setIgnored] = useState(false);
   const [tipsOpen, setTipsOpen] = useState(
-    () => localStorage.getItem(`${key}:collapsed`) !== "true",
+    () => {
+      const preference = localStorage.getItem(`${key}:collapsed`);
+      return preference === null ? !actions : preference !== "true";
+    },
   );
   useEffect(() => {
     // Count distinct days of exposure, not renders/tab switches. Ignored tips stay recoverable.
@@ -68,6 +75,7 @@ export function ChannelHome({
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 p-8">
       <CollaborationNetwork />
+      {actions && <HomeActions {...actions} defaultAgent={defaultAgent} installedAgents={installedAgents} />}
       <Collapsible
         open={tipsOpen}
         onOpenChange={(open) => {

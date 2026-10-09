@@ -1,0 +1,38 @@
+import {isolated} from '../../../support/controls.mjs';
+import {resource,cli} from '../../../support/client.mjs';
+export const USECASE={name:'Home guidance and pre-choice Files configuration',description:'Read the real owned workspace, verify Home action order and shared Agent prompt targeting, execute its explorer read, and open Files configuration before any native chooser. No sharing mutation or Agent model execution.'};
+export const META={id:'channels.home.actions',module:'channels/home',surface:'gui',priority:'critical',origin:'requirement',status:'trial',effects:'read-only',cost:'normal',suite:'business',testLevel:'end-to-end',locks:['write:client.owner','write:browser.loopback-auth'],affectedPaths:['desktop/ui/src/features/onboarding','desktop/ui/src/features/files/FilesView.tsx','desktop/ui/src/main.tsx']};
+export const REQUIREMENTS={channel:{permission:'read'},parameters:{keys:['isolationConfirmed','isolatedCoreDiscoveryFile','isolatedClientBaseUrl','testUserId','testOrganizationId']}};
+export async function run(ctx){
+  const target=await isolated(ctx),channel=resource(ctx,'channel');
+  await ctx.page.goto(target.baseUrl);
+  await ctx.page.locator('[aria-label="Channels"]').getByRole('button',{name:channel.name,exact:true}).click();
+  await ctx.page.getByRole('button',{name:'Home',exact:true}).click();
+  const actions=ctx.page.getByRole('region',{name:'Channel actions'});
+  const labels=['Call my Agent','Share my Session','Share my Files','Share my Skills','Add a Canvas','Catalog','Quick Share'];
+  ctx.assert('All seven guidance actions in order',await actions.getByRole('button').allTextContents(),labels);
+  const boxes=await Promise.all(labels.map(name=>actions.getByRole('button',{name,exact:true}).boundingBox()));
+  ctx.assert('Guidance actions form a vertical aligned column',boxes.every((box,index)=>box&&Math.abs(box.x-boxes[0].x)<2&&(!index||box.y>boxes[index-1].y)),true);
+  await ctx.screenshot('Home action guidance');
+  await actions.getByRole('button',{name:labels[0],exact:true}).click();
+  let dialog=ctx.page.getByRole('dialog');
+  await dialog.waitFor();
+  const prompt=await dialog.locator('pre').innerText();
+  ctx.assert('Prompt locates installed Skill',prompt.includes('/skills/agent-colab/SKILL.md'),true);
+  ctx.assert('Prompt targets exact selected Channel',prompt.includes(`open --ref 'colab://channel/${channel.id}'`),true);
+  await cli(ctx,'colab-explorer',['open','--ref',`colab://channel/${channel.id}`]);
+  await ctx.page.keyboard.press('Escape');
+  await dialog.waitFor({state:'hidden'});
+  await actions.getByRole('button',{name:'Share my Files',exact:true}).click();
+  dialog=ctx.page.getByRole('dialog');
+  await dialog.getByRole('heading',{name:'Share files',exact:true}).waitFor();
+  ctx.assert('Manual choice is available before selecting a source',await dialog.getByRole('button',{name:'Choose files',exact:true}).isVisible(),true);
+  await dialog.getByRole('button',{name:'Give to Agent',exact:true}).click();
+  const setup=ctx.page.getByRole('dialog').filter({has:ctx.page.getByRole('heading',{name:'Share Files with Agent',exact:true})});
+  const body=await setup.locator('pre').innerText();
+  ctx.assert('Agent asks for source instead of requiring prior chooser',body.includes('ask me which local file or directory to share'),true);
+  ctx.assert('Agent uses actual Files sharing tool',body.includes('colab-explorer share --parent')&&body.includes('--item-type files'),true);
+  await ctx.screenshot('Files configuration Agent handoff');
+  await ctx.page.keyboard.press('Escape');
+  await ctx.page.keyboard.press('Escape');
+}
