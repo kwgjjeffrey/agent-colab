@@ -14,7 +14,7 @@ export async function run(ctx){
   // rather than the daily installed target, whose version has not been promoted yet.
   const match=line.match(/^~\/\.agents\/skills\/agent-colab\/bin\/(colab-[\w-]+)(.*)$/);
   if(!match)throw new Error('Unexpected generated command');
-  const executable=path.join(ctx.repo,'dist/colab-skill/0.1.56-dev/agent-colab/bin',match[1]);
+  const executable=path.join(ctx.repo,'dist/colab-skill/0.1.56-dev/bin',match[1]);
   const result=await ctx.command('Execute generated '+match[1],'bash',['-c',"'"+executable+"'"+match[2]]);
   ctx.assert('Generated command exits successfully',result.code,0);return data(JSON.parse(result.stdout));
  };
@@ -24,7 +24,7 @@ export async function run(ctx){
   catalog.explorerRef=`colab://resource/${channel.id}/catalog/${created.id}`;
   await openTab(ctx,'Home');await ctx.page.getByRole('button',{name:'Add',exact:true}).click();
   for(const [name,text]of [['Catalog','Group and organize context documents.'],['Canvas','A shared document people and Agents can edit simultaneously.'],['Session','Share your local Agent conversation so teammates can help or explore it with their own Agents.'],['Files','Share your local files or directories.'],['Skill','Share a reusable Skill that teammates can install in their Agents.']]){
-   await ctx.page.getByRole('menuitem',{name,exact:true}).hover();await ctx.page.getByRole('tooltip').getByText(text,{exact:true}).waitFor();ctx.assert(name+' hover explanation',await ctx.page.getByRole('tooltip').isVisible(),true);
+   await ctx.page.getByRole('menuitem',{name,exact:true}).hover();const hint=ctx.page.locator('[data-slot="tooltip-content"]').filter({hasText:text});await hint.waitFor();ctx.assert(name+' hover explanation',await hint.innerText(),text);
   }
   await ctx.page.keyboard.press('Escape');
   // Use Catalog's own Add so the prompt must retain its exact destination.

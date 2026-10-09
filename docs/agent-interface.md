@@ -1,5 +1,19 @@
 # Agent 脚手架与接口设计
 
+## Source configuration interface (2026-10-09)
+
+`colab-browser inspect-source --source '/absolute/path' [--exclude dist]` previews
+the existing Local Core Files scope. Only supported directory names returned in
+`candidates` are accepted, not arbitrary Git globs. Repeated `--exclude` passes
+the complete confirmed list to Browser or Explorer Files `share`. Skill sharing
+rejects Files exclusions. `colab-browser sync-scope --ref '<stableRef>'` reads an
+owned local Files item's scope; `--set [--exclude dist]` replaces its list and
+queues publication, while `--set` alone clears it. Core remains the authorization
+and shadow-Git owner; scripts do not edit source `.gitignore` or storage directly.
+GUI setup prompts bind the exact Channel/Catalog and source, require confirmation,
+and distinguish accepted registration from completed synchronization. Skill setup
+uses `colab-skill-tool sources` then Explorer `share`, selecting one valid root.
+
 ## Explorer interface (2026-10-08)
 
 Browser is legacy and retains its existing flat-reference protocol. New

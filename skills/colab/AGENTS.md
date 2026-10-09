@@ -1,5 +1,13 @@
 # Colab Skill
 
+Files configuration uses `colab-browser inspect-source` and `sync-scope`, with
+the same Core endpoints as GUI. `--exclude` takes only supported directory names
+from inspection candidates. Scope replacement is explicit (`--set`); no exclusions
+means clear, not preserve. Explorer Files share forwards the complete list.
+Generated setup prompts distinguish source configuration from asset consumption,
+bind the selected Catalog, and must be validated by executing their commands on
+owned fixtures. Never treat a registration receipt as completed publication.
+
 `colab-explorer` owns mixed-tree discovery, Catalog CRUD, placement and directory-
 targeted sharing. Keep legacy Browser inputs/outputs and flat resolution compatible.
 Explorer location paths are not consumer identities: explorerRef targets Explorer;

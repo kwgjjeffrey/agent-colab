@@ -1,5 +1,17 @@
 # Colab 交互设计
 
+## 2026-10-09 Creation guidance and Agent-assisted source configuration
+
+Add and Catalog Add items reveal one-sentence explanations on hover/focus using
+shadcn Tooltip; Quick Share has its own explanation without changing its cascade.
+Files synchronization-scope and Skill source dialogs offer Give to Agent via the
+shared prompt Dialog. This configures a local source, not consumes an existing
+shared context. The prompt preserves the exact destination and current Files
+path/exclusions. Editing scope targets the existing share; it never registers
+another item. Users can add a task and copy/open their installed Agent. Producing
+a prompt does not upload or save anything; Agent mutation requires source/scope
+confirmation. Existing manual selection and save/share actions remain available.
+
 ## 2026-10-09 Unified asset preview correction
 
 The detail header has one inline Channel / Catalog / current-item breadcrumb.
