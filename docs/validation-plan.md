@@ -1465,3 +1465,8 @@ Public Core120/Skill69 published through the canonical R2 publisher and installe
 ### 2026-10-10 — Inline mention typography
 
 Chrome computed-style verification passed for member, Agent, Canvas and Files references in 14px, 16px and 24px text: font size/weight/line-height match surrounding text and resource icons measure 1em. This is a browser style check, not an end-to-end business regression. Shared checkout build initially blocked by dangling dependency links to a deleted temporary release directory. An isolated copy with independent dependencies passed TypeScript and Vite build; shared dependencies were left untouched.
+
+
+### 2026-10-10 — Mention typography release acceptance
+
+Public promotion 0.1.235-dev / GUI 0.1.174-dev and enterprise promotion 0.1.17-ks.1 / GUI 0.1.12-ks.1 are promoted and installed on macOS arm64. Source f20c99c; frozen build contains only GUI owning-version changes. Core, Skill, Shell and Workbench retained from each current channel. Public GUI SHA-256 4980492379ba9752791f96502da21b3fcc57b483c0d4af26ba2a941c32ad373d (1,336,599 bytes). Enterprise GUI SHA-256 3956aa2f75e1f72c4dcbbcfe53b7d72d05157718de4331597a8e3660bdbf0f4a (1,332,795 bytes). Canonical public R2 and company CDN full readback passed. Actual public /ui.json and all 41 installed archive entries match. Enterprise installed-client acceptance passed; real Canvas member mention inherits surrounding font size and weight, compact Agent CLI read, adjacent patch and reload passed, owned Canvas a7494725-100e-4ed3-ac5a-15292bbfab4e deleted. Screenshot inspected. Evidence: ignored integration/kuaishou/artifacts/build/profiles/mention-typography/evidence/client/. This used existing installed browser acceptance, not a Trace regression Run.
