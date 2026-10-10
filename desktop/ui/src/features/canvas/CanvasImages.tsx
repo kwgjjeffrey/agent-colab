@@ -46,7 +46,7 @@ function readyImage(src: string, signal: AbortSignal): Promise<void> {
 }
 export function CanvasImageUploads({ editor, canvasId }: { editor: Editor; canvasId: string }) {
  const [uploads, setUploads] = useState<Upload[]>([]);
- const jobs = useRef(new Map<string, Upload>()), abort = useRef(new AbortController()), input = useRef<HTMLInputElement>(null);
+ const jobs = useRef(new Map<string, Upload>()), abort = useRef(new AbortController());
  function refresh() {
   const pending = [...jobs.current.values()];
   setUploads(pending);
@@ -88,5 +88,6 @@ export function CanvasImageUploads({ editor, canvasId }: { editor: Editor; canva
   editor.on('transaction', map); dom.addEventListener('paste', paste, true); dom.addEventListener('drop', drop, true);
   return () => { controller.abort(); for (const job of jobs.current.values()) URL.revokeObjectURL(job.previewUrl); jobs.current.clear(); editor.off('transaction', map); dom.removeEventListener('paste', paste, true); dom.removeEventListener('drop', drop, true); };
  }, [editor, canvasId]);
- return <div className="mx-auto max-w-4xl px-12 py-2"><input ref={input} type="file" accept="image/png,image/jpeg,image/webp,image/gif" multiple hidden onChange={event => { add([...(event.target.files ?? [])]); event.target.value = ''; }} /><Button size="sm" variant="ghost" onClick={() => input.current?.click()}>Add image</Button>{uploads.map(job => <div key={job.id} role="status" className="flex items-center gap-3 py-2 text-sm"><span>{job.file.name}: {job.busy ? job.phase === 'loading' ? 'Loading…' : 'Uploading…' : job.error}</span>{job.error && <><Button size="sm" variant="outline" onClick={() => void send(job)}>Retry</Button><Button size="sm" variant="ghost" onClick={() => { jobs.current.delete(job.id); URL.revokeObjectURL(job.previewUrl); refresh(); }}>Dismiss</Button></>}</div>)}</div>;
+ if (!uploads.length) return null;
+ return <div className="mx-auto max-w-4xl px-12 py-2">{uploads.map(job => <div key={job.id} role="status" className="flex items-center gap-3 py-2 text-sm"><span>{job.file.name}: {job.busy ? job.phase === 'loading' ? 'Loading…' : 'Uploading…' : job.error}</span>{job.error && <><Button size="sm" variant="outline" onClick={() => void send(job)}>Retry</Button><Button size="sm" variant="ghost" onClick={() => { jobs.current.delete(job.id); URL.revokeObjectURL(job.previewUrl); refresh(); }}>Dismiss</Button></>}</div>)}</div>;
 }
