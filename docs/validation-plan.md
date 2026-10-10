@@ -1399,7 +1399,7 @@ production builds passed. Shell and Skill are unchanged.
 Operation Workbench implementation 2026-10-10: independent frontend, Settings entrance, authorized Skill feedbacks, independent updater and Core hosting. Feedback tests 3; setup tests 3 (selective update, malformed package recovery, legacy manifest); publisher tests 4 passed. TypeScript/Core check passed. Publication and installed acceptance pending; `.trial/V-WORKBENCH-01/README.md`.
 
 ### Canvas local text and verified reference editing (2026-10-10)
-Reproduced the real planning document's lossy-list guard failure. Inline text edits now use ProseMirror transforms with exact projection-context checks and preserve surrounding tree/marks/trailing spaces. Added replace-with-canvas through Skill→Core: validate both Canvas IDs in the same authorized Channel, check read revision, and insert the target's authoritative title/identity. Text patches still refuse capsule identity and structured-component edits. Fixed another ACK cursor advance in the patch path. Codec and installed release acceptance pending.
+Reproduced the real planning document's lossy-list guard failure. Inline text edits now use ProseMirror transforms with exact projection-context checks and preserve surrounding tree/marks/trailing spaces. Added replace-with-canvas through Skill→Core: validate both Canvas IDs in the same authorized Channel, check read revision, and insert the target's authoritative title/identity. Text patches still refuse capsule identity and structured-component edits. Fixed another ACK cursor advance in the patch path. Codec20 tests passed; clean frozen Core48 passed/2 ignored; Skill Canvas2 and installed entrypoints2 passed. All ten real planning substitutions passed against copied canonical state, including contextual Darwin disambiguation. Public230/Core120/Skill68 and enterprise15/Core11/Skill7 installed release acceptance pending.
 
 
 Compact mention release acceptance: Core 0.1.117-dev and GUI 0.1.172-dev
@@ -1421,3 +1421,34 @@ Files resource projection and handoff reading instruction, reload and durable
 owned cleanup. Screenshot reviewed. Original proxy-port/script-selector failures
 and default-timeout round remain recorded; this expanded case uses 120000 ms
 execution allowance, not a performance budget.
+
+
+### Enterprise compact mention release — 2026-10-10
+
+Enterprise promotion 0.1.16-ks.1 is promoted and installed through the company
+CDN stable channel. Core 0.1.12-ks.1 and GUI 0.1.11-ks.1 are built from the
+verified compact-reference source 60a36bd, with enterprise configuration and
+independent versions. Skill 0.1.5-ks.1 and Shell 0.1.0-ks.1 retain the previously
+promoted bytes. Server is unchanged. Full CDN readback verified Core SHA-256
+`6298c1e60999bafefc1db3a2d308af59f498f2f0eea1287f0942a96bbd98ab52`
+(45,824,394 bytes) and GUI
+`58f22b640ba759ba651b4a72352196d8782bb9613bf91f74f605bdc695b79793`
+(1,331,990 bytes). The signed candidate, normal stable update and installed-client
+acceptance passed; live Core executable is versions/local-core/0.1.12-ks.1/colabd.
+
+Enterprise functional acceptance exercised real GUI member mention insertion,
+compact Core Markdown, installed kwai-colab Skill read, adjacent text patch and
+reload retaining identity. Owned test Canvases were deleted, screenshot reviewed,
+and public installation isolation checks passed. Evidence and repeatable acceptance
+entry are integration/kuaishou/evidence/client/compact-mentions-acceptance.json
+and integration/kuaishou/artifacts/build/accept-compact-mentions.mjs.
+
+An overlapping publisher reused candidate promotion 0.1.15-ks.1 and replaced
+its manifest; receipt mismatch detected this before promotion. Fresh owning
+versions and promotion 0.1.16-ks.1 were allocated. Enterprise publish/promote
+now share one host-wide publisher lock across checkouts; promotion rejects an
+older channel version or the same version with different content. An explicit
+COLAB_RETAINED_COMPONENTS list can guard unchanged components during promotion.
+These are local single-host safeguards, not cross-host CAS or global immutable
+version reservation. Company signing/notarization and Windows are outside this
+macOS arm64 acceptance.
