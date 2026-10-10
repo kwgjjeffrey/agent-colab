@@ -1258,3 +1258,33 @@ Empty-search fix: 4 focused selector tests and canonical GUI build passed. Nativ
 - E2E `canvas.recovery.state`, Round `20261009T161453Z-5a2e81ff`: 10 assertions passed. Real edit forwarded to Core before a simulated lost response; after restoring transport, no additional edit/navigation was performed. Screenshots confirm Offline/error disappears and Synced returns; projection remains intact, pending outbox is zero and owned Canvas cleanup completed.
 - Cloud readback verified error trace `ca67d0b6d11e8d1e31c9124ef414fd29` (`edit-failed`, `offline`) and recovery trace `ec01a4e2ccf7e68fe1c7a1e4847cdcc1` (`offline-retry`, HTTP 200, `recovered`, `synced`, recovered=true). Recovery spans include GUI, Core and Server. The runner reported ingestion deadlines for nine other traces; this does not constitute complete telemetry acceptance for those traces.
 - Rust ingestion tests: 2 passed, including preservation of Canvas diagnostics and stripping document/secret attributes.
+
+## Feedback collection feasibility (2026-10-10)
+
+Local Codex CLI 0.155.0 trial verified Skill read/command hook evidence, Stop-time user-to-final-response transcript capture, and ephemeral exec/fork without persisted rollout or local thread DB rows. No feedback product implementation or upload is complete. Desktop host hooks/sidebar, multi-turn segmentation, compaction completeness and durable async handoff remain unverified. Evidence and scope: `.trial/V-FEEDBACK-01-codex-hooks/README.md`.
+
+### Desktop feedback probe (2026-10-10)
+
+Actual current desktop thread uses bundled Codex 0.162.0-alpha.2. Installed Skill read and explorer help succeeded; a previous completed turn was extracted from this same desktop transcript with query/final assertions. A new thread-scoped PostToolUse/Stop probe is registered but has not fired in the active turn; host reload/trust review remains pending. No upload, desktop live-hook success, ephemeral sidebar acceptance or production feedback completion is claimed. See `.trial/V-FEEDBACK-02-desktop-hooks/README.md`; trial-only hooks can be removed with its restore.py.
+
+### Desktop feedback live hooks accepted (2026-10-10)
+
+Supersedes the preceding pending probe status: real current desktop thread delivered PostToolUse for installed Colab Skill read/explorer invocation and Stop for the preceding turn. Stop transcript range verified actual user query, exact final response, 13 tool calls and 13 results. Capture required no inference/fork/upload/new thread. Trial hooks removed preserving unrelated hooks. Ephemeral desktop listing and background inference remain unverified. Evidence: `.trial/V-FEEDBACK-02-desktop-hooks/README.md`.
+
+### Feedback design review (2026-10-10)
+
+`docs/feedback-design.md` records proposed objective bundles, provenance, consumer-local evaluations, raw upload, producer tools and GUI. Existing CLI/desktop hook evidence was reread; managed installation code confirms path/revision receipts but no installation-channel provenance persistence. Native Skill activation, untrusted-hook scanner fallback, prior-three-human-query extraction and desktop ephemeral analysis remain acceptance gaps. This is a design deliverable, not product implementation or release.
+
+### Feedback design revision (2026-10-10)
+
+User rejected Core Session scanning: the design now requires authorized/trusted hooks, with no silent fallback capture/upload. Skill identity uses assetKey/channelKey; default GUI/Agent analysis aggregates by assetKey. Producer interfaces are owner asset statistics, filtered/projected feedback lists, existing Session Reader with proposed feedback-ref adapter, and processing-state mutation. Evaluation names are rating/taskTrajectory; negative tags require explicit selection criteria and evidence. Design-only; no new runtime acceptance claimed.
+
+### Feedback status and command semantics (2026-10-10)
+
+Design correction: feedback resolution states are unresolved/resolved/ignored, with reasons, evidence references and audited transitions; resolved means the problem was actually solved, not merely reviewed. Commands use list-assets/list-feedbacks/update-feedback-status with shared asset scope and status filters. No runtime implementation or validation claimed.
+
+Feedback design vocabulary correction: rating values and statistics use positive/negative/unrated; resolution counts use resolved/unresolved/ignored. Replaces prior up/down and processed/unprocessed terminology. Documentation only.
+
+Feedback design simplified: consumer evaluation is Markdown with an embedded YAML block (rating/taskOutcome/tags/taskTrajectory); tag evidence and trajectory descriptions are free text. Removed confidence/limitations/findings/customTags questionnaire. GUI is Skill preview feedback-count entrance, list and Markdown rendering without filters. Consumer and producer analysis prompts are now explicit. Design only; runtime unchanged.
+
+- Kwai Skill discovery metadata corrected (2026-10-10): installed `~/.agents/skills/kwai-colab` and SKILL name already existed, but Codex `agents/openai.yaml` still advertised Agent Colab and `$agent-colab`. The ignored enterprise derivative now emits display name Kwai Colab and `$kwai-colab`. Skill 0.1.4-ks.1 packaged, uploaded, installed, metadata inspected and accepted; enterprise stable 0.1.10-ks.1 promoted retaining current Core/GUI/Shell. Public Skill installation unchanged.
