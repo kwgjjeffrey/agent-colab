@@ -39,7 +39,9 @@ pub(super) async fn recover_legacy(state: &AppState, user: &str, runtime: &str) 
         if !response.status().is_success() { continue; }
         let Ok(rows) = response.json::<Vec<serde_json::Value>>().await else { continue };
         for row in rows {
-            if row["state"] != "running" || row["runtimeId"] != runtime || row["targetBlueprintId"] != blueprint { continue; }
+            if !["queued","delivering","running","failed"].contains(&row["state"].as_str().unwrap_or(""))
+                || row["runtimeId"].as_str().is_some_and(|id|id != runtime)
+                || row["targetBlueprintId"] != blueprint { continue; }
             let Some(request) = row["id"].as_str() else { continue };
             // Upgrade recovery is permitted only with an exact native client-message identity.
             // The binding alone cannot establish that this request was ever actually executed.

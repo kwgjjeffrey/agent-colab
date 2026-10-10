@@ -703,7 +703,7 @@ Ok(sqlx::query_as::<_,ChannelMessage>("with recursive chain(id,reply_to_message_
         user_id: Uuid,
         request_id: Uuid,
     ) -> anyhow::Result<Option<Uuid>> {
-        sqlx::query_scalar("update agent_requests ar set accepted_at=coalesce(accepted_at,now()) from agent_runtimes r join organization_members om on om.id=r.owner_member_id where ar.id=$1 and ar.runtime_id=r.id and om.user_id=$2 and ar.state='running' returning ar.channel_id")
+        sqlx::query_scalar("update agent_requests ar set accepted_at=coalesce(accepted_at,now()) from agent_runtimes r join organization_members om on om.id=r.owner_member_id where ar.id=$1 and ar.runtime_id=r.id and om.user_id=$2 and ar.state in ('running','failed') returning ar.channel_id")
             .bind(request_id).bind(user_id).fetch_optional(&self.pool).await.map_err(Into::into)
     }
 
@@ -713,7 +713,7 @@ Ok(sqlx::query_as::<_,ChannelMessage>("with recursive chain(id,reply_to_message_
         request_id: Uuid,
         trace_context: Option<&serde_json::Value>,
     ) -> anyhow::Result<Option<Uuid>> {
-        sqlx::query_scalar("update agent_requests ar set state='succeeded',result_trace_context=coalesce($3,result_trace_context) from agent_runtimes r join organization_members om on om.id=r.owner_member_id where ar.id=$1 and ar.runtime_id=r.id and om.user_id=$2 and ar.state in ('running','succeeded') returning ar.channel_id")
+        sqlx::query_scalar("update agent_requests ar set state='succeeded',result_trace_context=coalesce($3,result_trace_context) from agent_runtimes r join organization_members om on om.id=r.owner_member_id where ar.id=$1 and ar.runtime_id=r.id and om.user_id=$2 and ar.state in ('queued','running','failed','succeeded') returning ar.channel_id")
             .bind(request_id).bind(user_id).bind(trace_context).fetch_optional(&self.pool).await.map_err(Into::into)
     }
 
