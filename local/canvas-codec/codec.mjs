@@ -123,7 +123,18 @@ export function run(input){
  if(doc.store.pendingStructs || doc.store.pendingDs)throw Error('canvas_sync_incomplete: document dependencies are missing');
  const root=doc.getXmlFragment('default');const node=yXmlFragmentToProseMirrorRootNode(root,schema);
  if(input.operation==='render')return {content:render(node)};
- const next=input.operation==='replace-canvas'?replaceInline(node,input.old,schema.nodes.mention.createChecked(JSON.parse(input.new))):patch(node,input.old,input.new),vector=Y.encodeStateVector(doc);
+ let next;
+ if(input.operation==='replace-canvas') {
+  const spec=JSON.parse(input.new),attrs=spec.attrs??spec,before=render(node),context=spec.context;
+  let accept=()=>true;
+  if(context) {
+   const at=before.indexOf(context);
+   if(at<0 || before.indexOf(context,at+1)>=0)throw Error('patch_conflict: context must match exactly once');
+   accept=candidate=>{const text=render(candidate);return text.startsWith(before.slice(0,at)) && text.endsWith(before.slice(at+context.length)) && text!==before;};
+  }
+  next=replaceInline(node,input.old,schema.nodes.mention.createChecked(attrs),accept);
+ } else next=patch(node,input.old,input.new);
+ const vector=Y.encodeStateVector(doc);
  prosemirrorToYXmlFragment(next,root);
  const actual=yXmlFragmentToProseMirrorRootNode(root,schema);
  if(!actual.eq(next))throw Error('codec_postcondition_failed');

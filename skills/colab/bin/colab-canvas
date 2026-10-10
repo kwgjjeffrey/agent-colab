@@ -88,6 +88,7 @@ def main() -> int:
     reference.add_argument("--ref", required=True)
     reference.add_argument("--text", required=True)
     reference.add_argument("--target-ref", required=True)
+    reference.add_argument("--context", help="Exact unique Markdown excerpt when the text occurs more than once")
 
     image_read = operations.add_parser("image-read")
     image_read.add_argument("--id", required=True)
@@ -148,7 +149,7 @@ def main() -> int:
         if args.operation == "replace-with-canvas":
             target = canvas(args.core, args.target_ref)
             return success(request("POST", f"/v1/canvases/{row['id']}/replace-with-canvas", core=args.core,
-                body={"channelId": row["channelId"], "targetCanvasId": target["id"], "text": args.text, "revision": document["revision"]}))
+                body={"channelId": row["channelId"], "targetCanvasId": target["id"], "text": args.text, "context": args.context, "revision": document["revision"]}))
 
         patch = sys.stdin.read()
         if not patch.strip():

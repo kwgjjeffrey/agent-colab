@@ -116,3 +116,5 @@ To replace existing unique text with a native Canvas @ reference, run
 Local Core validates both documents in the same Channel, uses the actual target title,
 and preserves surrounding formatting and existing capsules. Ambiguous text or a changed
 read revision fails without mutation. Do not fabricate encoded mention attributes in patches.
+
+When text occurs more than once, pass `--context '<exact unique Markdown line or excerpt from read>'` to select the intended occurrence. Do not guess an occurrence number.

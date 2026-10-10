@@ -119,3 +119,14 @@ test('text operations cannot mutate structured components or add unchecked capsu
  const ordinary=schema.nodeFromJSON({type:'doc',content:[p(t('Project'))]});
  assert.throws(()=>patch(ordinary,'Project','[@Progress](colab:canvas:550e8400-e29b-41d4-a716-446655440000)'),/protected_content_changed/);
 });
+
+test('reference context selects the intended repeated name and rejects ambiguous context',()=>{
+ const original=schema.nodeFromJSON({type:'doc',content:[p(t('Plan Darwin ')),p(t('Discuss Darwin '))]});
+ const doc=prosemirrorJSONToYDoc(schema,original.toJSON(),'default'),state=Buffer.from(Y.encodeStateAsUpdate(doc)).toString('base64');
+ const attrs={kind:'canvas',id:'550e8400-e29b-41d4-a716-446655440000',label:'Progress',mentionId:'new'};
+ assert.throws(()=>run({operation:'replace-canvas',state,old:'Darwin',new:JSON.stringify(attrs)}),/exactly once/);
+ const result=run({operation:'replace-canvas',state,old:'Darwin',new:JSON.stringify({attrs,context:'Plan Darwin '})});
+ Y.applyUpdate(doc,Buffer.from(result.update,'base64'));const next=yXmlFragmentToProseMirrorRootNode(doc.getXmlFragment('default'),schema);
+ assert.equal(next.firstChild.child(1).type.name,'mention');assert(next.lastChild.eq(original.lastChild));
+ assert.throws(()=>run({operation:'replace-canvas',state,old:'Darwin',new:JSON.stringify({attrs,context:'Darwin'})}),/context must match exactly once/);
+});

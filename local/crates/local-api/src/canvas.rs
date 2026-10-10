@@ -454,6 +454,8 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
 pub(super) struct CanvasReferenceRequest {
     channel_id: String,
     target_canvas_id: String,
+    #[serde(default)]
+    context: Option<String>,
     text: String,
     revision: String,
 }
@@ -478,7 +480,7 @@ pub(super) async fn replace_with_canvas(
         return Err(LocalError::conflict("Canvas changed; read again before replacing text"));
     }
     let attrs=serde_json::json!({"kind":"canvas","id":target.id,"label":target.title,"mentionId":Uuid::new_v4().to_string()});
-    let update=super::canvas_codec::replace_canvas(&doc,&body.text,&attrs)
+    let update=super::canvas_codec::replace_canvas(&doc,&body.text,&serde_json::json!({"attrs":attrs,"context":body.context}))
         .map_err(|error|LocalError::conflict(error.to_string()))?;
     let id=Uuid::new_v4().to_string();
     persist_outbox(&state,&account,&canvas,&id,&update).await?;
