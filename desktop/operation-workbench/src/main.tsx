@@ -32,7 +32,7 @@ function App() {
     void load();
     // Account switches invalidate the visible selection; Server still authorizes every read.
     const focus = () => {
-      setSelected(undefined); void load();
+      void load();
       void fetch("/operation-workbench/workbench.json", { cache: "no-store" }).then(r => r.json()).then(v => { if (v.version !== __WORKBENCH_VERSION__) location.reload(); }).catch(() => {});
     };
     window.addEventListener("focus", focus); return () => window.removeEventListener("focus", focus);
