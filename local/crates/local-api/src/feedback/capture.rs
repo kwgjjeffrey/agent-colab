@@ -234,19 +234,19 @@ fn freeze_source(
         line.clear();
         let n = reader
             .by_ref()
-            .take(1024 * 1024 + 1)
+            .take(4 * 1024 * 1024 + 1)
             .read_until(b'\n', &mut line)
             .map_err(LocalError::internal)?;
         if n == 0 {
             break;
         }
-        if n > 1024 * 1024 {
+        if n > 4 * 1024 * 1024 {
             // Earlier images/tool payloads are outside the selected turn. Drain without
             // retaining them; they must not prevent capture of a later bounded task.
             if !current {
                 while !line.ends_with(b"\n") {
                     line.clear();
-                    if reader.by_ref().take(1024 * 1024 + 1).read_until(b'\n', &mut line)
+                    if reader.by_ref().take(4 * 1024 * 1024 + 1).read_until(b'\n', &mut line)
                         .map_err(LocalError::internal)? == 0 { break; }
                 }
                 continue;
@@ -262,6 +262,7 @@ fn freeze_source(
             host_version = v["payload"]["cli_version"].clone();
         }
         if v["type"] == "event_msg" && v["payload"]["type"] == "task_started" {
+            if found && v["payload"]["turn_id"] != target { break; }
             current = v["payload"]["turn_id"] == target;
             if current {
                 found = true;
@@ -373,6 +374,7 @@ pub(super) async fn analyze(
     let raw = tokio::fs::read_to_string(evidence)
         .await
         .map_err(LocalError::internal)?;
+    let (raw, images) = analysis_input(&raw, dir)?;
     let package = system::setup_path()?
         .parent()
         .and_then(|p| p.parent())
@@ -423,6 +425,7 @@ pub(super) async fn analyze(
     {
         command.args(["--model", model]);
     }
+    for path in images { command.arg("--image").arg(path); }
     let mut child = command
         .arg("-")
         .current_dir(dir)
@@ -491,7 +494,7 @@ mod fragment_tests {
         fs::create_dir_all(&dir).unwrap();
         let source = dir.join("source.jsonl");
         let mut rows = vec![json!({"type":"session_meta","payload":{"id":"session"}})];
-        rows.push(json!({"type":"response_item","payload":{"type":"function_call_output","output":"x".repeat(2 * 1024 * 1024)}}));
+        rows.push(json!({"type":"response_item","payload":{"type":"function_call_output","output":"x".repeat(5 * 1024 * 1024)}}));
         for text in [
             "older",
             "one",
@@ -570,5 +573,49 @@ mod installation_tests {
             assert_eq!(builtin_roots(Some(format!("{root}/setup/setup.py").into()), Some("/home/user".into())), vec![PathBuf::from(root)]);
         }
         assert!(builtin_roots(Some("invalid".into()), Some("/home/user".into())).is_empty());
+    }
+}
+
+// Feed images through Codex's image input, rather than paying text tokens for base64.
+fn analysis_input(raw: &str, dir: &Path) -> Result<(String, Vec<PathBuf>), LocalError> {
+    use base64::Engine;
+    let mut images = vec![];
+    let mut lines = vec![];
+    for line in raw.lines() {
+        let mut row: Value = serde_json::from_str(line).map_err(LocalError::internal)?;
+        if let Some(content) = row.pointer_mut("/payload/content").and_then(Value::as_array_mut) {
+            for item in content {
+                if item["type"] == "input_image" {
+                    if let Some(url) = item["image_url"].as_str() {
+                        if let Some((mime, data)) = url.strip_prefix("data:").and_then(|s| s.split_once(";base64,")) {
+                            let ext = match mime { "image/png" => "png", "image/jpeg" => "jpg", "image/webp" => "webp", _ => return Err(LocalError::bad_request("Unsupported feedback image")) };
+                            let bytes = base64::engine::general_purpose::STANDARD.decode(data).map_err(LocalError::internal)?;
+                            let path = dir.join(format!("image-{}.{}", images.len()+1, ext));
+                            fs::write(&path, bytes).map_err(LocalError::internal)?;
+                            images.push(path);
+                            *item = json!({"type":"input_text","text":format!("[Attached image {}]",images.len())});
+                        }
+                    }
+                }
+            }
+        }
+        lines.push(row.to_string());
+    }
+    Ok((lines.join("\n"), images))
+}
+#[cfg(test)]
+mod analysis_image_tests {
+    use super::*;
+    #[test]
+    fn image_bytes_are_separate_from_analysis_text() {
+        let dir = std::env::temp_dir().join(format!("feedback-images-{}",Uuid::new_v4()));
+        fs::create_dir_all(&dir).unwrap();
+        let raw = json!({"payload":{"content":[{"type":"input_text","text":"actual request"},{"type":"input_image","image_url":"data:image/png;base64,aW1hZ2U="}]}}).to_string();
+        let (text, images) = analysis_input(&raw, &dir).unwrap();
+        assert!(text.contains("actual request"));
+        assert!(!text.contains("base64"));
+        assert_eq!(images.len(),1);
+        assert_eq!(fs::read(&images[0]).unwrap(),b"image");
+        fs::remove_dir_all(dir).unwrap();
     }
 }
