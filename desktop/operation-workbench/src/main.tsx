@@ -3,7 +3,6 @@ import { createRoot } from "react-dom/client";
 import { runOperation } from "@/api/operation-runner";
 import { initializeTelemetry } from "@/api/telemetry";
 import { SkillFeedback } from "@/features/feedback/SkillFeedback";
-import "../../ui/src/styles.css";
 import "./workbench.css";
 declare const __WORKBENCH_VERSION__: string;
 void initializeTelemetry({serviceName:"colab-operation-workbench", version:__WORKBENCH_VERSION__});
