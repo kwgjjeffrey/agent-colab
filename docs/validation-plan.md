@@ -1519,3 +1519,11 @@ Two completed real turns from the hook-selected desktop conversation were replay
 Session and Task/Work details share adjacent-tool groups, collapsed by default with execution count. Messages interrupt grouping; individual calls remain expandable. Single calls keep one disclosure. Controls use 12px text/icons and reduced padding; status text is 10px. GUI tests 10/10 and TypeScript/build passed. Trace Run/Round 20261010T093755Z-d6df0db2 passed the installed Session case with two calls per group, exact input/output, scroll/paging/resize and Message cursor assertions; screenshot reviewed and owned Session withdrawn. Installed enterprise Work details request 2cbce7bd-8715-4529-9c10-907e8f5d5b37 also passed real grouped/default-collapse/individual-input browser acceptance.
 
 Public promotion 0.1.244-dev publishes GUI 0.1.180-dev; enterprise 0.1.24-ks.1 publishes GUI 0.1.16-ks.1. Both installed and verified; other artifacts retained from their current stable channels. Public canonical curl size/hash verification and enterprise candidate/client/isolation verification passed. No Core, Skill, Shell or Server release for this change.
+
+### Live feedback Stop closure
+
+The previous desktop turn automatically triggered both installed Stop hooks without event replay. Both real records uploaded raw fragments with three earlier queries, completed ephemeral local analysis, and uploaded comments. Exact scoped read-only watcher evidence: .trial/V-FEEDBACK-03-installed/live-stop-acceptance.json. This supersedes the earlier live-Stop pending status.
+
+### Native Workbench focus acceptance
+
+Workbench opening now uses a fixed, main-renderer-only Electron IPC with one owned BrowserWindow. Opening/reusing shows and focuses it; minimized windows restore; close releases only the Workbench so reopening creates a fresh window. Browser and older Shell fallback remain supported. Three Shell lifecycle/bootstrap tests and GUI TypeScript checks passed. Enterprise GUI and Shell independently published and installed; every installed GUI file matched the signed archive. Native Settings clicks verified initial foreground, minimized restore, close/reopen and retained main workspace without Window-menu assistance. Actual feedback comments remain visible. Company versions/evidence are ignored under integration/.
