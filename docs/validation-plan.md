@@ -1503,3 +1503,7 @@ The existing enterprise request bd9ef984-7116-416f-a732-ef9c276ef45d now contain
 ## Enterprise Operation Workbench acceptance (2026-10-10)
 
 The private enterprise channel now includes an independently versioned Workbench artifact. GUI and Workbench passed signed company-CDN readback, installed-file comparison and native window acceptance. Existing enterprise Core, Skill and Shell were retained exactly. Closing the Workbench preserves the main Message workspace; the native Window menu lists both windows. The configured alpha administrator is resolved through the enterprise SSO provider/subject and has server-backed manager/reviewer access to official Skill feedback. Its live permission dialog and reviewer grant form were opened. A Workbench-only update preserved the Core PID and every component version; the promoted manifest retains the artifact. Exact deployment values, identities, versions and evidence remain in ignored `integration/kuaishou/evidence/workbench-release.md` and its referenced profile directory. No real user conversation was captured or uploaded.
+
+## Feedback hook installation correction
+
+Both installed variants now register their own PostToolUse and Stop hooks, with explicit upload/model consent. Core builtin detection is bound to COLAB_SETUP_PATH so another variant cannot be reported through this Core. Installed end-to-end verification pending.

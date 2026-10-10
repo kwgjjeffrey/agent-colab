@@ -175,12 +175,10 @@ pub(super) async fn observe(
             }
         }
     }
-    // The built-in package is recognized only at supported installation slots, never by name elsewhere.
-    if let Some(home) = std::env::var_os("HOME") {
-        for root in [
-            PathBuf::from(&home).join(".agents/skills/agent-colab"),
-            PathBuf::from(&home).join(".codex/skills/agent-colab"),
-        ] {
+    // Bind to this Core's installed Skill, never another variant's supported slot.
+    let roots = builtin_roots(std::env::var_os("COLAB_SETUP_PATH"), std::env::var_os("HOME"));
+    {
+        for root in roots {
             if let Ok(root) = fs::canonicalize(root) {
                 if paths.iter().any(|p| {
                     p.starts_with(&root)
@@ -539,5 +537,27 @@ mod conservative_detection_tests {
             input_paths(&json!({"tool_input":{"command":"f() { cat /tmp/skill/SKILL.md; }"}}))
                 .is_empty()
         );
+    }
+}
+
+fn builtin_roots(setup: Option<std::ffi::OsString>, home: Option<std::ffi::OsString>) -> Vec<PathBuf> {
+    if let Some(setup) = setup {
+        PathBuf::from(setup).parent().and_then(Path::parent)
+            .map(|p| vec![p.to_path_buf()]).unwrap_or_default()
+    } else if let Some(home) = home {
+        vec![PathBuf::from(&home).join(".agents/skills/agent-colab"),
+             PathBuf::from(home).join(".codex/skills/agent-colab")]
+    } else { vec![] }
+}
+#[cfg(test)]
+mod installation_tests {
+    use super::*;
+    #[test]
+    fn managed_variants_never_include_each_others_skill() {
+        for name in ["agent-colab", "enterprise-colab"] {
+            let root = format!("/home/user/.agents/skills/{name}");
+            assert_eq!(builtin_roots(Some(format!("{root}/setup/setup.py").into()), Some("/home/user".into())), vec![PathBuf::from(root)]);
+        }
+        assert!(builtin_roots(Some("invalid".into()), Some("/home/user".into())).is_empty());
     }
 }
