@@ -1,3 +1,4 @@
+import { readableError } from "@/api/readable-error";
 import { artifactConfig } from "@/artifact-config";
 import { AuthOnboarding, hasBoundAuth } from "@/features/account/AuthOnboarding";
 import { enterpriseDeployment } from "@/deployment";
@@ -1379,26 +1380,7 @@ function initials(name: string) {
   );
 }
 
-function readableError(reason: unknown) {
-  const raw = reason instanceof Error ? reason.message : String(reason);
-  const candidate = raw.startsWith("Error: ") ? raw.slice(7) : raw;
-  try {
-    const parsed = JSON.parse(candidate) as { error?: unknown; message?: unknown };
-    const detail = parsed.message ?? parsed.error;
-    if (typeof detail === "string") {
-      try {
-        const nested = JSON.parse(detail) as { message?: unknown; error?: unknown };
-        const nestedDetail = nested.message ?? nested.error;
-        if (typeof nestedDetail === "string") return nestedDetail.slice(0, 500);
-      } catch {
-        return detail.slice(0, 500);
-      }
-    }
-  } catch {
-    // Non-JSON errors are already human-readable; only bound them for layout safety.
-  }
-  return candidate.slice(0, 500);
-}
+
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <App />
