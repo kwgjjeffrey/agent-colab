@@ -29,3 +29,7 @@ def platform_id() -> tuple[str, str]:
     machine = platform.machine().lower()
     arch = "x86_64" if machine in {"amd64", "x86_64"} else "arm64" if machine in {"arm64", "aarch64"} else machine
     return system, arch
+
+
+def application_identity():
+    return artifact_config()["application"]

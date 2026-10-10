@@ -1351,3 +1351,13 @@ Implemented optional account UUID `user.id` for GUI/Skill entrance spans and Cor
 Verified locally: GUI TypeScript check; focused GUI tracing tests (5 passed); Rust observability tests (8 passed, including mixed-account OTLP preservation and invalid-identity removal); Core and Server cargo check; Python tracing registry tests (3 passed) and command identity isolation test (1 passed). Backend historical readback at 2026-10-10 11:33 Beijing: GUI 49,135 observed operation spans, Skill 16, total 49,151; no user attribution available. Source metadata implementation is not yet released/deployed; actual packaged GUI/Skill and cloud user.id readback remain pending. No production UV coverage is claimed.
 
 Final Feedback release acceptance 2026-10-10: Server 0.1.14 readiness and binary hash readback passed. Promotion 0.1.220-dev installed Core 0.1.112-dev / GUI 0.1.167-dev / Skill 0.1.64-dev, Shell unchanged. Filtered producer query, Markdown comment, raw Reader with three prior queries and final reply, and disabled hook bypassing transcript access passed on the final installation. Source committed; immutable Server release guard rejects a real same-version conflict before upload/restart. Test-only feedbacks ignored; test parent archived; capture disabled.
+
+### 2026-10-10 runtime callback isolation and terminal recovery
+
+Implemented semantic runtime-tool binding in Local Core for task, context and
+Canvas prompts; application/service/Windows-task identity now comes from the
+artifact configuration. Removed enterprise Skill source-string patching.
+Implemented durable request execution identity, read-only native-turn recovery,
+completion/failure retry and reconnect replay prevention. Existing legacy requests
+are imported only after matching native client message ID. Release/installed
+recovery verification is pending; no Channel summary has been manually backfilled.

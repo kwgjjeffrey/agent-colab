@@ -927,3 +927,26 @@ Python Skill 持有 hook 薄客户端、可选分析提示词和 producer 命令
 ### Organization-person mention contract (2026-10-10)
 
 The shared Person contract carries optional userId/memberId, username, email, displayName, avatarUrl, department and provider/subject identity. The UI organization-people hook owns debouncing, cancellation and query-scoped status for both the member picker and message mention search. Public search uses organization records; an externally configured deployment uses the provider-neutral directory bridge. Corporate OpenAPI credentials/endpoints remain in ignored integration. Server discards directory-supplied account/member IDs and resolves provider/subject within the requested Channel organization. Enterprise username is the already persisted auth identity subject; Google subject is not presented as a username. Core preserves the additional fields. Mention nodes retain an identity/profile snapshot; invitation actions re-resolve membership rather than treating that snapshot as authorization. No account or login lease is created by search. Existing member-add authorization remains unchanged.
+
+### Artifact-bound runtime tools and durable execution recovery (2026-10-10)
+
+Server task/Canvas/context prompts contain `@COLAB_SKILL_BIN@`, not a deployment's
+installed Skill path. Local Core binds that semantic token to its managed
+`COLAB_SETUP_PATH` artifact and pins application/discovery paths in executable
+commands. Old Server command lines are recognized only for rolling-upgrade
+compatibility; user prose is not globally rewritten. Packaged Skill metadata and
+bootstrap text are rendered from artifact configuration; Python runtime defaults
+read the same packaged JSON, including application bundle/service/task identity.
+Enterprise packaging no longer reverse-edits Skill program text or disables a
+function by injecting an early return. Public legacy-link migration is explicitly
+limited to public deployment mode.
+
+`agent_executions` durably binds request/account/native thread before enqueue.
+A separate worker matches the native `userMessage.clientId` to the request ID,
+reads terminal turn state through read-only provider pagination, and retries the
+account-bound completion/failure report independently of WebSocket delivery.
+It works when another app-server holds the writer subscription. Reconnects never
+re-enqueue journaled work. Upgrade recovery imports only requests proven by native
+client-message identity, not merely by a thread binding. Provider work events are
+recovered; native final text is not synthesized into a Channel message. A task
+waiting for user approval is not failed merely because fifteen minutes elapsed.

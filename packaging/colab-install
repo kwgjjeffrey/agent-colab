@@ -84,18 +84,18 @@ setup_args=(install --manifest "$manifest_url")
 for agent in "${agents[@]}"; do setup_args+=(--agent "$agent"); done
 "$setup" "${setup_args[@]}"
 
-if [[ "$with_app" == true && ! -d /Applications/Colab.app ]]; then
+if [[ "$with_app" == true && ! -d /Applications/@COLAB_APP_BUNDLE@ ]]; then
   IFS=$'\t' read -r app_url app_hash app_size <<< "$(artifact_fields electron-shell)"
   app_archive="$temporary/Colab.zip"
   download "$app_url" "$app_archive"
   verify_file "$app_archive" "$app_hash" "$app_size"
-  [[ ! -e /Applications/Colab.app ]] || {
-    echo "/Applications/Colab.app already exists; update it from Colab Settings or remove it explicitly" >&2
+  [[ ! -e /Applications/@COLAB_APP_BUNDLE@ ]] || {
+    echo "/Applications/@COLAB_APP_BUNDLE@ already exists; update it from Colab Settings or remove it explicitly" >&2
     exit 4
   }
   ditto -x -k "$app_archive" /Applications
-  xattr -dr com.apple.quarantine /Applications/Colab.app
-  codesign --verify --deep --strict /Applications/Colab.app
+  xattr -dr com.apple.quarantine /Applications/@COLAB_APP_BUNDLE@
+  codesign --verify --deep --strict /Applications/@COLAB_APP_BUNDLE@
 fi
 
 if [[ -n "$invitation" ]]; then
@@ -103,4 +103,4 @@ if [[ -n "$invitation" ]]; then
   python3 "$(dirname "$setup")/../bin/colab-join" --invitation "$invitation"
 fi
 
-echo "Agent Colab installation complete. Run ~/.agents/skills/agent-colab/setup/colab-setup open or open /Applications/Colab.app."
+echo "Agent Colab installation complete. Run ~/.agents/skills/@COLAB_SKILL_NAME@/setup/colab-setup open or open /Applications/@COLAB_APP_BUNDLE@."

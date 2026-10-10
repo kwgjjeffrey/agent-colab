@@ -16,5 +16,10 @@
     "shortDescription": "Browse, share, transfer, and consume Agent Colab context",
     "brandColor": "#DFFF00",
     "defaultPrompt": "Use $agent-colab to browse or manage the relevant Channels, Files, Sessions, and members."
+  },
+  "application": {
+    "appBundleName": "Colab.app",
+    "serviceLabel": "online.agent-colab.core",
+    "windowsTaskName": "AgentColabCore"
   }
 }

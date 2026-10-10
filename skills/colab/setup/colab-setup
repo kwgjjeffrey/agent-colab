@@ -14,7 +14,9 @@ DEFAULT_MANIFEST = os.environ.get(
     ARTIFACT_CONFIG["releaseManifestUrl"],
 )
 ROOT = application_root()
-SERVICE_LABEL = "online." + ARTIFACT_CONFIG["skill"]["name"] + ".core"
+SERVICE_LABEL = ARTIFACT_CONFIG["application"]["serviceLabel"]
+APP_BUNDLE = ARTIFACT_CONFIG["application"]["appBundleName"]
+WINDOWS_TASK = ARTIFACT_CONFIG["application"]["windowsTaskName"]
 DISCOVERY = ROOT / "discovery.json"
 UPDATE_PROGRESS = ROOT / "update-progress.json"
 PENDING_SHELL_UPDATE = ROOT / "pending-shell-update.json"
@@ -184,6 +186,7 @@ def is_managed_target(path: pathlib.Path) -> bool:
 
 def remove_managed_legacy_link(agent: str):
     """Remove only the old Colab link created by this installer, never user-owned content."""
+    if ARTIFACT_CONFIG["deploymentMode"] != "public": return
     legacy = LEGACY_TARGETS[agent]
     managed = (ROOT / "versions/colab-skill").resolve()
     if (legacy.is_symlink() or (os.name == "nt" and legacy.exists())) and legacy.resolve().is_relative_to(managed):
@@ -304,11 +307,11 @@ def install_windows_task(server_url: str, credentials: pathlib.Path):
     runner.write_text("@echo off\n" + "".join(f'set "{key}={value}"\n' for key,value in environment.items()) +
                       f'"{ROOT / "current/core/colabd.exe"}"\n', encoding="utf-8")
     subprocess.run(
-        ["schtasks", "/Create", "/TN", "AgentColabCore", "/TR", f'"{runner}"', "/SC", "ONLOGON", "/RL", "LIMITED", "/F"],
+        ["schtasks", "/Create", "/TN", WINDOWS_TASK, "/TR", f'"{runner}"', "/SC", "ONLOGON", "/RL", "LIMITED", "/F"],
         check=True,
         stdout=subprocess.DEVNULL,
     )
-    subprocess.run(["schtasks", "/Run", "/TN", "AgentColabCore"], check=True, stdout=subprocess.DEVNULL)
+    subprocess.run(["schtasks", "/Run", "/TN", WINDOWS_TASK], check=True, stdout=subprocess.DEVNULL)
 
 def select_artifacts(manifest: dict) -> dict:
     """Select the universal and current-platform variants from a mixed channel."""
@@ -390,7 +393,7 @@ def main():
         for name, item in recorded_artifacts.items():
             if name in result or name == "electron-shell":
                 result.setdefault(name,{})["downloadUrl"] = item.get("url")
-        app=pathlib.Path("/Applications/Colab.app/Contents/Info.plist")
+        app=pathlib.Path("/Applications") / APP_BUNDLE / "Contents/Info.plist"
         shell=None
         if app.exists():
             try:
@@ -413,7 +416,7 @@ def main():
         print(json.dumps(current,indent=2)); return
     if args.operation=="open":
         if sys.platform=="darwin": subprocess.run(["launchctl","kickstart","-k",f"gui/{os.getuid()}/{SERVICE_LABEL}"],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
-        elif os.name=="nt": subprocess.run(["schtasks","/Run","/TN","AgentColabCore"],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+        elif os.name=="nt": subprocess.run(["schtasks","/Run","/TN",WINDOWS_TASK],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
         for _ in range(50):
             try:
                 discovered=json.loads(DISCOVERY.read_text()); break
@@ -459,7 +462,7 @@ def main():
             item=select_artifacts(manifest)["electron-shell"]
             archive=temporary/"shell.zip"; extracted=temporary/"extracted"
             download(item["url"],item["sha256"],item["size"],archive); extracted.mkdir(); safe_extract_macos_app(archive,extracted)
-            source=next(extracted.rglob("Colab.app")); target=pathlib.Path("/Applications/Colab.app")
+            source=next(extracted.rglob(APP_BUNDLE)); target=pathlib.Path("/Applications") / APP_BUNDLE
             backups=ROOT/"backups"; backups.mkdir(parents=True,exist_ok=True)
             if target.exists():
                 backup=backups/f"Colab-{int(time.time())}.app"; shutil.move(target,backup)

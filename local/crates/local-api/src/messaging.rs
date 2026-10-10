@@ -245,9 +245,17 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
         &body.0,
     )
     .await?;
+    let mut value = value;
+    bind_prompt_response(&mut value)?;
     Ok((status, Json(value)))
 
 }).await
+}
+fn bind_prompt_response(value: &mut serde_json::Value) -> Result<(), LocalError> {
+    if let Some(prompt) = value["prompt"].as_str() {
+        value["prompt"] = super::runtime_tools::bind(prompt)?.into();
+    }
+    Ok(())
 }
 pub(super) async fn agent_requests(
     State(state): State<AppState>,
@@ -255,7 +263,9 @@ pub(super) async fn agent_requests(
 ) -> Result<Json<Vec<serde_json::Value>>, LocalError> {
 colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.messaging.agent-requests", async {
 
-    proxy_get(&state, format!("/v1/channels/{channel}/agent-requests")).await
+    let Json(mut rows): Json<Vec<serde_json::Value>> = proxy_get(&state, format!("/v1/channels/{channel}/agent-requests")).await?;
+    for row in &mut rows { bind_prompt_response(row)?; }
+    Ok(Json(rows))
 
 }).await
 }
@@ -364,6 +374,7 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
 }
 
 pub(super) fn start_agent_runtime(state: &AppState) {
+    super::agent_execution::start(state);
     let state = state.clone();
     tokio::spawn(async move {
         let mut started = std::collections::HashSet::new();
@@ -423,6 +434,7 @@ async fn run_runtime_stream(
 ) -> Result<(), LocalError> {
 colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.messaging.run-runtime-stream", async {
 
+    super::agent_execution::recover_legacy(state, user_id, runtime_id).await;
     let token = access_token_for_user(state, user_id).await?;
     let url = format!(
         "{}/v1/agent-runtimes/{runtime_id}/stream",
@@ -494,8 +506,16 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
                     let store = state.inner.store.lock().await;
                     store.query_row("select exists(select 1 from agent_command_receipts where request_id=?1 and status='completed')",[&request],|row|row.get::<_,bool>(0)).unwrap_or(false)
                 };
+                let recovering = {
+                    let store = state.inner.store.lock().await;
+                    store.query_row("select exists(select 1 from agent_executions where request_id=?1)",[&request],|row|row.get::<_,bool>(0)).unwrap_or(false)
+                };
                 let result = if completed {
                     report_agent_completion(state, user_id, &request).await
+                } else if recovering {
+                    // The independent journal worker observes/reports the exact prior turn.
+                    // A transport reconnect must never enqueue the user's work a second time.
+                    Ok(())
                 } else {
                     match run_codex_request(state.clone(), user_id, command).await {
                         Ok(()) => {
@@ -506,7 +526,9 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
                             report_agent_completion(state, user_id, &request).await
                         }
                         Err(error) => {
-                            report_agent_failure(state, user_id, &request, &error.message).await;
+                            let outcome = Err(std::io::Error::other(error.message.clone()));
+                            super::agent_execution::finish(state, &request, &outcome).await?;
+                            // Terminal delivery is independently retried from the execution journal.
                             Err(error)
                         }
                     }
@@ -595,26 +617,6 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
 }).await
 }
 
-async fn report_agent_failure(state: &AppState, user_id: &str, request: &str, error: &str) {
-    let Ok(token) = access_token_for_user(state, user_id).await else {
-        return;
-    };
-    // Provider stderr may be huge. A bounded diagnostic releases the durable request from
-    // `running`; the Server deliberately does not publish this machine-local text to the Channel.
-    let bounded = error.chars().take(2000).collect::<String>();
-    let _ = state
-        .inner
-        .http
-        .post(format!(
-            "{}/v1/agent-requests/{request}/fail",
-            state.inner.server_url
-        ))
-        .bearer_auth(token)
-        .json(&serde_json::json!({"error":bounded}))
-        .send()
-        .await;
-}
-
 async fn run_codex_request(state: AppState, user_id: &str, value: &serde_json::Value) -> Result<(), LocalError> {
 colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.messaging.run-codex-request", async {
 
@@ -643,6 +645,7 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
         .and_then(|v| v.as_str())
         .ok_or_else(|| LocalError::internal("missing Agent prompt"))?
         .to_string();
+    let prompt = super::runtime_tools::bind(&prompt)?;
     let title = value
         .get("threadTitle")
         .and_then(|v| v.as_str())
@@ -659,11 +662,12 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
         .join(&channel)
         .join(&blueprint);
     fs::create_dir_all(&runtime_dir).map_err(LocalError::internal)?;
+    super::agent_execution::begin(&state, user_id, &request_id, binding.as_deref()).await?;
     let submission = state
         .inner
         .codex
         .submit(super::codex_runtime::SubmitRequest {
-            request_id,
+            request_id: request_id.clone(),
             existing_thread: binding,
             cwd: runtime_dir,
             title,
@@ -672,6 +676,7 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
         .await
         .map_err(LocalError::internal)?;
     let thread = submission.thread_id.clone();
+    super::agent_execution::bind_thread(&state, &request_id, &thread).await?;
     {
         let store = state.inner.store.lock().await;
         // Version 3 means the binding belongs to this Local Core's persistent app-server. Older
@@ -682,6 +687,7 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
     // Provider output remains in its native Codex thread. The Agent decides what belongs in the
     // Channel and publishes only that material through the request-scoped Skill command.
     let (completion, events) = submission.finish().await;
+    super::agent_execution::finish(&state, &request_id, &completion).await?;
     super::work_events::persist(&state, user_id, value.get("id").and_then(|v|v.as_str()).unwrap_or_default(), events).await?;
     completion.map_err(LocalError::internal)?;
     Ok(())

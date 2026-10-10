@@ -25,6 +25,12 @@ def load_config(path):
             raise ValueError(f'{key} must use HTTPS')
         if any(char in url for char in "'\"`$\\\r\n "):
             raise ValueError(f'{key} cannot be represented safely in bootstrap scripts')
+    app = value.get('application', {})
+    for key in ('appBundleName', 'serviceLabel', 'windowsTaskName'):
+        if not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._-]*', app.get(key, '')):
+            raise ValueError(f'application.{key} must be a safe filesystem/service identifier')
+    if not app['appBundleName'].endswith('.app'):
+        raise ValueError('application.appBundleName must be an app bundle')
     skill = value.get('skill', {})
     if not re.fullmatch(r'[a-z0-9]+(?:-[a-z0-9]+)*', skill.get('name', '')):
         raise ValueError('skill.name must be a lowercase Skill directory name')
@@ -42,7 +48,12 @@ def render(repo, config, output):
         text = (repo / 'packaging' / name).read_text()
         if '@COLAB_RELEASE_MANIFEST@' not in text:
             raise ValueError(f'{name} has no manifest template')
-        text = text.replace('@COLAB_RELEASE_MANIFEST@', config['releaseManifestUrl'])
+        for field, value in {'COLAB_RELEASE_MANIFEST':config['releaseManifestUrl'],
+                             'COLAB_APP_BUNDLE':config['application']['appBundleName'],
+                             'COLAB_SKILL_NAME':config['skill']['name']}.items():
+            text = text.replace('@' + field + '@', value)
+        if re.search(r'@COLAB_[A-Z_]+@', text):
+            raise ValueError(f'unresolved bootstrap template field in {name}')
         (output / name).write_text(text)
     (output / 'colab-install').chmod(0o755)
     (output / 'artifact-config.json').write_text(json.dumps(config, indent=2) + '\n')

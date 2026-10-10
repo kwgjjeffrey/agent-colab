@@ -16,7 +16,6 @@ use std::{
     time::{Duration, Instant},
 };
 
-const EXECUTION_LIMIT: Duration = Duration::from_secs(15 * 60);
 
 #[derive(Clone)]
 pub(super) struct CodexManager {
@@ -56,10 +55,10 @@ impl CodexSubmission {
         });
         let completion_result = tokio::task::spawn_blocking(move || {
             completion
-                .recv_timeout(EXECUTION_LIMIT)
+                .recv()
                 .map_err(|error| {
                     io_error(format!(
-                        "Codex queued turn did not complete in time: {error}"
+                        "Codex completion channel closed: {error}"
                     ))
                 })?
         })
@@ -83,6 +82,15 @@ impl CodexManager {
             .spawn(move || worker(binary, receiver))
             .expect("spawn Codex manager");
         Self { commands }
+    }
+
+    pub async fn request_status(&self, thread_id: String, request_id: String) -> std::io::Result<Option<Value>> {
+        let (reply, receive) = mpsc::channel();
+        self.commands.send(ManagerCommand::Read { thread_id, request_id, reply })
+            .map_err(|_| io_error("Codex manager stopped"))?;
+        tokio::task::spawn_blocking(move || receive.recv_timeout(Duration::from_secs(90)))
+            .await.map_err(|e| io_error(e.to_string()))?
+            .map_err(|e| io_error(e.to_string()))?
     }
 
     pub async fn submit(&self, request: SubmitRequest) -> std::io::Result<CodexSubmission> {
@@ -110,6 +118,7 @@ impl CodexManager {
 }
 
 enum ManagerCommand {
+    Read { thread_id: String, request_id: String, reply: mpsc::Sender<std::io::Result<Option<Value>>> },
     Submit {
         request: SubmitRequest,
         accepted: mpsc::Sender<std::io::Result<String>>,
@@ -249,12 +258,20 @@ impl Session {
     }
 
     fn handle(&mut self, command: ManagerCommand) -> std::io::Result<()> {
+        let command = match command {
+            ManagerCommand::Read { thread_id, request_id, reply } => {
+                let result = self.read_request_status(&thread_id, &request_id);
+                let _ = reply.send(result);
+                return Ok(());
+            }
+            other => other,
+        };
         let ManagerCommand::Submit {
             request,
             accepted,
             completed,
             events,
-        } = command;
+        } = command else { unreachable!() };
         let thread_id = match self.ensure_thread(&request) {
             Ok(thread_id) => thread_id,
             Err(error) => {
@@ -299,6 +316,38 @@ impl Session {
             }
         }
         Ok(())
+    }
+
+    fn read_request_status(&mut self, thread_id: &str, request_id: &str) -> std::io::Result<Option<Value>> {
+        // Read-only provider history also works when Desktop owns the writer. Match the durable
+        // client message ID, never the newest turn, FIFO position, or the wording of the prompt.
+        let mut cursor = Value::Null;
+        for _ in 0..20 {
+            let page = self.request("thread/turns/list", json!({"threadId":thread_id,
+                "limit":20,"itemsView":"full","cursor":cursor}), Duration::from_secs(30))?;
+            let result = &page["result"];
+            if let Some(turn) = result["data"].as_array().and_then(|turns| turns.iter().find(|turn| turn_matches_request(turn, request_id))) {
+                let status = turn["status"].as_str().unwrap_or("unknown").to_string();
+                if ["completed", "failed", "interrupted"].contains(&status.as_str()) {
+                    let event = json!({"method":"turn/completed", "params":{"threadId":thread_id,"turn":turn}});
+                    if let Some(state) = self.threads.get_mut(thread_id) {
+                        let job = if state.active.as_ref().is_some_and(|active| active.job.as_ref().is_some_and(|job| job.client_message_id == request_id)) {
+                            state.active.take().and_then(|active| active.job)
+                        } else {
+                            state.pending.iter().position(|job| job.client_message_id == request_id).and_then(|index| state.pending.remove(index))
+                        };
+                        if let Some(job) = job {
+                            let _ = job.events.send(event);
+                            let _ = job.completed.send(if status == "completed" { Ok(()) } else { Err(io_error(format!("Codex turn ended with status {status}"))) });
+                        }
+                    }
+                }
+                return Ok(Some(turn.clone()));
+            }
+            cursor = result["nextCursor"].clone();
+            if cursor.is_null() { break; }
+        }
+        Ok(None)
     }
 
     fn ensure_thread(&mut self, request: &SubmitRequest) -> std::io::Result<String> {
@@ -540,14 +589,18 @@ fn record_turn_completed(
 
 fn fail_command(command: ManagerCommand, message: impl Into<String>) {
     let message = message.into();
-    let ManagerCommand::Submit {
-        accepted,
-        completed,
-        events: _,
-        ..
-    } = command;
-    let _ = accepted.send(Err(io_error(message.clone())));
-    let _ = completed.send(Err(io_error(message)));
+    match command {
+        ManagerCommand::Submit { accepted, completed, .. } => {
+            let _ = accepted.send(Err(io_error(message.clone())));
+            let _ = completed.send(Err(io_error(message)));
+        }
+        ManagerCommand::Read { reply, .. } => { let _ = reply.send(Err(io_error(message))); }
+    }
+}
+
+fn turn_matches_request(turn: &Value, request: &str) -> bool {
+    turn["items"].as_array().is_some_and(|items| items.iter().any(|item|
+        item["type"] == "userMessage" && item["clientId"].as_str() == Some(request)))
 }
 
 fn is_missing_thread(error: &std::io::Error) -> bool {
@@ -640,5 +693,54 @@ mod tests {
             &json!({"params":{"turn":{"status":"interrupted"}}}),
         );
         assert!(second_rx.recv().expect("second completion").is_err());
+    }
+}
+
+#[cfg(test)]
+mod recovery_tests {
+    use super::*;
+    #[test]
+    fn recovery_matches_request_identity_instead_of_an_unrelated_latest_turn() {
+        let turn = json!({"status":"completed","items":[{"type":"userMessage","clientId":"request-2"}]});
+        assert!(!turn_matches_request(&turn,"request-1"));
+        assert!(turn_matches_request(&turn,"request-2"));
+        assert!(!turn_matches_request(&json!({"items":[{"type":"userMessage","content":[{"text":"request-1"}]}]}),"request-1"));
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn foreign_writer_completion_is_recovered_without_notifications_or_resubmission() {
+        use std::os::unix::fs::PermissionsExt;
+        for status in ["completed", "interrupted"] {
+            let dir = std::env::temp_dir().join(format!("colab-runtime-recovery-{}",uuid::Uuid::new_v4()));
+            std::fs::create_dir_all(&dir).unwrap();
+            let script = dir.join("provider");
+            let source = r#"#!/usr/bin/env python3
+import sys,json
+for line in sys.stdin:
+ r=json.loads(line)
+ if 'id' not in r:continue
+ method=r['method']
+ if method=='thread/resume':
+  print(json.dumps({'id':r['id'],'error':{'message':'thread already has an active writer'}}),flush=True);continue
+ result={}
+ if method=='thread/turns/list':
+  result={'data':[{'id':'unrelated','status':'completed','items':[{'type':'userMessage','clientId':'someone-else'}]},{'id':'our-turn','status':'@STATUS@','items':[{'type':'userMessage','clientId':'request-1'}]}],'nextCursor':None}
+ print(json.dumps({'id':r['id'],'result':result}),flush=True)
+"#.replace("@STATUS@",status);
+            std::fs::write(&script,source).unwrap();
+            std::fs::set_permissions(&script,std::fs::Permissions::from_mode(0o755)).unwrap();
+            let manager = CodexManager::new(Some(script.into_os_string()));
+            let submission = manager.submit(SubmitRequest{request_id:"request-1".into(),existing_thread:Some("existing".into()),cwd:dir.clone(),title:"Test".into(),prompt:"Test".into()}).await.unwrap();
+            let turn = manager.request_status("existing".into(),"request-1".into()).await.unwrap().unwrap();
+            assert_eq!(turn["id"],"our-turn");
+            let (completion,events) = submission.finish().await;
+            assert_eq!(completion.is_ok(),status == "completed");
+            assert_eq!(events[0]["params"]["turn"]["id"],"our-turn");
+            // A restarted manager can inspect the same durable identity without queue/add.
+            assert_eq!(manager.request_status("existing".into(),"request-1".into()).await.unwrap().unwrap()["status"],status);
+            drop(manager);
+            std::fs::remove_dir_all(dir).unwrap();
+        }
     }
 }

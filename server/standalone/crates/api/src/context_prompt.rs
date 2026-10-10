@@ -31,7 +31,7 @@ pub(super) fn message_text(row: &colab_server_persistence::ChannelMessage) -> St
     if row.content["content"].as_array().is_some_and(|rows| !rows.is_empty()) { projection(&row.content).trim_end().into() } else { row.body.clone() }
 }
 pub(super) fn instructions(channel: Uuid, rows: &[ContextRef]) -> String {
-    let root = "~/.agents/skills/agent-colab/bin";
+    let root = "@COLAB_SKILL_BIN@";
     ["files", "session", "canvas", "message"].iter().filter_map(|kind| {
         let ids = rows.iter().filter(|row| row.kind == *kind).map(|row| row.id).collect::<std::collections::BTreeSet<_>>();
         if ids.is_empty() { return None; }

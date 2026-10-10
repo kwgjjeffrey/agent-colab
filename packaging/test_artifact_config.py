@@ -41,6 +41,28 @@ class SkillRenderingTests(unittest.TestCase):
             self.assertIn('Frozen source marker', (output / 'SKILL.md').read_text())
             self.assertIn('name: company-colab', (output / 'SKILL.md').read_text())
 
+    def test_bootstrap_and_runtime_identity_follow_the_same_target_config(self):
+        import shutil, subprocess, sys
+        base = module.load_config(ROOT / 'packaging/artifact-config.example.json')
+        for name, bundle in [('agent-colab', 'Colab.app'), ('company-colab', 'Company.app')]:
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as directory:
+                config = json.loads(json.dumps(base))
+                config['skill'].update(name=name, defaultPrompt=f'Use ${name}.')
+                config['application'].update(appBundleName=bundle,serviceLabel=f'online.{name}.core',windowsTaskName=name+'Core')
+                root = Path(directory)
+                bootstrap = root / 'bootstrap'
+                module.render(ROOT,config,bootstrap)
+                text = (bootstrap / 'colab-install').read_text()
+                self.assertNotIn('@COLAB_',text)
+                self.assertIn('/Applications/'+bundle,text)
+                self.assertIn('skills/'+name+'/setup',text)
+                installed = root / 'skill'
+                shutil.copytree(ROOT / 'skills/colab',installed)
+                module.render_skill(ROOT,config,installed)
+                code = 'import runpy,json; v=runpy.run_path('+repr(str(installed/'setup/colab-setup'))+'); print(json.dumps([v["SERVICE_LABEL"],v["APP_BUNDLE"],v["WINDOWS_TASK"]]))'
+                actual = json.loads(subprocess.check_output([sys.executable,'-c',code],text=True))
+                self.assertEqual(actual,[f'online.{name}.core',bundle,name+'Core'])
+
     def test_unsafe_skill_names_are_rejected(self):
         config = module.load_config(ROOT / 'packaging/artifact-config.example.json')
         config['skill']['name'] = '../other'

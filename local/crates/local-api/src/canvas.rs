@@ -247,11 +247,13 @@ pub(super) async fn agent_prompt(
 ) -> Result<Json<CanvasAgentPrompt>, LocalError> {
 colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.canvas.agent-prompt", async {
 
-    proxy_one(
+    let Json(mut value): Json<CanvasAgentPrompt> = proxy_one(
         state.inner.http.post(format!("{}/v1/canvases/{canvas}/agent-prompt", state.inner.server_url)),
         &state,
         &body,
-    ).await
+    ).await?;
+    value.prompt = super::runtime_tools::bind(&value.prompt)?;
+    Ok(Json(value))
 
 }).await
 }

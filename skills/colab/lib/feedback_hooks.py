@@ -1,7 +1,11 @@
 """Own only Colab hook entries; host trust remains a separate explicit user action."""
 import json, os, shlex, tempfile
 from pathlib import Path
-OWNER = 'agent-colab-feedback'
+try:
+    from .artifact_config import artifact_config
+except ImportError:
+    from artifact_config import artifact_config
+OWNER = artifact_config()['skill']['name'] + '-feedback' 
 def configure_hooks(enabled, *, path=None, command=None):
     path = path or Path(os.environ.get('CODEX_HOME',Path.home()/'.codex'))/'hooks.json'
     command = command or f'{shlex.quote(sys_executable())} {shlex.quote(str(Path(__import__("sys").argv[0]).absolute().parent/"colab-feedback-hook"))}'

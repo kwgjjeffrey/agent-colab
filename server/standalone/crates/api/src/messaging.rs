@@ -660,7 +660,7 @@ fn assemble_agent_request(bundle: colab_server_persistence::AgentRequestBundle, 
         .map(|row| format!("[Message {} · {}]\n{}", row.seq, row.sender_name, super::context_prompt::message_text(row)))
         .collect::<Vec<_>>()
         .join("\n\n");
-    let root = "~/.agents/skills/agent-colab/bin/colab-messages";
+    let root = "@COLAB_SKILL_BIN@/colab-messages";
     let history = if bundle.kind == "mention" && bundle.before_seq.is_some() {
         format!(
             "\n\nTo load earlier messages for this task, run:\n{root} request context --request '{}' --before '{}' --limit 20",
@@ -703,7 +703,7 @@ fn assemble_agent_request(bundle: colab_server_persistence::AgentRequestBundle, 
     let envelope=colab_observability::context_json();
     let prompt=if let (Some(parent),Some(entry))=(envelope["traceparent"].as_str(),envelope["entryId"].as_str()) {
         let prefix=format!("COLAB_TRACEPARENT='{parent}' COLAB_TRACE_ENTRY_ID='{entry}' ");
-        prompt.lines().map(|line|if line.trim_start().starts_with("~/.agents/skills/agent-colab/bin/") {format!("{prefix}{line}")} else {line.to_owned()}).collect::<Vec<_>>().join("\n")
+        prompt.lines().map(|line|if line.trim_start().starts_with("@COLAB_SKILL_BIN@/") {format!("{prefix}{line}")} else {line.to_owned()}).collect::<Vec<_>>().join("\n")
     }else{prompt};
     colab_observability::prompt_at(&bundle.kind, stage, Some(bundle.id.to_string()), &prompt, "server/standalone/crates/api/src/messaging.rs", "assemble_agent_request");
     AgentRequestResponse {

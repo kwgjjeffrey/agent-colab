@@ -1327,3 +1327,14 @@ Implemented optional account UUID `user.id` for GUI/Skill entrance spans and Cor
 Verified locally: GUI TypeScript check; focused GUI tracing tests (5 passed); Rust observability tests (8 passed, including mixed-account OTLP preservation and invalid-identity removal); Core and Server cargo check; Python tracing registry tests (3 passed) and command identity isolation test (1 passed). Backend historical readback at 2026-10-10 11:33 Beijing: GUI 49,135 observed operation spans, Skill 16, total 49,151; no user attribution available. Source metadata implementation is not yet released/deployed; actual packaged GUI/Skill and cloud user.id readback remain pending. No production UV coverage is claimed.
 
 Final Feedback release acceptance 2026-10-10: Server 0.1.14 readiness and binary hash readback passed. Promotion 0.1.220-dev installed Core 0.1.112-dev / GUI 0.1.167-dev / Skill 0.1.64-dev, Shell unchanged. Filtered producer query, Markdown comment, raw Reader with three prior queries and final reply, and disabled hook bypassing transcript access passed on the final installation. Source committed; immutable Server release guard rejects a real same-version conflict before upload/restart. Test-only feedbacks ignored; test parent archived; capture disabled.
+
+### 2026-10-10 runtime callback/recovery validation
+
+Verified native `thread/turns/list` exposes exact request client IDs for both
+reported tasks. The first request already has an interrupted turn plus a later
+completed retry, demonstrating the old replay risk. Tests verify identity matching
+rejects unrelated turns and prompt-text guesses; a fake real app-server exercises
+foreign-writer completion/interruption without notifications or resubmission.
+Artifact tests render public and independent company bootstrap/Skill configurations
+and execute installed setup identity loading. Installed-client recovery and
+production promotion remain pending.

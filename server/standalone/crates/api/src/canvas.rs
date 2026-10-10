@@ -137,7 +137,7 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
 }).await
 }
 fn format_canvas_agent_prompt(canvas_title: &str, section: &str, canvas_ref: &str, channel_name: &str, resource_tools: &str, user_query: &str) -> String {
-    let command = "~/.agents/skills/agent-colab/bin/colab-canvas";
+    let command = "@COLAB_SKILL_BIN@/colab-canvas";
     let canvas_ref = canvas_ref.replace('\'', "%27");
     let channel_name = channel_name.replace('\'', "'\"'\"'");
     let prompt = format!(
