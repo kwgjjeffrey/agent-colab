@@ -1380,3 +1380,6 @@ R2 publisher; immutable GUI ZIP public readback verified SHA-256
 `e323b7ab60d9b5dcc46825797a732c722f73d0f8c7f8515d02c053bb9c640eda`
 and 1,335,487 bytes. Normal updater installed GUI 0.1.170-dev; all 39 installed
 files match the clean release build, and live /ui.json reports the same version.
+
+### Canvas missing dependency regression (2026-10-10)
+Real enterprise Canvas f19779cd-dffb-4dcc-954f-ce9d825a1955: installed Skill read returned newline at cursor76; fresh replay of all76 Server updates yielded4746 characters with no pending dependencies. Codec tests14 passed, including dependent-only update refusal and idempotent baseline repair. SQLite production save helper verifies stale callers retain both updates and upload ACK does not advance cursor. Installed release recovery pending.

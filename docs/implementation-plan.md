@@ -1392,3 +1392,6 @@ R2 publisher; immutable GUI ZIP public readback verified SHA-256
 `e323b7ab60d9b5dcc46825797a732c722f73d0f8c7f8515d02c053bb9c640eda`
 and 1,335,487 bytes. Normal updater installed GUI 0.1.170-dev; all 39 installed
 files match the clean release build, and live /ui.json reports the same version.
+
+### Canvas ordered cursor repair (2026-10-10)
+Located a shared Core defect: upload ACK advanced the pull cursor over unseen predecessors; stale concurrent replica saves could erase integrated updates. Core now advances cursors only through contiguous pulls, merges saves under the SQLite writer lock, replays legacy cursors once without deleting edits/outbox, and rejects projection of missing dependencies. Codec regression: 14 passed; replica save/cursor regression passed. Release and installed document recovery pending.

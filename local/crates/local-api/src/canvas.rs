@@ -397,6 +397,9 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
     sync_replica(&state, &account, &canvas).await?;
     flush_outbox(&state, &account, &canvas).await?;
     let (doc, seq) = load_replica(&state, &account, &canvas).await?;
+    if doc.transact().has_missing_updates() {
+        return Err(LocalError::internal("Canvas synchronization is incomplete; document dependencies are missing"));
+    }
     let content = render(&doc).map_err(LocalError::internal)?;
     let revision = projection_revision(&content);
     let pending = pending_count(&state, &account, &canvas).await?;
@@ -433,6 +436,9 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
     save_replica_doc(&state, &account, &canvas, &doc, None).await?;
     let row = send_outbox_item(&state, &account, &canvas, &client_update_id, None).await?;
     save_replica_doc(&state, &account, &canvas, &doc, Some(row.server_seq)).await?;
+    if doc.transact().has_missing_updates() {
+        return Err(LocalError::internal("Canvas synchronization is incomplete; document dependencies are missing"));
+    }
     let content = render(&doc).map_err(LocalError::internal)?;
     Ok(Json(PatchResult {
         status: "Done",
@@ -475,12 +481,17 @@ async fn sync_replica(state: &AppState, account: &str, canvas: &str) -> Result<(
 colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.canvas.sync-replica", async {
 
     let (doc, mut seq) = load_replica(state, account, canvas).await?;
+    // Legacy cursors could skip dependencies. Replay without discarding local edits.
+    if doc.transact().has_missing_updates() { seq = 0; }
     loop {
         let rows = remote_updates(state, canvas, seq).await?;
         if rows.is_empty() {
             break;
         }
         for row in &rows {
+            if row.server_seq != seq + 1 {
+                return Err(LocalError::internal("Canvas update sequence has a gap"));
+            }
             let bytes = STANDARD.decode(&row.update).map_err(LocalError::internal)?;
             doc.transact_mut()
                 .apply_update(Update::decode_v1(&bytes).map_err(LocalError::internal)?)
@@ -505,12 +516,13 @@ async fn merge_remote_update(
 ) -> Result<(), LocalError> {
 colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.canvas.merge-remote-update", async {
 
-    let (doc, seq) = load_replica(state, account, canvas).await?;
+    let (doc, _) = load_replica(state, account, canvas).await?;
     let bytes = STANDARD.decode(&row.update).map_err(LocalError::internal)?;
     doc.transact_mut()
         .apply_update(Update::decode_v1(&bytes).map_err(LocalError::internal)?)
         .map_err(LocalError::internal)?;
-    save_replica_doc(state, account, canvas, &doc, Some(seq.max(row.server_seq))).await
+    // An ACK confirms this update, not receipt of its predecessors.
+    save_replica_doc(state, account, canvas, &doc, None).await
 
 }).await
 }
@@ -574,14 +586,47 @@ async fn save_replica_doc(
 ) -> Result<(), LocalError> {
 colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.canvas.save-replica-doc", async {
 
-    let snapshot = doc
-        .transact()
-        .encode_state_as_update_v1(&StateVector::default());
     let store = state.inner.store.lock().await;
-    store.execute("insert into canvas_replicas(account_id,canvas_id,snapshot_bytes,last_server_seq) values(?1,?2,?3,coalesce(?4,0)) on conflict(account_id,canvas_id) do update set snapshot_bytes=excluded.snapshot_bytes,last_server_seq=coalesce(?4,canvas_replicas.last_server_seq),updated_at=current_timestamp", rusqlite::params![account, canvas, snapshot, seq]).map_err(LocalError::internal)?;
+    save_replica_locked(&store, account, canvas, doc, seq)?;
     Ok(())
 
 }).await
+}
+
+fn save_replica_locked(store: &rusqlite::Connection, account: &str, canvas: &str, doc: &Doc, seq: Option<i64>) -> Result<(), LocalError> {
+    // HTTP callers can hold different baselines. Merge with the latest replica
+    // under the writer lock so saving one cannot erase another caller's edits.
+    let existing = store.query_row("select snapshot_bytes from canvas_replicas where account_id=?1 and canvas_id=?2", rusqlite::params![account,canvas], |row| row.get::<_,Vec<u8>>(0)).ok();
+    if let Some(bytes) = existing {
+        doc.transact_mut().apply_update(Update::decode_v1(&bytes).map_err(LocalError::internal)?).map_err(LocalError::internal)?;
+    }
+    let snapshot = doc.transact().encode_state_as_update_v1(&StateVector::default());
+    store.execute("insert into canvas_replicas(account_id,canvas_id,snapshot_bytes,last_server_seq) values(?1,?2,?3,coalesce(?4,0)) on conflict(account_id,canvas_id) do update set snapshot_bytes=excluded.snapshot_bytes,last_server_seq=max(coalesce(?4,0),canvas_replicas.last_server_seq),updated_at=current_timestamp", rusqlite::params![account, canvas, snapshot, seq]).map_err(LocalError::internal)?;
+    Ok(())
+}
+
+#[cfg(test)]
+mod replica_recovery_tests {
+    use super::*;
+    use yrs::{Text, GetString};
+    #[test]
+    fn stale_saves_merge_and_upload_ack_does_not_advance_cursor() {
+        let db = rusqlite::Connection::open_in_memory().unwrap();
+        db.execute_batch("create table canvas_replicas(account_id text,canvas_id text,snapshot_bytes blob,last_server_seq integer,updated_at text,primary key(account_id,canvas_id));").unwrap();
+        let first = new_doc();
+        first.get_or_insert_text("test").insert(&mut first.transact_mut(),0,"A");
+        let second = new_doc();
+        second.get_or_insert_text("test").insert(&mut second.transact_mut(),0,"B");
+        save_replica_locked(&db,"u","c",&first,Some(4)).unwrap();
+        save_replica_locked(&db,"u","c",&second,None).unwrap();
+        save_replica_locked(&db,"u","c",&first,Some(2)).unwrap();
+        let (bytes,seq):(Vec<u8>,i64) = db.query_row("select snapshot_bytes,last_server_seq from canvas_replicas",[],|r|Ok((r.get(0)?,r.get(1)?))).unwrap();
+        let result=new_doc();
+        result.transact_mut().apply_update(Update::decode_v1(&bytes).unwrap()).unwrap();
+        let text=result.get_or_insert_text("test").get_string(&result.transact());
+        assert!(text.contains('A') && text.contains('B'));
+        assert_eq!(seq,4);
+    }
 }
 
 async fn persist_outbox(

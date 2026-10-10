@@ -86,6 +86,7 @@ export function patch(node,oldText,newText){
 }
 export function run(input){
  const doc=new Y.Doc();Y.applyUpdate(doc,Buffer.from(input.state,'base64'));
+ if(doc.store.pendingStructs || doc.store.pendingDs)throw Error('canvas_sync_incomplete: document dependencies are missing');
  const root=doc.getXmlFragment('default');const node=yXmlFragmentToProseMirrorRootNode(root,schema);
  if(input.operation==='render')return {content:render(node)};
  const next=patch(node,input.old,input.new),vector=Y.encodeStateVector(doc);

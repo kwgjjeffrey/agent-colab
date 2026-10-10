@@ -65,3 +65,14 @@ test('image handles and resized geometry survive projection, text patch and Yjs 
  Y.applyUpdate(doc,Buffer.from(out.update,'base64'));
  assert(yXmlFragmentToProseMirrorRootNode(doc.getXmlFragment('default'),schema).child(1).eq(node.child(1)));
 });
+
+test('dependent update without its baseline fails instead of reading empty; replay repairs it',()=>{
+ const doc=prosemirrorJSONToYDoc(schema,{type:'doc',content:[p(t('Planning'))]},'default');
+ const seed=Y.encodeStateAsUpdate(doc),vector=Y.encodeStateVector(doc);
+ doc.getXmlFragment('default').get(0).get(0).insert(8,' items');
+ const delta=Y.encodeStateAsUpdate(doc,vector),receiver=new Y.Doc();Y.applyUpdate(receiver,delta);
+ const read=()=>run({operation:'render',state:Buffer.from(Y.encodeStateAsUpdate(receiver)).toString('base64')});
+ assert.throws(read,/canvas_sync_incomplete/);
+ Y.applyUpdate(receiver,seed);assert.equal(read().content,'Planning items\n');
+ Y.applyUpdate(receiver,seed);assert.equal(read().content,'Planning items\n');
+});
