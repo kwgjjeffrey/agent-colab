@@ -23,6 +23,11 @@ use tracing_subscriber::prelude::*;
 static SERVER_CLOCK: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 tokio::task_local! { static CURRENT: Context; }
 
+/// Only call with a service-resolved account ID; incoming baggage is never an identity source.
+pub fn record_user_id(user_id: &str) {
+    parent().span().set_attribute(KeyValue::new("user.id", user_id.to_owned()));
+}
+
 pub struct TelemetryGuard(Option<SdkTracerProvider>);
 impl Drop for TelemetryGuard {
     fn drop(&mut self) {
