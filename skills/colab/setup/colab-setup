@@ -14,11 +14,13 @@ DEFAULT_MANIFEST = os.environ.get(
     ARTIFACT_CONFIG["releaseManifestUrl"],
 )
 ROOT = application_root()
+SERVICE_LABEL = "online." + ARTIFACT_CONFIG["skill"]["name"] + ".core"
 DISCOVERY = ROOT / "discovery.json"
 UPDATE_PROGRESS = ROOT / "update-progress.json"
 PENDING_SHELL_UPDATE = ROOT / "pending-shell-update.json"
 DOWNLOAD_CACHE = ROOT / "downloads"
-TARGETS = {"codex": pathlib.Path.home()/".agents/skills/agent-colab", "claude": pathlib.Path.home()/".claude/skills/agent-colab", "myflicker": pathlib.Path.home()/".myflicker/skills/agent-colab"}
+TARGETS = {agent: pathlib.Path.home()/directory/"skills"/ARTIFACT_CONFIG["skill"]["name"]
+           for agent,directory in {"codex":".agents", "claude":".claude", "myflicker":".myflicker"}.items()}
 LEGACY_TARGETS = {"codex": pathlib.Path.home()/".agents/skills/colab", "claude": pathlib.Path.home()/".claude/skills/colab", "myflicker": pathlib.Path.home()/".myflicker/skills/colab"}
 def fetch_release_url(url: str, target: pathlib.Path, timeout: int):
     """Stream public release bytes with the repository's proxy-safe curl policy.
@@ -232,7 +234,7 @@ def core_database_path():
     default = ROOT / "data/colab.sqlite3"
     if sys.platform != "darwin":
         return default
-    plist = pathlib.Path.home() / "Library/LaunchAgents/online.agent-colab.core.plist"
+    plist = pathlib.Path.home() / "Library/LaunchAgents" / f"{SERVICE_LABEL}.plist"
     try:
         previous = plistlib.loads(plist.read_bytes()).get("EnvironmentVariables", {})
         if previous.get("COLAB_APPLICATION_ROOT") == str(ROOT):
@@ -270,7 +272,7 @@ def core_environment(server_url: str, credentials: pathlib.Path):
 def install_launchd(server_url: str, credentials: pathlib.Path):
     if sys.platform != "darwin": return
     launch_agents=pathlib.Path.home()/"Library/LaunchAgents"; launch_agents.mkdir(parents=True,exist_ok=True)
-    label="online.agent-colab.core"; plist=launch_agents/f"{label}.plist"
+    label=SERVICE_LABEL; plist=launch_agents/f"{label}.plist"
     payload={"Label":label,"ProgramArguments":[str(ROOT/"current/core/colabd")],"RunAtLoad":True,"KeepAlive":True,
       "EnvironmentVariables":{**core_environment(server_url, credentials), "COLAB_MANAGED_SERVICE":"launchd"},
       "StandardOutPath":str(ROOT/"colabd.log"),"StandardErrorPath":str(ROOT/"colabd-error.log")}
@@ -410,7 +412,7 @@ def main():
         current["components"]=component_status(current)
         print(json.dumps(current,indent=2)); return
     if args.operation=="open":
-        if sys.platform=="darwin": subprocess.run(["launchctl","kickstart","-k",f"gui/{os.getuid()}/online.agent-colab.core"],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+        if sys.platform=="darwin": subprocess.run(["launchctl","kickstart","-k",f"gui/{os.getuid()}/{SERVICE_LABEL}"],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
         elif os.name=="nt": subprocess.run(["schtasks","/Run","/TN","AgentColabCore"],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
         for _ in range(50):
             try:

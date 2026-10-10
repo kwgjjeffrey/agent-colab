@@ -18,7 +18,9 @@ class InstalledEntrypointTests(unittest.TestCase):
         self.temporary = tempfile.TemporaryDirectory()
         self.root = pathlib.Path(self.temporary.name) / "agent-colab"
         shutil.copytree(SOURCE, self.root)
-        shutil.copyfile(SOURCE.parents[1] / "packaging/artifact-config.example.json", self.root / "artifact-config.json")
+        subprocess.run([os.sys.executable, str(SOURCE.parents[1] / "packaging/artifact-config.py"),
+                        "--config", str(SOURCE.parents[1] / "packaging/artifact-config.example.json"),
+                        "--skill-out", str(self.root)], check=True)
         for command in list((self.root / "bin").glob("colab-*")) + [self.root / "setup/colab-setup"]:
             command.chmod(command.stat().st_mode | stat.S_IXUSR)
 
@@ -38,7 +40,7 @@ class InstalledEntrypointTests(unittest.TestCase):
         return result
 
     def test_all_packaged_cli_entrypoints_import_from_an_installed_tree(self):
-        for command in ("colab-browser", "colab-canvas", "colab-messages", "colab-session-reader", "colab-skill-tool", "colab-transfer"):
+        for command in ("colab-browser", "colab-canvas", "colab-messages", "colab-session-reader", "colab-skill-tool", "colab-transfer", "colab-feedback"):
             with self.subTest(command=command):
                 self.assertIn("usage:", self.run_command(f"bin/{command}", "--help").stdout)
         self.assertIn("usage:", self.run_command("setup/colab-setup", "--help").stdout)

@@ -8,5 +8,13 @@
   "auth": {
     "kind": "google",
     "label": "Google"
+  },
+  "skill": {
+    "name": "agent-colab",
+    "displayName": "Agent Colab",
+    "description": "Browse and manage Agent Colab Channels, members, shared Files, Sessions, and Skills through the locally installed Local Core.",
+    "shortDescription": "Browse, share, transfer, and consume Agent Colab context",
+    "brandColor": "#DFFF00",
+    "defaultPrompt": "Use $agent-colab to browse or manage the relevant Channels, Files, Sessions, and members."
   }
 }

@@ -1,8 +1,8 @@
 interface:
-  display_name: "Agent Colab"
-  short_description: "Browse, share, transfer, and consume Colab context"
-  brand_color: "#DFFF00"
-  default_prompt: "Use $agent-colab to browse or manage the relevant Channels, Files, Sessions, and members."
+  display_name: @COLAB_SKILL_DISPLAY_NAME_YAML@
+  short_description: @COLAB_SKILL_SHORT_DESCRIPTION@
+  brand_color: @COLAB_SKILL_BRAND_COLOR@
+  default_prompt: @COLAB_SKILL_DEFAULT_PROMPT@
 
 policy:
   allow_implicit_invocation: true

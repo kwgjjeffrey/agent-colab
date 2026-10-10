@@ -5,6 +5,10 @@ import os
 import pathlib
 import platform
 import sys
+try:
+    from .artifact_config import artifact_config
+except ImportError:
+    from artifact_config import artifact_config
 
 
 def application_root() -> pathlib.Path:
@@ -12,10 +16,12 @@ def application_root() -> pathlib.Path:
     override = os.environ.get("COLAB_APPLICATION_ROOT")
     if override:
         return pathlib.Path(override)
+    name = artifact_config()["skill"]["name"]
     if sys.platform == "win32":
+        windows_name = "".join(part.title() for part in name.split("-"))
         local = os.environ.get("LOCALAPPDATA")
-        return pathlib.Path(local) / "AgentColab" if local else pathlib.Path.home() / "AppData/Local/AgentColab"
-    return pathlib.Path.home() / ".local/share/agent-colab"
+        return pathlib.Path(local) / windows_name if local else pathlib.Path.home() / "AppData/Local" / windows_name
+    return pathlib.Path.home() / ".local/share" / name
 
 
 def platform_id() -> tuple[str, str]:
