@@ -936,3 +936,6 @@ links remain readable and retained legacy patch excerpts normalize to the new
 projection. No CRDT migration is required; existing documents render compactly
 on their next read. Repeated references require contextual patch text, as other
 ambiguous text does.
+
+### Inline edits and validated Canvas capsules (2026-10-10)
+Existing inline text edits are applied through ProseMirror transforms, gated by exact projection-context correspondence; they preserve surrounding nodes and marks even when a containing list cannot round-trip through Markdown. Structural Markdown edits retain the representability/identity guards. replace-with-canvas is a separate Core use case: both source and target must resolve in the same authorized Channel, target title/ID come from discovery, and the read revision must match. An optional exact unique excerpt selects repeated text. New capsules are native atom nodes; existing capsules and component fences cannot be changed through ordinary text patches. Upload ACKs never advance the ordered pull cursor.
