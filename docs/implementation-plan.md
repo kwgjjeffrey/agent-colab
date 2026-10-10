@@ -1543,3 +1543,7 @@ Shared Markdown now renders with react-markdown/remark-gfm and a Preview/Source 
 Two focused rendering tests and TypeScript/build passed. Trace Run/Round 20261010T113944Z-f6d9b315 passed actual published fixtures for Markdown heading/table/source switching, source highlighting/line count, text content, decoded image and honest unsupported/corrupt workbook failures. Screenshots reviewed and owned share withdrawn. Enterprise actual Octo Markdown report edb2d953-f77f-4b62-a721-3b6dff5d3052 passed installed heading/table/source browser checks without modifying its contents.
 
 Published/installed public promotion 0.1.245-dev with GUI 0.1.181-dev and enterprise promotion 0.1.26-ks.1 with GUI 0.1.18-ks.1. Canonical public curl readback, enterprise candidate readback, installed component/actor checks and public-isolation check passed. All other components retained from current stable; no Shell/Core/Skill/Server release for this preview change.
+
+### 2026-10-10 — Remove permanent Canvas Add image entrance
+
+Removed the file picker and permanent Add image button; the upload-status container renders nothing when no upload exists. Existing paste/drop handlers and upload retry/dismiss remain unchanged. TypeScript/build passed. Installed public and enterprise Canvas browser checks confirmed an editable document with no Add image button. Public246/GUI182 and enterprise27/GUI19 published and installed with canonical artifact readback and enterprise client/isolation checks; all other components retained.
