@@ -610,6 +610,22 @@ mod replica_recovery_tests {
     use super::*;
     use yrs::{Text, GetString};
     #[test]
+    fn dependent_only_replica_recovers_without_losing_the_local_delta() {
+        let source=new_doc();let text=source.get_or_insert_text("test");
+        text.insert(&mut source.transact_mut(),0,"Planning");
+        let seed=source.transact().encode_state_as_update_v1(&StateVector::default());
+        let vector=source.transact().state_vector();
+        text.insert(&mut source.transact_mut(),8," items");
+        let delta=source.transact().encode_state_as_update_v1(&vector);
+        let replica=new_doc();replica.transact_mut().apply_update(Update::decode_v1(&delta).unwrap()).unwrap();
+        assert!(replica.transact().has_missing_updates());
+        let retained=replica.transact().encode_state_as_update_v1(&StateVector::default());
+        let restored=new_doc();restored.transact_mut().apply_update(Update::decode_v1(&retained).unwrap()).unwrap();
+        restored.transact_mut().apply_update(Update::decode_v1(&seed).unwrap()).unwrap();
+        assert!(!restored.transact().has_missing_updates());
+        assert_eq!(restored.get_or_insert_text("test").get_string(&restored.transact()),"Planning items");
+    }
+    #[test]
     fn stale_saves_merge_and_upload_ack_does_not_advance_cursor() {
         let db = rusqlite::Connection::open_in_memory().unwrap();
         db.execute_batch("create table canvas_replicas(account_id text,canvas_id text,snapshot_bytes blob,last_server_seq integer,updated_at text,primary key(account_id,canvas_id));").unwrap();
