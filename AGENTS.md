@@ -46,6 +46,12 @@ GUI regression Channel clicks must be scoped to the Channels rail (the breadcrum
 contains the same name). Verify GUI and Core artifact versions and actor alignment
 before interpreting regression results.
 
+Message and Canvas @ creation reuse the existing sharing dialogs and insert the
+resulting stable Channel reference at the transaction-mapped original range.
+Never navigate away to the created item or insert after cancellation/channel
+change. Skill references must remain consumable in GUI, Server prompts and Skill
+projections, not merely render as capsules.
+
 Large modules must be split by owned capability. Comments should explain invariants, security boundaries, recovery behavior, and non-obvious protocol decisions; do not narrate straightforward syntax.
 
 For end-to-end validation, start at regression_test/README.md (concrete commands, scope selection and fixture reuse), then regression_test/AGENTS.md. Choose cases for the changed capability; installation/login belong to release acceptance.

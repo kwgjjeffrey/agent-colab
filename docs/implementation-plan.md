@@ -4,6 +4,8 @@
 
 Implemented shared shadcn hover menu for Message/Canvas, existing creation-dialog orchestration with cancellation/channel guards, transaction-mapped insertion at the original @ range, and Skill resource lookup/projection/authorized Agent consumption. No source duplication, schema migration or Core change. Python Skill includes Skill context references and metadata inspection commands. GUI six-path acceptance passed in Run `20261010T081158Z-a1e5052c`, with real registration/placement and owned cleanup. Unrelated telemetry development remains excluded from this feature checkpoint.
 
+Public promotion `0.1.236-dev` released and installed: GUI `0.1.175-dev`, Skill `0.1.70-dev`; Server `0.1.18` deployed and ready. Source checkpoint `81e3b0f`, built from a clean clone. Core120, Shell23 and Workbench3 retained. No enterprise release is claimed by this checkpoint.
+
 ### 2026-10-10 Session chunk rollout — completion gates
 
 Rollback checkpoints: approved codec `6b85fc4`, protocol/reader `1470b7a`,
