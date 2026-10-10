@@ -137,6 +137,40 @@
         "path": "local/crates/local-api/src/system.rs",
         "function": "update_workbench"
       }
+    },
+    {
+      "id": "core.feedback.list-feedback-access",
+      "description": "Skill Feedback list access",
+      "owner": "local-core",
+      "status": "instrumented",
+      "entry": {
+        "kind": "internal"
+      },
+      "completion": {
+        "success": "return.ok",
+        "failure": "return.error"
+      },
+      "source": {
+        "path": "local/crates/local-api/src/feedback.rs",
+        "function": "list_access"
+      }
+    },
+    {
+      "id": "core.feedback.update-feedback-access",
+      "description": "Skill Feedback update access",
+      "owner": "local-core",
+      "status": "instrumented",
+      "entry": {
+        "kind": "internal"
+      },
+      "completion": {
+        "success": "return.ok",
+        "failure": "return.error"
+      },
+      "source": {
+        "path": "local/crates/local-api/src/feedback.rs",
+        "function": "update_access"
+      }
     }
   ],
   "spans": [

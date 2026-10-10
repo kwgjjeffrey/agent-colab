@@ -1,6 +1,8 @@
 import { runOperation } from "@/api/operation-runner";
 import { traceTargets } from "@/api/trace-locators";
 import { useEffect, useState } from 'react';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { PreviewMarkdown } from '@/features/workspace/PreviewMarkdown';
@@ -14,7 +16,7 @@ async function post<T>(path: string, body: unknown): Promise<T> {
   return response.json() as Promise<T>;
 }
 /** Asset aggregation stays independent of Channel placement. Evidence remains owner-authorized. */
-export function SkillFeedback({shareId, assetKey: providedAssetKey}: {shareId?: string; assetKey?: string}) {
+export function SkillFeedback({shareId, assetKey: providedAssetKey, inline = false}: {shareId?: string; assetKey?: string; inline?: boolean}) {
   const [refresh,setRefresh]=useState(0);
   const [assetKey,setAssetKey]=useState<string>();
   const [count,setCount]=useState<number>();
@@ -36,6 +38,7 @@ export function SkillFeedback({shareId, assetKey: providedAssetKey}: {shareId?: 
     })().catch(reason=>{if(active)setError(String(reason));});
     return ()=>{active=false;};
   },[shareId,providedAssetKey,refresh]);
+  useEffect(() => { if (inline && assetKey) void load(); }, [inline, assetKey]);
   async function load(next?:string){
     if(!assetKey)return;setLoading(true);setError(undefined);
     return runOperation("feedback.list",async(operation)=>{
@@ -43,10 +46,27 @@ export function SkillFeedback({shareId, assetKey: providedAssetKey}: {shareId?: 
     catch(reason){operation.fail();setError(String(reason));}finally{setLoading(false);}
     });
   }
+  const feedbackList = <div className="flex flex-col gap-5">
+    {items.map(item => <article key={item.feedbackId} className="flex flex-col gap-3">
+      <header className="flex items-center gap-2">
+        <Badge variant={item.rating === 'negative' ? 'destructive' : 'secondary'}>{item.rating === 'positive' ? '点赞' : item.rating === 'negative' ? '点踩' : '暂无评价'}</Badge>
+        <Badge variant="outline">{item.status === 'resolved' ? '已解决' : item.status === 'ignored' ? '已忽略' : '未解决'}</Badge>
+        <time className="text-xs text-muted-foreground">{new Date(item.capturedAt).toLocaleString()}</time>
+      </header>
+            {item.comment?<PreviewMarkdown>{item.comment}</PreviewMarkdown>:<p className="my-3 text-sm text-muted-foreground">{item.analysisStatus==='pending'?'评价尚在处理':item.analysisStatus==='failed'?'端侧分析失败，原始任务片段可供分析':'未启用端侧评价，原始任务片段可供分析'}</p>}
+            <Button variant="outline" size="sm" disabled={item.evidenceAvailable===false} onClick={()=>setSessionId(item.feedbackId)}>{item.evidenceAvailable===false ? "任务片段正在上报" : "查看原始任务片段"}</Button>
+      <Separator />
+    </article>)}
+    {!loading && !error && items.length === 0 && <p className="text-sm text-muted-foreground">还没有反馈。</p>}
+    {error && <p role="alert">{error}<Button variant="outline" onClick={() => void load()}>重试</Button></p>}
+    {loading && <p role="status">正在读取反馈…</p>}
+    {cursor && <Button variant="outline" disabled={loading} onClick={() => void load(cursor)}>加载更多</Button>}
+  </div>;
   return <>
-    <Button data-trace-target={traceTargets("feedback.list")} variant="outline" disabled={!assetKey} onClick={()=>{setOpen(true);void load();}}>查看反馈{count===undefined?'…':`（${count}）`}</Button>
+    {!inline && <Button data-trace-target={traceTargets("feedback.list")} variant="outline" disabled={!assetKey} onClick={()=>{setOpen(true);void load();}}>查看反馈{count===undefined?'…':`（${count}）`}</Button>}
     {!open&&error&&<p role="alert" className="text-sm text-destructive">反馈读取失败：{error}<Button variant="outline" onClick={()=>setRefresh(value=>value+1)}>重试</Button></p>}
-    <Dialog open={open} onOpenChange={setOpen}>
+    {inline && feedbackList}
+    {!inline && <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="sm:max-w-3xl">
         <DialogHeader><DialogTitle>Skill 反馈（{count ?? '…'}）</DialogTitle><DialogDescription>消费方 Agent 的使用评价和任务记录</DialogDescription></DialogHeader>
         <div className="max-h-[70vh] overflow-y-auto space-y-4">
@@ -61,7 +81,7 @@ export function SkillFeedback({shareId, assetKey: providedAssetKey}: {shareId?: 
           {cursor&&<Button variant="outline" disabled={loading} onClick={()=>void load(cursor)}>加载更多</Button>}
         </div>
       </DialogContent>
-    </Dialog>
+    </Dialog>}
     <Dialog open={Boolean(sessionId)} onOpenChange={value=>{if(!value)setSessionId(undefined);}}>
       <DialogContent className="flex h-[80vh] flex-col sm:max-w-3xl">
         <DialogHeader><DialogTitle>原始任务片段</DialogTitle><DialogDescription>任务及此前最多三段用户 query</DialogDescription></DialogHeader>

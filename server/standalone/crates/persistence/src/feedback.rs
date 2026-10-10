@@ -84,18 +84,42 @@ impl Database {
         reviewers: &[Uuid],
     ) -> anyhow::Result<()> {
         let mut tx = self.pool.begin().await?;
+        let configured:bool=sqlx::query_scalar("select exists(select 1 from feedback_managers where asset_key='builtin:agent-colab')").fetch_one(&mut *tx).await?;
+        if configured { return Ok(()); }
         sqlx::query("delete from feedback_reviewers where asset_key='builtin:agent-colab'")
             .execute(&mut *tx)
             .await?;
         for id in reviewers {
             sqlx::query("insert into feedback_reviewers(asset_key,user_id) values('builtin:agent-colab',$1) on conflict do nothing").bind(id).execute(&mut *tx).await?;
         }
+        sqlx::query("insert into feedback_managers select asset_key,user_id from feedback_reviewers where asset_key='builtin:agent-colab' on conflict do nothing").execute(&mut *tx).await?;
         tx.commit().await?;
         Ok(())
     }
 
+    pub async fn feedback_can_manage(&self, user: Uuid, key: &str) -> anyhow::Result<bool> {
+        Ok(sqlx::query_scalar("select exists(select 1 from feedback_managers where asset_key=$1 and user_id=$2) or exists(select 1 from shared_assets where 'asset:'||id::text=$1 and owner_user_id=$2 and kind='skill')").bind(key).bind(user).fetch_one(&self.pool).await?)
+    }
+    pub async fn list_feedback_access(&self, user: Uuid, key: &str) -> anyhow::Result<Value> {
+        anyhow::ensure!(self.feedback_can_review(user,key).await?, "feedback_review_forbidden");
+        let rows=sqlx::query("with grants as (select user_id,'reviewer' role from feedback_reviewers where asset_key=$1 union select user_id,'manager' role from feedback_managers where asset_key=$1 union select owner_user_id,'owner' role from shared_assets where 'asset:'||id::text=$1 and kind='skill') select u.id,u.email,coalesce(u.display_name,u.email) name,array_agg(g.role order by g.role) roles from grants g join users u on u.id=g.user_id group by u.id order by name,u.id").bind(key).fetch_all(&self.pool).await?;
+        Ok(json!({"assetKey":key,"canManage":self.feedback_can_manage(user,key).await?,"members":rows.iter().map(|r|json!({"userId":r.get::<Uuid,_>("id"),"email":r.get::<String,_>("email"),"name":r.get::<String,_>("name"),"roles":r.get::<Vec<String>,_>("roles")})).collect::<Vec<_>>()}))
+    }
+    pub async fn update_feedback_access(&self, actor: Uuid, key: &str, email: &str, action: &str) -> anyhow::Result<Value> {
+        // A reviewer cannot delegate private transcript access. Owner/manager authority is checked in the mutation transaction.
+        let mut tx=self.pool.begin().await?;
+        let allowed:bool=sqlx::query_scalar("select exists(select 1 from feedback_managers where asset_key=$1 and user_id=$2) or exists(select 1 from shared_assets where 'asset:'||id::text=$1 and owner_user_id=$2 and kind='skill')").bind(key).bind(actor).fetch_one(&mut *tx).await?;
+        anyhow::ensure!(allowed,"feedback_review_forbidden");
+        let subject:Option<Uuid>=sqlx::query_scalar("select id from users where lower(email)=lower($1)").bind(email).fetch_optional(&mut *tx).await?;
+        let subject=subject.ok_or_else(||anyhow::anyhow!("feedback_account_not_found"))?;
+        let changed=if action=="grant" {sqlx::query("insert into feedback_reviewers(asset_key,user_id) values($1,$2) on conflict do nothing").bind(key).bind(subject).execute(&mut *tx).await?.rows_affected()} else {sqlx::query("delete from feedback_reviewers where asset_key=$1 and user_id=$2").bind(key).bind(subject).execute(&mut *tx).await?.rows_affected()};
+        if changed>0 {sqlx::query("insert into feedback_access_events(asset_key,actor_user_id,subject_user_id,action) values($1,$2,$3,$4)").bind(key).bind(actor).bind(subject).bind(action).execute(&mut *tx).await?;}
+        tx.commit().await?;
+        self.list_feedback_access(actor,key).await
+    }
+
     pub async fn feedback_can_review(&self, user: Uuid, key: &str) -> anyhow::Result<bool> {
-        Ok(sqlx::query_scalar("select exists(select 1 from feedback_reviewers where asset_key=$1 and user_id=$2) or exists(select 1 from shared_assets where 'asset:'||id::text=$1 and owner_user_id=$2 and kind='skill')").bind(key).bind(user).fetch_one(&self.pool).await?)
+        Ok(sqlx::query_scalar("select exists(select 1 from feedback_reviewers where asset_key=$1 and user_id=$2) or exists(select 1 from feedback_managers where asset_key=$1 and user_id=$2) or exists(select 1 from shared_assets where 'asset:'||id::text=$1 and owner_user_id=$2 and kind='skill')").bind(key).bind(user).fetch_one(&self.pool).await?)
     }
     pub async fn feedback_can_report(
         &self,
@@ -216,7 +240,7 @@ impl Database {
         f: &FeedbackFilter,
     ) -> anyhow::Result<Value> {
         let sql = concat!(
-            "with owned as (select 'asset:'||id::text asset_key,name from shared_assets where owner_user_id=$9 and kind='skill' union select r.asset_key,case when r.asset_key='builtin:agent-colab' then 'Agent Colab' else coalesce(a.name,r.asset_key) end from feedback_reviewers r left join shared_assets a on 'asset:'||a.id::text=r.asset_key where r.user_id=$9), matched as (select * from feedback_records f where ",
+            "with owned as (select 'asset:'||id::text asset_key,name from shared_assets where owner_user_id=$9 and kind='skill' union select asset_key,'Agent Colab' name from feedback_managers where user_id=$9 union select r.asset_key,case when r.asset_key='builtin:agent-colab' then 'Agent Colab' else coalesce(a.name,r.asset_key) end from feedback_reviewers r left join shared_assets a on 'asset:'||a.id::text=r.asset_key where r.user_id=$9), matched as (select * from feedback_records f where ",
             feedback_filter_sql!(),
             ") select o.asset_key,o.name,(select count(*) from feedback_records where asset_key=o.asset_key) total,count(m.id) matching,count(m.id) filter(where rating='positive') positive,count(m.id) filter(where rating='negative') negative,count(m.id) filter(where rating is null) unrated,count(m.id) filter(where resolution_status='resolved') resolved,count(m.id) filter(where resolution_status='unresolved') unresolved,count(m.id) filter(where resolution_status='ignored') ignored from owned o left join matched m on m.asset_key=o.asset_key where $1::text='' and ($10::text is null or o.asset_key>$10) group by o.asset_key,o.name order by o.asset_key limit $11"
         );
@@ -406,6 +430,17 @@ mod database_tests {
             .bind(owner)
             .execute(&db.pool)
             .await?;
+        assert!(db.feedback_can_manage(owner,key).await?);
+        assert!(db.list_feedback_access(outsider,key).await.is_err());
+        let outsider_email=format!("{outsider}@feedback.invalid");
+        let access=db.update_feedback_access(owner,key,&outsider_email,"grant").await?;
+        assert!(access["canManage"].as_bool().unwrap());
+        assert!(db.feedback_can_review(outsider,key).await?);
+        assert!(!db.feedback_can_manage(outsider,key).await?);
+        assert!(db.update_feedback_access(outsider,key,&format!("{reporter}@feedback.invalid"),"grant").await.is_err());
+        db.update_feedback_access(owner,key,&outsider_email,"revoke").await?;
+        assert!(!db.feedback_can_review(outsider,key).await?);
+        assert!(db.update_feedback_access(owner,key,"missing@feedback.invalid","grant").await.is_err());
         let b = FeedbackSubmission {
             asset_key: key.into(),
             channel_key: format!("channel:{}", channel.id),

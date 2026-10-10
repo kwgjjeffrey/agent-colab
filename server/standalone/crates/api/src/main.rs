@@ -284,6 +284,8 @@ fn router(state: AppState) -> Router {
             get(list_session_segments),
         )
         .route("/v1/sessions/{share_id}", delete(withdraw_session_share))
+        .route("/v1/feedbacks/list-feedback-access",post(feedback::list_access).layer(DefaultBodyLimit::max(16384)))
+        .route("/v1/feedbacks/update-feedback-access",post(feedback::update_access).layer(DefaultBodyLimit::max(16384)))
         .route("/v1/feedbacks/list-assets",post(feedback::list_assets).layer(DefaultBodyLimit::max(128*1024)))
         .route("/v1/feedbacks/list-feedbacks",post(feedback::list_feedbacks).layer(DefaultBodyLimit::max(128*1024)))
         .route("/v1/feedbacks/update-status",post(feedback::update_status).layer(DefaultBodyLimit::max(128*1024)))

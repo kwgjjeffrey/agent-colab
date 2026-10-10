@@ -40,4 +40,13 @@ describe('Skill feedback preview',()=>{
     expect(JSON.parse(fetcher.mock.calls[1][1].body).assetKey).toBe('builtin:agent-colab');
   });
 
+  it('shows inline evaluation items immediately without a counted-entry dialog',async()=>{
+    fetcher.mockResolvedValueOnce(new Response(JSON.stringify({totalMatching:1})))
+      .mockResolvedValueOnce(new Response(JSON.stringify({totalMatching:1,items:[{feedbackId:'inline',rating:'negative',status:'unresolved',capturedAt:'2026-10-10T04:00:00Z',analysisStatus:'completed',comment:'## Concrete issue\n\nMissing argument documentation.'}]})));
+    render(<SkillFeedback assetKey="builtin:agent-colab" inline/>);
+    expect(await screen.findByText('Missing argument documentation.')).toBeTruthy();
+    expect(screen.queryByRole('button',{name:/查看反馈/})).toBeNull();
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
 });

@@ -811,6 +811,8 @@ pub fn router(state: AppState, security: LocalSecurity) -> Router {
         )
         .route("/v1/feedbacks/settings",get(feedback::settings).put(feedback::configure))
         .route("/v1/feedbacks/hook",axum::routing::post(feedback::hook))
+        .route("/v1/feedbacks/list-feedback-access", axum::routing::post(feedback::list_access))
+        .route("/v1/feedbacks/update-feedback-access", axum::routing::post(feedback::update_access))
         .route("/v1/feedbacks/list-assets",axum::routing::post(feedback::list_assets))
         .route("/v1/feedbacks/list-feedbacks",axum::routing::post(feedback::list_feedbacks))
         .route("/v1/feedbacks/update-status",axum::routing::post(feedback::update_status))

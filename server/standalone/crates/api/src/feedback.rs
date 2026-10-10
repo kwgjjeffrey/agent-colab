@@ -6,6 +6,7 @@ use colab_server_persistence::{
 fn failure(error: anyhow::Error) -> ApiError {
     let message = error.to_string();
     match message.as_str() {
+        "feedback_account_not_found" => ApiError::bad_request("feedback_account_not_found"),
         "feedback_review_forbidden" => ApiError::forbidden("feedback_review_forbidden"),
         "feedback_revision_conflict" => ApiError::conflict("feedback_revision_conflict"),
         "feedback_scope_mismatch" | "invalid_cursor" => {
@@ -304,4 +305,22 @@ pub(super) async fn download(
         },
     )
     .await
+}
+
+#[derive(serde::Deserialize)]
+#[serde(rename_all="camelCase")]
+pub(super) struct AccessRequest { asset_key:String, email:Option<String>, action:Option<String> }
+pub(super) async fn list_access(State(s):State<AppState>, h:HeaderMap, Json(b):Json<AccessRequest>) -> Result<Json<serde_json::Value>,ApiError> {
+    colab_observability::registered_business(include_str!("../../../tracing/registry.json"),"server.feedback.list-feedback-access",async {
+    let u=authenticated_user(&s,&h).await?;
+    s.database.list_feedback_access(u,&b.asset_key).await.map(Json).map_err(failure)
+    }).await
+}
+pub(super) async fn update_access(State(s):State<AppState>, h:HeaderMap, Json(b):Json<AccessRequest>) -> Result<Json<serde_json::Value>,ApiError> {
+    colab_observability::registered_business(include_str!("../../../tracing/registry.json"),"server.feedback.update-feedback-access",async {
+    let u=authenticated_user(&s,&h).await?;
+    let email=b.email.as_deref().unwrap_or("").trim();let action=b.action.as_deref().unwrap_or("");
+    if email.is_empty() || email.len()>320 || !matches!(action,"grant"|"revoke") { return Err(ApiError::bad_request("invalid_feedback_access")); }
+    s.database.update_feedback_access(u,&b.asset_key,email,action).await.map(Json).map_err(failure)
+    }).await
 }

@@ -2,7 +2,10 @@ import { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { runOperation } from "@/api/operation-runner";
 import { initializeTelemetry } from "@/api/telemetry";
+import { FeedbackAccess } from "./FeedbackAccess";
 import { SkillFeedback } from "@/features/feedback/SkillFeedback";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import "./workbench.css";
 declare const __WORKBENCH_VERSION__: string;
 void initializeTelemetry({serviceName:"colab-operation-workbench", version:__WORKBENCH_VERSION__});
@@ -24,6 +27,7 @@ function App() {
       if (!auth.authenticated) throw new Error("请先在 Colab 登录，然后刷新此页面。");
       const result = await api<{ items: Asset[]; nextCursor?: string }>("/v1/feedbacks/list-assets", { limit: 100, cursor: next });
       result.items.sort((a,b)=>(a.assetKey==="builtin:agent-colab"?-1:b.assetKey==="builtin:agent-colab"?1:a.name.localeCompare(b.name)));
+      setSelected(previous => previous && result.items.some(a => a.assetKey === previous.assetKey) ? previous : result.items.find(a => a.stats.totalFeedbacks > 0) ?? result.items[0]);
       setAccount(auth.user?.displayName); setAssets(previous => next ? [...previous, ...result.items] : result.items); setCursor(result.nextCursor);
     } catch (e) { setError(String(e)); } finally { setLoading(false); }
   }
@@ -49,20 +53,19 @@ function App() {
     catch (e) { setUpdateMessage(String(e)); setUpdating(false); }
   }
   return <div className="workbench" data-trace-region="operation-workbench">
-    <aside><a href="/operation-workbench/" className="brand">Operation Workbench</a><nav><button aria-current="page" onClick={()=>{setSelected(undefined);void load();}}>Skill Feedbacks</button></nav><a href="/">返回 Colab</a>
-      <footer><small>{__WORKBENCH_VERSION__}</small><button data-trace-target="workbench.check-update workbench.update" disabled={updating} onClick={() => void (hasUpdate ? update() : check())}>{updating ? "处理中…" : hasUpdate ? "更新 Workbench" : "检查更新"}</button>{updateMessage && <p role="status">{updateMessage}</p>}</footer>
+    <aside className="workbench-nav"><a href="/operation-workbench/" className="brand">Operation Workbench</a><Button variant="secondary" aria-current="page" onClick={()=>void load()}>Skill Feedbacks</Button>
+      <footer><small>{__WORKBENCH_VERSION__}</small><Button variant="outline" size="sm" data-trace-target="workbench.check-update workbench.update" disabled={updating} onClick={() => void (hasUpdate ? update() : check())}>{updating ? "处理中…" : hasUpdate ? "更新 Workbench" : "检查更新"}</Button>{updateMessage && <p role="status">{updateMessage}</p>}</footer>
     </aside>
-    <main><header><div><h1>Skill Feedbacks</h1><p>查看和分析你有权访问的 Skill 使用反馈</p></div><span>{account}</span></header>
-      {error ? <section role="alert">{error}<button onClick={() => void load()}>重试</button></section> : <>
-        <section className="asset-grid" data-trace-target="workbench.assets workbench.account">{assets.map(a => <button key={a.assetKey} className={selected?.assetKey === a.assetKey ? "asset selected" : "asset"} onClick={() => setSelected(a)}>
-          <strong>{a.assetKey === "builtin:agent-colab" ? "Agent Colab（官方）" : a.name}</strong>
-          <span>{a.stats.totalFeedbacks} 条反馈 · {a.stats.statusCounts.unresolved} 条未解决</span>
-          <span>点赞 {a.stats.ratingCounts.positive} · 点踩 {a.stats.ratingCounts.negative} · 未评价 {a.stats.ratingCounts.unrated}</span>
-        </button>)}</section>
-        {!loading && assets.length === 0 && <p>当前账户暂无可查看的 Skill 反馈资产。官方 Skill 需要管理员明确授予查看权限。</p>}
-        {cursor && <button disabled={loading} onClick={() => void load(cursor)}>加载更多 Skill</button>}
-        {selected && <section className="detail"><h2>{selected.assetKey === "builtin:agent-colab" ? "Agent Colab（官方）" : selected.name}</h2><SkillFeedback key={selected.assetKey} assetKey={selected.assetKey} /></section>}
-      </>}{loading && <p role="status">正在读取…</p>}
+    <main><header className="workbench-header"><div><h1>Skill Feedbacks</h1><p>Skill 使用反馈</p></div><span>{account}</span></header>
+      {error ? <section role="alert">{error}<Button variant="outline" onClick={() => void load()}>重试</Button></section> : <div className="feedback-workspace">
+        <section className="skill-list" aria-label="Skills" data-trace-target="workbench.assets workbench.account">
+          <h2>Skills</h2>{assets.map(a => <Button variant={selected?.assetKey === a.assetKey ? "secondary" : "ghost"} key={a.assetKey} className="skill-row" onClick={() => setSelected(a)}>
+            <span className="truncate">{a.assetKey === "builtin:agent-colab" ? "Agent Colab（官方）" : a.name}</span><Badge variant="outline">{a.stats.totalFeedbacks}</Badge>
+          </Button>)}
+          {cursor && <Button variant="ghost" disabled={loading} onClick={() => void load(cursor)}>加载更多 Skill</Button>}
+        </section>
+        <section className="feedback-list-pane">{selected ? <><div className="feedback-heading"><h2>{selected.assetKey === "builtin:agent-colab" ? "Agent Colab（官方）" : selected.name}</h2><p>{selected.stats.totalFeedbacks} 条反馈 · {selected.stats.statusCounts.unresolved} 条未解决 · 点赞 {selected.stats.ratingCounts.positive} · 点踩 {selected.stats.ratingCounts.negative}</p><div className="mt-3"><FeedbackAccess assetKey={selected.assetKey}/></div></div><SkillFeedback key={selected.assetKey} assetKey={selected.assetKey} inline /></> : !loading && <p>当前账户暂无可查看的 Skill 反馈资产。官方 Skill 需要明确授权。</p>}</section>
+      </div>}{loading && <p role="status">正在读取…</p>}
     </main>
   </div>;
 }

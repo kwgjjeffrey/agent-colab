@@ -563,3 +563,6 @@ mod tests {
         fs::remove_dir_all(root).unwrap();
     }
 }
+
+pub(super) async fn list_access(State(s):State<AppState>,Json(b):Json<Value>)->Result<Json<Value>,LocalError>{colab_observability::registered_business(include_str!("../../../tracing/registry.json"),"core.feedback.list-feedback-access",async {proxy(&s,"/v1/feedbacks/list-feedback-access",&b).await}).await}
+pub(super) async fn update_access(State(s):State<AppState>,Json(b):Json<Value>)->Result<Json<Value>,LocalError>{colab_observability::registered_business(include_str!("../../../tracing/registry.json"),"core.feedback.update-feedback-access",async {proxy(&s,"/v1/feedbacks/update-feedback-access",&b).await}).await}
