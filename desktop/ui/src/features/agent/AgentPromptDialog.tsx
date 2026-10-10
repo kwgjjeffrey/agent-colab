@@ -1,3 +1,4 @@
+import { artifactConfig } from "@/artifact-config";
 import { AgentButton } from "@/features/agent/AgentButton";
 import { traceTargets } from "@/api/trace-locators";
 import { runOperation } from "@/api/operation-runner";
@@ -38,10 +39,14 @@ export const agentSkillRoots: Record<AgentTarget, string> = {
   myflicker: "~/.myflicker",
 };
 
+export function agentSkillDirectory(agent: AgentTarget) {
+  return `${agentSkillRoots[agent]}/skills/${artifactConfig.skill.name}`;
+}
+
 /** Windows shells do not execute extensionless Python shebang files directly. */
 export function agentSkillCommand(agent: AgentTarget, command: string) {
   const isWindows = navigator.userAgent.toLowerCase().includes("windows");
-  return `${agentSkillRoots[agent]}/skills/agent-colab/bin/${command}${isWindows ? ".cmd" : ""}`;
+  return `${agentSkillRoots[agent]}/skills/${artifactConfig.skill.name}/bin/${command}${isWindows ? ".cmd" : ""}`;
 }
 
 type Props = {

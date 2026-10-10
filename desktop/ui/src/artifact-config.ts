@@ -1,4 +1,5 @@
 export type ArtifactConfig = {
+  skill: {name: string};
   auth: {kind: "google" | "external"; label: string};
   schemaVersion: number; deploymentMode: "public" | "enterprise";
   serverUrl: string; releaseManifestUrl: string; installMacUrl: string; installWindowsUrl: string;

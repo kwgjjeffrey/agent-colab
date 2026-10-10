@@ -1054,7 +1054,7 @@ const canvasJson=operation.json;
           description="Review the exact instruction, add a query if needed, then send or copy it."
           defaultAgent={defaultAgent}
           installedAgents={installedAgents}
-          promptFor={(agent) => (handoff?.prompt ?? "").replaceAll("~/.agents/skills/agent-colab/bin/colab-canvas", agentSkillCommand(agent, "colab-canvas"))}
+          promptFor={() => handoff?.prompt ?? ""}
           onSend={async (query) => {return runOperation("canvas.agent.send", async (operation)=>{
 const canvasJson=operation.json;
 

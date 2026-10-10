@@ -121,6 +121,7 @@ if $build_ui; then
   mkdir -p "$dist/desktop-ui/$ui_version"
   cp -R "$build_work/ui/." "$dist/desktop-ui/$ui_version/"
   cp -R "$repo_root/desktop/ui/tracing" "$dist/desktop-ui/$ui_version/"
+  cp "$COLAB_ARTIFACT_CONFIG" "$dist/desktop-ui/$ui_version/artifact-config.json"
   printf '{"package":"colab-desktop-ui","version":"%s","hostProtocol":1,"localApi":">=0.1.0 <0.2.0"}\n' "$ui_version" > "$dist/desktop-ui/$ui_version/ui.json"
   rm -f "$dist/desktop-ui/$ui_version.zip"
   (cd "$dist/desktop-ui/$ui_version" && /usr/bin/zip -qr "$dist/desktop-ui/$ui_version.zip" .)
