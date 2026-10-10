@@ -1527,3 +1527,11 @@ The previous desktop turn automatically triggered both installed Stop hooks with
 ### Native Workbench focus acceptance
 
 Workbench opening now uses a fixed, main-renderer-only Electron IPC with one owned BrowserWindow. Opening/reusing shows and focuses it; minimized windows restore; close releases only the Workbench so reopening creates a fresh window. Browser and older Shell fallback remain supported. Three Shell lifecycle/bootstrap tests and GUI TypeScript checks passed. Enterprise GUI and Shell independently published and installed; every installed GUI file matched the signed archive. Native Settings clicks verified initial foreground, minimized restore, close/reopen and retained main workspace without Window-menu assistance. Actual feedback comments remain visible. Company versions/evidence are ignored under integration/.
+
+### 2026-10-10 — Markdown and source file previews
+
+Shared Markdown now renders with react-markdown/remark-gfm and a Preview/Source switch. Source files use lazily loaded Shiki token rendering with line numbers and horizontal scrolling; React text tokens preserve escaping and no raw file HTML is executed. Expanded common language extensions; text larger than 200,000 characters stays readable without expensive highlighting. Existing local DOCX/XLSX, native PDF and image renderers retained. No ONLYOFFICE/document service, no PPT/PPTX/legacy Office compatibility claim.
+
+Two focused rendering tests and TypeScript/build passed. Trace Run/Round 20261010T113944Z-f6d9b315 passed actual published fixtures for Markdown heading/table/source switching, source highlighting/line count, text content, decoded image and honest unsupported/corrupt workbook failures. Screenshots reviewed and owned share withdrawn. Enterprise actual Octo Markdown report edb2d953-f77f-4b62-a721-3b6dff5d3052 passed installed heading/table/source browser checks without modifying its contents.
+
+Published/installed public promotion 0.1.245-dev with GUI 0.1.181-dev and enterprise promotion 0.1.26-ks.1 with GUI 0.1.18-ks.1. Canonical public curl readback, enterprise candidate readback, installed component/actor checks and public-isolation check passed. All other components retained from current stable; no Shell/Core/Skill/Server release for this preview change.
