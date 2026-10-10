@@ -134,6 +134,7 @@ export function workTranscript(events: RecordValue[]): WorkEntry[] {
           ),
         output:
           text(item.aggregatedOutput) ||
+          text(record(item.result).text) ||
           printable(item.result ?? item.output ?? item.error),
       },
     ];

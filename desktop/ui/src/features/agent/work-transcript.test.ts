@@ -78,3 +78,8 @@ describe("task conversation projection", () => {
     ).toEqual(["Failed"]);
   });
 });
+
+it("shows bounded Session output text without its truncation envelope",()=>{
+ const [tool]=workTranscript([event("item/completed",{item:{id:"session-call",type:"mcpToolCall",tool:"exec",result:{text:"actual output",truncated:true,originalChars:5000}}})]);
+ expect(tool.output).toBe("actual output");
+});

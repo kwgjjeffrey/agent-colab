@@ -24,7 +24,7 @@ export const META = {
     "read:client.primary",
     "write:channel.shared"
   ],
-  "statusReason": "Reviewed Run 20261009T012334Z-0239217b Round 2: real long snapshot, collapsed typed tools, tail/manual scroll/older anchor, sidebar resize and exact Server latest/before/after results pass; owned share withdrawn in finally."
+  "statusReason": "Reviewed Run 20261010T085222Z-4925ff73 Round 4 (20261010T090156Z-69a21227): installed GUI 0.1.179-dev/Core 0.1.124-dev; collapsed shared execution cards, exact input/output, bounded tail, manual scroll, older anchor, resize and message cursor assertions pass; owned share withdrawn in finally."
 };
 export const REQUIREMENTS={channel:{permission:'read'},parameters:{keys:['disposable']}};
 import fs from 'node:fs/promises';
