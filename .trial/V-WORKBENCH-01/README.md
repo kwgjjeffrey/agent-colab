@@ -11,3 +11,12 @@ Installed components during final validation: Core 0.1.120-dev, GUI 0.1.173-dev,
 Security acceptance: no-auth feedback API returned 401, invalid Host on Workbench returned 400. Existing Server feedback owner/reviewer checks remain in effect. Feedback capture remains disabled; this task uploaded no real user conversation.
 
 Checks: feedback component tests 3, installer tests 3, publisher tests 4; both frontend TypeScript checks, cargo check, Core security test and trace registry check (172 operations) passed. Final independent frontend build repeated TypeScript/build validation. Private execution logs remain ignored.
+
+
+## Separate-window feedback lists and access management (2026-10-10)
+
+Published promotion 0.1.238-dev: GUI 0.1.177-dev, Workbench 0.1.4-dev, Core 0.1.123-dev. Server 0.1.19 deployed and readiness passed. Existing Shell 0.1.23-dev supports a separate native window; no Shell release required. The desktop Settings click opens Workbench without navigating the Colab window. Closing Workbench returned to the same selected Canvas and open Settings; reopening showed the directly visible evaluation list. Shadcn Button/Badge/Separator/Field/Dialog primitives replace the card grid and nested feedback entry.
+
+Permissions are asset-scoped Server grants, not a frontend account allow-list. The official asset currently has one account, Zhiyuan Yu, with manager/reviewer roles. Its live access dialog was opened and left visible with the registered-account-email grant form. Shared Skill owners manage their own reviewer grants. Reviewers cannot delegate; revoke immediately removes review authorization. Server records mutation audit events. Migration 47 seeds builtin managers from existing operator grants once; environment bootstrap cannot overwrite GUI-managed grants on restart.
+
+Verified four feedback UI tests (including direct inline item rendering), isolated PostgreSQL grant/revoke/reviewer-denial/nonexistent-account tests, frontend TypeScript/build checks, Server/Core cargo check and 176-operation registry check. Installed access list matched the actual single-account grant; unauthenticated mutation returned 401. No additional real account was granted access during acceptance. Raw conversation evidence remained the previous synthetic fixture.
