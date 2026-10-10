@@ -39,6 +39,9 @@ PYPATH
   export COLAB_ARTIFACT_CONFIG="${COLAB_ARTIFACT_CONFIG:-$(dirname "$COLAB_COMPONENT_VERSIONS_DIR")/config.json}"
   deployment_mode=enterprise
   core_version=$(tr -d '[:space:]' < "$COLAB_COMPONENT_VERSIONS_DIR/local-core")
+  if [[ -f "$COLAB_COMPONENT_VERSIONS_DIR/operation-workbench" ]]; then
+    workbench_version=$(tr -d '[:space:]' < "$COLAB_COMPONENT_VERSIONS_DIR/operation-workbench")
+  fi
   ui_version=$(tr -d '[:space:]' < "$COLAB_COMPONENT_VERSIONS_DIR/desktop-ui")
   skill_version=$(tr -d '[:space:]' < "$COLAB_COMPONENT_VERSIONS_DIR/colab-skill")
   shell_version=$(tr -d '[:space:]' < "$COLAB_COMPONENT_VERSIONS_DIR/electron-shell")
