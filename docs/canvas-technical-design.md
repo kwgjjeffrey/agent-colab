@@ -19,7 +19,7 @@ Rust/Yrs 继续持有持久副本及 outbox。独立 Node helper/runtime 随 Cor
 
 Markdown patch 只重新解析实际变更覆盖的根节点；其他节点（包括空段落、属性）保留。
 修改区域先验证基线能否往返；无法无损表达则报 `projection_not_representable`，不落库。
-Mention 投影使用带完整身份属性的 `colab-mention:` 链接；改动胶囊身份、删除胶囊或
+Mention 投影使用紧凑稳定身份的 `colab:<kind>:<id>` 链接；改动胶囊身份、删除胶囊或
 修改 `colab-component` 围栏内容须走专用结构接口，本次文本 patch 明确拒绝。
 段尾硬换行采用显式 `<br>` 投影，parser 只接受该 break token，不启用任意 HTML。
 原文真实数据中的段尾空格+硬换行已通过往返及追加验证。

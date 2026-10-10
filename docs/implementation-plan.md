@@ -1412,3 +1412,24 @@ Operation Workbench implementation 2026-10-10: independent frontend, Settings en
 
 ### Canvas local text and verified reference editing (2026-10-10)
 Reproduced the real planning document's lossy-list guard failure. Inline text edits now use ProseMirror transforms with exact projection-context checks and preserve surrounding tree/marks/trailing spaces. Added replace-with-canvas through Skill→Core: validate both Canvas IDs in the same authorized Channel, check read revision, and insert the target's authoritative title/identity. Text patches still refuse capsule identity and structured-component edits. Fixed another ACK cursor advance in the patch path. Codec and installed release acceptance pending.
+
+
+Compact mention release acceptance: Core 0.1.117-dev and GUI 0.1.172-dev
+are published and installed. Canonical R2 readback verified complete immutable
+archives: Core SHA-256 `e35a378f5f326486e875af233b5af228a4d56fbf610002a2249fc13c6af644ac`
+(46,012,597 bytes), final GUI `44d4da1734c2f985463e06c206d5e998db9986a9753b9c43832985f10ff807d4`
+(1,335,596 bytes). Installed Core 4 files and GUI 39 files matched the clean builds;
+discovery PID 84768 executed versions/local-core/0.1.117-dev/colabd and live
+GUI /ui.json reported 0.1.172-dev.
+
+All supported mention types were audited: member/user, Agent and files/session/
+canvas/message resources. The shared codec emits compact references for each;
+GUI context assembly accepts each resource kind and retains deduplicated reading
+instructions, with legacy compatibility. Messages/forwarding and Server prompt
+projections already avoid encoded editor capsules. Focused context/composer checks
+passed 7 tests. Real end-to-end Round 20261010T071210Z-bea6d63c passed 21 assertions: GUI
+insertion, Agent CLI compact read, adjacent Agent patch, original identity/label,
+Files resource projection and handoff reading instruction, reload and durable
+owned cleanup. Screenshot reviewed. Original proxy-port/script-selector failures
+and default-timeout round remain recorded; this expanded case uses 120000 ms
+execution allowance, not a performance budget.

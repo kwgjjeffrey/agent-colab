@@ -54,7 +54,7 @@ Local Core GET/PATCH /v1/auth/profile provides the current account profile and d
 Channel invitation: `colab-install --with-app --invitation TOKEN` prepares existing signed artifacts/service, then invokes packaged `bin/colab-join`. The join entry preserves an authenticated account, otherwise calls Local Core device start; ambiguous accounts fail with `account_selection_required` before joining. It accepts through Local Core and returns only `joined` and Channel identity. `colab-open --channel ID` uses a bootstrap-preserved fragment to locate Channel Home. Invitation capabilities must not appear in ordinary receipts or regression evidence.
 
 Canvas 投影实现（2026-10-04）：文本接口仍为 `read` / `apply-patch`，不暴露 CRDT
-blocks。读取到的 `[@label](colab-mention:...)` 是胶囊身份的无损 Markdown 表达，
+blocks。读取到的 `[@label](colab:<kind>:<id>)` 是胶囊目标身份的紧凑 Markdown 表达，
 作为上下文时原样保留。每次提交一个 hunk；歧义上下文或无法往返的修改区域明确拒绝。
 底层框架、保护边界和实现索引见 [Canvas 技术设计](canvas-technical-design.md#2026-10-04转换实现替换)。
 

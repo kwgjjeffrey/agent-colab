@@ -1,6 +1,6 @@
 export const USECASE={name:'Read and edit compact Canvas mention references',description:'Insert a genuine GUI Agent mention, read its compact stable reference through Core, patch adjacent text and reload. Verify the original editor occurrence survives and remove the owned Canvas.'};
-export const META={id:'canvas.editing.compact-mentions',module:'canvas/editing',surface:'gui',priority:'critical',origin:'requirement',status:'trial',effects:'isolated-write',cost:'normal',requires:['local-core'],suite:'business',testLevel:'end-to-end',locks:['read:client.primary','read:channel.shared','write:canvas.collection'],affectedPaths:['local/canvas-codec/codec.mjs','desktop/ui/src/features/agent/AgentWorkDrawer.tsx']};
-export const REQUIREMENTS={channel:{permission:'read'},agent:{connected:true},parameters:{keys:['disposable']}};
+export const META={id:'canvas.editing.compact-mentions',module:'canvas/editing',surface:'gui',priority:'critical',origin:'requirement',status:'active',statusReason:'Reviewed Round 20261010T071210Z-bea6d63c: 21 passing assertions, actual GUI/Agent CLI read and patch, Files handoff reader, reload screenshot and owned cleanup',effects:'isolated-write',cost:'normal',requires:['local-core'],suite:'business',testLevel:'end-to-end',locks:['read:client.primary','read:channel.shared','write:canvas.collection'],affectedPaths:['local/canvas-codec/codec.mjs','desktop/ui/src/features/agent/AgentWorkDrawer.tsx']};
+export const REQUIREMENTS={channel:{permission:'read'},agent:{connected:true},parameters:{keys:['disposable','filesName','filesRef']}};
 import {createDocument,deleteDocument} from '../../../support/canvas.mjs';
 import {core,eventually,resource,cli,data} from '../../../support/client.mjs';
 export async function run(ctx){const doc=await createDocument(ctx),agent=resource(ctx,'agent');try{
@@ -12,6 +12,9 @@ export async function run(ctx){const doc=await createDocument(ctx),agent=resourc
  await core(ctx,'POST','/v1/canvases/'+doc.id+'/apply-patch',{patch:'*** Begin Patch\n*** Update File: document.md\n@@\n-'+before.content.trim()+'\n+'+before.content.trim().replace(' after',' updated')+'\n*** End Patch'});
  await eventually(ctx,'Agent patch reaches GUI',()=>editor.innerText(),v=>v.includes('updated'));
  ctx.assert('Original mention target survives patch',await capsule.getAttribute('data-mention-id'),agent.id);ctx.assert('Original mention label survives patch',await capsule.innerText(),label);
+ await editor.press('End');await editor.pressSequentially(' @'+ctx.parameters.filesName.split(' ')[1]);await ctx.page.locator('div.fixed.z-50').getByRole('button').filter({has:ctx.page.getByText(ctx.parameters.filesName,{exact:true})}).click();
+ const fileId=ctx.parameters.filesRef.split('/').at(-1);await eventually(ctx,'File mention uses compact resource reference',()=>core(ctx,'GET','/v1/canvases/'+doc.id+'/document'),v=>v.content.includes('colab:files:'+fileId));
+ await ctx.page.getByRole('button',{name:'Give to Agent',exact:true}).click();const dialog=ctx.page.getByRole('dialog');await dialog.locator('pre').waitFor();ctx.assert('Handoff retains referenced resource reader',await dialog.locator('pre').innerText().then(v=>v.includes('colab-browser use')&&v.includes(fileId)),true);await dialog.getByRole('button',{name:'Close',exact:true}).click();
  await ctx.page.reload();
  await ctx.page.locator('[data-item-id="'+doc.id+'"][data-item-kind="canvas"]').click();await capsule.waitFor();ctx.assert('Reload preserves stable target',await capsule.getAttribute('data-mention-id'),agent.id);await ctx.screenshot('Compact mention after Agent edit');
  }finally{await deleteDocument(ctx,doc);}}
