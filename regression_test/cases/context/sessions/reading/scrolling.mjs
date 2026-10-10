@@ -24,7 +24,7 @@ export const META = {
     "read:client.primary",
     "write:channel.shared"
   ],
-  "statusReason": "Reviewed Run 20261010T085222Z-4925ff73 Round 4 (20261010T090156Z-69a21227): installed GUI 0.1.179-dev/Core 0.1.124-dev; collapsed shared execution cards, exact input/output, bounded tail, manual scroll, older anchor, resize and message cursor assertions pass; owned share withdrawn in finally."
+  "statusReason": "Reviewed Run/Round 20261010T093755Z-d6df0db2: installed GUI 0.1.180-dev; adjacent tools grouped and counted, nested exact input/output, tail/manual scroll/older anchor, resize and message cursors pass; screenshot reviewed and disposable share withdrawn."
 };
 export const REQUIREMENTS={channel:{permission:'read'},parameters:{keys:['disposable']}};
 import fs from 'node:fs/promises';
@@ -38,6 +38,8 @@ export async function run(ctx){
     rows.push({type:'response_item',payload:{type:'message',role:'user',content:[{type:'input_text',text:`QUESTION_${i}_${ctx.runId}`}]}},
       {type:'response_item',payload:{type:'function_call',name:'shell',call_id:`call-${i}`,arguments:JSON.stringify({command:'echo Tool fixture'})}},
       {type:'response_item',payload:{type:'message',role:'user',content:[{type:'tool_result',tool_use_id:`call-${i}`,content:'Not user prose'}]}},
+      {type:'response_item',payload:{type:'function_call',name:'shell',call_id:`second-${i}`,arguments:JSON.stringify({command:'echo Second tool'})}},
+      {type:'response_item',payload:{type:'message',role:'user',content:[{type:'tool_result',tool_use_id:`second-${i}`,content:'Second tool output'}]}},
       {type:'response_item',payload:{type:'message',role:'assistant',content:[{type:'output_text',text:`ANSWER_${i}_${ctx.runId}\n\n`+'A paragraph of representative conversation content.\n\n'.repeat(35)}]}});
   }
   await fs.writeFile(source,rows.map(JSON.stringify).join('\n')+'\n');
@@ -55,10 +57,12 @@ export async function run(ctx){
     await ctx.page.waitForTimeout(500);
     ctx.assert('Initial Session position is the conversation tail',await scroll.evaluate(el=>el.scrollHeight-el.scrollTop-el.clientHeight<5),true);
     ctx.assert('Tool calls are collapsed',await preview.locator('[data-slot="collapsible-trigger"][aria-expanded="false"]').count(),5);
-    const tool=preview.locator('[data-slot="collapsible-trigger"]').first();await tool.click();
+    const batch=preview.getByRole('button',{name:'2 tool calls'}).first();await batch.click();
+    ctx.assert('Consecutive tool batch contains both executions',await preview.locator('[data-tool-group]').first().locator('[data-slot="collapsible-trigger"]').count(),3);
+    const tool=preview.locator('[data-tool-group]').first().getByRole('button',{name:/Run command|shell/}).first();await tool.click();
     await preview.getByText('Not user prose',{exact:true}).waitFor();
     ctx.assert('Shared tool card exposes bounded output on expansion',await preview.getByText('Output',{exact:true}).count(),1);
-    await ctx.screenshot('Session shared tool input and output card');await tool.click();
+    await tool.scrollIntoViewIfNeeded();await ctx.screenshot('Session shared tool input and output card');await tool.click();await batch.click();
     await scroll.evaluate(el=>{el.scrollTop=el.scrollHeight;});
     await scroll.hover();await ctx.page.mouse.wheel(0,-650);await ctx.page.waitForTimeout(300);
     const before=await scroll.evaluate(el=>el.scrollTop);
