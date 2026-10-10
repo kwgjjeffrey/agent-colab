@@ -50,7 +50,7 @@ function App() {
     catch (e) { setUpdateMessage(String(e)); setUpdating(false); }
   }
   return <div className="workbench" data-trace-region="operation-workbench">
-    <aside><a href="/operation-workbench/" className="brand">Operation Workbench</a><nav><button aria-current="page">Skill Feedbacks</button></nav><a href="/">返回 Colab</a>
+    <aside><a href="/operation-workbench/" className="brand">Operation Workbench</a><nav><button aria-current="page" onClick={()=>{setSelected(undefined);void load();}}>Skill Feedbacks</button></nav><a href="/">返回 Colab</a>
       <footer><small>{__WORKBENCH_VERSION__}</small><button data-trace-target="workbench.check-update workbench.update" disabled={updating} onClick={() => void (hasUpdate ? update() : check())}>{updating ? "处理中…" : hasUpdate ? "更新 Workbench" : "检查更新"}</button>{updateMessage && <p role="status">{updateMessage}</p>}</footer>
     </aside>
     <main><header><div><h1>Skill Feedbacks</h1><p>查看和分析你有权访问的 Skill 使用反馈</p></div><span>{account}</span></header>
