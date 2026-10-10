@@ -508,3 +508,10 @@ links remain readable and retained legacy patch excerpts normalize to the new
 projection. No CRDT migration is required; existing documents render compactly
 on their next read. Repeated references require contextual patch text, as other
 ambiguous text does.
+
+
+## Operation Workbench
+
+Settings opens an independently packaged Operation Workbench frontend. Skill Feedbacks is the first module: authorized official/shared Skill assets, asset counts, complete Markdown/YAML evaluation and existing Session Reader. No new GUI filters. Server authenticates each request and requires asset ownership or an explicit reviewer grant; Channel membership is insufficient.
+
+The operation-workbench artifact owns desktop/operation-workbench, VERSION, ZIP and a signed manifest entry. Core hosts its active resources at /operation-workbench/ with the same loopback session; GUI calls only Core, which calls Server. Python setup owns verified download and atomic activation, including Workbench-only updates preserving other artifact versions and the resident Core. The Workbench exposes version/check/update; Settings can install the added artifact when opening from a legacy installation.

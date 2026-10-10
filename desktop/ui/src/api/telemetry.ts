@@ -32,7 +32,7 @@ async function calibrate() {
   }
   if (best) { offsetMs=best.offsetMs; clockQuality=best.quality; uncertaintyMs=best.uncertaintyMs; calibratedAt=performance.now(); }
 }
-export async function initializeTelemetry() {
+export async function initializeTelemetry(options: { serviceName?: string; version?: string } = {}) {
   if (provider) return;
   let release: ((enabled:boolean)=>void) | undefined;
   try {
@@ -44,7 +44,7 @@ export async function initializeTelemetry() {
       export:(spans,callback)=>{void ready.then(enabled=>{if(enabled)exporter.export(spans,callback);else callback({code:0});});},
       shutdown:()=>exporter.shutdown(), forceFlush:()=>exporter.forceFlush(),
     };
-    provider=new WebTracerProvider({resource:resourceFromAttributes({"service.name":"colab-desktop-ui","service.version":metadata.version}),spanProcessors:[new BatchSpanProcessor(gated,{maxQueueSize:512,maxExportBatchSize:4,scheduledDelayMillis:1000})]});
+    provider=new WebTracerProvider({resource:resourceFromAttributes({"service.name":options.serviceName ?? "colab-desktop-ui","service.version":options.version ?? metadata.version}),spanProcessors:[new BatchSpanProcessor(gated,{maxQueueSize:512,maxExportBatchSize:4,scheduledDelayMillis:1000})]});
     provider.register();
     const r=await fetch("/v1/observability/config",{signal:AbortSignal.timeout(2000)});
     if (!r.ok || !(await r.json()).enabled) {release?.(false);return;}

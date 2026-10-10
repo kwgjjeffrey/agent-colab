@@ -7,3 +7,4 @@ registries:
   - ../skills/colab/tracing/registry.json
   - ../local/tracing/registry.json
   - ../server/standalone/tracing/registry.json
+  - ../desktop/operation-workbench/tracing/registry.json

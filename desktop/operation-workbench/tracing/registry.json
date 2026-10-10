@@ -1,0 +1,169 @@
+{
+  "schemaVersion": 1,
+  "unit": "operation-workbench",
+  "operations": [
+    {
+      "id": "workbench.sessions.preview",
+      "description": "Open a selected Session and render five recent turns; execution details remain collapsed",
+      "owner": "operation-workbench",
+      "status": "candidate",
+      "entry": {
+        "kind": "gui",
+        "page": "operation-workbench",
+        "target": "sessions.preview",
+        "selector": "[data-trace-target~=\"sessions.preview\"]",
+        "locator": {
+          "region": "session-preview",
+          "steps": [],
+          "kind": "region",
+          "unavailable": "Select a Session in the Channel directory"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/ui/src/features/sessions/SessionPreview.tsx",
+        "function": "read",
+        "object": "SessionPreview"
+      }
+    },
+    {
+      "id": "workbench.feedback.list",
+      "description": "\u67e5\u770b\u8d44\u4ea7\u7684\u6d88\u8d39\u65b9\u53cd\u9988\u8bc4\u8bba",
+      "owner": "operation-workbench",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "operation-workbench",
+        "target": "feedback.list",
+        "selector": "[data-trace-target~=\"feedback.list\"]",
+        "locator": {
+          "region": "skill-preview",
+          "steps": [],
+          "kind": "action"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/ui/src/features/feedback/SkillFeedback.tsx",
+        "function": "load",
+        "object": "SkillFeedback"
+      }
+    },
+    {
+      "id": "workbench.assets",
+      "description": "workbench.assets",
+      "owner": "operation-workbench",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "operation-workbench",
+        "target": "workbench.assets",
+        "selector": "[data-trace-target~=\"workbench.assets\"]",
+        "locator": {
+          "region": "operation-workbench",
+          "steps": [],
+          "kind": "action"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/operation-workbench/src/main.tsx",
+        "function": "load",
+        "object": "App"
+      }
+    },
+    {
+      "id": "workbench.account",
+      "description": "workbench.account",
+      "owner": "operation-workbench",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "operation-workbench",
+        "target": "workbench.account",
+        "selector": "[data-trace-target~=\"workbench.account\"]",
+        "locator": {
+          "region": "operation-workbench",
+          "steps": [],
+          "kind": "action"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/operation-workbench/src/main.tsx",
+        "function": "load",
+        "object": "App"
+      }
+    },
+    {
+      "id": "workbench.check-update",
+      "description": "workbench.check-update",
+      "owner": "operation-workbench",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "operation-workbench",
+        "target": "workbench.check-update",
+        "selector": "[data-trace-target~=\"workbench.check-update\"]",
+        "locator": {
+          "region": "operation-workbench",
+          "steps": [],
+          "kind": "action"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/operation-workbench/src/main.tsx",
+        "function": "check",
+        "object": "App"
+      }
+    },
+    {
+      "id": "workbench.update",
+      "description": "workbench.update",
+      "owner": "operation-workbench",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "operation-workbench",
+        "target": "workbench.update",
+        "selector": "[data-trace-target~=\"workbench.update\"]",
+        "locator": {
+          "region": "operation-workbench",
+          "steps": [],
+          "kind": "action"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/operation-workbench/src/main.tsx",
+        "function": "update",
+        "object": "App"
+      }
+    }
+  ]
+}

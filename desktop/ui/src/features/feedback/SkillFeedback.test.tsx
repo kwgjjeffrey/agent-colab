@@ -30,4 +30,14 @@ describe('Skill feedback preview',()=>{
     await waitFor(()=>expect(screen.getByRole('alert').textContent).toContain('forbidden'));
     expect(screen.queryByRole('button',{name:'查看反馈（0）'})).toBeNull();
   });
+  it('uses an authorized builtin asset directly without inventing a Channel share',async()=>{
+    fetcher.mockResolvedValueOnce(new Response(JSON.stringify({totalMatching:1})))
+      .mockResolvedValueOnce(new Response(JSON.stringify({totalMatching:1,items:[]})));
+    render(<SkillFeedback assetKey="builtin:agent-colab"/>);
+    fireEvent.click(await screen.findByRole('button',{name:/1/}));
+    await waitFor(()=>expect(fetcher).toHaveBeenCalledTimes(2));
+    expect(fetcher.mock.calls.every(call=>!String(call[0]).includes('/shares/'))).toBe(true);
+    expect(JSON.parse(fetcher.mock.calls[1][1].body).assetKey).toBe('builtin:agent-colab');
+  });
+
 });

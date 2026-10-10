@@ -14,6 +14,7 @@ source_revision=$(python3 "$repo_root/packaging/source-revision.py")
 export COLAB_CODE_REVISION="$source_revision"
 export VITE_COLAB_CODE_REVISION="$source_revision"
 core_version=$(tr -d '[:space:]' < "$repo_root/local/VERSION")
+workbench_version=$(tr -d '[:space:]' < "$repo_root/desktop/operation-workbench/VERSION")
 ui_version=$(tr -d '[:space:]' < "$repo_root/desktop/ui/VERSION")
 skill_version=$(tr -d '[:space:]' < "$repo_root/skills/colab/VERSION")
 shell_version=$(tr -d '[:space:]' < "$repo_root/desktop/shell/VERSION")
@@ -56,6 +57,7 @@ build_core=false
 build_ui=false
 build_skill=false
 build_shell=false
+build_workbench=false
 if [[ $# -eq 0 ]]; then
   build_core=true
   build_ui=true
@@ -67,6 +69,7 @@ else
         case "${2:-}" in
           local-core) build_core=true ;;
           desktop-ui) build_ui=true ;;
+          operation-workbench) build_workbench=true ;;
           colab-skill) build_skill=true ;;
           electron-shell) build_shell=true ;;
           *) echo "unknown component: ${2:-}" >&2; exit 2 ;;
@@ -83,7 +86,7 @@ else
 fi
 
 # Never rebuild an existing independent version in place.
-for entry in "local-core:$build_core:$core_version" "desktop-ui:$build_ui:$ui_version" "colab-skill:$build_skill:$skill_version" "electron-shell:$build_shell:$shell_version"; do
+for entry in "local-core:$build_core:$core_version" "desktop-ui:$build_ui:$ui_version" "colab-skill:$build_skill:$skill_version" "electron-shell:$build_shell:$shell_version" "operation-workbench:$build_workbench:$workbench_version"; do
   IFS=: read -r component enabled version <<< "$entry"
   if [[ "$enabled" == true && -e "$dist/$component/$version" ]]; then
     echo "artifact version already exists: $component/$version; advance its owning version" >&2
@@ -127,6 +130,17 @@ if $build_ui; then
   (cd "$dist/desktop-ui/$ui_version" && /usr/bin/zip -qr "$dist/desktop-ui/$ui_version.zip" .)
 fi
 
+if $build_workbench; then
+  CI=true npx --yes pnpm@10.18.3 --dir "$repo_root/desktop" install --frozen-lockfile --ignore-scripts
+  npx --yes pnpm@10.18.3 --dir "$repo_root/desktop/operation-workbench" exec tsc --noEmit --incremental false
+  COLAB_WORKBENCH_VERSION="$workbench_version" npx --yes pnpm@10.18.3 --dir "$repo_root/desktop/operation-workbench" exec vite build --outDir "$build_work/workbench"
+  mkdir -p "$dist/operation-workbench/$workbench_version"
+  cp -R "$build_work/workbench/." "$dist/operation-workbench/$workbench_version/"
+  cp -R "$repo_root/desktop/operation-workbench/tracing" "$dist/operation-workbench/$workbench_version/"
+  printf '{"package":"colab-operation-workbench","version":"%s","localApi":">=0.1.0 <0.2.0"}\n' "$workbench_version" > "$dist/operation-workbench/$workbench_version/workbench.json"
+  (cd "$dist/operation-workbench/$workbench_version" && /usr/bin/zip -qr "$dist/operation-workbench/$workbench_version.zip" .)
+fi
+
 if $build_skill; then
   mkdir -p "$dist/colab-skill/$skill_version"
   cp "$COLAB_ARTIFACT_CONFIG" "$dist/colab-skill/$skill_version/artifact-config.json"
@@ -164,6 +178,7 @@ fi
 
 artifacts=()
 $build_core && artifacts+=("$dist/local-core/$core_version/$platform-$arch.tar.gz")
+$build_workbench && artifacts+=("$dist/operation-workbench/$workbench_version.zip")
 $build_ui && artifacts+=("$dist/desktop-ui/$ui_version.zip")
 $build_skill && artifacts+=("$dist/colab-skill/$skill_version.zip")
 if $build_shell; then

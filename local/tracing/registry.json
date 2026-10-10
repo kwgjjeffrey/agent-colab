@@ -120,6 +120,23 @@
         "path": "local/crates/local-api/src/feedback.rs",
         "function": "read"
       }
+    },
+    {
+      "id": "core.system.update-workbench",
+      "description": "Update independently activated Operation Workbench",
+      "owner": "local-core",
+      "status": "instrumented",
+      "entry": {
+        "kind": "internal"
+      },
+      "completion": {
+        "success": "return.ok",
+        "failure": "return.error"
+      },
+      "source": {
+        "path": "local/crates/local-api/src/system.rs",
+        "function": "update_workbench"
+      }
     }
   ],
   "spans": [
@@ -149,7 +166,7 @@
     },
     {
       "id": "core.auth.start-google",
-      "description": "core 层 auth 的 start_google 承接点",
+      "description": "core \u5c42 auth \u7684 start_google \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/auth.rs",
         "function": "start_google"
@@ -157,7 +174,7 @@
     },
     {
       "id": "core.auth.google-callback",
-      "description": "core 层 auth 的 google_callback 承接点",
+      "description": "core \u5c42 auth \u7684 google_callback \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/auth.rs",
         "function": "google_callback"
@@ -165,7 +182,7 @@
     },
     {
       "id": "core.auth.fail",
-      "description": "core 层 auth 的 fail 承接点",
+      "description": "core \u5c42 auth \u7684 fail \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/auth.rs",
         "function": "fail"
@@ -173,7 +190,7 @@
     },
     {
       "id": "core.auth.auth-status",
-      "description": "core 层 auth 的 auth_status 承接点",
+      "description": "core \u5c42 auth \u7684 auth_status \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/auth.rs",
         "function": "auth_status"
@@ -181,7 +198,7 @@
     },
     {
       "id": "core.auth.list-accounts",
-      "description": "core 层 auth 的 list_accounts 承接点",
+      "description": "core \u5c42 auth \u7684 list_accounts \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/auth.rs",
         "function": "list_accounts"
@@ -189,7 +206,7 @@
     },
     {
       "id": "core.auth.switch-account",
-      "description": "core 层 auth 的 switch_account 承接点",
+      "description": "core \u5c42 auth \u7684 switch_account \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/auth.rs",
         "function": "switch_account"
@@ -197,7 +214,7 @@
     },
     {
       "id": "core.auth.logout",
-      "description": "core 层 auth 的 logout 承接点",
+      "description": "core \u5c42 auth \u7684 logout \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/auth.rs",
         "function": "logout"
@@ -205,7 +222,7 @@
     },
     {
       "id": "core.auth.save-account",
-      "description": "core 层 auth 的 save_account 承接点",
+      "description": "core \u5c42 auth \u7684 save_account \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/auth.rs",
         "function": "save_account"
@@ -213,7 +230,7 @@
     },
     {
       "id": "core.canvas.list-canvases",
-      "description": "core 层 canvas 的 list_canvases 承接点",
+      "description": "core \u5c42 canvas \u7684 list_canvases \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/canvas.rs",
         "function": "list_canvases"
@@ -221,7 +238,7 @@
     },
     {
       "id": "core.canvas.create-canvas",
-      "description": "core 层 canvas 的 create_canvas 承接点",
+      "description": "core \u5c42 canvas \u7684 create_canvas \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/canvas.rs",
         "function": "create_canvas"
@@ -229,7 +246,7 @@
     },
     {
       "id": "core.canvas.rename-canvas",
-      "description": "core 层 canvas 的 rename_canvas 承接点",
+      "description": "core \u5c42 canvas \u7684 rename_canvas \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/canvas.rs",
         "function": "rename_canvas"
@@ -237,7 +254,7 @@
     },
     {
       "id": "core.canvas.archive-canvas",
-      "description": "core 层 canvas 的 archive_canvas 承接点",
+      "description": "core \u5c42 canvas \u7684 archive_canvas \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/canvas.rs",
         "function": "archive_canvas"
@@ -245,7 +262,7 @@
     },
     {
       "id": "core.canvas.move-canvas",
-      "description": "core 层 canvas 的 move_canvas 承接点",
+      "description": "core \u5c42 canvas \u7684 move_canvas \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/canvas.rs",
         "function": "move_canvas"
@@ -253,7 +270,7 @@
     },
     {
       "id": "core.canvas.send-to-agent",
-      "description": "core 层 canvas 的 send_to_agent 承接点",
+      "description": "core \u5c42 canvas \u7684 send_to_agent \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/canvas.rs",
         "function": "send_to_agent"
@@ -261,7 +278,7 @@
     },
     {
       "id": "core.canvas.agent-prompt",
-      "description": "core 层 canvas 的 agent_prompt 承接点",
+      "description": "core \u5c42 canvas \u7684 agent_prompt \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/canvas.rs",
         "function": "agent_prompt"
@@ -269,7 +286,7 @@
     },
     {
       "id": "core.canvas.list-folders",
-      "description": "core 层 canvas 的 list_folders 承接点",
+      "description": "core \u5c42 canvas \u7684 list_folders \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/canvas.rs",
         "function": "list_folders"
@@ -277,7 +294,7 @@
     },
     {
       "id": "core.canvas.create-folder",
-      "description": "core 层 canvas 的 create_folder 承接点",
+      "description": "core \u5c42 canvas \u7684 create_folder \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/canvas.rs",
         "function": "create_folder"
@@ -285,7 +302,7 @@
     },
     {
       "id": "core.canvas.rename-folder",
-      "description": "core 层 canvas 的 rename_folder 承接点",
+      "description": "core \u5c42 canvas \u7684 rename_folder \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/canvas.rs",
         "function": "rename_folder"
@@ -293,7 +310,7 @@
     },
     {
       "id": "core.canvas.updates",
-      "description": "core 层 canvas 的 updates 承接点",
+      "description": "core \u5c42 canvas \u7684 updates \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/canvas.rs",
         "function": "updates"
@@ -301,7 +318,7 @@
     },
     {
       "id": "core.canvas.submit-update",
-      "description": "core 层 canvas 的 submit_update 承接点",
+      "description": "core \u5c42 canvas \u7684 submit_update \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/canvas.rs",
         "function": "submit_update"
@@ -309,7 +326,7 @@
     },
     {
       "id": "core.canvas.read-document",
-      "description": "core 层 canvas 的 read_document 承接点",
+      "description": "core \u5c42 canvas \u7684 read_document \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/canvas.rs",
         "function": "read_document"
@@ -317,7 +334,7 @@
     },
     {
       "id": "core.canvas.apply-patch",
-      "description": "core 层 canvas 的 apply_patch 承接点",
+      "description": "core \u5c42 canvas \u7684 apply_patch \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/canvas.rs",
         "function": "apply_patch"
@@ -325,7 +342,7 @@
     },
     {
       "id": "core.canvas.remote-updates",
-      "description": "core 层 canvas 的 remote_updates 承接点",
+      "description": "core \u5c42 canvas \u7684 remote_updates \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/canvas.rs",
         "function": "remote_updates"
@@ -333,7 +350,7 @@
     },
     {
       "id": "core.canvas.sync-replica",
-      "description": "core 层 canvas 的 sync_replica 承接点",
+      "description": "core \u5c42 canvas \u7684 sync_replica \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/canvas.rs",
         "function": "sync_replica"
@@ -341,7 +358,7 @@
     },
     {
       "id": "core.canvas.merge-remote-update",
-      "description": "core 层 canvas 的 merge_remote_update 承接点",
+      "description": "core \u5c42 canvas \u7684 merge_remote_update \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/canvas.rs",
         "function": "merge_remote_update"
@@ -349,7 +366,7 @@
     },
     {
       "id": "core.canvas.apply-local-update",
-      "description": "core 层 canvas 的 apply_local_update 承接点",
+      "description": "core \u5c42 canvas \u7684 apply_local_update \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/canvas.rs",
         "function": "apply_local_update"
@@ -357,7 +374,7 @@
     },
     {
       "id": "core.canvas.load-replica",
-      "description": "core 层 canvas 的 load_replica 承接点",
+      "description": "core \u5c42 canvas \u7684 load_replica \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/canvas.rs",
         "function": "load_replica"
@@ -365,7 +382,7 @@
     },
     {
       "id": "core.canvas.save-replica-doc",
-      "description": "core 层 canvas 的 save_replica_doc 承接点",
+      "description": "core \u5c42 canvas \u7684 save_replica_doc \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/canvas.rs",
         "function": "save_replica_doc"
@@ -373,7 +390,7 @@
     },
     {
       "id": "core.canvas.persist-outbox",
-      "description": "core 层 canvas 的 persist_outbox 承接点",
+      "description": "core \u5c42 canvas \u7684 persist_outbox \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/canvas.rs",
         "function": "persist_outbox"
@@ -381,7 +398,7 @@
     },
     {
       "id": "core.canvas.send-outbox-item",
-      "description": "core 层 canvas 的 send_outbox_item 承接点",
+      "description": "core \u5c42 canvas \u7684 send_outbox_item \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/canvas.rs",
         "function": "send_outbox_item"
@@ -389,7 +406,7 @@
     },
     {
       "id": "core.canvas.flush-outbox",
-      "description": "core 层 canvas 的 flush_outbox 承接点",
+      "description": "core \u5c42 canvas \u7684 flush_outbox \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/canvas.rs",
         "function": "flush_outbox"
@@ -397,7 +414,7 @@
     },
     {
       "id": "core.canvas.pending-count",
-      "description": "core 层 canvas 的 pending_count 承接点",
+      "description": "core \u5c42 canvas \u7684 pending_count \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/canvas.rs",
         "function": "pending_count"
@@ -405,7 +422,7 @@
     },
     {
       "id": "core.collaboration.list-channels",
-      "description": "core 层 collaboration 的 list_channels 承接点",
+      "description": "core \u5c42 collaboration \u7684 list_channels \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/collaboration.rs",
         "function": "list_channels"
@@ -413,7 +430,7 @@
     },
     {
       "id": "core.collaboration.list-organizations",
-      "description": "core 层 collaboration 的 list_organizations 承接点",
+      "description": "core \u5c42 collaboration \u7684 list_organizations \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/collaboration.rs",
         "function": "list_organizations"
@@ -421,7 +438,7 @@
     },
     {
       "id": "core.collaboration.create-organization",
-      "description": "core 层 collaboration 的 create_organization 承接点",
+      "description": "core \u5c42 collaboration \u7684 create_organization \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/collaboration.rs",
         "function": "create_organization"
@@ -429,7 +446,7 @@
     },
     {
       "id": "core.collaboration.activate-organization",
-      "description": "core 层 collaboration 的 activate_organization 承接点",
+      "description": "core \u5c42 collaboration \u7684 activate_organization \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/collaboration.rs",
         "function": "activate_organization"
@@ -437,7 +454,7 @@
     },
     {
       "id": "core.collaboration.accept-invitation",
-      "description": "core 层 collaboration 的 accept_invitation 承接点",
+      "description": "core \u5c42 collaboration \u7684 accept_invitation \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/collaboration.rs",
         "function": "accept_invitation"
@@ -445,7 +462,7 @@
     },
     {
       "id": "core.collaboration.create-channel",
-      "description": "core 层 collaboration 的 create_channel 承接点",
+      "description": "core \u5c42 collaboration \u7684 create_channel \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/collaboration.rs",
         "function": "create_channel"
@@ -453,7 +470,7 @@
     },
     {
       "id": "core.collaboration.update-channel",
-      "description": "core 层 collaboration 的 update_channel 承接点",
+      "description": "core \u5c42 collaboration \u7684 update_channel \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/collaboration.rs",
         "function": "update_channel"
@@ -461,7 +478,7 @@
     },
     {
       "id": "core.collaboration.list-members",
-      "description": "core 层 collaboration 的 list_members 承接点",
+      "description": "core \u5c42 collaboration \u7684 list_members \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/collaboration.rs",
         "function": "list_members"
@@ -469,7 +486,7 @@
     },
     {
       "id": "core.collaboration.search-people",
-      "description": "core 层 collaboration 的 search_people 承接点",
+      "description": "core \u5c42 collaboration \u7684 search_people \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/collaboration.rs",
         "function": "search_people"
@@ -477,7 +494,7 @@
     },
     {
       "id": "core.collaboration.add-member",
-      "description": "core 层 collaboration 的 add_member 承接点",
+      "description": "core \u5c42 collaboration \u7684 add_member \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/collaboration.rs",
         "function": "add_member"
@@ -485,7 +502,7 @@
     },
     {
       "id": "core.collaboration.update-member",
-      "description": "core 层 collaboration 的 update_member 承接点",
+      "description": "core \u5c42 collaboration \u7684 update_member \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/collaboration.rs",
         "function": "update_member"
@@ -493,7 +510,7 @@
     },
     {
       "id": "core.collaboration.remove-member",
-      "description": "core 层 collaboration 的 remove_member 承接点",
+      "description": "core \u5c42 collaboration \u7684 remove_member \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/collaboration.rs",
         "function": "remove_member"
@@ -501,7 +518,7 @@
     },
     {
       "id": "core.collaboration.remove-invitation",
-      "description": "core 层 collaboration 的 remove_invitation 承接点",
+      "description": "core \u5c42 collaboration \u7684 remove_invitation \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/collaboration.rs",
         "function": "remove_invitation"
@@ -509,7 +526,7 @@
     },
     {
       "id": "core.files.enqueue-job",
-      "description": "core 层 files 的 enqueue_job 承接点",
+      "description": "core \u5c42 files \u7684 enqueue_job \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/files.rs",
         "function": "enqueue_job"
@@ -517,7 +534,7 @@
     },
     {
       "id": "core.files.claim-job",
-      "description": "core 层 files 的 claim_job 承接点",
+      "description": "core \u5c42 files \u7684 claim_job \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/files.rs",
         "function": "claim_job"
@@ -525,7 +542,7 @@
     },
     {
       "id": "core.files.wait-for-job",
-      "description": "core 层 files 的 wait_for_job 承接点",
+      "description": "core \u5c42 files \u7684 wait_for_job \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/files.rs",
         "function": "wait_for_job"
@@ -533,7 +550,7 @@
     },
     {
       "id": "core.files.run-file-sync",
-      "description": "core 层 files 的 run_file_sync 承接点",
+      "description": "core \u5c42 files \u7684 run_file_sync \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/files.rs",
         "function": "run_file_sync"
@@ -541,7 +558,7 @@
     },
     {
       "id": "core.files.list-file-shares",
-      "description": "core 层 files 的 list_file_shares 承接点",
+      "description": "core \u5c42 files \u7684 list_file_shares \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/files.rs",
         "function": "list_file_shares"
@@ -549,7 +566,7 @@
     },
     {
       "id": "core.files.inspect-file-source",
-      "description": "core 层 files 的 inspect_file_source 承接点",
+      "description": "core \u5c42 files \u7684 inspect_file_source \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/files.rs",
         "function": "inspect_file_source"
@@ -557,7 +574,7 @@
     },
     {
       "id": "core.files.get-sync-scope",
-      "description": "core 层 files 的 get_sync_scope 承接点",
+      "description": "core \u5c42 files \u7684 get_sync_scope \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/files.rs",
         "function": "get_sync_scope"
@@ -565,7 +582,7 @@
     },
     {
       "id": "core.files.update-sync-scope",
-      "description": "core 层 files 的 update_sync_scope 承接点",
+      "description": "core \u5c42 files \u7684 update_sync_scope \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/files.rs",
         "function": "update_sync_scope"
@@ -573,7 +590,7 @@
     },
     {
       "id": "core.files.share-local-files",
-      "description": "core 层 files 的 share_local_files 承接点",
+      "description": "core \u5c42 files \u7684 share_local_files \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/files.rs",
         "function": "share_local_files"
@@ -581,7 +598,7 @@
     },
     {
       "id": "core.files.publish-local-files",
-      "description": "core 层 files 的 publish_local_files 承接点",
+      "description": "core \u5c42 files \u7684 publish_local_files \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/files.rs",
         "function": "publish_local_files"
@@ -589,7 +606,7 @@
     },
     {
       "id": "core.files.retry-file-sync",
-      "description": "core 层 files 的 retry_file_sync 承接点",
+      "description": "core \u5c42 files \u7684 retry_file_sync \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/files.rs",
         "function": "retry_file_sync"
@@ -597,7 +614,7 @@
     },
     {
       "id": "core.files.publish-source",
-      "description": "core 层 files 的 publish_source 承接点",
+      "description": "core \u5c42 files \u7684 publish_source \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/files.rs",
         "function": "publish_source"
@@ -605,7 +622,7 @@
     },
     {
       "id": "core.files.ensure-published-commit",
-      "description": "core 层 files 的 ensure_published_commit 承接点",
+      "description": "core \u5c42 files \u7684 ensure_published_commit \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/files.rs",
         "function": "ensure_published_commit"
@@ -613,7 +630,7 @@
     },
     {
       "id": "core.files.materialize-file-share",
-      "description": "core 层 files 的 materialize_file_share 承接点",
+      "description": "core \u5c42 files \u7684 materialize_file_share \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/files.rs",
         "function": "materialize_file_share"
@@ -621,7 +638,7 @@
     },
     {
       "id": "core.files.sync-materialization",
-      "description": "core 层 files 的 sync_materialization 承接点",
+      "description": "core \u5c42 files \u7684 sync_materialization \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/files.rs",
         "function": "sync_materialization"
@@ -629,7 +646,7 @@
     },
     {
       "id": "core.files.withdraw-file-share",
-      "description": "core 层 files 的 withdraw_file_share 承接点",
+      "description": "core \u5c42 files \u7684 withdraw_file_share \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/files.rs",
         "function": "withdraw_file_share"
@@ -637,7 +654,7 @@
     },
     {
       "id": "core.files.list-local-file-tree",
-      "description": "core 层 files 的 list_local_file_tree 承接点",
+      "description": "core \u5c42 files \u7684 list_local_file_tree \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/files.rs",
         "function": "list_local_file_tree"
@@ -645,7 +662,7 @@
     },
     {
       "id": "core.files.read-local-file-content",
-      "description": "core 层 files 的 read_local_file_content 承接点",
+      "description": "core \u5c42 files \u7684 read_local_file_content \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/files.rs",
         "function": "read_local_file_content"
@@ -653,7 +670,7 @@
     },
     {
       "id": "core.files.stream-local-file-content",
-      "description": "core 层 files 的 stream_local_file_content 承接点",
+      "description": "core \u5c42 files \u7684 stream_local_file_content \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/files.rs",
         "function": "stream_local_file_content"
@@ -661,7 +678,7 @@
     },
     {
       "id": "core.files.local-file-root",
-      "description": "core 层 files 的 local_file_root 承接点",
+      "description": "core \u5c42 files \u7684 local_file_root \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/files.rs",
         "function": "local_file_root"
@@ -669,7 +686,7 @@
     },
     {
       "id": "core.files.withdraw-remote",
-      "description": "core 层 files 的 withdraw_remote 承接点",
+      "description": "core \u5c42 files \u7684 withdraw_remote \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/files.rs",
         "function": "withdraw_remote"
@@ -677,7 +694,7 @@
     },
     {
       "id": "core.lib.choose-path",
-      "description": "core 层 lib 的 choose_path 承接点",
+      "description": "core \u5c42 lib \u7684 choose_path \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/lib.rs",
         "function": "choose_path"
@@ -685,7 +702,7 @@
     },
     {
       "id": "core.lib.pick-file-or-directory",
-      "description": "core 层 lib 的 pick_file_or_directory 承接点",
+      "description": "core \u5c42 lib \u7684 pick_file_or_directory \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/lib.rs",
         "function": "pick_file_or_directory"
@@ -693,7 +710,7 @@
     },
     {
       "id": "core.lib.current-user-id",
-      "description": "core 层 lib 的 current_user_id 承接点",
+      "description": "core \u5c42 lib \u7684 current_user_id \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/lib.rs",
         "function": "current_user_id"
@@ -701,7 +718,7 @@
     },
     {
       "id": "core.lib.set-current-organization",
-      "description": "core 层 lib 的 set_current_organization 承接点",
+      "description": "core \u5c42 lib \u7684 set_current_organization \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/lib.rs",
         "function": "set_current_organization"
@@ -709,7 +726,7 @@
     },
     {
       "id": "core.lib.current-organization-id",
-      "description": "core 层 lib 的 current_organization_id 承接点",
+      "description": "core \u5c42 lib \u7684 current_organization_id \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/lib.rs",
         "function": "current_organization_id"
@@ -717,7 +734,7 @@
     },
     {
       "id": "core.lib.proxy-one",
-      "description": "core 层 lib 的 proxy_one 承接点",
+      "description": "core \u5c42 lib \u7684 proxy_one \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/lib.rs",
         "function": "proxy_one"
@@ -725,7 +742,7 @@
     },
     {
       "id": "core.lib.proxy-empty",
-      "description": "core 层 lib 的 proxy_empty 承接点",
+      "description": "core \u5c42 lib \u7684 proxy_empty \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/lib.rs",
         "function": "proxy_empty"
@@ -733,7 +750,7 @@
     },
     {
       "id": "core.lib.proxy-delete",
-      "description": "core 层 lib 的 proxy_delete 承接点",
+      "description": "core \u5c42 lib \u7684 proxy_delete \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/lib.rs",
         "function": "proxy_delete"
@@ -741,7 +758,7 @@
     },
     {
       "id": "core.lib.access-token",
-      "description": "core 层 lib 的 access_token 承接点",
+      "description": "core \u5c42 lib \u7684 access_token \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/lib.rs",
         "function": "access_token"
@@ -749,7 +766,7 @@
     },
     {
       "id": "core.lib.access-token-for-user",
-      "description": "core 层 lib 的 access_token_for_user 承接点",
+      "description": "core \u5c42 lib \u7684 access_token_for_user \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/lib.rs",
         "function": "access_token_for_user"
@@ -757,7 +774,7 @@
     },
     {
       "id": "core.lib.proxy-json",
-      "description": "core 层 lib 的 proxy_json 承接点",
+      "description": "core \u5c42 lib \u7684 proxy_json \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/lib.rs",
         "function": "proxy_json"
@@ -765,7 +782,7 @@
     },
     {
       "id": "core.messaging.participants",
-      "description": "core 层 messaging 的 participants 承接点",
+      "description": "core \u5c42 messaging \u7684 participants \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/messaging.rs",
         "function": "participants"
@@ -773,7 +790,7 @@
     },
     {
       "id": "core.messaging.runtimes",
-      "description": "core 层 messaging 的 runtimes 承接点",
+      "description": "core \u5c42 messaging \u7684 runtimes \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/messaging.rs",
         "function": "runtimes"
@@ -781,7 +798,7 @@
     },
     {
       "id": "core.messaging.blueprints",
-      "description": "core 层 messaging 的 blueprints 承接点",
+      "description": "core \u5c42 messaging \u7684 blueprints \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/messaging.rs",
         "function": "blueprints"
@@ -789,7 +806,7 @@
     },
     {
       "id": "core.messaging.create-blueprint",
-      "description": "core 层 messaging 的 create_blueprint 承接点",
+      "description": "core \u5c42 messaging \u7684 create_blueprint \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/messaging.rs",
         "function": "create_blueprint"
@@ -797,7 +814,7 @@
     },
     {
       "id": "core.messaging.update-blueprint",
-      "description": "core 层 messaging 的 update_blueprint 承接点",
+      "description": "core \u5c42 messaging \u7684 update_blueprint \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/messaging.rs",
         "function": "update_blueprint"
@@ -805,7 +822,7 @@
     },
     {
       "id": "core.messaging.delete-blueprint",
-      "description": "core 层 messaging 的 delete_blueprint 承接点",
+      "description": "core \u5c42 messaging \u7684 delete_blueprint \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/messaging.rs",
         "function": "delete_blueprint"
@@ -813,7 +830,7 @@
     },
     {
       "id": "core.messaging.select-blueprint",
-      "description": "core 层 messaging 的 select_blueprint 承接点",
+      "description": "core \u5c42 messaging \u7684 select_blueprint \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/messaging.rs",
         "function": "select_blueprint"
@@ -821,7 +838,7 @@
     },
     {
       "id": "core.messaging.messages",
-      "description": "core 层 messaging 的 messages 承接点",
+      "description": "core \u5c42 messaging \u7684 messages \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/messaging.rs",
         "function": "messages"
@@ -829,7 +846,7 @@
     },
     {
       "id": "core.messaging.message-by-id",
-      "description": "core 层 messaging 的 message_by_id 承接点",
+      "description": "core \u5c42 messaging \u7684 message_by_id \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/messaging.rs",
         "function": "message_by_id"
@@ -837,7 +854,7 @@
     },
     {
       "id": "core.messaging.send-message",
-      "description": "core 层 messaging 的 send_message 承接点",
+      "description": "core \u5c42 messaging \u7684 send_message \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/messaging.rs",
         "function": "send_message"
@@ -845,7 +862,7 @@
     },
     {
       "id": "core.messaging.create-agent-request",
-      "description": "core 层 messaging 的 create_agent_request 承接点",
+      "description": "core \u5c42 messaging \u7684 create_agent_request \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/messaging.rs",
         "function": "create_agent_request"
@@ -853,7 +870,7 @@
     },
     {
       "id": "core.messaging.agent-requests",
-      "description": "core 层 messaging 的 agent_requests 承接点",
+      "description": "core \u5c42 messaging \u7684 agent_requests \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/messaging.rs",
         "function": "agent_requests"
@@ -861,7 +878,7 @@
     },
     {
       "id": "core.messaging.agent-request-context",
-      "description": "core 层 messaging 的 agent_request_context 承接点",
+      "description": "core \u5c42 messaging \u7684 agent_request_context \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/messaging.rs",
         "function": "agent_request_context"
@@ -869,7 +886,7 @@
     },
     {
       "id": "core.messaging.agent-request-events",
-      "description": "core 层 messaging 的 agent_request_events 承接点",
+      "description": "core \u5c42 messaging \u7684 agent_request_events \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/messaging.rs",
         "function": "agent_request_events"
@@ -877,7 +894,7 @@
     },
     {
       "id": "core.messaging.agent-request-reply",
-      "description": "core 层 messaging 的 agent_request_reply 承接点",
+      "description": "core \u5c42 messaging \u7684 agent_request_reply \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/messaging.rs",
         "function": "agent_request_reply"
@@ -885,7 +902,7 @@
     },
     {
       "id": "core.messaging.request-owner-call",
-      "description": "core 层 messaging 的 request_owner_call 承接点",
+      "description": "core \u5c42 messaging \u7684 request_owner_call \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/messaging.rs",
         "function": "request_owner_call"
@@ -893,7 +910,7 @@
     },
     {
       "id": "core.messaging.run-runtime-stream",
-      "description": "core 层 messaging 的 run_runtime_stream 承接点",
+      "description": "core \u5c42 messaging \u7684 run_runtime_stream \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/messaging.rs",
         "function": "run_runtime_stream"
@@ -901,7 +918,7 @@
     },
     {
       "id": "core.messaging.report-agent-completion",
-      "description": "core 层 messaging 的 report_agent_completion 承接点",
+      "description": "core \u5c42 messaging \u7684 report_agent_completion \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/messaging.rs",
         "function": "report_agent_completion"
@@ -909,7 +926,7 @@
     },
     {
       "id": "core.messaging.run-codex-request",
-      "description": "core 层 messaging 的 run_codex_request 承接点",
+      "description": "core \u5c42 messaging \u7684 run_codex_request \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/messaging.rs",
         "function": "run_codex_request"
@@ -917,7 +934,7 @@
     },
     {
       "id": "core.messaging.proxy-get",
-      "description": "core 层 messaging 的 proxy_get 承接点",
+      "description": "core \u5c42 messaging \u7684 proxy_get \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/messaging.rs",
         "function": "proxy_get"
@@ -925,7 +942,7 @@
     },
     {
       "id": "core.messaging.proxy-created",
-      "description": "core 层 messaging 的 proxy_created 承接点",
+      "description": "core \u5c42 messaging \u7684 proxy_created \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/messaging.rs",
         "function": "proxy_created"
@@ -933,7 +950,7 @@
     },
     {
       "id": "core.messaging.stream",
-      "description": "core 层 messaging 的 stream 承接点",
+      "description": "core \u5c42 messaging \u7684 stream \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/messaging.rs",
         "function": "stream"
@@ -941,7 +958,7 @@
     },
     {
       "id": "core.sessions.list-session-sources",
-      "description": "core 层 sessions 的 list_session_sources 承接点",
+      "description": "core \u5c42 sessions \u7684 list_session_sources \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/sessions.rs",
         "function": "list_session_sources"
@@ -949,7 +966,7 @@
     },
     {
       "id": "core.sessions.refresh-session-catalog",
-      "description": "core 层 sessions 的 refresh_session_catalog 承接点",
+      "description": "core \u5c42 sessions \u7684 refresh_session_catalog \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/sessions.rs",
         "function": "refresh_session_catalog"
@@ -957,7 +974,7 @@
     },
     {
       "id": "core.sessions.list-session-shares",
-      "description": "core 层 sessions 的 list_session_shares 承接点",
+      "description": "core \u5c42 sessions \u7684 list_session_shares \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/sessions.rs",
         "function": "list_session_shares"
@@ -965,7 +982,7 @@
     },
     {
       "id": "core.sessions.share-session",
-      "description": "core 层 sessions 的 share_session 承接点",
+      "description": "core \u5c42 sessions \u7684 share_session \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/sessions.rs",
         "function": "share_session"
@@ -973,7 +990,7 @@
     },
     {
       "id": "core.sessions.sync-session",
-      "description": "core 层 sessions 的 sync_session 承接点",
+      "description": "core \u5c42 sessions \u7684 sync_session \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/sessions.rs",
         "function": "sync_session"
@@ -981,7 +998,7 @@
     },
     {
       "id": "core.sessions.sync-source",
-      "description": "core 层 sessions 的 sync_source 承接点",
+      "description": "core \u5c42 sessions \u7684 sync_source \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/sessions.rs",
         "function": "sync_source"
@@ -989,7 +1006,7 @@
     },
     {
       "id": "core.sessions.materialize",
-      "description": "core 层 sessions 的 materialize 承接点",
+      "description": "core \u5c42 sessions \u7684 materialize \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/sessions.rs",
         "function": "materialize"
@@ -997,7 +1014,7 @@
     },
     {
       "id": "core.sessions.read-session",
-      "description": "core 层 sessions 的 read_session 承接点",
+      "description": "core \u5c42 sessions \u7684 read_session \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/sessions.rs",
         "function": "read_session"
@@ -1005,7 +1022,7 @@
     },
     {
       "id": "core.sessions.withdraw-session",
-      "description": "core 层 sessions 的 withdraw_session 承接点",
+      "description": "core \u5c42 sessions \u7684 withdraw_session \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/sessions.rs",
         "function": "withdraw_session"
@@ -1013,7 +1030,7 @@
     },
     {
       "id": "core.skills.run-skill-sync",
-      "description": "core 层 skills 的 run_skill_sync 承接点",
+      "description": "core \u5c42 skills \u7684 run_skill_sync \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/skills.rs",
         "function": "run_skill_sync"
@@ -1021,7 +1038,7 @@
     },
     {
       "id": "core.skills.enqueue-changed-sources",
-      "description": "core 层 skills 的 enqueue_changed_sources 承接点",
+      "description": "core \u5c42 skills \u7684 enqueue_changed_sources \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/skills.rs",
         "function": "enqueue_changed_sources"
@@ -1029,7 +1046,7 @@
     },
     {
       "id": "core.skills.refresh-catalog",
-      "description": "core 层 skills 的 refresh_catalog 承接点",
+      "description": "core \u5c42 skills \u7684 refresh_catalog \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/skills.rs",
         "function": "refresh_catalog"
@@ -1037,7 +1054,7 @@
     },
     {
       "id": "core.skills.list-skill-sources",
-      "description": "core 层 skills 的 list_skill_sources 承接点",
+      "description": "core \u5c42 skills \u7684 list_skill_sources \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/skills.rs",
         "function": "list_skill_sources"
@@ -1045,7 +1062,7 @@
     },
     {
       "id": "core.skills.list-skill-shares",
-      "description": "core 层 skills 的 list_skill_shares 承接点",
+      "description": "core \u5c42 skills \u7684 list_skill_shares \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/skills.rs",
         "function": "list_skill_shares"
@@ -1053,7 +1070,7 @@
     },
     {
       "id": "core.skills.share-skill",
-      "description": "core 层 skills 的 share_skill 承接点",
+      "description": "core \u5c42 skills \u7684 share_skill \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/skills.rs",
         "function": "share_skill"
@@ -1061,7 +1078,7 @@
     },
     {
       "id": "core.skills.publish-source",
-      "description": "core 层 skills 的 publish_source 承接点",
+      "description": "core \u5c42 skills \u7684 publish_source \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/skills.rs",
         "function": "publish_source"
@@ -1069,7 +1086,7 @@
     },
     {
       "id": "core.skills.materialize-skill",
-      "description": "core 层 skills 的 materialize_skill 承接点",
+      "description": "core \u5c42 skills \u7684 materialize_skill \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/skills.rs",
         "function": "materialize_skill"
@@ -1077,7 +1094,7 @@
     },
     {
       "id": "core.skills.sync-materialization",
-      "description": "core 层 skills 的 sync_materialization 承接点",
+      "description": "core \u5c42 skills \u7684 sync_materialization \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/skills.rs",
         "function": "sync_materialization"
@@ -1085,7 +1102,7 @@
     },
     {
       "id": "core.skills.materialized-share",
-      "description": "core 层 skills 的 materialized_share 承接点",
+      "description": "core \u5c42 skills \u7684 materialized_share \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/skills.rs",
         "function": "materialized_share"
@@ -1093,7 +1110,7 @@
     },
     {
       "id": "core.skills.list-installations",
-      "description": "core 层 skills 的 list_installations 承接点",
+      "description": "core \u5c42 skills \u7684 list_installations \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/skills.rs",
         "function": "list_installations"
@@ -1101,7 +1118,7 @@
     },
     {
       "id": "core.skills.ensure-installed",
-      "description": "core 层 skills 的 ensure_installed 承接点",
+      "description": "core \u5c42 skills \u7684 ensure_installed \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/skills.rs",
         "function": "ensure_installed"
@@ -1109,7 +1126,7 @@
     },
     {
       "id": "core.skills.uninstall",
-      "description": "core 层 skills 的 uninstall 承接点",
+      "description": "core \u5c42 skills \u7684 uninstall \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/skills.rs",
         "function": "uninstall"
@@ -1117,7 +1134,7 @@
     },
     {
       "id": "core.skills.withdraw-skill",
-      "description": "core 层 skills 的 withdraw_skill 承接点",
+      "description": "core \u5c42 skills \u7684 withdraw_skill \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/skills.rs",
         "function": "withdraw_skill"
@@ -1125,7 +1142,7 @@
     },
     {
       "id": "core.skills.current-skill-root",
-      "description": "core 层 skills 的 current_skill_root 承接点",
+      "description": "core \u5c42 skills \u7684 current_skill_root \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/skills.rs",
         "function": "current_skill_root"
@@ -1133,7 +1150,7 @@
     },
     {
       "id": "core.system.setup",
-      "description": "core 层 system 的 setup 承接点",
+      "description": "core \u5c42 system \u7684 setup \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/system.rs",
         "function": "setup"
@@ -1141,7 +1158,7 @@
     },
     {
       "id": "core.system.installation-status",
-      "description": "core 层 system 的 installation_status 承接点",
+      "description": "core \u5c42 system \u7684 installation_status \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/system.rs",
         "function": "installation_status"
@@ -1149,7 +1166,7 @@
     },
     {
       "id": "core.system.update-installation",
-      "description": "core 层 system 的 update_installation 承接点",
+      "description": "core \u5c42 system \u7684 update_installation \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/system.rs",
         "function": "update_installation"
@@ -1157,7 +1174,7 @@
     },
     {
       "id": "core.system.restart-managed",
-      "description": "core 层 system 的 restart_managed 承接点",
+      "description": "core \u5c42 system \u7684 restart_managed \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/system.rs",
         "function": "restart_managed"
@@ -1165,7 +1182,7 @@
     },
     {
       "id": "core.system.update-shell",
-      "description": "core 层 system 的 update_shell 承接点",
+      "description": "core \u5c42 system \u7684 update_shell \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/system.rs",
         "function": "update_shell"
@@ -1173,7 +1190,7 @@
     },
     {
       "id": "core.system.runtime-identity",
-      "description": "core 层 system 的 runtime_identity 承接点",
+      "description": "core \u5c42 system \u7684 runtime_identity \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/system.rs",
         "function": "runtime_identity"
@@ -1181,7 +1198,7 @@
     },
     {
       "id": "core.system.register-runtime",
-      "description": "core 层 system 的 register_runtime 承接点",
+      "description": "core \u5c42 system \u7684 register_runtime \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/system.rs",
         "function": "register_runtime"
@@ -1189,7 +1206,7 @@
     },
     {
       "id": "core.system.mutate-agent",
-      "description": "core 层 system 的 mutate_agent 承接点",
+      "description": "core \u5c42 system \u7684 mutate_agent \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/system.rs",
         "function": "mutate_agent"
@@ -1197,7 +1214,7 @@
     },
     {
       "id": "core.system.set-default-agent",
-      "description": "core 层 system 的 set_default_agent 承接点",
+      "description": "core \u5c42 system \u7684 set_default_agent \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/system.rs",
         "function": "set_default_agent"
@@ -1205,7 +1222,7 @@
     },
     {
       "id": "core.system.open-agent",
-      "description": "core 层 system 的 open_agent 承接点",
+      "description": "core \u5c42 system \u7684 open_agent \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/system.rs",
         "function": "open_agent"
@@ -1213,7 +1230,7 @@
     },
     {
       "id": "core.system.install-agent",
-      "description": "core 层 system 的 install_agent 承接点",
+      "description": "core \u5c42 system \u7684 install_agent \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/system.rs",
         "function": "install_agent"
@@ -1221,7 +1238,7 @@
     },
     {
       "id": "core.system.uninstall-agent",
-      "description": "core 层 system 的 uninstall_agent 承接点",
+      "description": "core \u5c42 system \u7684 uninstall_agent \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/system.rs",
         "function": "uninstall_agent"
@@ -1229,7 +1246,7 @@
     },
     {
       "id": "core.transfers.create-transfer",
-      "description": "core 层 transfers 的 create_transfer 承接点",
+      "description": "core \u5c42 transfers \u7684 create_transfer \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/transfers.rs",
         "function": "create_transfer"
@@ -1237,7 +1254,7 @@
     },
     {
       "id": "core.transfers.fetch-managed",
-      "description": "core 层 transfers 的 fetch_managed 承接点",
+      "description": "core \u5c42 transfers \u7684 fetch_managed \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/transfers.rs",
         "function": "fetch_managed"
@@ -1245,7 +1262,7 @@
     },
     {
       "id": "core.transfers.list-transfers",
-      "description": "core 层 transfers 的 list_transfers 承接点",
+      "description": "core \u5c42 transfers \u7684 list_transfers \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/transfers.rs",
         "function": "list_transfers"
@@ -1253,7 +1270,7 @@
     },
     {
       "id": "core.transfers.get-transfer",
-      "description": "core 层 transfers 的 get_transfer 承接点",
+      "description": "core \u5c42 transfers \u7684 get_transfer \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/transfers.rs",
         "function": "get_transfer"
@@ -1261,7 +1278,7 @@
     },
     {
       "id": "core.transfers.update-transfer",
-      "description": "core 层 transfers 的 update_transfer 承接点",
+      "description": "core \u5c42 transfers \u7684 update_transfer \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/transfers.rs",
         "function": "update_transfer"
@@ -1269,7 +1286,7 @@
     },
     {
       "id": "core.transfers.prepare-source",
-      "description": "core 层 transfers 的 prepare_source 承接点",
+      "description": "core \u5c42 transfers \u7684 prepare_source \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/transfers.rs",
         "function": "prepare_source"
@@ -1277,7 +1294,7 @@
     },
     {
       "id": "core.transfers.receive-transfer",
-      "description": "core 层 transfers 的 receive_transfer 承接点",
+      "description": "core \u5c42 transfers \u7684 receive_transfer \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/transfers.rs",
         "function": "receive_transfer"
@@ -1285,7 +1302,7 @@
     },
     {
       "id": "core.transfers.receive-item",
-      "description": "core 层 transfers 的 receive_item 承接点",
+      "description": "core \u5c42 transfers \u7684 receive_item \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/transfers.rs",
         "function": "receive_item"
@@ -1293,7 +1310,7 @@
     },
     {
       "id": "core.transfers.revoke-transfer",
-      "description": "core 层 transfers 的 revoke_transfer 承接点",
+      "description": "core \u5c42 transfers \u7684 revoke_transfer \u627f\u63a5\u70b9",
       "source": {
         "path": "local/crates/local-api/src/transfers.rs",
         "function": "revoke_transfer"
@@ -1301,7 +1318,7 @@
     },
     {
       "id": "core.agent.execution",
-      "description": "终端接受 Agent 指令，执行 provider，并向服务端报告完成或失败",
+      "description": "\u7ec8\u7aef\u63a5\u53d7 Agent \u6307\u4ee4\uff0c\u6267\u884c provider\uff0c\u5e76\u5411\u670d\u52a1\u7aef\u62a5\u544a\u5b8c\u6210\u6216\u5931\u8d25",
       "source": {
         "path": "local/crates/local-api/src/messaging.rs",
         "function": "run_runtime_stream"
@@ -1309,7 +1326,7 @@
     },
     {
       "id": "core.canvas.local-replica",
-      "description": "Load this account’s persisted Canvas replica for offline GUI recovery without acknowledging remote synchronization",
+      "description": "Load this account\u2019s persisted Canvas replica for offline GUI recovery without acknowledging remote synchronization",
       "source": {
         "path": "local/crates/local-api/src/canvas.rs",
         "function": "local_replica"

@@ -60,7 +60,7 @@
     },
     {
       "id": "messages.send",
-      "description": "在 Colab Channel 发送消息，提交成功后将消息展示在终端界面；不包括被提及 Agent 的执行与回复",
+      "description": "\u5728 Colab Channel \u53d1\u9001\u6d88\u606f\uff0c\u63d0\u4ea4\u6210\u529f\u540e\u5c06\u6d88\u606f\u5c55\u793a\u5728\u7ec8\u7aef\u754c\u9762\uff1b\u4e0d\u5305\u62ec\u88ab\u63d0\u53ca Agent \u7684\u6267\u884c\u4e0e\u56de\u590d",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -72,7 +72,7 @@
           "region": "messages",
           "steps": [],
           "kind": "control",
-          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+          "unavailable": "\u8be5\u64cd\u4f5c\u9700\u8981\u76f8\u5e94\u8d44\u6e90\u3001\u6743\u9650\u6216\u5df2\u6253\u5f00\u7684\u64cd\u4f5c\u5f39\u5c42\uff1b\u5f53\u524d\u4ec5\u6807\u51fa\u6240\u5c5e\u533a\u57df\uff0c\u8bf7\u9009\u62e9\u8d44\u6e90\u540e\u91cd\u8bd5"
         }
       },
       "completion": {
@@ -88,7 +88,7 @@
     },
     {
       "id": "channels.list",
-      "description": "列出当前账号可访问的 Channel",
+      "description": "\u5217\u51fa\u5f53\u524d\u8d26\u53f7\u53ef\u8bbf\u95ee\u7684 Channel",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -115,7 +115,7 @@
     },
     {
       "id": "accounts.list",
-      "description": "查询本机保存的账号",
+      "description": "\u67e5\u8be2\u672c\u673a\u4fdd\u5b58\u7684\u8d26\u53f7",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -154,7 +154,7 @@
     },
     {
       "id": "system.installation",
-      "description": "查看本机各制品与 Agent 的安装状态",
+      "description": "\u67e5\u770b\u672c\u673a\u5404\u5236\u54c1\u4e0e Agent \u7684\u5b89\u88c5\u72b6\u6001",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -190,7 +190,7 @@
     },
     {
       "id": "system.check-update",
-      "description": "检查 Colab 制品更新",
+      "description": "\u68c0\u67e5 Colab \u5236\u54c1\u66f4\u65b0",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -211,7 +211,7 @@
             }
           ],
           "kind": "control",
-          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+          "unavailable": "\u8be5\u64cd\u4f5c\u9700\u8981\u76f8\u5e94\u8d44\u6e90\u3001\u6743\u9650\u6216\u5df2\u6253\u5f00\u7684\u64cd\u4f5c\u5f39\u5c42\uff1b\u5f53\u524d\u4ec5\u6807\u51fa\u6240\u5c5e\u533a\u57df\uff0c\u8bf7\u9009\u62e9\u8d44\u6e90\u540e\u91cd\u8bd5"
         }
       },
       "completion": {
@@ -227,7 +227,7 @@
     },
     {
       "id": "system.update",
-      "description": "安装已验证的 Colab 制品；完成边界为 updater 返回与重启恢复",
+      "description": "\u5b89\u88c5\u5df2\u9a8c\u8bc1\u7684 Colab \u5236\u54c1\uff1b\u5b8c\u6210\u8fb9\u754c\u4e3a updater \u8fd4\u56de\u4e0e\u91cd\u542f\u6062\u590d",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -248,8 +248,8 @@
             }
           ],
           "kind": "control",
-          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试",
-          "stateNote": "检查更新、更新、重启共用此按钮；当前可执行动作以按钮文字为准"
+          "unavailable": "\u8be5\u64cd\u4f5c\u9700\u8981\u76f8\u5e94\u8d44\u6e90\u3001\u6743\u9650\u6216\u5df2\u6253\u5f00\u7684\u64cd\u4f5c\u5f39\u5c42\uff1b\u5f53\u524d\u4ec5\u6807\u51fa\u6240\u5c5e\u533a\u57df\uff0c\u8bf7\u9009\u62e9\u8d44\u6e90\u540e\u91cd\u8bd5",
+          "stateNote": "\u68c0\u67e5\u66f4\u65b0\u3001\u66f4\u65b0\u3001\u91cd\u542f\u5171\u7528\u6b64\u6309\u94ae\uff1b\u5f53\u524d\u53ef\u6267\u884c\u52a8\u4f5c\u4ee5\u6309\u94ae\u6587\u5b57\u4e3a\u51c6"
         }
       },
       "completion": {
@@ -265,7 +265,7 @@
     },
     {
       "id": "system.restart",
-      "description": "重启 Local Core 并等待 readiness",
+      "description": "\u91cd\u542f Local Core \u5e76\u7b49\u5f85 readiness",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -286,8 +286,8 @@
             }
           ],
           "kind": "control",
-          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试",
-          "stateNote": "检查更新、更新、重启共用此按钮；当前可执行动作以按钮文字为准"
+          "unavailable": "\u8be5\u64cd\u4f5c\u9700\u8981\u76f8\u5e94\u8d44\u6e90\u3001\u6743\u9650\u6216\u5df2\u6253\u5f00\u7684\u64cd\u4f5c\u5f39\u5c42\uff1b\u5f53\u524d\u4ec5\u6807\u51fa\u6240\u5c5e\u533a\u57df\uff0c\u8bf7\u9009\u62e9\u8d44\u6e90\u540e\u91cd\u8bd5",
+          "stateNote": "\u68c0\u67e5\u66f4\u65b0\u3001\u66f4\u65b0\u3001\u91cd\u542f\u5171\u7528\u6b64\u6309\u94ae\uff1b\u5f53\u524d\u53ef\u6267\u884c\u52a8\u4f5c\u4ee5\u6309\u94ae\u6587\u5b57\u4e3a\u51c6"
         }
       },
       "completion": {
@@ -303,7 +303,7 @@
     },
     {
       "id": "system.skill-target",
-      "description": "安装或卸载目标 Agent 的 Colab Skill",
+      "description": "\u5b89\u88c5\u6216\u5378\u8f7d\u76ee\u6807 Agent \u7684 Colab Skill",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -324,7 +324,7 @@
             }
           ],
           "kind": "control",
-          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+          "unavailable": "\u8be5\u64cd\u4f5c\u9700\u8981\u76f8\u5e94\u8d44\u6e90\u3001\u6743\u9650\u6216\u5df2\u6253\u5f00\u7684\u64cd\u4f5c\u5f39\u5c42\uff1b\u5f53\u524d\u4ec5\u6807\u51fa\u6240\u5c5e\u533a\u57df\uff0c\u8bf7\u9009\u62e9\u8d44\u6e90\u540e\u91cd\u8bd5"
         }
       },
       "completion": {
@@ -340,7 +340,7 @@
     },
     {
       "id": "system.default-agent",
-      "description": "设置设备默认 Agent",
+      "description": "\u8bbe\u7f6e\u8bbe\u5907\u9ed8\u8ba4 Agent",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -361,7 +361,7 @@
             }
           ],
           "kind": "control",
-          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+          "unavailable": "\u8be5\u64cd\u4f5c\u9700\u8981\u76f8\u5e94\u8d44\u6e90\u3001\u6743\u9650\u6216\u5df2\u6253\u5f00\u7684\u64cd\u4f5c\u5f39\u5c42\uff1b\u5f53\u524d\u4ec5\u6807\u51fa\u6240\u5c5e\u533a\u57df\uff0c\u8bf7\u9009\u62e9\u8d44\u6e90\u540e\u91cd\u8bd5"
         }
       },
       "completion": {
@@ -377,7 +377,7 @@
     },
     {
       "id": "organizations.list",
-      "description": "列出可访问的 Organization",
+      "description": "\u5217\u51fa\u53ef\u8bbf\u95ee\u7684 Organization",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -416,7 +416,7 @@
     },
     {
       "id": "auth.sign-in",
-      "description": "获取登录入口并打开身份平台",
+      "description": "\u83b7\u53d6\u767b\u5f55\u5165\u53e3\u5e76\u6253\u5f00\u8eab\u4efd\u5e73\u53f0",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -440,7 +440,7 @@
             }
           ],
           "kind": "control",
-          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+          "unavailable": "\u8be5\u64cd\u4f5c\u9700\u8981\u76f8\u5e94\u8d44\u6e90\u3001\u6743\u9650\u6216\u5df2\u6253\u5f00\u7684\u64cd\u4f5c\u5f39\u5c42\uff1b\u5f53\u524d\u4ec5\u6807\u51fa\u6240\u5c5e\u533a\u57df\uff0c\u8bf7\u9009\u62e9\u8d44\u6e90\u540e\u91cd\u8bd5"
         }
       },
       "completion": {
@@ -456,7 +456,7 @@
     },
     {
       "id": "auth.switch",
-      "description": "切换本机账号并刷新可见资源",
+      "description": "\u5207\u6362\u672c\u673a\u8d26\u53f7\u5e76\u5237\u65b0\u53ef\u89c1\u8d44\u6e90",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -480,7 +480,7 @@
             }
           ],
           "kind": "control",
-          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+          "unavailable": "\u8be5\u64cd\u4f5c\u9700\u8981\u76f8\u5e94\u8d44\u6e90\u3001\u6743\u9650\u6216\u5df2\u6253\u5f00\u7684\u64cd\u4f5c\u5f39\u5c42\uff1b\u5f53\u524d\u4ec5\u6807\u51fa\u6240\u5c5e\u533a\u57df\uff0c\u8bf7\u9009\u62e9\u8d44\u6e90\u540e\u91cd\u8bd5"
         }
       },
       "completion": {
@@ -496,7 +496,7 @@
     },
     {
       "id": "auth.logout",
-      "description": "退出当前账号",
+      "description": "\u9000\u51fa\u5f53\u524d\u8d26\u53f7",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -520,7 +520,7 @@
             }
           ],
           "kind": "control",
-          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+          "unavailable": "\u8be5\u64cd\u4f5c\u9700\u8981\u76f8\u5e94\u8d44\u6e90\u3001\u6743\u9650\u6216\u5df2\u6253\u5f00\u7684\u64cd\u4f5c\u5f39\u5c42\uff1b\u5f53\u524d\u4ec5\u6807\u51fa\u6240\u5c5e\u533a\u57df\uff0c\u8bf7\u9009\u62e9\u8d44\u6e90\u540e\u91cd\u8bd5"
         }
       },
       "completion": {
@@ -536,7 +536,7 @@
     },
     {
       "id": "channels.create",
-      "description": "创建 Channel 并选择新 Channel",
+      "description": "\u521b\u5efa Channel \u5e76\u9009\u62e9\u65b0 Channel",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -548,7 +548,7 @@
           "region": "application",
           "steps": [],
           "kind": "control",
-          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+          "unavailable": "\u8be5\u64cd\u4f5c\u9700\u8981\u76f8\u5e94\u8d44\u6e90\u3001\u6743\u9650\u6216\u5df2\u6253\u5f00\u7684\u64cd\u4f5c\u5f39\u5c42\uff1b\u5f53\u524d\u4ec5\u6807\u51fa\u6240\u5c5e\u533a\u57df\uff0c\u8bf7\u9009\u62e9\u8d44\u6e90\u540e\u91cd\u8bd5"
         }
       },
       "completion": {
@@ -564,7 +564,7 @@
     },
     {
       "id": "organizations.switch",
-      "description": "切换活动 Organization",
+      "description": "\u5207\u6362\u6d3b\u52a8 Organization",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -588,7 +588,7 @@
             }
           ],
           "kind": "control",
-          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+          "unavailable": "\u8be5\u64cd\u4f5c\u9700\u8981\u76f8\u5e94\u8d44\u6e90\u3001\u6743\u9650\u6216\u5df2\u6253\u5f00\u7684\u64cd\u4f5c\u5f39\u5c42\uff1b\u5f53\u524d\u4ec5\u6807\u51fa\u6240\u5c5e\u533a\u57df\uff0c\u8bf7\u9009\u62e9\u8d44\u6e90\u540e\u91cd\u8bd5"
         }
       },
       "completion": {
@@ -604,7 +604,7 @@
     },
     {
       "id": "organizations.create",
-      "description": "创建 Organization",
+      "description": "\u521b\u5efa Organization",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -628,7 +628,7 @@
             }
           ],
           "kind": "control",
-          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+          "unavailable": "\u8be5\u64cd\u4f5c\u9700\u8981\u76f8\u5e94\u8d44\u6e90\u3001\u6743\u9650\u6216\u5df2\u6253\u5f00\u7684\u64cd\u4f5c\u5f39\u5c42\uff1b\u5f53\u524d\u4ec5\u6807\u51fa\u6240\u5c5e\u533a\u57df\uff0c\u8bf7\u9009\u62e9\u8d44\u6e90\u540e\u91cd\u8bd5"
         }
       },
       "completion": {
@@ -644,7 +644,7 @@
     },
     {
       "id": "invitations.accept",
-      "description": "接受待处理的 Organization 邀请",
+      "description": "\u63a5\u53d7\u5f85\u5904\u7406\u7684 Organization \u9080\u8bf7",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -656,8 +656,8 @@
           "region": "application",
           "steps": [],
           "kind": "region",
-          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试",
-          "stateNote": "接受邀请由登录后的回调自动承接，页面没有独立按钮"
+          "unavailable": "\u8be5\u64cd\u4f5c\u9700\u8981\u76f8\u5e94\u8d44\u6e90\u3001\u6743\u9650\u6216\u5df2\u6253\u5f00\u7684\u64cd\u4f5c\u5f39\u5c42\uff1b\u5f53\u524d\u4ec5\u6807\u51fa\u6240\u5c5e\u533a\u57df\uff0c\u8bf7\u9009\u62e9\u8d44\u6e90\u540e\u91cd\u8bd5",
+          "stateNote": "\u63a5\u53d7\u9080\u8bf7\u7531\u767b\u5f55\u540e\u7684\u56de\u8c03\u81ea\u52a8\u627f\u63a5\uff0c\u9875\u9762\u6ca1\u6709\u72ec\u7acb\u6309\u94ae"
         }
       },
       "completion": {
@@ -673,7 +673,7 @@
     },
     {
       "id": "members.list",
-      "description": "读取 Channel 成员清单",
+      "description": "\u8bfb\u53d6 Channel \u6210\u5458\u6e05\u5355",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -700,7 +700,7 @@
     },
     {
       "id": "files.list",
-      "description": "读取 Channel 共享 Files 清单",
+      "description": "\u8bfb\u53d6 Channel \u5171\u4eab Files \u6e05\u5355",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -727,7 +727,7 @@
     },
     {
       "id": "sessions.list",
-      "description": "读取 Channel 共享 Session 清单",
+      "description": "\u8bfb\u53d6 Channel \u5171\u4eab Session \u6e05\u5355",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -754,7 +754,7 @@
     },
     {
       "id": "sessions.withdraw",
-      "description": "撤回自己的共享 Session",
+      "description": "\u64a4\u56de\u81ea\u5df1\u7684\u5171\u4eab Session",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -766,7 +766,7 @@
           "region": "sessions",
           "steps": [],
           "kind": "control",
-          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+          "unavailable": "\u8be5\u64cd\u4f5c\u9700\u8981\u76f8\u5e94\u8d44\u6e90\u3001\u6743\u9650\u6216\u5df2\u6253\u5f00\u7684\u64cd\u4f5c\u5f39\u5c42\uff1b\u5f53\u524d\u4ec5\u6807\u51fa\u6240\u5c5e\u533a\u57df\uff0c\u8bf7\u9009\u62e9\u8d44\u6e90\u540e\u91cd\u8bd5"
         }
       },
       "completion": {
@@ -782,7 +782,7 @@
     },
     {
       "id": "files.share",
-      "description": "登记 Files 并返回本地受理状态；后台同步是独立阶段",
+      "description": "\u767b\u8bb0 Files \u5e76\u8fd4\u56de\u672c\u5730\u53d7\u7406\u72b6\u6001\uff1b\u540e\u53f0\u540c\u6b65\u662f\u72ec\u7acb\u9636\u6bb5",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -794,7 +794,7 @@
           "region": "files",
           "steps": [],
           "kind": "control",
-          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+          "unavailable": "\u8be5\u64cd\u4f5c\u9700\u8981\u76f8\u5e94\u8d44\u6e90\u3001\u6743\u9650\u6216\u5df2\u6253\u5f00\u7684\u64cd\u4f5c\u5f39\u5c42\uff1b\u5f53\u524d\u4ec5\u6807\u51fa\u6240\u5c5e\u533a\u57df\uff0c\u8bf7\u9009\u62e9\u8d44\u6e90\u540e\u91cd\u8bd5"
         }
       },
       "completion": {
@@ -810,7 +810,7 @@
     },
     {
       "id": "files.materialize",
-      "description": "刷新并物化共享 Files",
+      "description": "\u5237\u65b0\u5e76\u7269\u5316\u5171\u4eab Files",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -822,7 +822,7 @@
           "region": "files",
           "steps": [],
           "kind": "control",
-          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+          "unavailable": "\u8be5\u64cd\u4f5c\u9700\u8981\u76f8\u5e94\u8d44\u6e90\u3001\u6743\u9650\u6216\u5df2\u6253\u5f00\u7684\u64cd\u4f5c\u5f39\u5c42\uff1b\u5f53\u524d\u4ec5\u6807\u51fa\u6240\u5c5e\u533a\u57df\uff0c\u8bf7\u9009\u62e9\u8d44\u6e90\u540e\u91cd\u8bd5"
         }
       },
       "completion": {
@@ -838,7 +838,7 @@
     },
     {
       "id": "files.withdraw",
-      "description": "撤回自己的共享 Files",
+      "description": "\u64a4\u56de\u81ea\u5df1\u7684\u5171\u4eab Files",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -850,7 +850,7 @@
           "region": "files",
           "steps": [],
           "kind": "control",
-          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+          "unavailable": "\u8be5\u64cd\u4f5c\u9700\u8981\u76f8\u5e94\u8d44\u6e90\u3001\u6743\u9650\u6216\u5df2\u6253\u5f00\u7684\u64cd\u4f5c\u5f39\u5c42\uff1b\u5f53\u524d\u4ec5\u6807\u51fa\u6240\u5c5e\u533a\u57df\uff0c\u8bf7\u9009\u62e9\u8d44\u6e90\u540e\u91cd\u8bd5"
         }
       },
       "completion": {
@@ -866,7 +866,7 @@
     },
     {
       "id": "files.retry",
-      "description": "手动重试 Files 同步任务",
+      "description": "\u624b\u52a8\u91cd\u8bd5 Files \u540c\u6b65\u4efb\u52a1",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -878,7 +878,7 @@
           "region": "files",
           "steps": [],
           "kind": "control",
-          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+          "unavailable": "\u8be5\u64cd\u4f5c\u9700\u8981\u76f8\u5e94\u8d44\u6e90\u3001\u6743\u9650\u6216\u5df2\u6253\u5f00\u7684\u64cd\u4f5c\u5f39\u5c42\uff1b\u5f53\u524d\u4ec5\u6807\u51fa\u6240\u5c5e\u533a\u57df\uff0c\u8bf7\u9009\u62e9\u8d44\u6e90\u540e\u91cd\u8bd5"
         }
       },
       "completion": {
@@ -894,7 +894,7 @@
     },
     {
       "id": "channels.update",
-      "description": "修改 Channel 名称与图标",
+      "description": "\u4fee\u6539 Channel \u540d\u79f0\u4e0e\u56fe\u6807",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -906,7 +906,7 @@
           "region": "channel-settings",
           "steps": [],
           "kind": "control",
-          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+          "unavailable": "\u8be5\u64cd\u4f5c\u9700\u8981\u76f8\u5e94\u8d44\u6e90\u3001\u6743\u9650\u6216\u5df2\u6253\u5f00\u7684\u64cd\u4f5c\u5f39\u5c42\uff1b\u5f53\u524d\u4ec5\u6807\u51fa\u6240\u5c5e\u533a\u57df\uff0c\u8bf7\u9009\u62e9\u8d44\u6e90\u540e\u91cd\u8bd5"
         }
       },
       "completion": {
@@ -922,7 +922,7 @@
     },
     {
       "id": "members.add",
-      "description": "添加或邀请 Channel 成员",
+      "description": "\u6dfb\u52a0\u6216\u9080\u8bf7 Channel \u6210\u5458",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -934,7 +934,7 @@
           "region": "channel-settings",
           "steps": [],
           "kind": "control",
-          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+          "unavailable": "\u8be5\u64cd\u4f5c\u9700\u8981\u76f8\u5e94\u8d44\u6e90\u3001\u6743\u9650\u6216\u5df2\u6253\u5f00\u7684\u64cd\u4f5c\u5f39\u5c42\uff1b\u5f53\u524d\u4ec5\u6807\u51fa\u6240\u5c5e\u533a\u57df\uff0c\u8bf7\u9009\u62e9\u8d44\u6e90\u540e\u91cd\u8bd5"
         }
       },
       "completion": {
@@ -950,7 +950,7 @@
     },
     {
       "id": "members.role",
-      "description": "修改 Channel 成员角色",
+      "description": "\u4fee\u6539 Channel \u6210\u5458\u89d2\u8272",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -962,7 +962,7 @@
           "region": "channel-settings",
           "steps": [],
           "kind": "control",
-          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+          "unavailable": "\u8be5\u64cd\u4f5c\u9700\u8981\u76f8\u5e94\u8d44\u6e90\u3001\u6743\u9650\u6216\u5df2\u6253\u5f00\u7684\u64cd\u4f5c\u5f39\u5c42\uff1b\u5f53\u524d\u4ec5\u6807\u51fa\u6240\u5c5e\u533a\u57df\uff0c\u8bf7\u9009\u62e9\u8d44\u6e90\u540e\u91cd\u8bd5"
         }
       },
       "completion": {
@@ -978,7 +978,7 @@
     },
     {
       "id": "members.remove",
-      "description": "移除 Channel 成员",
+      "description": "\u79fb\u9664 Channel \u6210\u5458",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -990,7 +990,7 @@
           "region": "channel-settings",
           "steps": [],
           "kind": "control",
-          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+          "unavailable": "\u8be5\u64cd\u4f5c\u9700\u8981\u76f8\u5e94\u8d44\u6e90\u3001\u6743\u9650\u6216\u5df2\u6253\u5f00\u7684\u64cd\u4f5c\u5f39\u5c42\uff1b\u5f53\u524d\u4ec5\u6807\u51fa\u6240\u5c5e\u533a\u57df\uff0c\u8bf7\u9009\u62e9\u8d44\u6e90\u540e\u91cd\u8bd5"
         }
       },
       "completion": {
@@ -1006,7 +1006,7 @@
     },
     {
       "id": "members.search",
-      "description": "搜索 Organization 人员",
+      "description": "\u641c\u7d22 Organization \u4eba\u5458",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -1018,7 +1018,7 @@
           "region": "channel-settings",
           "steps": [],
           "kind": "control",
-          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+          "unavailable": "\u8be5\u64cd\u4f5c\u9700\u8981\u76f8\u5e94\u8d44\u6e90\u3001\u6743\u9650\u6216\u5df2\u6253\u5f00\u7684\u64cd\u4f5c\u5f39\u5c42\uff1b\u5f53\u524d\u4ec5\u6807\u51fa\u6240\u5c5e\u533a\u57df\uff0c\u8bf7\u9009\u62e9\u8d44\u6e90\u540e\u91cd\u8bd5"
         }
       },
       "completion": {
@@ -1046,7 +1046,7 @@
           "region": "catalog-items",
           "steps": [],
           "kind": "control",
-          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+          "unavailable": "\u8be5\u64cd\u4f5c\u9700\u8981\u76f8\u5e94\u8d44\u6e90\u3001\u6743\u9650\u6216\u5df2\u6253\u5f00\u7684\u64cd\u4f5c\u5f39\u5c42\uff1b\u5f53\u524d\u4ec5\u6807\u51fa\u6240\u5c5e\u533a\u57df\uff0c\u8bf7\u9009\u62e9\u8d44\u6e90\u540e\u91cd\u8bd5"
         }
       },
       "completion": {
@@ -1062,7 +1062,7 @@
     },
     {
       "id": "files.handoff",
-      "description": "为共享 Files 准备 Agent 交接提示词",
+      "description": "\u4e3a\u5171\u4eab Files \u51c6\u5907 Agent \u4ea4\u63a5\u63d0\u793a\u8bcd",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -1074,7 +1074,7 @@
           "region": "files",
           "steps": [],
           "kind": "control",
-          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+          "unavailable": "\u8be5\u64cd\u4f5c\u9700\u8981\u76f8\u5e94\u8d44\u6e90\u3001\u6743\u9650\u6216\u5df2\u6253\u5f00\u7684\u64cd\u4f5c\u5f39\u5c42\uff1b\u5f53\u524d\u4ec5\u6807\u51fa\u6240\u5c5e\u533a\u57df\uff0c\u8bf7\u9009\u62e9\u8d44\u6e90\u540e\u91cd\u8bd5"
         }
       },
       "completion": {
@@ -1090,7 +1090,7 @@
     },
     {
       "id": "files.inspect",
-      "description": "检查 Files 来源的同步范围与体积",
+      "description": "\u68c0\u67e5 Files \u6765\u6e90\u7684\u540c\u6b65\u8303\u56f4\u4e0e\u4f53\u79ef",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -1102,7 +1102,7 @@
           "region": "files",
           "steps": [],
           "kind": "control",
-          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+          "unavailable": "\u8be5\u64cd\u4f5c\u9700\u8981\u76f8\u5e94\u8d44\u6e90\u3001\u6743\u9650\u6216\u5df2\u6253\u5f00\u7684\u64cd\u4f5c\u5f39\u5c42\uff1b\u5f53\u524d\u4ec5\u6807\u51fa\u6240\u5c5e\u533a\u57df\uff0c\u8bf7\u9009\u62e9\u8d44\u6e90\u540e\u91cd\u8bd5"
         }
       },
       "completion": {
@@ -1118,7 +1118,7 @@
     },
     {
       "id": "files.scope.read",
-      "description": "打开自己的 Files 同步范围",
+      "description": "\u6253\u5f00\u81ea\u5df1\u7684 Files \u540c\u6b65\u8303\u56f4",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -1130,7 +1130,7 @@
           "region": "files",
           "steps": [],
           "kind": "control",
-          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+          "unavailable": "\u8be5\u64cd\u4f5c\u9700\u8981\u76f8\u5e94\u8d44\u6e90\u3001\u6743\u9650\u6216\u5df2\u6253\u5f00\u7684\u64cd\u4f5c\u5f39\u5c42\uff1b\u5f53\u524d\u4ec5\u6807\u51fa\u6240\u5c5e\u533a\u57df\uff0c\u8bf7\u9009\u62e9\u8d44\u6e90\u540e\u91cd\u8bd5"
         }
       },
       "completion": {
@@ -1146,7 +1146,7 @@
     },
     {
       "id": "files.scope.commit",
-      "description": "确认 Files 同步范围或提交共享",
+      "description": "\u786e\u8ba4 Files \u540c\u6b65\u8303\u56f4\u6216\u63d0\u4ea4\u5171\u4eab",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -1158,7 +1158,7 @@
           "region": "files",
           "steps": [],
           "kind": "control",
-          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+          "unavailable": "\u8be5\u64cd\u4f5c\u9700\u8981\u76f8\u5e94\u8d44\u6e90\u3001\u6743\u9650\u6216\u5df2\u6253\u5f00\u7684\u64cd\u4f5c\u5f39\u5c42\uff1b\u5f53\u524d\u4ec5\u6807\u51fa\u6240\u5c5e\u533a\u57df\uff0c\u8bf7\u9009\u62e9\u8d44\u6e90\u540e\u91cd\u8bd5"
         }
       },
       "completion": {
@@ -1174,7 +1174,7 @@
     },
     {
       "id": "sessions.sources",
-      "description": "搜索本机 Agent Session 来源",
+      "description": "\u641c\u7d22\u672c\u673a Agent Session \u6765\u6e90",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -1186,7 +1186,7 @@
           "region": "sessions",
           "steps": [],
           "kind": "control",
-          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+          "unavailable": "\u8be5\u64cd\u4f5c\u9700\u8981\u76f8\u5e94\u8d44\u6e90\u3001\u6743\u9650\u6216\u5df2\u6253\u5f00\u7684\u64cd\u4f5c\u5f39\u5c42\uff1b\u5f53\u524d\u4ec5\u6807\u51fa\u6240\u5c5e\u533a\u57df\uff0c\u8bf7\u9009\u62e9\u8d44\u6e90\u540e\u91cd\u8bd5"
         }
       },
       "completion": {
@@ -1202,7 +1202,7 @@
     },
     {
       "id": "sessions.share",
-      "description": "登记 Session 并返回持久化受理结果",
+      "description": "\u767b\u8bb0 Session \u5e76\u8fd4\u56de\u6301\u4e45\u5316\u53d7\u7406\u7ed3\u679c",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -1214,7 +1214,7 @@
           "region": "sessions",
           "steps": [],
           "kind": "control",
-          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+          "unavailable": "\u8be5\u64cd\u4f5c\u9700\u8981\u76f8\u5e94\u8d44\u6e90\u3001\u6743\u9650\u6216\u5df2\u6253\u5f00\u7684\u64cd\u4f5c\u5f39\u5c42\uff1b\u5f53\u524d\u4ec5\u6807\u51fa\u6240\u5c5e\u533a\u57df\uff0c\u8bf7\u9009\u62e9\u8d44\u6e90\u540e\u91cd\u8bd5"
         }
       },
       "completion": {
@@ -1230,7 +1230,7 @@
     },
     {
       "id": "skills.list",
-      "description": "读取 Channel Skills 与本机安装状态",
+      "description": "\u8bfb\u53d6 Channel Skills \u4e0e\u672c\u673a\u5b89\u88c5\u72b6\u6001",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -1257,7 +1257,7 @@
     },
     {
       "id": "skills.sources",
-      "description": "发现本机可共享的 Skill",
+      "description": "\u53d1\u73b0\u672c\u673a\u53ef\u5171\u4eab\u7684 Skill",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -1269,7 +1269,7 @@
           "region": "skills",
           "steps": [],
           "kind": "control",
-          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+          "unavailable": "\u8be5\u64cd\u4f5c\u9700\u8981\u76f8\u5e94\u8d44\u6e90\u3001\u6743\u9650\u6216\u5df2\u6253\u5f00\u7684\u64cd\u4f5c\u5f39\u5c42\uff1b\u5f53\u524d\u4ec5\u6807\u51fa\u6240\u5c5e\u533a\u57df\uff0c\u8bf7\u9009\u62e9\u8d44\u6e90\u540e\u91cd\u8bd5"
         }
       },
       "completion": {
@@ -1285,7 +1285,7 @@
     },
     {
       "id": "skills.share",
-      "description": "登记 Skill 为持续共享来源",
+      "description": "\u767b\u8bb0 Skill \u4e3a\u6301\u7eed\u5171\u4eab\u6765\u6e90",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -1297,7 +1297,7 @@
           "region": "skills",
           "steps": [],
           "kind": "control",
-          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+          "unavailable": "\u8be5\u64cd\u4f5c\u9700\u8981\u76f8\u5e94\u8d44\u6e90\u3001\u6743\u9650\u6216\u5df2\u6253\u5f00\u7684\u64cd\u4f5c\u5f39\u5c42\uff1b\u5f53\u524d\u4ec5\u6807\u51fa\u6240\u5c5e\u533a\u57df\uff0c\u8bf7\u9009\u62e9\u8d44\u6e90\u540e\u91cd\u8bd5"
         }
       },
       "completion": {
@@ -1313,7 +1313,7 @@
     },
     {
       "id": "skills.installation",
-      "description": "安装或卸载选定 Skill 的目标 Agent 副本",
+      "description": "\u5b89\u88c5\u6216\u5378\u8f7d\u9009\u5b9a Skill \u7684\u76ee\u6807 Agent \u526f\u672c",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -1325,7 +1325,7 @@
           "region": "skills",
           "steps": [],
           "kind": "control",
-          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+          "unavailable": "\u8be5\u64cd\u4f5c\u9700\u8981\u76f8\u5e94\u8d44\u6e90\u3001\u6743\u9650\u6216\u5df2\u6253\u5f00\u7684\u64cd\u4f5c\u5f39\u5c42\uff1b\u5f53\u524d\u4ec5\u6807\u51fa\u6240\u5c5e\u533a\u57df\uff0c\u8bf7\u9009\u62e9\u8d44\u6e90\u540e\u91cd\u8bd5"
         }
       },
       "completion": {
@@ -1341,7 +1341,7 @@
     },
     {
       "id": "skills.withdraw",
-      "description": "撤回自己的共享 Skill",
+      "description": "\u64a4\u56de\u81ea\u5df1\u7684\u5171\u4eab Skill",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -1353,7 +1353,7 @@
           "region": "skills",
           "steps": [],
           "kind": "control",
-          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+          "unavailable": "\u8be5\u64cd\u4f5c\u9700\u8981\u76f8\u5e94\u8d44\u6e90\u3001\u6743\u9650\u6216\u5df2\u6253\u5f00\u7684\u64cd\u4f5c\u5f39\u5c42\uff1b\u5f53\u524d\u4ec5\u6807\u51fa\u6240\u5c5e\u533a\u57df\uff0c\u8bf7\u9009\u62e9\u8d44\u6e90\u540e\u91cd\u8bd5"
         }
       },
       "completion": {
@@ -1369,7 +1369,7 @@
     },
     {
       "id": "canvas.create",
-      "description": "创建 Canvas 文档或文件夹并显示新条目 [Legacy standalone Canvas collection; mixed workspace mutations use workspace.mutate]",
+      "description": "\u521b\u5efa Canvas \u6587\u6863\u6216\u6587\u4ef6\u5939\u5e76\u663e\u793a\u65b0\u6761\u76ee [Legacy standalone Canvas collection; mixed workspace mutations use workspace.mutate]",
       "owner": "desktop-ui",
       "status": "legacy",
       "entry": {
@@ -1397,7 +1397,7 @@
     },
     {
       "id": "canvas.rename",
-      "description": "保存 Canvas 文档或文件夹名称",
+      "description": "\u4fdd\u5b58 Canvas \u6587\u6863\u6216\u6587\u4ef6\u5939\u540d\u79f0",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -1409,7 +1409,7 @@
           "region": "catalog-items",
           "steps": [],
           "kind": "control",
-          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+          "unavailable": "\u8be5\u64cd\u4f5c\u9700\u8981\u76f8\u5e94\u8d44\u6e90\u3001\u6743\u9650\u6216\u5df2\u6253\u5f00\u7684\u64cd\u4f5c\u5f39\u5c42\uff1b\u5f53\u524d\u4ec5\u6807\u51fa\u6240\u5c5e\u533a\u57df\uff0c\u8bf7\u9009\u62e9\u8d44\u6e90\u540e\u91cd\u8bd5"
         }
       },
       "completion": {
@@ -1452,7 +1452,7 @@
     },
     {
       "id": "canvas.title",
-      "description": "保存当前 Canvas 文档标题 [Legacy standalone Canvas collection; mixed workspace mutations use workspace.mutate]",
+      "description": "\u4fdd\u5b58\u5f53\u524d Canvas \u6587\u6863\u6807\u9898 [Legacy standalone Canvas collection; mixed workspace mutations use workspace.mutate]",
       "owner": "desktop-ui",
       "status": "legacy",
       "entry": {
@@ -1480,7 +1480,7 @@
     },
     {
       "id": "canvas.agent.prepare",
-      "description": "将当前 Heading 区域与任务发送给目标 Agent",
+      "description": "\u5c06\u5f53\u524d Heading \u533a\u57df\u4e0e\u4efb\u52a1\u53d1\u9001\u7ed9\u76ee\u6807 Agent",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -1492,7 +1492,7 @@
           "region": "canvas",
           "steps": [],
           "kind": "control",
-          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+          "unavailable": "\u8be5\u64cd\u4f5c\u9700\u8981\u76f8\u5e94\u8d44\u6e90\u3001\u6743\u9650\u6216\u5df2\u6253\u5f00\u7684\u64cd\u4f5c\u5f39\u5c42\uff1b\u5f53\u524d\u4ec5\u6807\u51fa\u6240\u5c5e\u533a\u57df\uff0c\u8bf7\u9009\u62e9\u8d44\u6e90\u540e\u91cd\u8bd5"
         }
       },
       "completion": {
@@ -1508,7 +1508,7 @@
     },
     {
       "id": "messages.participants",
-      "description": "读取 Channel 成员和 Agent roster",
+      "description": "\u8bfb\u53d6 Channel \u6210\u5458\u548c Agent roster",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -1535,7 +1535,7 @@
     },
     {
       "id": "messages.list",
-      "description": "读取或修复消息游标并提交显示状态",
+      "description": "\u8bfb\u53d6\u6216\u4fee\u590d\u6d88\u606f\u6e38\u6807\u5e76\u63d0\u4ea4\u663e\u793a\u72b6\u6001",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -1562,7 +1562,7 @@
     },
     {
       "id": "agents.list",
-      "description": "读取个人 Agent blueprint 清单",
+      "description": "\u8bfb\u53d6\u4e2a\u4eba Agent blueprint \u6e05\u5355",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -1589,7 +1589,7 @@
     },
     {
       "id": "agents.runtimes",
-      "description": "读取可执行的已登记 Agent runtime",
+      "description": "\u8bfb\u53d6\u53ef\u6267\u884c\u7684\u5df2\u767b\u8bb0 Agent runtime",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -1606,7 +1606,7 @@
             }
           ],
           "kind": "region",
-          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+          "unavailable": "\u8be5\u64cd\u4f5c\u9700\u8981\u76f8\u5e94\u8d44\u6e90\u3001\u6743\u9650\u6216\u5df2\u6253\u5f00\u7684\u64cd\u4f5c\u5f39\u5c42\uff1b\u5f53\u524d\u4ec5\u6807\u51fa\u6240\u5c5e\u533a\u57df\uff0c\u8bf7\u9009\u62e9\u8d44\u6e90\u540e\u91cd\u8bd5"
         }
       },
       "completion": {
@@ -1622,7 +1622,7 @@
     },
     {
       "id": "agents.requests",
-      "description": "读取持久化 Agent 请求状态",
+      "description": "\u8bfb\u53d6\u6301\u4e45\u5316 Agent \u8bf7\u6c42\u72b6\u6001",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -1649,7 +1649,7 @@
     },
     {
       "id": "agents.forward",
-      "description": "将明确选择的消息转发为 Agent 任务",
+      "description": "\u5c06\u660e\u786e\u9009\u62e9\u7684\u6d88\u606f\u8f6c\u53d1\u4e3a Agent \u4efb\u52a1",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -1661,7 +1661,7 @@
           "region": "messages",
           "steps": [],
           "kind": "control",
-          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+          "unavailable": "\u8be5\u64cd\u4f5c\u9700\u8981\u76f8\u5e94\u8d44\u6e90\u3001\u6743\u9650\u6216\u5df2\u6253\u5f00\u7684\u64cd\u4f5c\u5f39\u5c42\uff1b\u5f53\u524d\u4ec5\u6807\u51fa\u6240\u5c5e\u533a\u57df\uff0c\u8bf7\u9009\u62e9\u8d44\u6e90\u540e\u91cd\u8bd5"
         }
       },
       "completion": {
@@ -1677,7 +1677,7 @@
     },
     {
       "id": "messages.member.add",
-      "description": "从 Messages 邀请或添加成员",
+      "description": "\u4ece Messages \u9080\u8bf7\u6216\u6dfb\u52a0\u6210\u5458",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -1689,7 +1689,7 @@
           "region": "messages",
           "steps": [],
           "kind": "control",
-          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+          "unavailable": "\u8be5\u64cd\u4f5c\u9700\u8981\u76f8\u5e94\u8d44\u6e90\u3001\u6743\u9650\u6216\u5df2\u6253\u5f00\u7684\u64cd\u4f5c\u5f39\u5c42\uff1b\u5f53\u524d\u4ec5\u6807\u51fa\u6240\u5c5e\u533a\u57df\uff0c\u8bf7\u9009\u62e9\u8d44\u6e90\u540e\u91cd\u8bd5"
         }
       },
       "completion": {
@@ -1705,7 +1705,7 @@
     },
     {
       "id": "agents.manager",
-      "description": "打开个人 Agent 配置清单",
+      "description": "\u6253\u5f00\u4e2a\u4eba Agent \u914d\u7f6e\u6e05\u5355",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -1717,7 +1717,7 @@
           "region": "messages",
           "steps": [],
           "kind": "control",
-          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+          "unavailable": "\u8be5\u64cd\u4f5c\u9700\u8981\u76f8\u5e94\u8d44\u6e90\u3001\u6743\u9650\u6216\u5df2\u6253\u5f00\u7684\u64cd\u4f5c\u5f39\u5c42\uff1b\u5f53\u524d\u4ec5\u6807\u51fa\u6240\u5c5e\u533a\u57df\uff0c\u8bf7\u9009\u62e9\u8d44\u6e90\u540e\u91cd\u8bd5"
         }
       },
       "completion": {
@@ -1733,7 +1733,7 @@
     },
     {
       "id": "agents.save",
-      "description": "保存个人 Agent blueprint",
+      "description": "\u4fdd\u5b58\u4e2a\u4eba Agent blueprint",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -1750,7 +1750,7 @@
             }
           ],
           "kind": "control",
-          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+          "unavailable": "\u8be5\u64cd\u4f5c\u9700\u8981\u76f8\u5e94\u8d44\u6e90\u3001\u6743\u9650\u6216\u5df2\u6253\u5f00\u7684\u64cd\u4f5c\u5f39\u5c42\uff1b\u5f53\u524d\u4ec5\u6807\u51fa\u6240\u5c5e\u533a\u57df\uff0c\u8bf7\u9009\u62e9\u8d44\u6e90\u540e\u91cd\u8bd5"
         }
       },
       "completion": {
@@ -1766,7 +1766,7 @@
     },
     {
       "id": "agents.select",
-      "description": "将个人 Agent 引入或移出 Channel",
+      "description": "\u5c06\u4e2a\u4eba Agent \u5f15\u5165\u6216\u79fb\u51fa Channel",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -1783,7 +1783,7 @@
             }
           ],
           "kind": "control",
-          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+          "unavailable": "\u8be5\u64cd\u4f5c\u9700\u8981\u76f8\u5e94\u8d44\u6e90\u3001\u6743\u9650\u6216\u5df2\u6253\u5f00\u7684\u64cd\u4f5c\u5f39\u5c42\uff1b\u5f53\u524d\u4ec5\u6807\u51fa\u6240\u5c5e\u533a\u57df\uff0c\u8bf7\u9009\u62e9\u8d44\u6e90\u540e\u91cd\u8bd5"
         }
       },
       "completion": {
@@ -1799,7 +1799,7 @@
     },
     {
       "id": "agents.remove",
-      "description": "删除个人 Agent blueprint",
+      "description": "\u5220\u9664\u4e2a\u4eba Agent blueprint",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -1816,7 +1816,7 @@
             }
           ],
           "kind": "control",
-          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+          "unavailable": "\u8be5\u64cd\u4f5c\u9700\u8981\u76f8\u5e94\u8d44\u6e90\u3001\u6743\u9650\u6216\u5df2\u6253\u5f00\u7684\u64cd\u4f5c\u5f39\u5c42\uff1b\u5f53\u524d\u4ec5\u6807\u51fa\u6240\u5c5e\u533a\u57df\uff0c\u8bf7\u9009\u62e9\u8d44\u6e90\u540e\u91cd\u8bd5"
         }
       },
       "completion": {
@@ -1832,7 +1832,7 @@
     },
     {
       "id": "transfers.list",
-      "description": "查看本机创建的 Quick Share",
+      "description": "\u67e5\u770b\u672c\u673a\u521b\u5efa\u7684 Quick Share",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -1853,7 +1853,7 @@
             }
           ],
           "kind": "region",
-          "unavailable": "先打开 Quick Share 并选择相应分享；定位不会创建、撤销分享或修改有效期"
+          "unavailable": "\u5148\u6253\u5f00 Quick Share \u5e76\u9009\u62e9\u76f8\u5e94\u5206\u4eab\uff1b\u5b9a\u4f4d\u4e0d\u4f1a\u521b\u5efa\u3001\u64a4\u9500\u5206\u4eab\u6216\u4fee\u6539\u6709\u6548\u671f"
         }
       },
       "completion": {
@@ -1869,7 +1869,7 @@
     },
     {
       "id": "transfers.create",
-      "description": "创建固定快照 Quick Share 并展示管理结果",
+      "description": "\u521b\u5efa\u56fa\u5b9a\u5feb\u7167 Quick Share \u5e76\u5c55\u793a\u7ba1\u7406\u7ed3\u679c",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -1881,7 +1881,7 @@
           "region": "application",
           "steps": [],
           "kind": "control",
-          "unavailable": "先打开 Quick Share 并选择相应分享；定位不会创建、撤销分享或修改有效期"
+          "unavailable": "\u5148\u6253\u5f00 Quick Share \u5e76\u9009\u62e9\u76f8\u5e94\u5206\u4eab\uff1b\u5b9a\u4f4d\u4e0d\u4f1a\u521b\u5efa\u3001\u64a4\u9500\u5206\u4eab\u6216\u4fee\u6539\u6709\u6548\u671f"
         }
       },
       "completion": {
@@ -1897,7 +1897,7 @@
     },
     {
       "id": "transfers.expiry",
-      "description": "修改自己的 Quick Share 有效期",
+      "description": "\u4fee\u6539\u81ea\u5df1\u7684 Quick Share \u6709\u6548\u671f",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -1918,7 +1918,7 @@
             }
           ],
           "kind": "control",
-          "unavailable": "先打开 Quick Share 并选择相应分享；定位不会创建、撤销分享或修改有效期"
+          "unavailable": "\u5148\u6253\u5f00 Quick Share \u5e76\u9009\u62e9\u76f8\u5e94\u5206\u4eab\uff1b\u5b9a\u4f4d\u4e0d\u4f1a\u521b\u5efa\u3001\u64a4\u9500\u5206\u4eab\u6216\u4fee\u6539\u6709\u6548\u671f"
         }
       },
       "completion": {
@@ -1934,7 +1934,7 @@
     },
     {
       "id": "transfers.revoke",
-      "description": "撤销自己的 Quick Share",
+      "description": "\u64a4\u9500\u81ea\u5df1\u7684 Quick Share",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -1955,7 +1955,7 @@
             }
           ],
           "kind": "control",
-          "unavailable": "先打开 Quick Share 并选择相应分享；定位不会创建、撤销分享或修改有效期"
+          "unavailable": "\u5148\u6253\u5f00 Quick Share \u5e76\u9009\u62e9\u76f8\u5e94\u5206\u4eab\uff1b\u5b9a\u4f4d\u4e0d\u4f1a\u521b\u5efa\u3001\u64a4\u9500\u5206\u4eab\u6216\u4fee\u6539\u6709\u6548\u671f"
         }
       },
       "completion": {
@@ -1971,7 +1971,7 @@
     },
     {
       "id": "prompt.open-agent",
-      "description": "组装最终交接提示词、复制并请求打开选定 Agent",
+      "description": "\u7ec4\u88c5\u6700\u7ec8\u4ea4\u63a5\u63d0\u793a\u8bcd\u3001\u590d\u5236\u5e76\u8bf7\u6c42\u6253\u5f00\u9009\u5b9a Agent",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -1983,7 +1983,7 @@
           "region": "prompt",
           "steps": [],
           "kind": "control",
-          "unavailable": "先打开任一资源的 Give to Agent 提示词弹层，再定位复制/打开控件"
+          "unavailable": "\u5148\u6253\u5f00\u4efb\u4e00\u8d44\u6e90\u7684 Give to Agent \u63d0\u793a\u8bcd\u5f39\u5c42\uff0c\u518d\u5b9a\u4f4d\u590d\u5236/\u6253\u5f00\u63a7\u4ef6"
         }
       },
       "completion": {
@@ -1999,7 +1999,7 @@
     },
     {
       "id": "prompt.copy",
-      "description": "复制最终组装的上下文交接提示词",
+      "description": "\u590d\u5236\u6700\u7ec8\u7ec4\u88c5\u7684\u4e0a\u4e0b\u6587\u4ea4\u63a5\u63d0\u793a\u8bcd",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -2011,7 +2011,7 @@
           "region": "prompt",
           "steps": [],
           "kind": "control",
-          "unavailable": "先打开任一资源的 Give to Agent 提示词弹层，再定位复制/打开控件"
+          "unavailable": "\u5148\u6253\u5f00\u4efb\u4e00\u8d44\u6e90\u7684 Give to Agent \u63d0\u793a\u8bcd\u5f39\u5c42\uff0c\u518d\u5b9a\u4f4d\u590d\u5236/\u6253\u5f00\u63a7\u4ef6"
         }
       },
       "completion": {
@@ -2026,7 +2026,7 @@
     },
     {
       "id": "transfers.prompt.copy",
-      "description": "复制 Quick Share 最终提示词；观测记录屏蔽 capability",
+      "description": "\u590d\u5236 Quick Share \u6700\u7ec8\u63d0\u793a\u8bcd\uff1b\u89c2\u6d4b\u8bb0\u5f55\u5c4f\u853d capability",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -2047,7 +2047,7 @@
             }
           ],
           "kind": "control",
-          "unavailable": "先打开 Quick Share 并选择相应分享；定位不会创建、撤销分享或修改有效期"
+          "unavailable": "\u5148\u6253\u5f00 Quick Share \u5e76\u9009\u62e9\u76f8\u5e94\u5206\u4eab\uff1b\u5b9a\u4f4d\u4e0d\u4f1a\u521b\u5efa\u3001\u64a4\u9500\u5206\u4eab\u6216\u4fee\u6539\u6709\u6548\u671f"
         }
       },
       "completion": {
@@ -2062,7 +2062,7 @@
     },
     {
       "id": "canvas.participants",
-      "description": "打开 Canvas 时加载 Channel 人员与 Agent",
+      "description": "\u6253\u5f00 Canvas \u65f6\u52a0\u8f7d Channel \u4eba\u5458\u4e0e Agent",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -2089,7 +2089,7 @@
     },
     {
       "id": "canvas.tree.rename",
-      "description": "从文档树保存 Canvas 名称",
+      "description": "\u4ece\u6587\u6863\u6811\u4fdd\u5b58 Canvas \u540d\u79f0",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -2101,7 +2101,7 @@
           "region": "catalog-items",
           "steps": [],
           "kind": "control",
-          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+          "unavailable": "\u8be5\u64cd\u4f5c\u9700\u8981\u76f8\u5e94\u8d44\u6e90\u3001\u6743\u9650\u6216\u5df2\u6253\u5f00\u7684\u64cd\u4f5c\u5f39\u5c42\uff1b\u5f53\u524d\u4ec5\u6807\u51fa\u6240\u5c5e\u533a\u57df\uff0c\u8bf7\u9009\u62e9\u8d44\u6e90\u540e\u91cd\u8bd5"
         }
       },
       "completion": {
@@ -2117,7 +2117,7 @@
     },
     {
       "id": "canvas.agent.requests",
-      "description": "读取当前 Canvas 中 Agent 任务的持久化状态",
+      "description": "\u8bfb\u53d6\u5f53\u524d Canvas \u4e2d Agent \u4efb\u52a1\u7684\u6301\u4e45\u5316\u72b6\u6001",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -2144,7 +2144,7 @@
     },
     {
       "id": "canvas.reconcile",
-      "description": "同步 Canvas：失效通知和 Offline 重试均核对 Core outbox；恢复后清除错误。记录触发原因、HTTP 状态、游标、待同步数量和恢复结果，不记录正文。",
+      "description": "\u540c\u6b65 Canvas\uff1a\u5931\u6548\u901a\u77e5\u548c Offline \u91cd\u8bd5\u5747\u6838\u5bf9 Core outbox\uff1b\u6062\u590d\u540e\u6e05\u9664\u9519\u8bef\u3002\u8bb0\u5f55\u89e6\u53d1\u539f\u56e0\u3001HTTP \u72b6\u6001\u3001\u6e38\u6807\u3001\u5f85\u540c\u6b65\u6570\u91cf\u548c\u6062\u590d\u7ed3\u679c\uff0c\u4e0d\u8bb0\u5f55\u6b63\u6587\u3002",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -2171,7 +2171,7 @@
     },
     {
       "id": "canvas.edit",
-      "description": "编辑 Canvas，将更新持久化并提交显示状态",
+      "description": "\u7f16\u8f91 Canvas\uff0c\u5c06\u66f4\u65b0\u6301\u4e45\u5316\u5e76\u63d0\u4ea4\u663e\u793a\u72b6\u6001",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -2183,7 +2183,7 @@
           "region": "canvas",
           "steps": [],
           "kind": "control",
-          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+          "unavailable": "\u8be5\u64cd\u4f5c\u9700\u8981\u76f8\u5e94\u8d44\u6e90\u3001\u6743\u9650\u6216\u5df2\u6253\u5f00\u7684\u64cd\u4f5c\u5f39\u5c42\uff1b\u5f53\u524d\u4ec5\u6807\u51fa\u6240\u5c5e\u533a\u57df\uff0c\u8bf7\u9009\u62e9\u8d44\u6e90\u540e\u91cd\u8bd5"
         }
       },
       "completion": {
@@ -2193,13 +2193,13 @@
       },
       "source": {
         "path": "desktop/ui/src/features/canvas/CanvasView.tsx",
-        "function": "useEffect callback → onUpdate → queue.current.then callback",
+        "function": "useEffect callback \u2192 onUpdate \u2192 queue.current.then callback",
         "object": "LoadedCanvasEditor"
       }
     },
     {
       "id": "canvas.agent.send",
-      "description": "提交已审阅的 Canvas 提示词与用户任务到 Agent runtime",
+      "description": "\u63d0\u4ea4\u5df2\u5ba1\u9605\u7684 Canvas \u63d0\u793a\u8bcd\u4e0e\u7528\u6237\u4efb\u52a1\u5230 Agent runtime",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -2211,7 +2211,7 @@
           "region": "canvas",
           "steps": [],
           "kind": "control",
-          "unavailable": "先打开对应 Agent 发送/转发弹层；定位不会发送指令"
+          "unavailable": "\u5148\u6253\u5f00\u5bf9\u5e94 Agent \u53d1\u9001/\u8f6c\u53d1\u5f39\u5c42\uff1b\u5b9a\u4f4d\u4e0d\u4f1a\u53d1\u9001\u6307\u4ee4"
         }
       },
       "completion": {
@@ -2227,7 +2227,7 @@
     },
     {
       "id": "context.people",
-      "description": "上下文选择器加载 Channel 成员与 Agent",
+      "description": "\u4e0a\u4e0b\u6587\u9009\u62e9\u5668\u52a0\u8f7d Channel \u6210\u5458\u4e0e Agent",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -2254,7 +2254,7 @@
     },
     {
       "id": "context.resources",
-      "description": "上下文选择器加载 Files、Session、Canvas 与消息资源",
+      "description": "\u4e0a\u4e0b\u6587\u9009\u62e9\u5668\u52a0\u8f7d Files\u3001Session\u3001Canvas \u4e0e\u6d88\u606f\u8d44\u6e90",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -2281,7 +2281,7 @@
     },
     {
       "id": "context.lookup",
-      "description": "按资源类型与 ID 解析共享上下文元信息",
+      "description": "\u6309\u8d44\u6e90\u7c7b\u578b\u4e0e ID \u89e3\u6790\u5171\u4eab\u4e0a\u4e0b\u6587\u5143\u4fe1\u606f",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -2293,7 +2293,7 @@
           "region": "messages",
           "steps": [],
           "kind": "control",
-          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+          "unavailable": "\u8be5\u64cd\u4f5c\u9700\u8981\u76f8\u5e94\u8d44\u6e90\u3001\u6743\u9650\u6216\u5df2\u6253\u5f00\u7684\u64cd\u4f5c\u5f39\u5c42\uff1b\u5f53\u524d\u4ec5\u6807\u51fa\u6240\u5c5e\u533a\u57df\uff0c\u8bf7\u9009\u62e9\u8d44\u6e90\u540e\u91cd\u8bd5"
         }
       },
       "completion": {
@@ -2309,7 +2309,7 @@
     },
     {
       "id": "context.forward",
-      "description": "将选择的上下文资源转发给目标 Agent",
+      "description": "\u5c06\u9009\u62e9\u7684\u4e0a\u4e0b\u6587\u8d44\u6e90\u8f6c\u53d1\u7ed9\u76ee\u6807 Agent",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -2321,7 +2321,7 @@
           "region": "messages",
           "steps": [],
           "kind": "control",
-          "unavailable": "先打开对应 Agent 发送/转发弹层；定位不会发送指令"
+          "unavailable": "\u5148\u6253\u5f00\u5bf9\u5e94 Agent \u53d1\u9001/\u8f6c\u53d1\u5f39\u5c42\uff1b\u5b9a\u4f4d\u4e0d\u4f1a\u53d1\u9001\u6307\u4ee4"
         }
       },
       "completion": {
@@ -2337,7 +2337,7 @@
     },
     {
       "id": "files.preview",
-      "description": "读取共享文件并生成文本或 Office 本地预览",
+      "description": "\u8bfb\u53d6\u5171\u4eab\u6587\u4ef6\u5e76\u751f\u6210\u6587\u672c\u6216 Office \u672c\u5730\u9884\u89c8",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -2349,7 +2349,7 @@
           "region": "file-preview",
           "steps": [],
           "kind": "region",
-          "unavailable": "先打开共享文件并选择一个可预览的文件"
+          "unavailable": "\u5148\u6253\u5f00\u5171\u4eab\u6587\u4ef6\u5e76\u9009\u62e9\u4e00\u4e2a\u53ef\u9884\u89c8\u7684\u6587\u4ef6"
         }
       },
       "completion": {
@@ -2365,7 +2365,7 @@
     },
     {
       "id": "transfers.sources",
-      "description": "搜索本机 Session 或 Skill 来源以创建 Quick Share",
+      "description": "\u641c\u7d22\u672c\u673a Session \u6216 Skill \u6765\u6e90\u4ee5\u521b\u5efa Quick Share",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -2377,7 +2377,7 @@
           "region": "application",
           "steps": [],
           "kind": "control",
-          "unavailable": "先打开 Quick Share 并选择相应分享；定位不会创建、撤销分享或修改有效期"
+          "unavailable": "\u5148\u6253\u5f00 Quick Share \u5e76\u9009\u62e9\u76f8\u5e94\u5206\u4eab\uff1b\u5b9a\u4f4d\u4e0d\u4f1a\u521b\u5efa\u3001\u64a4\u9500\u5206\u4eab\u6216\u4fee\u6539\u6709\u6548\u671f"
         }
       },
       "completion": {
@@ -2387,13 +2387,13 @@
       },
       "source": {
         "path": "desktop/ui/src/features/transfers/QuickShareDialog.tsx",
-        "function": "useEffect callback → window.setTimeout callback",
+        "function": "useEffect callback \u2192 window.setTimeout callback",
         "object": "QuickShareControl"
       }
     },
     {
       "id": "system.choose-path",
-      "description": "通过 Local Core 打开本机文件或目录选择器",
+      "description": "\u901a\u8fc7 Local Core \u6253\u5f00\u672c\u673a\u6587\u4ef6\u6216\u76ee\u5f55\u9009\u62e9\u5668",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -2405,7 +2405,7 @@
           "region": "files",
           "steps": [],
           "kind": "control",
-          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+          "unavailable": "\u8be5\u64cd\u4f5c\u9700\u8981\u76f8\u5e94\u8d44\u6e90\u3001\u6743\u9650\u6216\u5df2\u6253\u5f00\u7684\u64cd\u4f5c\u5f39\u5c42\uff1b\u5f53\u524d\u4ec5\u6807\u51fa\u6240\u5c5e\u533a\u57df\uff0c\u8bf7\u9009\u62e9\u8d44\u6e90\u540e\u91cd\u8bd5"
         }
       },
       "completion": {
@@ -2421,7 +2421,7 @@
     },
     {
       "id": "auth.status",
-      "description": "读取当前账号登录状态并提交界面状态",
+      "description": "\u8bfb\u53d6\u5f53\u524d\u8d26\u53f7\u767b\u5f55\u72b6\u6001\u5e76\u63d0\u4ea4\u754c\u9762\u72b6\u6001",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -2448,7 +2448,7 @@
     },
     {
       "id": "system.gui-version",
-      "description": "检查 GUI 资源版本并在更新后刷新界面",
+      "description": "\u68c0\u67e5 GUI \u8d44\u6e90\u7248\u672c\u5e76\u5728\u66f4\u65b0\u540e\u5237\u65b0\u754c\u9762",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -2478,13 +2478,13 @@
       },
       "source": {
         "path": "desktop/ui/src/main.tsx",
-        "function": "useEffect callback → reloadIfGuiChanged",
+        "function": "useEffect callback \u2192 reloadIfGuiChanged",
         "object": "App"
       }
     },
     {
       "id": "files.choose",
-      "description": "打开文件或目录选择器以准备共享 Files",
+      "description": "\u6253\u5f00\u6587\u4ef6\u6216\u76ee\u5f55\u9009\u62e9\u5668\u4ee5\u51c6\u5907\u5171\u4eab Files",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -2496,7 +2496,7 @@
           "region": "files",
           "steps": [],
           "kind": "control",
-          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+          "unavailable": "\u8be5\u64cd\u4f5c\u9700\u8981\u76f8\u5e94\u8d44\u6e90\u3001\u6743\u9650\u6216\u5df2\u6253\u5f00\u7684\u64cd\u4f5c\u5f39\u5c42\uff1b\u5f53\u524d\u4ec5\u6807\u51fa\u6240\u5c5e\u533a\u57df\uff0c\u8bf7\u9009\u62e9\u8d44\u6e90\u540e\u91cd\u8bd5"
         }
       },
       "completion": {
@@ -2512,7 +2512,7 @@
     },
     {
       "id": "files.preview.native",
-      "description": "在本机原生 image/PDF 预览中打开共享文件；PDF 完成边界为 frame load，不能证明 PDF 内部渲染成功",
+      "description": "\u5728\u672c\u673a\u539f\u751f image/PDF \u9884\u89c8\u4e2d\u6253\u5f00\u5171\u4eab\u6587\u4ef6\uff1bPDF \u5b8c\u6210\u8fb9\u754c\u4e3a frame load\uff0c\u4e0d\u80fd\u8bc1\u660e PDF \u5185\u90e8\u6e32\u67d3\u6210\u529f",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -2524,7 +2524,7 @@
           "region": "file-preview",
           "steps": [],
           "kind": "region",
-          "unavailable": "先打开共享文件并选择一个可预览的文件"
+          "unavailable": "\u5148\u6253\u5f00\u5171\u4eab\u6587\u4ef6\u5e76\u9009\u62e9\u4e00\u4e2a\u53ef\u9884\u89c8\u7684\u6587\u4ef6"
         }
       },
       "completion": {
@@ -2540,7 +2540,7 @@
     },
     {
       "id": "agents.work.read",
-      "description": "打开指定 Agent 任务的工作明细",
+      "description": "\u6253\u5f00\u6307\u5b9a Agent \u4efb\u52a1\u7684\u5de5\u4f5c\u660e\u7ec6",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -2552,7 +2552,7 @@
           "region": "agent-work",
           "steps": [],
           "kind": "region",
-          "unavailable": "先打开某条 Agent 任务的 Work details"
+          "unavailable": "\u5148\u6253\u5f00\u67d0\u6761 Agent \u4efb\u52a1\u7684 Work details"
         }
       },
       "completion": {
@@ -2568,7 +2568,7 @@
     },
     {
       "id": "members.identity.requests",
-      "description": "打开成员身份卡并读取任务清单",
+      "description": "\u6253\u5f00\u6210\u5458\u8eab\u4efd\u5361\u5e76\u8bfb\u53d6\u4efb\u52a1\u6e05\u5355",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -2580,7 +2580,7 @@
           "region": "messages",
           "steps": [],
           "kind": "control",
-          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+          "unavailable": "\u8be5\u64cd\u4f5c\u9700\u8981\u76f8\u5e94\u8d44\u6e90\u3001\u6743\u9650\u6216\u5df2\u6253\u5f00\u7684\u64cd\u4f5c\u5f39\u5c42\uff1b\u5f53\u524d\u4ec5\u6807\u51fa\u6240\u5c5e\u533a\u57df\uff0c\u8bf7\u9009\u62e9\u8d44\u6e90\u540e\u91cd\u8bd5"
         }
       },
       "completion": {
@@ -2590,13 +2590,13 @@
       },
       "source": {
         "path": "desktop/ui/src/features/context/UserIdentity.tsx",
-        "function": "useEffect callback → load",
+        "function": "useEffect callback \u2192 load",
         "object": "UserIdentityCard"
       }
     },
     {
       "id": "context.preview",
-      "description": "展开上下文胶囊并读取资源元信息或消息正文",
+      "description": "\u5c55\u5f00\u4e0a\u4e0b\u6587\u80f6\u56ca\u5e76\u8bfb\u53d6\u8d44\u6e90\u5143\u4fe1\u606f\u6216\u6d88\u606f\u6b63\u6587",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -2608,7 +2608,7 @@
           "region": "messages",
           "steps": [],
           "kind": "control",
-          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+          "unavailable": "\u8be5\u64cd\u4f5c\u9700\u8981\u76f8\u5e94\u8d44\u6e90\u3001\u6743\u9650\u6216\u5df2\u6253\u5f00\u7684\u64cd\u4f5c\u5f39\u5c42\uff1b\u5f53\u524d\u4ec5\u6807\u51fa\u6240\u5c5e\u533a\u57df\uff0c\u8bf7\u9009\u62e9\u8d44\u6e90\u540e\u91cd\u8bd5"
         }
       },
       "completion": {
@@ -2624,7 +2624,7 @@
     },
     {
       "id": "canvas.move",
-      "description": "在文档树中移动 Canvas 文档或调整排序 [Legacy standalone Canvas collection; mixed workspace mutations use workspace.mutate]",
+      "description": "\u5728\u6587\u6863\u6811\u4e2d\u79fb\u52a8 Canvas \u6587\u6863\u6216\u8c03\u6574\u6392\u5e8f [Legacy standalone Canvas collection; mixed workspace mutations use workspace.mutate]",
       "owner": "desktop-ui",
       "status": "legacy",
       "entry": {
@@ -2652,7 +2652,7 @@
     },
     {
       "id": "canvas.remove",
-      "description": "删除选定 Canvas 文档并刷新文档树",
+      "description": "\u5220\u9664\u9009\u5b9a Canvas \u6587\u6863\u5e76\u5237\u65b0\u6587\u6863\u6811",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -2664,7 +2664,7 @@
           "region": "catalog-items",
           "steps": [],
           "kind": "control",
-          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+          "unavailable": "\u8be5\u64cd\u4f5c\u9700\u8981\u76f8\u5e94\u8d44\u6e90\u3001\u6743\u9650\u6216\u5df2\u6253\u5f00\u7684\u64cd\u4f5c\u5f39\u5c42\uff1b\u5f53\u524d\u4ec5\u6807\u51fa\u6240\u5c5e\u533a\u57df\uff0c\u8bf7\u9009\u62e9\u8d44\u6e90\u540e\u91cd\u8bd5"
         }
       },
       "completion": {
@@ -2680,7 +2680,7 @@
     },
     {
       "id": "system.shell-update",
-      "description": "下载并安装新的 Electron Shell 制品",
+      "description": "\u4e0b\u8f7d\u5e76\u5b89\u88c5\u65b0\u7684 Electron Shell \u5236\u54c1",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -2701,8 +2701,8 @@
             }
           ],
           "kind": "region",
-          "unavailable": "仅 Electron 宿主的更新流程提供此动作；普通浏览器没有对应操作控件",
-          "stateNote": "Electron 更新后的自动承接；普通浏览器没有独立按钮"
+          "unavailable": "\u4ec5 Electron \u5bbf\u4e3b\u7684\u66f4\u65b0\u6d41\u7a0b\u63d0\u4f9b\u6b64\u52a8\u4f5c\uff1b\u666e\u901a\u6d4f\u89c8\u5668\u6ca1\u6709\u5bf9\u5e94\u64cd\u4f5c\u63a7\u4ef6",
+          "stateNote": "Electron \u66f4\u65b0\u540e\u7684\u81ea\u52a8\u627f\u63a5\uff1b\u666e\u901a\u6d4f\u89c8\u5668\u6ca1\u6709\u72ec\u7acb\u6309\u94ae"
         }
       },
       "completion": {
@@ -2718,7 +2718,7 @@
     },
     {
       "id": "members.agent-count",
-      "description": "打开成员消息设置时查询可用 Agent 数量",
+      "description": "\u6253\u5f00\u6210\u5458\u6d88\u606f\u8bbe\u7f6e\u65f6\u67e5\u8be2\u53ef\u7528 Agent \u6570\u91cf",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -2739,7 +2739,7 @@
             }
           ],
           "kind": "control",
-          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+          "unavailable": "\u8be5\u64cd\u4f5c\u9700\u8981\u76f8\u5e94\u8d44\u6e90\u3001\u6743\u9650\u6216\u5df2\u6253\u5f00\u7684\u64cd\u4f5c\u5f39\u5c42\uff1b\u5f53\u524d\u4ec5\u6807\u51fa\u6240\u5c5e\u533a\u57df\uff0c\u8bf7\u9009\u62e9\u8d44\u6e90\u540e\u91cd\u8bd5"
         }
       },
       "completion": {
@@ -2755,7 +2755,7 @@
     },
     {
       "id": "canvas.handoff",
-      "description": "读取 Canvas 最终投影并打开 Agent 交接提示词界面",
+      "description": "\u8bfb\u53d6 Canvas \u6700\u7ec8\u6295\u5f71\u5e76\u6253\u5f00 Agent \u4ea4\u63a5\u63d0\u793a\u8bcd\u754c\u9762",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -2767,7 +2767,7 @@
           "region": "canvas",
           "steps": [],
           "kind": "control",
-          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+          "unavailable": "\u8be5\u64cd\u4f5c\u9700\u8981\u76f8\u5e94\u8d44\u6e90\u3001\u6743\u9650\u6216\u5df2\u6253\u5f00\u7684\u64cd\u4f5c\u5f39\u5c42\uff1b\u5f53\u524d\u4ec5\u6807\u51fa\u6240\u5c5e\u533a\u57df\uff0c\u8bf7\u9009\u62e9\u8d44\u6e90\u540e\u91cd\u8bd5"
         }
       },
       "completion": {
@@ -2783,7 +2783,7 @@
     },
     {
       "id": "messages.focus",
-      "description": "通过定位入口读取并显示指定消息",
+      "description": "\u901a\u8fc7\u5b9a\u4f4d\u5165\u53e3\u8bfb\u53d6\u5e76\u663e\u793a\u6307\u5b9a\u6d88\u606f",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -2795,7 +2795,7 @@
           "region": "messages",
           "steps": [],
           "kind": "region",
-          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+          "unavailable": "\u8be5\u64cd\u4f5c\u9700\u8981\u76f8\u5e94\u8d44\u6e90\u3001\u6743\u9650\u6216\u5df2\u6253\u5f00\u7684\u64cd\u4f5c\u5f39\u5c42\uff1b\u5f53\u524d\u4ec5\u6807\u51fa\u6240\u5c5e\u533a\u57df\uff0c\u8bf7\u9009\u62e9\u8d44\u6e90\u540e\u91cd\u8bd5"
         }
       },
       "completion": {
@@ -2811,7 +2811,7 @@
     },
     {
       "id": "agents.identity.requests",
-      "description": "打开 Agent 身份卡并读取持久化任务清单",
+      "description": "\u6253\u5f00 Agent \u8eab\u4efd\u5361\u5e76\u8bfb\u53d6\u6301\u4e45\u5316\u4efb\u52a1\u6e05\u5355",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -2823,7 +2823,7 @@
           "region": "messages",
           "steps": [],
           "kind": "control",
-          "unavailable": "该操作需要相应资源、权限或已打开的操作弹层；当前仅标出所属区域，请选择资源后重试"
+          "unavailable": "\u8be5\u64cd\u4f5c\u9700\u8981\u76f8\u5e94\u8d44\u6e90\u3001\u6743\u9650\u6216\u5df2\u6253\u5f00\u7684\u64cd\u4f5c\u5f39\u5c42\uff1b\u5f53\u524d\u4ec5\u6807\u51fa\u6240\u5c5e\u533a\u57df\uff0c\u8bf7\u9009\u62e9\u8d44\u6e90\u540e\u91cd\u8bd5"
         }
       },
       "completion": {
@@ -2833,13 +2833,13 @@
       },
       "source": {
         "path": "desktop/ui/src/features/context/AgentIdentityLink.tsx",
-        "function": "useEffect callback → load",
+        "function": "useEffect callback \u2192 load",
         "object": "AgentIdentityLink"
       }
     },
     {
       "id": "feedback.list",
-      "description": "查看资产的消费方反馈评论",
+      "description": "\u67e5\u770b\u8d44\u4ea7\u7684\u6d88\u8d39\u65b9\u53cd\u9988\u8bc4\u8bba",
       "owner": "desktop-ui",
       "status": "instrumented",
       "entry": {
@@ -2862,6 +2862,33 @@
         "path": "desktop/ui/src/features/feedback/SkillFeedback.tsx",
         "function": "load",
         "object": "SkillFeedback"
+      }
+    },
+    {
+      "id": "workbench.open",
+      "description": "Open independently installed Operation Workbench",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "settings",
+        "target": "workbench.open",
+        "selector": "[data-trace-target~=\"workbench.open\"]",
+        "locator": {
+          "region": "settings",
+          "steps": [],
+          "kind": "action"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/ui/src/features/workbench/WorkbenchEntry.tsx",
+        "function": "open",
+        "object": "WorkbenchEntry"
       }
     }
   ]

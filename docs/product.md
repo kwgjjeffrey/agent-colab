@@ -258,3 +258,10 @@ folders and shared local-file collections must remain visually distinguishable.
 ## Skill Feedback
 
 消费方可明确同意通过宿主 hook 上报 Skill 使用任务片段及此前三段用户 query。采集默认关闭，无授权不采集、不上报；不向主任务注入评价提示或创建聊天。端侧模型评价另行可选，原文上报不等待评价。资产 owner 按资产合并查看 Markdown 反馈，并由其 Agent 修复验证后标记 resolved，或说明理由标记 ignored。首版 Codex/macOS；协议与数据见 [feedback-design.md](feedback-design.md)。
+
+
+## Operation Workbench
+
+Settings opens an independently packaged Operation Workbench frontend. Skill Feedbacks is the first module: authorized official/shared Skill assets, asset counts, complete Markdown/YAML evaluation and existing Session Reader. No new GUI filters. Server authenticates each request and requires asset ownership or an explicit reviewer grant; Channel membership is insufficient.
+
+The operation-workbench artifact owns desktop/operation-workbench, VERSION, ZIP and a signed manifest entry. Core hosts its active resources at /operation-workbench/ with the same loopback session; GUI calls only Core, which calls Server. Python setup owns verified download and atomic activation, including Workbench-only updates preserving other artifact versions and the resident Core. The Workbench exposes version/check/update; Settings can install the added artifact when opening from a legacy installation.

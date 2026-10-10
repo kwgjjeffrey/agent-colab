@@ -14,7 +14,7 @@ async function post<T>(path: string, body: unknown): Promise<T> {
   return response.json() as Promise<T>;
 }
 /** Asset aggregation stays independent of Channel placement. Evidence remains owner-authorized. */
-export function SkillFeedback({shareId}: {shareId: string}) {
+export function SkillFeedback({shareId, assetKey: providedAssetKey}: {shareId?: string; assetKey?: string}) {
   const [refresh,setRefresh]=useState(0);
   const [assetKey,setAssetKey]=useState<string>();
   const [count,setCount]=useState<number>();
@@ -27,15 +27,15 @@ export function SkillFeedback({shareId}: {shareId: string}) {
   useEffect(()=>{
     let active=true;setAssetKey(undefined);setCount(undefined);setError(undefined);setOpen(false);setItems([]);
     void (async()=>{
-      const binding=await trackedFetch(`/v1/shares/${shareId}/asset`);
-      if (!binding.ok) throw new Error(await binding.text());
-      const {assetId}=await binding.json() as {assetId:string};
-      const key=`asset:${assetId}`;
+      if (!shareId && !providedAssetKey) throw new Error("Missing feedback asset");
+      const binding=providedAssetKey ? undefined : await trackedFetch(`/v1/shares/${shareId}/asset`);
+      if (binding && !binding.ok) throw new Error(await binding.text());
+      const key=providedAssetKey ?? `asset:${(await binding!.json() as {assetId:string}).assetId}`;
       const result=await post<{totalMatching:number}>('/v1/feedbacks/list-feedbacks',{assetKey:key,limit:1,include:'rating'});
       if(active){setAssetKey(key);setCount(result.totalMatching);}
     })().catch(reason=>{if(active)setError(String(reason));});
     return ()=>{active=false;};
-  },[shareId,refresh]);
+  },[shareId,providedAssetKey,refresh]);
   async function load(next?:string){
     if(!assetKey)return;setLoading(true);setError(undefined);
     return runOperation("feedback.list",async(operation)=>{

@@ -360,3 +360,10 @@ Canvas image editing: paste/drop image files or choose Add image. Upload has a v
 ### Organization people in message mentions (2026-10-10)
 
 Message `@` uses the same organization-person search endpoint as Add member. Channel participants remain locally available; a nonempty query also searches the configured organization directory. People match display name, persisted enterprise username, or email. Exact matches take priority; otherwise at most three people appear. Agent and resource matching stays separate. Person mentions retain provider/subject and profile metadata in atomic node attributes, without entering Agent routing. Click or hover opens the shared identity card. A person outside this Channel has an Invite to this Channel action: re-query current organization membership, add an existing organization member through the authorized member API, or open the existing invitation prompt for an unregistered person. Server permissions and failures remain visible.
+
+
+## Operation Workbench
+
+Settings opens an independently packaged Operation Workbench frontend. Skill Feedbacks is the first module: authorized official/shared Skill assets, asset counts, complete Markdown/YAML evaluation and existing Session Reader. No new GUI filters. Server authenticates each request and requires asset ownership or an explicit reviewer grant; Channel membership is insufficient.
+
+The operation-workbench artifact owns desktop/operation-workbench, VERSION, ZIP and a signed manifest entry. Core hosts its active resources at /operation-workbench/ with the same loopback session; GUI calls only Core, which calls Server. Python setup owns verified download and atomic activation, including Workbench-only updates preserving other artifact versions and the resident Core. The Workbench exposes version/check/update; Settings can install the added artifact when opening from a legacy installation.

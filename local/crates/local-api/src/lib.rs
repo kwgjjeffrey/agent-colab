@@ -577,6 +577,7 @@ pub fn router(state: AppState, security: LocalSecurity) -> Router {
         .route("/v1/observability/clock", get(colab_observability::clock_reply))
         .route("/v1/observability/traces", axum::routing::post(observability::traces).layer(axum::extract::DefaultBodyLimit::max(1024*1024)))
         .route("/v1/system/installation", get(system::installation_status))
+        .route("/v1/system/operation-workbench/update", axum::routing::post(system::update_workbench))
         .route("/v1/system/update-progress", get(system::update_progress))
         .route(
             "/v1/system/update",
@@ -874,13 +875,12 @@ pub fn router(state: AppState, security: LocalSecurity) -> Router {
                 .allow_headers(tower_http::cors::Any)
                 .expose_headers([axum::http::HeaderName::from_static("x-colab-source-kind")]),
         )
-        .layer(middleware::from_fn_with_state(
-            security,
-            enforce_local_security,
-        ));
+        ;
     // Local Core is the stable GUI host. Electron may open this origin in a native
     // window, while headless installations use the same URL in the system browser.
     // Static resources are independently activated by setup via COLAB_GUI_ROOT.
+    let workbench_root = std::env::var_os("COLAB_WORKBENCH_ROOT").map(PathBuf::from).unwrap_or_else(|| system::installation_root().join("current/operation-workbench"));
+    let router = router.nest_service("/operation-workbench", tower_http::services::ServeDir::new(workbench_root).append_index_html_on_directories(true)).layer(middleware::from_fn_with_state(security, enforce_local_security));
     match gui_root {
         Some(root) => router.fallback_service(
             tower_http::services::ServeDir::new(root).append_index_html_on_directories(true),

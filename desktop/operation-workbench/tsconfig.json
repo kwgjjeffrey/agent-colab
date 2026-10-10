@@ -1,0 +1,14 @@
+{
+  "extends": "../ui/tsconfig.json",
+  "compilerOptions": {
+    "paths": {
+      "@/*": [
+        "../ui/src/*"
+      ]
+    }
+  },
+  "include": [
+    "src",
+    "../ui/src/vite-env.d.ts"
+  ]
+}

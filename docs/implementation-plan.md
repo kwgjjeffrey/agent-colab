@@ -1407,3 +1407,5 @@ when applying patches. Legacy excerpts remain patchable. Codec tests passed
 16/16, covering repeated mentions, exact occurrence preservation, escaped labels,
 legacy parsing/patching, protected identities and Yjs replay. Clean Core and GUI
 production builds passed. Shell and Skill are unchanged.
+
+Operation Workbench implementation 2026-10-10: independent frontend, Settings entrance, authorized Skill feedbacks, independent updater and Core hosting. Feedback tests 3; setup tests 3 (selective update, malformed package recovery, legacy manifest); publisher tests 4 passed. TypeScript/Core check passed. Publication and installed acceptance pending; `.trial/V-WORKBENCH-01/README.md`.

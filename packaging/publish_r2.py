@@ -29,6 +29,7 @@ def sha256(path: Path) -> str:
 def artifact_specs(repo: Path) -> list[tuple[str, str, Path, str, str | None, str | None]]:
     versions = {
         "local-core": (repo / "local/VERSION").read_text().strip(),
+        "operation-workbench": (repo / "desktop/operation-workbench/VERSION").read_text().strip(),
         "desktop-ui": (repo / "desktop/ui/VERSION").read_text().strip(),
         "colab-skill": (repo / "skills/colab/VERSION").read_text().strip(),
         "electron-shell": (repo / "desktop/shell/VERSION").read_text().strip(),
@@ -39,6 +40,7 @@ def artifact_specs(repo: Path) -> list[tuple[str, str, Path, str, str | None, st
         # last entry; new installers filter platform + architecture explicitly.
         ("local-core", versions["local-core"], repo / f"dist/local-core/{versions['local-core']}/windows-x86_64.zip", "local-core-windows-x86_64.zip", "windows", "x86_64"),
         ("local-core", versions["local-core"], repo / f"dist/local-core/{versions['local-core']}/darwin-arm64.tar.gz", "local-core-darwin-arm64.tar.gz", "darwin", "arm64"),
+        ("operation-workbench", versions["operation-workbench"], repo / f"dist/operation-workbench/{versions['operation-workbench']}.zip", "operation-workbench.zip", None, None),
         ("desktop-ui", versions["desktop-ui"], repo / f"dist/desktop-ui/{versions['desktop-ui']}.zip", "desktop-ui.zip", None, None),
         ("colab-skill", versions["colab-skill"], repo / f"dist/colab-skill/{versions['colab-skill']}.zip", "colab-skill.zip", None, None),
         ("electron-shell", versions["electron-shell"], repo / f"dist/electron-shell/{versions['electron-shell']}/Colab-{versions['electron-shell']}-x64.exe", f"Colab-{versions['electron-shell']}-x64.exe", "windows", "x86_64"),
@@ -170,7 +172,7 @@ def main() -> None:
     parser.add_argument(
         "--component",
         action="append",
-        choices=["local-core", "desktop-ui", "colab-skill", "electron-shell"],
+        choices=["local-core", "desktop-ui", "colab-skill", "electron-shell", "operation-workbench"],
         help="Publish this changed component and retain all other artifacts from stable",
     )
     parser.add_argument(

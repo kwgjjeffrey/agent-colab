@@ -367,6 +367,7 @@ def verify_core_readiness(core: pathlib.Path, gui: pathlib.Path, server_url: str
 def main():
     parser=argparse.ArgumentParser(prog="colab-setup")
     parser.add_argument("operation", choices=["install","update","update-shell","status","check","install-agent","uninstall-agent","open"])
+    parser.add_argument("--component", choices=["operation-workbench"], help="Update only this independently activated frontend")
     parser.add_argument("--manifest", default=DEFAULT_MANIFEST)
     parser.add_argument("--agent", action="append", choices=TARGETS, default=[])
     parser.add_argument("--server-url", default=os.environ.get("COLAB_SERVER_URL",ARTIFACT_CONFIG["serverUrl"]))
@@ -389,7 +390,7 @@ def main():
         installed_versions=current.get("componentVersions",{})
         legacy=current.get("version")
         recorded_artifacts=current.get("componentArtifacts",{})
-        result={name:{"installedVersion":installed_versions.get(name,legacy)} for name in ("local-core","desktop-ui","colab-skill")}
+        result={name:{"installedVersion":installed_versions.get(name,legacy)} for name in ("local-core","desktop-ui","colab-skill","operation-workbench")}
         for name, item in recorded_artifacts.items():
             if name in result or name == "electron-shell":
                 result.setdefault(name,{})["downloadUrl"] = item.get("url")
@@ -400,6 +401,9 @@ def main():
                 with app.open("rb") as source: shell=plistlib.load(source).get("CFBundleShortVersionString")
             except (OSError,ValueError): pass
         result.setdefault("electron-shell",{})["installedVersion"]=shell
+        workbench_version=result["operation-workbench"].get("installedVersion")
+        if not workbench_version or not (ROOT/"versions/operation-workbench"/workbench_version/"workbench.json").is_file():
+            result["operation-workbench"]["installedVersion"]=None
         if manifest:
             for item in select_artifacts(manifest).values():
                 result.setdefault(item["name"],{})["latestVersion"]=item.get("version",manifest["version"])
@@ -407,7 +411,7 @@ def main():
             for name,value in result.items():
                 # Electron is optional. Absence is a download opportunity, not a pending update
                 # that would make the shared update button install an unwanted shell.
-                value["updateAvailable"]=bool(value.get("installedVersion")) and value.get("installedVersion")!=value.get("latestVersion")
+                value["updateAvailable"]=(bool(value.get("installedVersion")) or name=="operation-workbench") and value.get("installedVersion")!=value.get("latestVersion")
         return result
     if args.operation=="status":
         current=json.loads(receipt.read_text()) if receipt.exists() else {"installed":False}
@@ -481,8 +485,12 @@ def main():
         existing=json.loads(receipt.read_text()) if receipt.exists() else {}
         installed_versions=existing.get("componentVersions",{})
         legacy_version=existing.get("version")
+        if args.component and args.operation != "update": raise RuntimeError("--component is only supported for update")
+        if args.component and args.component not in items: raise RuntimeError("release has no Operation Workbench artifact")
+        install_names=[args.component] if args.component else [name for name in ("local-core","desktop-ui","colab-skill","operation-workbench") if name in items]
+        if args.component and not installed_versions: raise RuntimeError("install Colab before updating only Workbench")
         staged={}
-        for name in ("local-core","desktop-ui","colab-skill"):
+        for name in install_names:
             item=items[name]; archive=temporary/pathlib.Path(item["url"]).name
             version=item.get("version",release_version)
             if installed_versions.get(name,legacy_version)==version and (ROOT/"versions"/name/version).exists():
@@ -492,11 +500,22 @@ def main():
             stage=ROOT/"versions"/name/f".{version}.staging-{os.getpid()}"
             shutil.rmtree(stage,ignore_errors=True); stage.mkdir(parents=True)
             safe_extract(archive,stage)
+            if name=="operation-workbench":
+                metadata=json.loads((stage/"workbench.json").read_text())
+                if metadata.get("package")!="colab-operation-workbench" or metadata.get("version")!=version or not (stage/"index.html").is_file():
+                    raise RuntimeError("invalid Operation Workbench artifact")
             staged[name]=(stage,final)
         for stage,final in staged.values():
             if final.exists(): shutil.rmtree(final)
             os.replace(stage,final)
-        component_versions={name:item.get("version",release_version) for name,item in items.items()}
+        component_versions={name:item.get("version",release_version) for name,item in items.items()} if not args.component else {**installed_versions, **{name:items[name].get("version",release_version) for name in install_names}}
+        if args.component:
+            name=args.component
+            activate_link(ROOT/"current"/name,ROOT/"versions"/name/component_versions[name])
+            component_artifacts={**existing.get("componentArtifacts",{}),name:{key:items[name].get(key) for key in ("version","url","platform","arch") if items[name].get(key) is not None}}
+            receipt.write_text(json.dumps({**existing,"version":release_version,"componentVersions":component_versions,"componentArtifacts":component_artifacts,"manifest":args.manifest,"installedAt":time.time()},indent=2)+"\n")
+            print(receipt.read_text(),end="")
+            return
         skill_version=component_versions["colab-skill"]
         skill_root=ROOT/"versions/colab-skill"/skill_version/skill_version
         # Python's zipfile does not restore executable mode bits. The archive has already passed
@@ -532,12 +551,14 @@ def main():
         activate_link(ROOT/"current/skill",skill_root)
         activate_link(ROOT/"current/core",ROOT/"versions/local-core"/component_versions["local-core"])
         activate_link(ROOT/"current/ui",ROOT/"versions/desktop-ui"/component_versions["desktop-ui"])
+        if "operation-workbench" in component_versions:
+            activate_link(ROOT/"current/operation-workbench",ROOT/"versions/operation-workbench"/component_versions["operation-workbench"])
         # Alpha setup triggers the service restart but does not block the user
         # on watcher shutdown or attempt business-data rollback.
-        if not args.no_restart:
+        if not args.no_restart and not args.component:
             install_launchd(args.server_url,credentials)
             install_windows_task(args.server_url,credentials)
-        component_artifacts={name:{key:item.get(key) for key in ("version","url","platform","arch") if item.get(key) is not None} for name,item in items.items()}
+        component_artifacts={**existing.get("componentArtifacts",{}), **{name:{key:items[name].get(key) for key in ("version","url","platform","arch") if items[name].get(key) is not None} for name in (install_names if args.component else items)}}
         receipt.write_text(json.dumps({"installed":True,"version":release_version,"componentVersions":component_versions,"componentArtifacts":component_artifacts,"manifest":args.manifest,"serverUrl":args.server_url,"agents":agents,"installedAt":time.time()},indent=2)+"\n")
         # The Shell stays pinned when its artifact version is unchanged. A changed Shell is a
         # second durable phase: recording it here lets both legacy and current GUIs survive the

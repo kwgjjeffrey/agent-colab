@@ -21,7 +21,7 @@ async fn default_agent(state: &AppState) -> String {
 
 // Keep update/installer state in the same explicitly configured application root as Core.
 // An isolated client must never inherit another client's pending update or activation paths.
-fn installation_root() -> PathBuf {
+pub(super) fn installation_root() -> PathBuf {
     if let Some(root)=std::env::var_os("COLAB_APPLICATION_ROOT") { return root.into(); }
     #[cfg(target_os="windows")]
     if let Some(root)=std::env::var_os("LOCALAPPDATA") { return PathBuf::from(root).join("AgentColab"); }
@@ -110,6 +110,7 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
     value["shellUpdatePending"] = serde_json::Value::Bool(
         installation_root().join("pending-shell-update.json").exists(),
     );
+    value["operationWorkbenchAvailable"] = serde_json::json!(true);
     value["defaultAgent"] = serde_json::Value::String(default_agent(&state).await);
     // Existing installations predate runtime registration. Refresh them whenever Settings reads
     // status so every logged-in device converges without forcing users to reinstall the Skill.
@@ -410,4 +411,11 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
     mutate_agent(&state, agent, "uninstall-agent").await
 
 }).await
+}
+
+/// Only setup owns activation; the Workbench updates independently without restarting Core.
+pub(super) async fn update_workbench() -> Result<Json<serde_json::Value>, LocalError> {
+    colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.system.update-workbench", async {
+    setup(vec!["update".into(), "--component".into(), "operation-workbench".into(), "--no-restart".into()]).await.map(Json)
+    }).await
 }
