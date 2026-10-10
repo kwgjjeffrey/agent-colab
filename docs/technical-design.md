@@ -950,3 +950,14 @@ re-enqueue journaled work. Upgrade recovery imports only requests proven by nati
 client-message identity, not merely by a thread binding. Provider work events are
 recovered; native final text is not synthesized into a Channel message. A task
 waiting for user approval is not failed merely because fifteen minutes elapsed.
+
+Rolling-upgrade wire compatibility: Server supplies both executable legacy `prompt`
+and semantic `promptTemplate`. New Cores prefer the latter and perform local binding;
+old Cores continue using `prompt`. Server's legacy Skill name comes from its artifact
+configuration when configured; invalid configured values fail startup. Public old
+clients retain their default Skill name. Enterprise Server mounts the same private
+target configuration used for its client artifacts. A completed native execution may
+correct a previously timed-out failed/queued request through the owner-bound completion
+endpoint; repeated failure receipts remain idempotent. This does not publish a Channel
+message or rerun the native task. Electron branding derivation remains a separate older
+private packaging recipe; this release did not rebuild or replace either Shell.

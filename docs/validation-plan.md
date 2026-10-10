@@ -1338,3 +1338,24 @@ foreign-writer completion/interruption without notifications or resubmission.
 Artifact tests render public and independent company bootstrap/Skill configurations
 and execute installed setup identity loading. Installed-client recovery and
 production promotion remain pending.
+
+Installed verification completed (2026-10-10): Core tests 46 passed / 2 ignored;
+Server API tests 14 passed / 2 ignored; artifact rendering/installed-identity tests
+4 passed; installed Skill entrypoint tests 2 passed; GUI handoff tests 6 passed.
+Foreign-writer tests also instantiate a fresh manager to recover existing native
+history without queue submission. Public and enterprise Canvas prompt previews
+both expose semantic templates and bind executable commands to their own installed
+Skill/discovery paths; previews created no tasks and mutated no Canvas content.
+Public and company organization search return resolved member identity.
+
+Enterprise requests b8cfaea4-6993-4dd2-b630-8c5a0c825a44 and
+ ef110a8a-22a6-4812-9e33-e2840ab5de66 are both succeeded. Their remote work records
+contain native final answers (6 and 11 events), journal status completed/reported,
+and installed kwai-colab request-context reads exit 0. No callback summary was
+manually backfilled into Channel messages. Evidence lives in ignored
+integration/kuaishou/evidence/client/runtime-recovery-acceptance.json,
+runtime-prompt-binding.json and client-acceptance.json. Packaged Skill comparison
+found 497 program files byte-identical across variants; differences are configuration,
+rendered metadata, independent package version and signer trust. Native GUI visual
+validation was not resumed, at the user's request. Windows Core was retained and
+is outside this installed macOS acceptance.

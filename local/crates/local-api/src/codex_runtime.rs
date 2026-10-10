@@ -730,14 +730,16 @@ for line in sys.stdin:
 "#.replace("@STATUS@",status);
             std::fs::write(&script,source).unwrap();
             std::fs::set_permissions(&script,std::fs::Permissions::from_mode(0o755)).unwrap();
-            let manager = CodexManager::new(Some(script.into_os_string()));
+            let manager = CodexManager::new(Some(script.clone().into_os_string()));
             let submission = manager.submit(SubmitRequest{request_id:"request-1".into(),existing_thread:Some("existing".into()),cwd:dir.clone(),title:"Test".into(),prompt:"Test".into()}).await.unwrap();
             let turn = manager.request_status("existing".into(),"request-1".into()).await.unwrap().unwrap();
             assert_eq!(turn["id"],"our-turn");
             let (completion,events) = submission.finish().await;
             assert_eq!(completion.is_ok(),status == "completed");
             assert_eq!(events[0]["params"]["turn"]["id"],"our-turn");
+            drop(manager);
             // A restarted manager can inspect the same durable identity without queue/add.
+            let manager = CodexManager::new(Some(script.into_os_string()));
             assert_eq!(manager.request_status("existing".into(),"request-1".into()).await.unwrap().unwrap()["status"],status);
             drop(manager);
             std::fs::remove_dir_all(dir).unwrap();

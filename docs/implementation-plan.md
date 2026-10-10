@@ -1361,3 +1361,13 @@ Implemented durable request execution identity, read-only native-turn recovery,
 completion/failure retry and reconnect replay prevention. Existing legacy requests
 are imported only after matching native client message ID. Release/installed
 recovery verification is pending; no Channel summary has been manually backfilled.
+
+Verified release completion (2026-10-10): public macOS promotion 0.1.222-dev
+installed Core 0.1.115-dev / GUI 0.1.168-dev / Skill 0.1.65-dev; Server 0.1.17
+readiness passed. Enterprise promotion 0.1.12-ks.1 installed Core 0.1.8-ks.1 /
+GUI 0.1.9-ks.1 / Skill 0.1.5-ks.1; independent Server 0.1.8-ks.1 readiness passed.
+Shell versions were retained. Immutable artifacts were read back for full size
+and SHA-256; the enterprise stable channel was promoted after installed acceptance.
+Both reported requests are now succeeded, with recovered native final-answer work
+records and acknowledged journal reports. Their historical Channel summaries were
+not manually resent. Enterprise installation preserved public installation hashes.
