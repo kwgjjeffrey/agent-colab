@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import type { Blueprint, ChannelMessage, Participant } from "./types";
 import { useChannelContext } from "@/features/context/ChannelContext";
 import type { ResourceKind } from "@/features/context/context-model";
+import { loadMessageDraft, saveMessageDraft } from "./message-drafts";
 import { ContextMentionNode } from "@/features/context/ContextMentionNode";
 
 export type AgentMention = { blueprintId: string; label: string };
@@ -70,6 +71,7 @@ export function serializeAgentDocument(
  * while the request identity remains the immutable blueprint id carried by the node attributes.
  */
 export function AgentMessageComposer({
+  draftKey,
   channelName,
   agents,
   participants,
@@ -78,6 +80,7 @@ export function AgentMessageComposer({
   onCancelReply,
   onSubmit,
 }: {
+  draftKey: string;
   channelName: string;
   agents: Blueprint[];
   participants: Participant[];
@@ -126,7 +129,7 @@ export function AgentMessageComposer({
       Placeholder.configure({ placeholder: "Write a message… Type @ to mention a teammate or Agent." }),
       mentionExtension,
     ],
-    content: "",
+    content: loadMessageDraft(draftKey) ?? "",
     editorProps: {
       attributes: {
         class: "agent-message-editor",
@@ -146,6 +149,7 @@ export function AgentMessageComposer({
       },
     },
     onUpdate: ({ editor }) => {
+      saveMessageDraft(draftKey, editor.isEmpty ? undefined : editor.getJSON());
       const selection = editor.state.selection;
       if (!selection.empty) {
         setSuggestion(undefined);
@@ -169,7 +173,7 @@ export function AgentMessageComposer({
         to: selection.from,
       });
     },
-  });
+  }, [draftKey]);
   useEffect(() => () => editor?.destroy(), [editor]);
   useEffect(() => {
     if (suggestion)

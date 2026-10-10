@@ -63,6 +63,7 @@ import { activeAgentNames, agentActivityLabel } from "./agent-activity";
 import { AgentWorkDrawer } from "@/features/agent/AgentWorkDrawer";
 
 type Props = {
+  accountId: string;
   focusId?: string;
   channelId: string;
   channelName: string;
@@ -80,6 +81,7 @@ const messageCache = new Map<string, MessageCache>();
 
 /** WebSocket frames only wake this view; the ordered HTTP cursor is authoritative. */
 export function MessagesView({
+  accountId,
   focusId,
   channelId,
   channelName,
@@ -594,6 +596,7 @@ const messageRequest = operation.message;
           </div>
         )}
         <AgentMessageComposer
+          draftKey={JSON.stringify([accountId, channelId])}
           channelName={channelName}
           agents={channelAgents}
           participants={participants}
