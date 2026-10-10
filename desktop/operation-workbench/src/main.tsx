@@ -30,7 +30,7 @@ function App() {
   }
   useEffect(() => {
     void load();
-    // Account switches invalidate the visible selection; Server still authorizes every read.
+    // Refresh the account scope without interrupting an open feedback reader.
     const focus = () => {
       void load();
       void fetch("/operation-workbench/workbench.json", { cache: "no-store" }).then(r => r.json()).then(v => { if (v.version !== __WORKBENCH_VERSION__) location.reload(); }).catch(() => {});
