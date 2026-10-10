@@ -9,7 +9,7 @@ export function readableError(reason: unknown): string {
     }
     if (typeof value !== 'string') break;
     value = value.replace(/^Error:\s*/, '');
-    try { value = JSON.parse(value); } catch { return String(value).slice(0, 500); }
+    try { value = JSON.parse(String(value)); } catch { return String(value).slice(0, 500); }
   }
   return String(value).slice(0, 500);
 }
