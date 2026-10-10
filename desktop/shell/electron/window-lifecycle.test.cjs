@@ -17,6 +17,7 @@ test('macOS close and activation reuse the loaded renderer; Quit releases it', a
   }
   const context = vm.createContext({ __dirname, URL, setTimeout, process: { platform: 'darwin', env: { COLAB_UI_DEV_URL: 'http://localhost:1420' }, getuid: () => 501 }, require(name) {
     if (name === 'electron') return { app, BrowserWindow: Window, dialog: {}, ipcMain: { handle() {} }, shell: {} }
+    if (name === './workbench-window.cjs') return { workbenchOpener: () => () => {} }
     if (name.includes('bootstrap')) return {}
     if (name === 'node:child_process') return { spawn: () => ({ unref() {} }) }
     return require(name)
