@@ -2,6 +2,7 @@
 const { contextBridge, ipcRenderer } = require('electron')
 contextBridge.exposeInMainWorld('colabHost', {
   isElectron: true,
+  openWorkbench: () => ipcRenderer.invoke('host:open-workbench'),
   openExternal: url => ipcRenderer.invoke('host:open-external', url),
   choosePath: options => ipcRenderer.invoke('host:choose-path', options),
   onDeepLink: callback => {

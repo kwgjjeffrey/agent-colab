@@ -146,3 +146,5 @@ ipcMain.handle('host:choose-path', async (_event, options) => {
   return result.canceled ? null : result.filePaths[0] || null
 })
 ipcMain.handle('host:show-and-focus', () => { window.show(); window.focus() })
+
+ipcMain.handle('host:open-workbench', require('./workbench-window.cjs').workbenchOpener(() => window))

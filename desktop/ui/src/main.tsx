@@ -89,6 +89,7 @@ import { trackedFetch } from "@/api/request-activity";
 declare global {
   interface Window {
     colabHost: {
+      openWorkbench?: () => Promise<void>;
       isElectron: boolean;
       openExternal(url: string): Promise<void>;
       choosePath(options: {

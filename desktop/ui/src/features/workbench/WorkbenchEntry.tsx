@@ -9,17 +9,18 @@ export function WorkbenchEntry() {
   async function open() {
     setOpening(true); setError(undefined);
     // Reserve the native child window during the click, before asynchronous installation.
-    const workbench = window.open("", "colab-operation-workbench", "width=1280,height=820");
+    const nativeOpen = window.colabHost?.openWorkbench;
+    const workbench = nativeOpen ? null : window.open("", "colab-operation-workbench", "width=1280,height=820");
     try {
-      if (!workbench) throw new Error("Please allow opening the Operation Workbench window.");
+      if (!nativeOpen && !workbench) throw new Error("Please allow opening the Operation Workbench window.");
       await runOperation("workbench.open", async operation => {
         const status = await operation.json<{components:Record<string,{installedVersion?:string}>}>("/v1/system/installation");
         if (!status.components["operation-workbench"]?.installedVersion) {
           await operation.json("/v1/system/operation-workbench/update", {method:"POST",headers:{"content-type":"application/json"},body:"{}"});
         }
         // Electron creates a separate BrowserWindow; both windows share the loopback cookie.
-        workbench.location.replace("/operation-workbench/");
-        workbench.focus();
+        if (nativeOpen) await nativeOpen();
+        else if (workbench) { workbench.location.replace("/operation-workbench/"); workbench.focus(); }
       });
     } catch (e) {
       if (workbench && workbench.location.href === "about:blank") workbench.close();
