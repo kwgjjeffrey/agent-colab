@@ -1359,3 +1359,18 @@ found 497 program files byte-identical across variants; differences are configur
 rendered metadata, independent package version and signer trust. Native GUI visual
 validation was not resumed, at the user's request. Windows Core was retained and
 is outside this installed macOS acceptance.
+
+
+### Catalog error recovery — 2026-10-10
+
+Catalog action failures now decode nested Core/Server envelopes, can be dismissed,
+clear on navigation and expire after 8 seconds. Read failures remain visible with
+a real retry action. Navigation invalidates delayed action failures; disposed
+Catalog read requests cannot publish errors into the next view. Successful Session
+source reads/shares clear previous failures, and reopening Forward to Agent starts
+with a fresh error state. GUI 0.1.170-dev contains the final change; Core and Shell
+are unchanged. Focused decoder tests passed (2 tests), production GUI build passed,
+and end-to-end run 20261010T063417Z-5a67dbcb passed 8 assertions using the actual
+Core with a controlled rename 403 matching the reported envelope. Dismissal,
+navigation, expiry and durable fixture cleanup were verified; screenshot reviewed.
+This verifies notice recovery, not the cause of the original authorization denial.
