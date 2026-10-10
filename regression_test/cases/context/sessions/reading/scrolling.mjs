@@ -55,6 +55,11 @@ export async function run(ctx){
     await ctx.page.waitForTimeout(500);
     ctx.assert('Initial Session position is the conversation tail',await scroll.evaluate(el=>el.scrollHeight-el.scrollTop-el.clientHeight<5),true);
     ctx.assert('Tool calls are collapsed',await preview.locator('[data-slot="collapsible-trigger"][aria-expanded="false"]').count(),5);
+    const tool=preview.locator('[data-slot="collapsible-trigger"]').first();await tool.click();
+    await preview.getByText('Not user prose',{exact:true}).waitFor();
+    ctx.assert('Shared tool card exposes bounded output on expansion',await preview.getByText('Output',{exact:true}).count(),1);
+    await ctx.screenshot('Session shared tool input and output card');await tool.click();
+    await scroll.evaluate(el=>{el.scrollTop=el.scrollHeight;});
     await scroll.hover();await ctx.page.mouse.wheel(0,-650);await ctx.page.waitForTimeout(300);
     const before=await scroll.evaluate(el=>el.scrollTop);
     await ctx.page.waitForTimeout(6000);
