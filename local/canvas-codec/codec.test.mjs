@@ -85,3 +85,9 @@ test('dependent update without its baseline fails instead of reading empty; repl
  assert.throws(()=>patch(n,attrs.id,'another'),/ambiguous|protected_content_changed/);
  const legacy='[@郭航宇](colab-mention:'+Buffer.from(JSON.stringify(n.firstChild.child(0).attrs)).toString('base64url')+')';assert.deepEqual(parser.parse(legacy).firstChild.firstChild.attrs,n.firstChild.child(0).attrs);
  });
+
+test('legacy excerpt patches normalize to compact projection without losing attributes',()=>{
+ const n=schema.nodeFromJSON({type:'doc',content:[p(t('Before '),mention,t(' after'))]});
+ const legacy='Before [@Runtime Validation Agent](colab-mention:'+Buffer.from(JSON.stringify(n.firstChild.child(1).attrs)).toString('base64url')+') after';
+ const next=patch(n,legacy,legacy.replace(' after',' updated'));assert.deepEqual(next.firstChild.child(1).attrs,n.firstChild.child(1).attrs);assert(next.textContent.endsWith(' updated'));
+});

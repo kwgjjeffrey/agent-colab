@@ -495,3 +495,16 @@ Canvas image handles: colab-canvas read includes images metadata for the returne
 ## Skill Feedback
 
 `colab-feedback list-assets` 罗列本人或获授权处理的资产和筛选统计；`list-feedbacks --asset-key KEY` 分页选择反馈字段；`update-feedback-status --asset-key KEY` 用 reason 与每项 expected-revision 原子更新 resolved/ignored/unresolved。原始片段由现有 `colab-session-reader read --ref colab://feedback/<id>/session` 消费，Reader envelope 保持不变。评价正文为 Markdown，重要判定放 YAML fence；完整运行指引与两类提示词随 Skill 的 `feedback/` 资源发布。主任务不执行消费方评价。
+
+
+### Compact Canvas mention projection
+
+Agent Markdown uses `[@Display name](colab:<kind>:<stable-target-id>)` for
+member, Agent and resource mentions. Labels are escaped Markdown; names do not
+replace stable identity. Occurrence IDs and editor attributes remain in the Core
+replica, resolved from unchanged references during patch parsing. Protected node
+validation still rejects target changes, removal or metadata loss. Legacy encoded
+links remain readable and retained legacy patch excerpts normalize to the new
+projection. No CRDT migration is required; existing documents render compactly
+on their next read. Repeated references require contextual patch text, as other
+ambiguous text does.

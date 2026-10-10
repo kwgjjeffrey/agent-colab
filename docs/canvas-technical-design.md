@@ -923,3 +923,16 @@ Server uses the existing object_store S3 adapter with a separate Canvas image st
 image_interpretation is separate metadata, hidden in GUI and available in Agent read output. Agent image-read downloads original bytes with exact length/SHA-256 validation; image-interpret updates interpretation. Canonical Markdown emits ![](colab-image:<UUID> "<encoded geometry>"); it remains a stable identity handle across document rename/move and text edits. Interpretation does not alter the document's text revision.
 
 Under the Canvas row lock Server merges the authoritative ordered updates to reconcile referenced images. Unreferenced uploads and removed images are retained 24 hours; archived documents retain images 24 hours after archive. GC clears durable blob heads first, then ordinary object/staging GC reclaims bytes with retry. Images currently belong to their originating Canvas; independent cross-Canvas attachment reuse is not an advertised use case.
+
+
+### Compact Canvas mention projection
+
+Agent Markdown uses `[@Display name](colab:<kind>:<stable-target-id>)` for
+member, Agent and resource mentions. Labels are escaped Markdown; names do not
+replace stable identity. Occurrence IDs and editor attributes remain in the Core
+replica, resolved from unchanged references during patch parsing. Protected node
+validation still rejects target changes, removal or metadata loss. Legacy encoded
+links remain readable and retained legacy patch excerpts normalize to the new
+projection. No CRDT migration is required; existing documents render compactly
+on their next read. Repeated references require contextual patch text, as other
+ambiguous text does.
