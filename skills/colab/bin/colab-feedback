@@ -1,0 +1,79 @@
+#!/usr/bin/env python3
+"""Review asset feedback and explicitly configure hook capture."""
+from __future__ import annotations
+import argparse, json, sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'lib'))
+from local_api import request, LocalApiError
+from output import success, failure
+
+def parser():
+    p = argparse.ArgumentParser(prog='colab-feedback')
+    p.add_argument('--core')
+    commands = p.add_subparsers(dest='operation', required=True)
+    for name in ('list-assets', 'list-feedbacks'):
+        cmd = commands.add_parser(name)
+        cmd.add_argument('--from', dest='from_time', help='Inclusive RFC3339 capture time')
+        cmd.add_argument('--to', dest='to_time', help='Exclusive RFC3339 capture time')
+        cmd.add_argument('--status', choices=['all','unresolved','resolved','ignored'], default='all')
+        cmd.add_argument('--rating', choices=['all','positive','negative','unrated'], default='all')
+        cmd.add_argument('--negative-tag', action='append', default=[])
+        cmd.add_argument('--tag-match', choices=['any','all'], default='any')
+        cmd.add_argument('--cursor')
+        cmd.add_argument('--limit', type=int, default=20)
+        if name == 'list-feedbacks':
+            cmd.add_argument('--asset-key', required=True)
+            cmd.add_argument('--feedback-id')
+            cmd.add_argument('--include', default='metadata,rating,tags,taskOutcome')
+            cmd.add_argument('--exclude', default='')
+    cmd = commands.add_parser('update-feedback-status')
+    cmd.add_argument('--asset-key', required=True)
+    cmd.add_argument('--feedback-id', required=True, action='append')
+    cmd.add_argument('--status', required=True, choices=['unresolved','resolved','ignored'])
+    cmd.add_argument('--reason', required=True)
+    cmd.add_argument('--resolution-ref', action='append', default=[])
+    cmd.add_argument('--expected-revision', action='append', required=True, metavar='ID=REVISION', help='One current statusRevision per feedback; stale writes fail atomically')
+    cmd = commands.add_parser('configure')
+    cmd.add_argument('--enable', action='store_true')
+    cmd.add_argument('--disable', action='store_true')
+    cmd.add_argument('--consent-upload', action='store_true', help='Agree to upload task fragments and three earlier user queries to Skill owners')
+    cmd.add_argument('--analysis', choices=['enabled','disabled'], default='disabled', help='Optional background use of this device’s Codex account/model quota')
+    cmd.add_argument('--install-codex-hooks', action='store_true', help='Register hooks; Codex must still trust them')
+    commands.add_parser('settings')
+    return p
+
+def main():
+    args = parser().parse_args()
+    __import__("telemetry").select_operation(args)
+    try:
+        if args.operation == 'settings':
+            return success(request('GET','/v1/feedbacks/settings',core=args.core))
+        if args.operation == 'configure':
+            if args.enable == args.disable:
+                raise ValueError('Choose exactly one of --enable or --disable')
+            if args.enable and not args.consent_upload:
+                raise ValueError('--enable requires --consent-upload')
+            if args.install_codex_hooks:
+                from feedback_hooks import configure_hooks
+                configure_hooks(args.enable)
+            value = request('PUT','/v1/feedbacks/settings',core=args.core,body={'enabled':args.enable,'analysisEnabled':args.analysis=='enabled','consentUpload':args.consent_upload})
+            return success({'enabled':value['enabled'],'analysisEnabled':value['analysisEnabled'],'hostTrustRequired':bool(args.enable and args.install_codex_hooks)})
+        if args.operation == 'update-feedback-status':
+            revisions = {}
+            for value in args.expected_revision:
+                key, revision = value.rsplit('=',1)
+                revisions[key] = int(revision)
+            if set(revisions) != set(args.feedback_id):
+                raise ValueError('Provide --expected-revision ID=REVISION for every feedback ID')
+            body = {'assetKey':args.asset_key,'feedbackIds':args.feedback_id,'status':args.status,'reason':args.reason,'resolutionRefs':args.resolution_ref,'expectedRevisions':revisions}
+            return success(request('POST','/v1/feedbacks/update-status',core=args.core,body=body))
+        body = {'from':args.from_time,'to':args.to_time,'status':args.status,'rating':args.rating,'negativeTags':args.negative_tag,'tagMatch':args.tag_match,'cursor':args.cursor,'limit':args.limit}
+        if args.operation == 'list-feedbacks':
+            body.update(assetKey=args.asset_key,feedbackId=args.feedback_id,include=args.include,exclude=args.exclude)
+        return success(request('POST',f'/v1/feedbacks/{args.operation}',core=args.core,body=body))
+    except (ValueError, TypeError) as error:
+        return failure('invalid_argument',str(error),2)
+    except LocalApiError as error:
+        return failure('local_api_error',str(error),error.exit_code)
+if __name__ == '__main__':
+    raise SystemExit(__import__("telemetry").run(main))

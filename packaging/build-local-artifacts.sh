@@ -131,7 +131,7 @@ if $build_skill; then
   cp "$COLAB_ARTIFACT_CONFIG" "$dist/colab-skill/$skill_version/artifact-config.json"
   cp "$repo_root/skills/colab/SKILL.md" "$dist/colab-skill/$skill_version/"
   cp "$repo_root/skills/colab/AGENTS.md" "$dist/colab-skill/$skill_version/"
-  cp -R "$repo_root/skills/colab/agents" "$repo_root/skills/colab/bin" "$repo_root/skills/colab/lib" "$repo_root/skills/colab/setup" "$repo_root/skills/colab/references" "$repo_root/skills/colab/tracing" "$dist/colab-skill/$skill_version/"
+  cp -R "$repo_root/skills/colab/agents" "$repo_root/skills/colab/bin" "$repo_root/skills/colab/lib" "$repo_root/skills/colab/setup" "$repo_root/skills/colab/references" "$repo_root/skills/colab/feedback" "$repo_root/skills/colab/tracing" "$dist/colab-skill/$skill_version/"
   python3 "$repo_root/packaging/artifact-config.py" --config "$COLAB_ARTIFACT_CONFIG" --skill-out "$dist/colab-skill/$skill_version"
   rm -f "$dist/colab-skill/$skill_version/lib/trace-registry.generated.json"
   python3 "$repo_root/packaging/bundle-skill-telemetry.py" "$dist/colab-skill/$skill_version"

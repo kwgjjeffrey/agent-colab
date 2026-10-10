@@ -47,6 +47,12 @@ def main():
     __import__("telemetry").select_operation(args)
     success = __import__("output_views").writer("session-reader", args)
     try:
+        feedback = urlparse(args.ref)
+        parts = [unquote(p) for p in feedback.path.split('/') if p]
+        if feedback.scheme == 'colab' and feedback.netloc == 'feedback' and len(parts) == 2 and parts[1] == 'session':
+            import uuid
+            feedback_id = str(uuid.UUID(parts[0]))
+            return success(request('POST', f'/v1/feedbacks/{feedback_id}/read', core=args.core, body={'cursor':args.cursor,'turnLimit':args.turn_limit,'includeOutputs':args.include_outputs,'maxOutputCharsPerItem':args.max_output_chars_per_item}))
         session = resolve(args.core, args.ref)
         # First use may materialize a very large historical Session. Local Core streams it to
         # disk; keep the loopback wait above ordinary CRUD timeouts instead of aborting a valid

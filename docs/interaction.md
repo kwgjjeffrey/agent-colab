@@ -352,6 +352,10 @@ Home 的顺序为动效 banner、Recent activity、操作引导、场景引导�
 
 Canvas image editing: paste/drop image files or choose Add image. Upload has a visible pending state and Retry/Dismiss on failure. Validated uploads insert at the original editing location, mapped through intervening editor transactions. Drag image handles to resize while preserving aspect ratio; ordinary document undo/delete removes the node. Interpretation metadata is never shown as a caption or required from the user.
 
+## Skill Feedback
+
+拥有者在 Skill 预览区域点击“查看反馈（数量）”，打开分页反馈列表。展开后按标准 Markdown 渲染评论（含 YAML 和自由说明），并可查看上报的原始任务片段。界面不提供筛选问卷；筛选和状态处理通过 Agent 接口完成。失败可重试，未提交片段显示上报中。
+
 
 ### Organization people in message mentions (2026-10-10)
 

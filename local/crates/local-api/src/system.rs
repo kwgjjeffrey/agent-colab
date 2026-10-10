@@ -33,7 +33,7 @@ pub(super) async fn update_progress() -> Json<serde_json::Value> {
     Json(super::update_status::read(&root))
 }
 
-fn setup_path() -> Result<PathBuf, LocalError> {
+pub(super) fn setup_path() -> Result<PathBuf, LocalError> {
     if let Some(path) = std::env::var_os("COLAB_SETUP_PATH") {
         return Ok(path.into());
     }

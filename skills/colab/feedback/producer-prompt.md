@@ -1,0 +1,6 @@
+分析我拥有的Skill反馈，找出有证据、值得改进的问题。
+先用list-assets按{{日期范围与筛选条件}}查看资产及反馈数量，确定需要分析的assetKey。
+用list-feedbacks查看该资产未解决反馈，先读rating和tags，再按需读取完整comment或taskTrajectory。不要只看点踩；选取正向样本理解哪些设计应保留。没有评价的反馈也可分析，不能把unrated当negative。
+需要核实背景、原因或复现步骤时，用结果中的sessionRef调用现有colab-session-reader，按需展开工具输出。
+将相似问题归类，说明实际影响、证据及具体改进建议；区别Skill缺陷、环境因素和操作误用。
+完成修复并验证后，用清单的statusRevision填写每条feedback的--expected-revision，再用update-feedback-status标记对应反馈resolved，写清解决方式和验证依据。明确不处理的标记ignored并说明理由；仅阅读或形成建议时不改状态。

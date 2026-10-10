@@ -30,3 +30,5 @@ percent-encoding = "2.3"
 object_store = { version = "0.14.2", features = ["aws"] }
 zstd = "0.13.3"
 async-compression = { version = "0.4", features = ["tokio", "zstd"] }
+
+chrono = "0.4"

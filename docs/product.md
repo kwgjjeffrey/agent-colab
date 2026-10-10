@@ -254,3 +254,7 @@ immediate creation menu, with Quick Share in a cascade. Mixed assets support
 dragging into Catalogs, sibling ordering and moving back to root; placement is
 shared persistent information, not a device-local visual preference. Catalog
 folders and shared local-file collections must remain visually distinguishable.
+
+## Skill Feedback
+
+消费方可明确同意通过宿主 hook 上报 Skill 使用任务片段及此前三段用户 query。采集默认关闭，无授权不采集、不上报；不向主任务注入评价提示或创建聊天。端侧模型评价另行可选，原文上报不等待评价。资产 owner 按资产合并查看 Markdown 反馈，并由其 Agent 修复验证后标记 resolved，或说明理由标记 ignored。首版 Codex/macOS；协议与数据见 [feedback-design.md](feedback-design.md)。

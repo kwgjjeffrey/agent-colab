@@ -32,7 +32,7 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
 }).await
 }
 
-async fn write_bounded_with_limit(
+pub(crate) async fn write_bounded_with_limit(
     root: &Path,
     key: &str,
     body: Body,

@@ -17,5 +17,8 @@ thiserror.workspace = true
 ring = "0.17.14"
 base64.workspace = true
 
+pulldown-cmark = "0.13"
+serde_yaml = "0.9"
+
 [dev-dependencies]
 tokio.workspace = true

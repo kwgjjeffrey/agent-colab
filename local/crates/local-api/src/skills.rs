@@ -773,6 +773,7 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
     {
         let store = state.inner.store.lock().await;
         store.execute("insert into skill_installations(share_id,user_id,target_agent,installed_path,installed_root_oid,content_hash) values(coalesce((select asset_id from local_asset_references where reference_id=?1 and user_id=?2),?1),?2,?3,?4,?5,?6) on conflict(share_id,user_id,target_agent) do update set installed_path=excluded.installed_path,installed_root_oid=excluded.installed_root_oid,content_hash=excluded.content_hash,installed_at=current_timestamp",rusqlite::params![share_id,user_id,target,destination.to_string_lossy(),current_root,hash]).map_err(LocalError::internal)?;
+        store.execute("update skill_installations set source_channel_key=coalesce((select 'channel:'||channel_id from local_asset_references where reference_id=?1 and user_id=?2),'unknown:legacy-install'),generation=generation+1 where share_id=coalesce((select asset_id from local_asset_references where reference_id=?1 and user_id=?2),?1) and user_id=?2 and target_agent=?3",rusqlite::params![share_id,user_id,target]).map_err(LocalError::internal)?;
     }
     Ok(Json(Installation {
         target_agent: target,
@@ -888,7 +889,7 @@ fn target_root(target: &str) -> Result<PathBuf, LocalError> {
         .ok_or_else(|| LocalError::bad_request("Unsupported Agent target"))
 }
 
-fn read_skill_metadata(path: &Path) -> anyhow::Result<(String, Option<String>)> {
+pub(super) fn read_skill_metadata(path: &Path) -> anyhow::Result<(String, Option<String>)> {
     let text = fs::read_to_string(path.join("SKILL.md"))?;
     let front = text
         .strip_prefix("---")

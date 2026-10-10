@@ -57,11 +57,11 @@ struct ScannedFile {
     bytes: u64,
 }
 
-struct LocalJob {
+pub(super) struct LocalJob {
     trace_context: serde_json::Value,
     id: String,
     kind: String,
-    share_id: String,
+    pub(super) share_id: String,
     attempts: i64,
     generation: i64,
 }
@@ -91,7 +91,7 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
     let dedupe_key = format!("{kind}:{user_id}:{share_id}");
     let store = state.inner.store.lock().await;
     store.execute(
-        "insert into local_jobs(id,dedupe_key,kind,share_id,user_id,state,next_attempt_at,trace_context) values(?1,?2,?3,?4,?5,'pending',unixepoch()+?6,?7) on conflict(dedupe_key) do update set trace_context=coalesce(excluded.trace_context,local_jobs.trace_context),generation=generation+case when excluded.kind like 'publish_%' or state not in ('pending','running') then 1 else 0 end,state=case when state='running' then 'running' else 'pending' end,next_attempt_at=case when excluded.kind like 'materialize_%' and state in ('pending','running') then next_attempt_at else unixepoch()+?6 end,last_error=null,updated_at=current_timestamp,completed_at=null",
+        "insert into local_jobs(id,dedupe_key,kind,share_id,user_id,state,next_attempt_at,trace_context) values(?1,?2,?3,?4,?5,'pending',unixepoch()+?6,?7) on conflict(dedupe_key) do update set trace_context=coalesce(excluded.trace_context,local_jobs.trace_context),generation=generation+case when excluded.kind like 'publish_%' or excluded.kind='feedback_upload' or state not in ('pending','running') then 1 else 0 end,state=case when state='running' then 'running' else 'pending' end,next_attempt_at=case when excluded.kind like 'materialize_%' and state in ('pending','running') then next_attempt_at else unixepoch()+?6 end,last_error=null,updated_at=current_timestamp,completed_at=null",
         rusqlite::params![Uuid::new_v4().to_string(), dedupe_key, kind, share_id, user_id, delay_seconds, colab_observability::context_json().as_object().map(|_|colab_observability::context_json().to_string())],
     ).map_err(LocalError::internal)?;
     Ok(())
@@ -101,14 +101,16 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
 
 /// Atomically leases one due job. SQLite permits one writer, so the conditional UPDATE is enough
 /// to prevent the watcher, GUI and worker from executing the same job concurrently.
-async fn claim_job(state: &AppState) -> Result<Option<LocalJob>, LocalError> {
+async fn claim_job(state: &AppState) -> Result<Option<LocalJob>, LocalError> {claim_scoped_job(state,"sync").await}
+pub(super) async fn claim_feedback_job(state:&AppState,analysis:bool)->Result<Option<LocalJob>,LocalError>{claim_scoped_job(state,if analysis{"feedback_analyze"}else{"feedback_upload"}).await}
+async fn claim_scoped_job(state: &AppState,scope:&str) -> Result<Option<LocalJob>, LocalError> {
 colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.files.claim-job", async {
 
     let mut store = state.inner.store.lock().await;
     let tx = store.transaction().map_err(LocalError::internal)?;
     let candidate = tx.query_row(
-        "select id,kind,share_id,attempts,generation,trace_context from local_jobs where state in ('pending','failed') and next_attempt_at<=unixepoch() order by next_attempt_at,created_at limit 1",
-        [],
+        "select id,kind,share_id,attempts,generation,trace_context from local_jobs where state in ('pending','failed') and next_attempt_at<=unixepoch() and ((?1='sync' and kind not like 'feedback_%') or kind=?1) order by next_attempt_at,created_at limit 1",
+        [scope],
         |row| Ok(LocalJob { id: row.get(0)?, kind: row.get(1)?, share_id: row.get(2)?, attempts: row.get(3)?, generation: row.get(4)?, trace_context: row.get::<_, Option<String>>(5)?.and_then(|raw|serde_json::from_str(&raw).ok()).unwrap_or_default() }),
     ).ok();
     let Some(job) = candidate else {
@@ -125,7 +127,7 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
 }).await
 }
 
-async fn finish_job(state: &AppState, job: &LocalJob, result: &Result<(), LocalError>) {
+pub(super) async fn finish_job(state: &AppState, job: &LocalJob, result: &Result<(), LocalError>) {
     let store = state.inner.store.lock().await;
     match result {
         Ok(()) => {

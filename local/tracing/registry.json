@@ -1,11 +1,152 @@
 {
   "schemaVersion": 1,
   "unit": "local-core",
-  "operations": [],
+  "operations": [
+    {
+      "id": "core.feedback.settings",
+      "description": "Skill Feedback settings",
+      "owner": "local-core",
+      "status": "instrumented",
+      "entry": {
+        "kind": "internal"
+      },
+      "completion": {
+        "success": "return.ok",
+        "failure": "return.error"
+      },
+      "source": {
+        "path": "local/crates/local-api/src/feedback.rs",
+        "function": "settings"
+      }
+    },
+    {
+      "id": "core.feedback.configure",
+      "description": "Skill Feedback configure",
+      "owner": "local-core",
+      "status": "instrumented",
+      "entry": {
+        "kind": "internal"
+      },
+      "completion": {
+        "success": "return.ok",
+        "failure": "return.error"
+      },
+      "source": {
+        "path": "local/crates/local-api/src/feedback.rs",
+        "function": "configure"
+      }
+    },
+    {
+      "id": "core.feedback.hook",
+      "description": "Skill Feedback hook",
+      "owner": "local-core",
+      "status": "instrumented",
+      "entry": {
+        "kind": "internal"
+      },
+      "completion": {
+        "success": "return.ok",
+        "failure": "return.error"
+      },
+      "source": {
+        "path": "local/crates/local-api/src/feedback.rs",
+        "function": "hook"
+      }
+    },
+    {
+      "id": "core.feedback.list-assets",
+      "description": "Skill Feedback list assets",
+      "owner": "local-core",
+      "status": "instrumented",
+      "entry": {
+        "kind": "internal"
+      },
+      "completion": {
+        "success": "return.ok",
+        "failure": "return.error"
+      },
+      "source": {
+        "path": "local/crates/local-api/src/feedback.rs",
+        "function": "list_assets"
+      }
+    },
+    {
+      "id": "core.feedback.list-feedbacks",
+      "description": "Skill Feedback list feedbacks",
+      "owner": "local-core",
+      "status": "instrumented",
+      "entry": {
+        "kind": "internal"
+      },
+      "completion": {
+        "success": "return.ok",
+        "failure": "return.error"
+      },
+      "source": {
+        "path": "local/crates/local-api/src/feedback.rs",
+        "function": "list_feedbacks"
+      }
+    },
+    {
+      "id": "core.feedback.update-status",
+      "description": "Skill Feedback update status",
+      "owner": "local-core",
+      "status": "instrumented",
+      "entry": {
+        "kind": "internal"
+      },
+      "completion": {
+        "success": "return.ok",
+        "failure": "return.error"
+      },
+      "source": {
+        "path": "local/crates/local-api/src/feedback.rs",
+        "function": "update_status"
+      }
+    },
+    {
+      "id": "core.feedback.read",
+      "description": "Skill Feedback read",
+      "owner": "local-core",
+      "status": "instrumented",
+      "entry": {
+        "kind": "internal"
+      },
+      "completion": {
+        "success": "return.ok",
+        "failure": "return.error"
+      },
+      "source": {
+        "path": "local/crates/local-api/src/feedback.rs",
+        "function": "read"
+      }
+    }
+  ],
   "spans": [
-    {"id":"core.assets.register-source","description":"Register an owned source and reuse one publication across Channel references","source":{"path":"local/crates/local-api/src/assets.rs","function":"register"}},
-    {"id":"core.assets.binding","description":"Resolve the authorized asset behind one Channel reference","source":{"path":"local/crates/local-api/src/assets.rs","function":"binding"}},
-    {"id":"core.assets.consolidate-sources","description":"Consolidate proven equal historical local publishers without resurrecting withdrawn references","source":{"path":"local/crates/local-api/src/assets.rs","function":"consolidate_sources"}},
+    {
+      "id": "core.assets.register-source",
+      "description": "Register an owned source and reuse one publication across Channel references",
+      "source": {
+        "path": "local/crates/local-api/src/assets.rs",
+        "function": "register"
+      }
+    },
+    {
+      "id": "core.assets.binding",
+      "description": "Resolve the authorized asset behind one Channel reference",
+      "source": {
+        "path": "local/crates/local-api/src/assets.rs",
+        "function": "binding"
+      }
+    },
+    {
+      "id": "core.assets.consolidate-sources",
+      "description": "Consolidate proven equal historical local publishers without resurrecting withdrawn references",
+      "source": {
+        "path": "local/crates/local-api/src/assets.rs",
+        "function": "consolidate_sources"
+      }
+    },
     {
       "id": "core.auth.start-google",
       "description": "core 层 auth 的 start_google 承接点",

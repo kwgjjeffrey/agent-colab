@@ -25,6 +25,8 @@ mod canvas_images;
 pub use canvas_images::CanvasImage;
 mod catalog;
 mod assets;
+mod feedback;
+pub use feedback::{FeedbackSubmission,FeedbackFilter,FeedbackComment,FeedbackStatusUpdate};
 mod session_indexes;
 pub use session_indexes::SessionReadIndex;
 pub use assets::{RegisterAsset,AssetBinding};
@@ -802,7 +804,7 @@ let rows=sqlx::query_as::<_,FileShare>("select fs.id,fs.channel_id,fs.name,fs.co
     /// shares and expired/revoked Quick Shares are intentionally absent and become collectible.
     pub async fn referenced_blob_keys(&self) -> anyhow::Result<Vec<String>> {
         sqlx::query_scalar(
-            "select r.blob_key from file_revisions r join shared_assets a on a.publication_share_id=r.share_id where a.retained_until is null or a.retained_until>now() union select sg.blob_key from session_segments sg join session_snapshots ss on ss.id=sg.snapshot_id join shared_assets a on a.publication_share_id=ss.share_id where a.retained_until is null or a.retained_until>now() union select ss.read_index_blob_key from session_snapshots ss join shared_assets a on a.publication_share_id=ss.share_id where ss.read_index_blob_key is not null and (ss.id=a.current_snapshot_id or ss.created_at>now()-interval '24 hours') and (a.retained_until is null or a.retained_until>now()) union select blob_key from canvas_images where blob_key is not null union select qi.blob_key from quick_transfer_items qi join quick_transfers qt on qt.id=qi.transfer_id where qi.blob_key is not null and qt.state in ('uploading','ready') and qt.expires_at>now()"
+            "select r.blob_key from file_revisions r join shared_assets a on a.publication_share_id=r.share_id where a.retained_until is null or a.retained_until>now() union select sg.blob_key from session_segments sg join session_snapshots ss on ss.id=sg.snapshot_id join shared_assets a on a.publication_share_id=ss.share_id where a.retained_until is null or a.retained_until>now() union select ss.read_index_blob_key from session_snapshots ss join shared_assets a on a.publication_share_id=ss.share_id where ss.read_index_blob_key is not null and (ss.id=a.current_snapshot_id or ss.created_at>now()-interval '24 hours') and (a.retained_until is null or a.retained_until>now()) union select session_blob_key from feedback_records where session_blob_key is not null union select blob_key from canvas_images where blob_key is not null union select qi.blob_key from quick_transfer_items qi join quick_transfers qt on qt.id=qi.transfer_id where qi.blob_key is not null and qt.state in ('uploading','ready') and qt.expires_at>now()"
         ).fetch_all(&self.pool).await.map_err(Into::into)
     }
 

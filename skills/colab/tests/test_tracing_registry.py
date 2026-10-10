@@ -22,7 +22,7 @@ class TraceRegistryTests(unittest.TestCase):
     def test_actual_parsers_match_registry_without_business_io(self):
         result=subprocess.run([sys.executable,str(ROOT.parents[1]/'observability/tools/audit-entries.py')],capture_output=True,text=True)
         self.assertEqual(result.returncode,0,result.stderr+result.stdout)
-        self.assertIn('"cliLeafCommands": 48',result.stdout)
+        self.assertIn('"cliLeafCommands": 55',result.stdout)
 
     def test_http_span_uses_current_scope_without_undefined_parent(self):
         # Run the enabled path with a tracer double; real SDK propagation is covered by

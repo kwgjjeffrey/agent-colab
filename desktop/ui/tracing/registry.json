@@ -2836,6 +2836,33 @@
         "function": "useEffect callback → load",
         "object": "AgentIdentityLink"
       }
+    },
+    {
+      "id": "feedback.list",
+      "description": "查看资产的消费方反馈评论",
+      "owner": "desktop-ui",
+      "status": "instrumented",
+      "entry": {
+        "kind": "gui",
+        "page": "channel.workspace",
+        "target": "feedback.list",
+        "selector": "[data-trace-target~=\"feedback.list\"]",
+        "locator": {
+          "region": "skill-preview",
+          "steps": [],
+          "kind": "action"
+        }
+      },
+      "completion": {
+        "success": "result.state_committed",
+        "failure": "result.failed",
+        "cancelled": "result.cancelled"
+      },
+      "source": {
+        "path": "desktop/ui/src/features/feedback/SkillFeedback.tsx",
+        "function": "load",
+        "object": "SkillFeedback"
+      }
     }
   ]
 }

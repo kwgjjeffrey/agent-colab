@@ -1056,8 +1056,7 @@ fn project_codex(text: &str, include_outputs: bool, max_chars: usize) -> Vec<Val
     project_codex_rows(text.lines().enumerate().filter_map(|(index,line)| serde_json::from_str::<Value>(line).ok().map(|row|(index,row))),include_outputs,max_chars)
 }
 
-#[cfg(test)]
-fn project_codex_rows(rows: impl Iterator<Item=(usize,Value)>, include_outputs: bool, max_chars: usize) -> Vec<Value> {
+pub(super) fn project_codex_rows(rows: impl Iterator<Item=(usize,Value)>, include_outputs: bool, max_chars: usize) -> Vec<Value> {
     let mut turns=Vec::new();
     fold_codex_rows(rows,&mut turns,include_outputs,max_chars);
     turns
@@ -1348,9 +1347,11 @@ fn attach_result(turns: &mut [Value], call: &str, output: &str, max: usize) {
         }
     }
 }
-fn clean_user_text(raw: &str) -> Option<String> {
+pub(super) fn clean_user_text(raw: &str) -> Option<String> {
     let s = raw.trim();
-    if s.starts_with("<environment_context>")
+    if s.starts_with("# AGENTS.md instructions")
+        || s.starts_with("<INSTRUCTIONS>")
+        || s.starts_with("<environment_context>")
         || s.starts_with("<recommended_plugins>")
         || s.starts_with("<app-context>")
     {

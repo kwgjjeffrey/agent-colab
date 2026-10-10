@@ -24,6 +24,7 @@ mod session_indexes;
 #[cfg(test)]
 mod session_protocol_tests;
 mod assets;
+mod feedback;
 mod canvas;
 mod canvas_images;
 mod catalog;
@@ -126,6 +127,10 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
     println!("google OAuth client loaded: {}", google.client_id);
     let database = Database::connect(&config.database_url, config.database_max_connections).await?
         .with_external_policy(external_auth.as_ref().and_then(|c| c.policy.clone()));
+    if let Ok(ids)=std::env::var("COLAB_FEEDBACK_REVIEWER_IDS") {
+        let reviewers=ids.split(',').filter(|s|!s.trim().is_empty()).map(|s|uuid::Uuid::parse_str(s.trim())).collect::<Result<Vec<_>,_>>().context("parse COLAB_FEEDBACK_REVIEWER_IDS")?;
+        database.configure_builtin_feedback_reviewers(&reviewers).await.context("configure builtin feedback reviewers")?;
+    }
     tokio::fs::create_dir_all(&config.blob_root)
         .await
         .context("create blob root")?;
@@ -278,6 +283,12 @@ fn router(state: AppState) -> Router {
             get(list_session_segments),
         )
         .route("/v1/sessions/{share_id}", delete(withdraw_session_share))
+        .route("/v1/feedbacks/list-assets",post(feedback::list_assets).layer(DefaultBodyLimit::max(128*1024)))
+        .route("/v1/feedbacks/list-feedbacks",post(feedback::list_feedbacks).layer(DefaultBodyLimit::max(128*1024)))
+        .route("/v1/feedbacks/update-status",post(feedback::update_status).layer(DefaultBodyLimit::max(128*1024)))
+        .route("/v1/feedbacks/{id}",axum::routing::put(feedback::submit).layer(DefaultBodyLimit::max(128*1024)))
+        .route("/v1/feedbacks/{id}/comment",axum::routing::put(feedback::comment).layer(DefaultBodyLimit::max(128*1024)))
+        .route("/v1/feedbacks/{id}/session",get(feedback::download).put(feedback::upload))
         .route("/v1/channels/{channel_id}/assets",post(assets::register))
         .route("/v1/shares/{share_id}/asset",get(assets::binding))
         .route(
@@ -1335,7 +1346,7 @@ async fn authenticated_user(state: &AppState, headers: &HeaderMap) -> Result<uui
 colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "server.main.authenticated-user", async {
 
     let token = bearer_token(headers)?;
-    state
+    let user_id = state
         .database
         .authenticate(token)
         .await
@@ -1343,7 +1354,9 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
             eprintln!("session lookup failed: {error:#}");
             ApiError::internal("session_lookup_failed")
         })?
-        .ok_or_else(|| ApiError::unauthorized("invalid_session"))
+        .ok_or_else(|| ApiError::unauthorized("invalid_session"))?;
+    colab_observability::record_user_id(&user_id.to_string());
+    Ok(user_id)
 
 }).await
 }

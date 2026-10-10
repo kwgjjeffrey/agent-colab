@@ -24,9 +24,10 @@ type Turn = {
   }>;
 };
 /** Selecting a Session reads a bounded page; discovery never reads conversations. */
-export function SessionPreview({ id }: { id: string }) {
+export function SessionPreview({ id, feedback = false }: { id: string; feedback?: boolean }) {
   const [sync, setSync] = useState<{state:string; contributor?:boolean; uploadedBytes?:number; totalBytes?:number; error?:string}>();
   useEffect(() => {
+    if (feedback) return;
     let stopped = false;
     let timer: ReturnType<typeof setTimeout>;
     setSync(undefined);
@@ -41,7 +42,7 @@ export function SessionPreview({ id }: { id: string }) {
     }
     void poll().catch(() => {});
     return () => { stopped = true; clearTimeout(timer); };
-  }, [id]);
+  }, [id, feedback]);
   const [turns, setTurns] = useState<Turn[]>();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>();
@@ -60,7 +61,7 @@ export function SessionPreview({ id }: { id: string }) {
     return () => {
       generation.current += 1;
     };
-  }, [id]);
+  }, [id, feedback]);
   async function read(cursor?: string) {
     const viewport = scrolling.current?.scrollRef.current;
     const previousHeight = viewport?.scrollHeight ?? 0;
@@ -76,7 +77,7 @@ export function SessionPreview({ id }: { id: string }) {
           page?: { hasMore: boolean; nextCursor?: string };
           warnings?: Array<{ code: string; count: number }>;
         }>(
-          `/v1/sessions/${id}/read`,
+          feedback ? `/v1/feedbacks/${id}/read` : `/v1/sessions/${id}/read`,
           "POST",
           {
             turnLimit: 5,
@@ -88,7 +89,7 @@ export function SessionPreview({ id }: { id: string }) {
         );
         if (current === generation.current) {
           setTurns((previous) =>
-            cursor ? [...row.turns, ...(previous ?? [])] : row.turns,
+            cursor ? (feedback ? [...(previous ?? []), ...row.turns] : [...row.turns, ...(previous ?? [])]) : row.turns,
           );
           setWarnings(row.warnings ?? []);
           setOlderCursor(row.page?.hasMore ? row.page.nextCursor : undefined);
@@ -163,7 +164,7 @@ export function SessionPreview({ id }: { id: string }) {
                 disabled={loading}
                 onClick={() => void read(olderCursor)}
               >
-                Load earlier messages
+                {feedback ? "Load more messages" : "Load earlier messages"}
               </Button>
             )}
             {turns.flatMap((turn, turnIndex) =>

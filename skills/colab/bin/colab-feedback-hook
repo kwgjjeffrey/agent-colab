@@ -1,0 +1,19 @@
+#!/usr/bin/env python3
+"""Best-effort bounded event delivery; emits no prompt or continuation instructions."""
+import json, sys
+from pathlib import Path
+sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'lib'))
+from local_api import request
+def main():
+    try:
+        raw = sys.stdin.buffer.read(4 * 1024 * 1024 + 1)
+        if len(raw) <= 4 * 1024 * 1024:
+            event = json.loads(raw)
+            fields = ('session_id','turn_id','transcript_path','cwd','hook_event_name','tool_name','tool_input','stop_hook_active','model','host_version')
+            request('POST','/v1/feedbacks/hook',body={k:event[k] for k in fields if k in event},timeout=2)
+    except Exception:
+        pass  # Never alter the user task or expose private diagnostics.
+    print('{}')
+    return 0
+if __name__ == '__main__':
+    raise SystemExit(main())

@@ -569,8 +569,137 @@ paths:
       summary: Idempotently persist one bounded Yjs update-v1 record
       responses:
         "201": { description: Durable update and assigned server sequence }
+  /v1/feedbacks/list-assets:
+    post:
+      operationId: listFeedbackAssets
+      description: Lists owned or reviewer-authorized Skill assets, including zero-feedback assets. Aggregates by asset; Channel is provenance only.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/FeedbackFilter'}
+      responses:
+        '200': {description: 'items with assetKey/name/stats(totalFeedbacks, matchingFeedbacks, ratingCounts positive/negative/unrated, statusCounts resolved/unresolved/ignored), asOf and nextCursor'}
+  /v1/feedbacks/list-feedbacks:
+    post:
+      operationId: listAssetFeedbacks
+      description: Requires assetKey and asset owner or explicit reviewer authorization. Default include is metadata,rating,tags,taskOutcome; excludes are applied afterward. Evidence bytes are never included.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/FeedbackFilter'}
+      responses:
+        '200': {description: 'items, totalMatching, nextCursor. Each item always includes feedbackId, assetKey, status, statusRevision, analysisStatus, evidenceAvailable, sessionRef.'}
+        '403': {description: Asset review forbidden}
+  /v1/feedbacks/{id}:
+    parameters:
+      - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+    put:
+      operationId: submitSkillFeedback
+      description: Authenticated reporter submits immutable objective metadata; reporter identity is derived from authentication. Idempotent by ID; changed ownership/source conflicts.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/FeedbackSubmission'}
+      responses:
+        '204': {description: Accepted or exact retry}
+        '403': {description: Source access forbidden}
+        '409': {description: Feedback identity conflict}
+  /v1/feedbacks/{id}/session:
+    parameters:
+      - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+    put:
+      operationId: uploadFeedbackEvidence
+      description: Reporter-only immutable opaque JSONL evidence; streaming limit 4 MiB, SHA-256 verified before commit. Server never parses provider records. Same digest retry succeeds.
+      parameters:
+        - {name: digest, in: query, required: true, schema: {type: string, pattern: '^[a-f0-9]{64}$'}}
+      requestBody:
+        required: true
+        content:
+          application/x-ndjson:
+            schema: {type: string, format: binary}
+      responses:
+        '204': {description: Evidence committed}
+        '400': {description: Invalid digest or mismatch}
+        '413': {description: Evidence exceeds limit}
+        '409': {description: Immutable evidence conflict}
+    get:
+      operationId: readFeedbackEvidence
+      description: Reporter, asset owner or explicit reviewer only. Returns committed evidence bytes with x-colab-sha256 and x-colab-byte-size verification headers; Channel membership alone is insufficient.
+      responses:
+        '200': {description: Opaque JSONL evidence}
+        '403': {description: Evidence access forbidden}
+  /v1/feedbacks/{id}/comment:
+    parameters:
+      - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+    put:
+      operationId: submitFeedbackComment
+      description: Reporter-only Markdown comment, independently idempotent by analysisId. YAML indexes are derived; malformed YAML preserves the original Markdown and remains unrated.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [analysisId, analysisStatus]
+              properties:
+                analysisId: {type: string, format: uuid}
+                analysisStatus: {type: string, enum: [completed, failed, disabled]}
+                commentMarkdown: {type: [string, 'null'], maxLength: 65536}
+      responses:
+        '204': {description: Comment accepted}
+        '409': {description: Reporter or analysis identity conflict}
+  /v1/feedbacks/update-status:
+    post:
+      operationId: updateAssetFeedbackStatus
+      description: Owner/reviewer atomically updates up to 100 feedbacks within one asset. Every expectedRevisions entry must match. resolved means fixed and verified; reading does not resolve. Original ratings are preserved.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [assetKey, feedbackIds, status, reason, expectedRevisions]
+              properties:
+                assetKey: {type: string, minLength: 1}
+                feedbackIds: {type: array, minItems: 1, maxItems: 100, items: {type: string, format: uuid}}
+                status: {type: string, enum: [unresolved, resolved, ignored]}
+                reason: {type: string, minLength: 1, maxLength: 8192}
+                resolutionRefs: {type: array, maxItems: 30, items: {type: string, maxLength: 2048}}
+                expectedRevisions: {type: object, additionalProperties: {type: integer, minimum: 0}}
+      responses:
+        '200': {description: 'assetKey, updatedCount, items(feedbackId,status,statusRevision)'}
+        '403': {description: Asset review forbidden}
+        '409': {description: Stale revision; no changes committed}
 components:
   schemas:
+    FeedbackSubmission:
+      type: object
+      required: [assetKey, channelKey, skillVersion, consumerAgentType, capturedAt, metadata]
+      properties:
+        assetKey: {type: string, minLength: 1}
+        channelKey: {type: string, minLength: 1, description: 'channel:<UUID>, builtin:agent-colab, or unknown:legacy-install; never empty'}
+        skillVersion: {type: string, maxLength: 200}
+        consumerAgentType: {type: string, enum: [codex, claude, myflicker]}
+        capturedAt: {type: string, format: date-time}
+        metadata: {type: object, description: Core-generated bounded capture scope and task provenance}
+    FeedbackFilter:
+      type: object
+      properties:
+        assetKey: {type: string, description: Required for list-feedbacks}
+        from: {type: [string, 'null'], format: date-time, description: Inclusive capture time}
+        to: {type: [string, 'null'], format: date-time, description: Exclusive capture time}
+        status: {type: string, enum: [all, unresolved, resolved, ignored], default: all}
+        rating: {type: string, enum: [all, positive, negative, unrated], default: all}
+        negativeTags: {type: array, maxItems: 30, items: {type: string}}
+        tagMatch: {type: string, enum: [any, all], default: any}
+        cursor: {type: [string, 'null'], description: Opaque nextCursor from same query}
+        limit: {type: integer, minimum: 1, maximum: 100, default: 20}
+        feedbackId: {type: [string, 'null'], format: uuid}
+        include: {type: string, description: 'Comma-separated metadata,rating,tags,taskOutcome,taskTrajectory,comment'}
+        exclude: {type: string, description: Same field vocabulary as include}
     Organization:
       type: object
       required: [id, memberId, name, role, createdAt]

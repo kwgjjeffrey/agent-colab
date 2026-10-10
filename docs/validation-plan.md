@@ -1295,13 +1295,15 @@ Feedback design simplified: consumer evaluation is Markdown with an embedded YAM
 - Agent target directories, default application state roots and managed service labels derive from configured Skill identity. Artifact metadata retains the independently owned artifact version. Historical public migration paths remain explicitly historical and retain their existing ownership guards.
 - Canonical public and enterprise Skill test builds passed. Enterprise ZIP contains configured metadata, the correct independent version, and working packaged setup with isolated kwai-colab state root. Rendering tests (3) cover public, company and third-party names plus frozen-template derivation; platform tests (8) and installed-entrypoint tests (2) passed. Original templates are frozen as .in files inside each package; enterprise derivatives render those templates from their input artifact, not newer source HEAD. No release channel changed for these build-rule checks.
 
-### Message draft retention — 2026-10-10
+### Skill Feedback acceptance — 2026-10-10
 
-Message composer now saves the full Tiptap document locally per authenticated account and stable Channel ID, preserving formatting and immutable mention identities. Navigation/unmount and page reload restore the draft; only a successful submit or explicitly emptying the editor clears it. Failed sends retain the input. Storage failures fall back to an in-memory cache. This is GUI-only; existing server-backed sent messages remain unchanged.
-
-Validation: clean isolated GUI `0.1.162-dev` artifact built successfully. End-to-end Run `20261010T031624Z-1ee846d1`, `communication.messages.draft`: seven assertions passed for navigation, reload, failed-send retention, real successful submit and post-reload clearing. Screenshot reviewed. Initial Run `20261010T031456Z-16fa6607` failed because an empty contenteditable reads as a newline; fixed the empty assertion and preserved its evidence. Focused serializer/draft identity tests: four passed. Public promotion `0.1.216-dev` updates GUI to `0.1.163-dev` only. The initial immutable `0.1.162-dev` URL had a cached pre-upload 404; a fresh version passed canonical curl size/SHA-256 verification without changing feature code.
-
-Installed acceptance: the concurrent normal updater installed GUI `0.1.163-dev`; the live GUI proxy `/ui.json` reports that version and every installed GUI file matches the published build byte-for-byte.
+- Core capture/consent/identity/queue tests pass; existing Session projection tests: 16 pass, 2 integration tests ignored.
+- Isolated Postgres feedback tests pass, including zero-feedback assets and atomic stale-revision rejection.
+- GUI feedback tests pass (2); TypeScript/Vite and changed component builds pass.
+- Skill feedback tests (3), installed entrypoint tests (2), parser/trace tests (3), and Trace registry check pass. Packaged Skill resources/ZIP verified.
+- Desktop bundled Codex 0.162.0-alpha.2 ephemeral evaluation: zero new thread rows and rollout files.
+- Trace Run 20261010T024724Z-ba31f69e: feedback transport 1 passed / 12 assertions; real isolated Core/Server, synthetic evidence only, owner scope and digest corruption checked. Case reviewed and qualified active.
+- New production hook registration/trust and a fully installed GUI acceptance run have not been performed. No real conversation upload or production deployment occurred. See `.trial/V-FEEDBACK-03-implementation/README.md`.
 
 
 ### 2026-10-10 — organization-person mentions
@@ -1315,3 +1317,5 @@ Message composer now saves the full Tiptap document locally per authenticated ac
 Validation: clean isolated GUI `0.1.162-dev` artifact built successfully. End-to-end Run `20261010T031624Z-1ee846d1`, `communication.messages.draft`: seven assertions passed for navigation, reload, failed-send retention, real successful submit and post-reload clearing. Screenshot reviewed. Initial Run `20261010T031456Z-16fa6607` failed because an empty contenteditable reads as a newline; fixed the empty assertion and preserved its evidence. Focused serializer/draft identity tests: four passed. Public promotion `0.1.216-dev` updates GUI to `0.1.163-dev` only. The initial immutable `0.1.162-dev` URL had a cached pre-upload 404; a fresh version passed canonical curl size/SHA-256 verification without changing feature code.
 
 Installed acceptance: the concurrent normal updater installed GUI `0.1.163-dev`; the live GUI proxy `/ui.json` reports that version and every installed GUI file matches the published build byte-for-byte.
+
+2026-10-10 Feedback deployed acceptance: Server 0.1.13 activated with migration/readiness; Core 0.1.110-dev and Skill 0.1.64-dev installed. Actual Desktop-bundled Codex invocation-scoped hooks captured builtin and naturally read managed Skill tasks, with previous three human queries; raw and two ephemeral Markdown evaluations uploaded, zero analysis threads. Producer queries, Reader and ignored revision update passed. Global capture restored disabled; GUI 0.1.165-dev published/installed; actual Desktop counted entry, YAML/Markdown, status and original task preview passed. See `.trial/V-FEEDBACK-03-implementation/README.md`.

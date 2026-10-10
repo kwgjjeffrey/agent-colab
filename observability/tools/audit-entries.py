@@ -18,7 +18,7 @@ missing=[];seen=set();argsparse=argparse.ArgumentParser.parse_args
 try:
     argparse.ArgumentParser.parse_args=stop
     for file in sorted((skill/'bin').glob('colab-*')):
-        if file.suffix or file.name=='colab-open':continue
+        if file.suffix or file.name in ('colab-open','colab-feedback-hook'):continue
         loader=importlib.machinery.SourceFileLoader('audit_'+file.name.replace('-','_'),str(file));spec=importlib.util.spec_from_loader(loader.name,loader);module=importlib.util.module_from_spec(spec);loader.exec_module(module)
         try:module.main()
         except Parsed as result:parser=result.parser

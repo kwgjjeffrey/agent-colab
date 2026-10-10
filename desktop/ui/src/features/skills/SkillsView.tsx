@@ -1,3 +1,4 @@
+import { SkillFeedback } from "@/features/feedback/SkillFeedback";
 import { AgentButton } from "@/features/agent/AgentButton";
 import { traceTargets } from "@/api/trace-locators";
 import { WorkspaceActions } from "@/features/workspace/WorkspaceActions";
@@ -234,6 +235,7 @@ const trackedFetch = operation.fetch;
                 {share.canWithdraw && <Button data-trace-target={traceTargets("skills.withdraw")} variant="destructive" disabled={working === share.id} onClick={() => void withdraw(share)}>Withdraw</Button>}</WorkspaceActions>
               </div>
               {preview !== undefined ? <article data-trace-region="skill-preview">{share.description && <p className="text-sm text-muted-foreground">{share.description}</p>}<PreviewMarkdown>{preview.replace(/^---\r?\n[\s\S]*?\r?\n---(?:\r?\n|$)/, "")}</PreviewMarkdown></article> : !error && <p className="text-muted-foreground">Loading Skill preview…</p>}
+              {share.canWithdraw && <div><SkillFeedback shareId={share.id} /></div>}
               <WorkspaceActions><Popover>
                 <PopoverTrigger render={<Button variant="outline" />}>Install to Agent</PopoverTrigger>
                 <PopoverContent align="end" className="w-80">

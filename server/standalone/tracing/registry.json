@@ -1,10 +1,144 @@
 {
   "schemaVersion": 1,
   "unit": "server",
-  "operations": [],
+  "operations": [
+    {
+      "id": "server.feedback.list-assets",
+      "description": "Skill Feedback list assets",
+      "owner": "server",
+      "status": "instrumented",
+      "entry": {
+        "kind": "internal"
+      },
+      "completion": {
+        "success": "return.ok",
+        "failure": "return.error"
+      },
+      "source": {
+        "path": "server/standalone/crates/api/src/feedback.rs",
+        "function": "list_assets"
+      }
+    },
+    {
+      "id": "server.feedback.list-feedbacks",
+      "description": "Skill Feedback list feedbacks",
+      "owner": "server",
+      "status": "instrumented",
+      "entry": {
+        "kind": "internal"
+      },
+      "completion": {
+        "success": "return.ok",
+        "failure": "return.error"
+      },
+      "source": {
+        "path": "server/standalone/crates/api/src/feedback.rs",
+        "function": "list_feedbacks"
+      }
+    },
+    {
+      "id": "server.feedback.submit",
+      "description": "Skill Feedback submit",
+      "owner": "server",
+      "status": "instrumented",
+      "entry": {
+        "kind": "internal"
+      },
+      "completion": {
+        "success": "return.ok",
+        "failure": "return.error"
+      },
+      "source": {
+        "path": "server/standalone/crates/api/src/feedback.rs",
+        "function": "submit"
+      }
+    },
+    {
+      "id": "server.feedback.comment",
+      "description": "Skill Feedback comment",
+      "owner": "server",
+      "status": "instrumented",
+      "entry": {
+        "kind": "internal"
+      },
+      "completion": {
+        "success": "return.ok",
+        "failure": "return.error"
+      },
+      "source": {
+        "path": "server/standalone/crates/api/src/feedback.rs",
+        "function": "comment"
+      }
+    },
+    {
+      "id": "server.feedback.update-status",
+      "description": "Skill Feedback update status",
+      "owner": "server",
+      "status": "instrumented",
+      "entry": {
+        "kind": "internal"
+      },
+      "completion": {
+        "success": "return.ok",
+        "failure": "return.error"
+      },
+      "source": {
+        "path": "server/standalone/crates/api/src/feedback.rs",
+        "function": "update_status"
+      }
+    },
+    {
+      "id": "server.feedback.upload",
+      "description": "Skill Feedback upload",
+      "owner": "server",
+      "status": "instrumented",
+      "entry": {
+        "kind": "internal"
+      },
+      "completion": {
+        "success": "return.ok",
+        "failure": "return.error"
+      },
+      "source": {
+        "path": "server/standalone/crates/api/src/feedback.rs",
+        "function": "upload"
+      }
+    },
+    {
+      "id": "server.feedback.download",
+      "description": "Skill Feedback download",
+      "owner": "server",
+      "status": "instrumented",
+      "entry": {
+        "kind": "internal"
+      },
+      "completion": {
+        "success": "return.ok",
+        "failure": "return.error"
+      },
+      "source": {
+        "path": "server/standalone/crates/api/src/feedback.rs",
+        "function": "download"
+      }
+    }
+  ],
   "spans": [
-    {"id":"server.assets.register","description":"Accept an authorized Channel reference to one source-owned asset","source":{"path":"server/standalone/crates/api/src/assets.rs","function":"register"}},
-    {"id":"server.assets.binding","description":"Return an authorized source asset binding","source":{"path":"server/standalone/crates/api/src/assets.rs","function":"binding"}},
+    {
+      "id": "server.assets.register",
+      "description": "Accept an authorized Channel reference to one source-owned asset",
+      "source": {
+        "path": "server/standalone/crates/api/src/assets.rs",
+        "function": "register"
+      }
+    },
+    {
+      "id": "server.assets.binding",
+      "description": "Return an authorized source asset binding",
+      "source": {
+        "path": "server/standalone/crates/api/src/assets.rs",
+        "function": "binding"
+      }
+    },
     {
       "id": "server.blobs.write-bounded",
       "description": "server 层 blobs 的 write_bounded 承接点",

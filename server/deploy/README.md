@@ -22,7 +22,9 @@ host, builds a locked release binary, and downloads that artifact into `dist/`.
 
 `deploy-server.sh` uploads an immutable release directory, atomically switches
 `/opt/agent-colab/current`, restarts systemd, and requires the real readiness
-endpoint to pass. It does not build artifacts, install infrastructure, write
+endpoint to pass. Existing release directories are immutable: different bytes at the same version are rejected before upload/restart. Activation uses an atomic no-clobber artifact link; concurrent deployments must allocate distinct versions.
+
+It does not build artifacts, install infrastructure, write
 runtime secrets, or pretend that an unconfigured host is production-ready.
 
 Application deployment does not migrate an existing environment's business

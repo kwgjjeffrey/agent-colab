@@ -1,6 +1,6 @@
 {
   "name": "colab-skill",
-  "version": "0.1.59-dev",
+  "version": "0.1.64-dev",
   "localApi": ">=0.1.0 <0.2.0",
   "entrypoints": [
     "bin/colab-open",
@@ -12,6 +12,8 @@
     "bin/colab-session-reader",
     "bin/colab-skill-tool",
     "bin/colab-transfer",
-    "setup/colab-setup"
+    "setup/colab-setup",
+    "bin/colab-feedback",
+    "bin/colab-feedback-hook"
   ]
 }

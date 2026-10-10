@@ -919,6 +919,10 @@ An optional ExternalPolicy constrains the accepted identity provider, one deploy
 
 `packaging/artifact-config.example.json` defines schema version 1: deployment mode, Server URL, signed release manifest URL and macOS/Windows installer URLs. The actual public profile is ignored `packaging/artifact-config.local.json`; an enterprise profile stays inside its ignored integration artifacts directory. `COLAB_ARTIFACT_CONFIG` selects the profile. Canonical build validates the mode, embeds the GUI configuration and ships the same JSON in Skill. Bootstrap scripts are generated from the same profile, and the publisher uploads those rendered scripts. GUI/Skill still call Local Core; configuration does not bypass Core or put enterprise credentials in clients.
 
+## Skill Feedback
+
+Python Skill 持有 hook 薄客户端、可选分析提示词和 producer 命令；Local Core 按安装回执识别资产、截取 hook 指定的冻结范围，并分别运行持久化上传与 ephemeral 分析任务。Core 不扫描 Session 补采集。Server 存储私有 opaque JSONL Blob、Markdown 正文、可重建 YAML 索引与 revision 审计；上传和读取均验证大小与 SHA-256。GUI/Skill 只调用 Core。具体字段、授权与部署配置见 [feedback-design.md](feedback-design.md)，Server 协议见 `server/api/openapi.yaml`。
+
 
 ### Organization-person mention contract (2026-10-10)
 

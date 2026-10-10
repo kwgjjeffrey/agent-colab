@@ -37,6 +37,7 @@ mod catalog;
 mod canvas_codec;
 mod update_status;
 mod assets;
+mod feedback;
 mod codex_runtime;
 mod collaboration;
 mod files;
@@ -351,6 +352,7 @@ impl AppState {
         store.execute_batch("create table if not exists accounts(user_id text primary key,email text not null,display_name text,avatar_url text,session_json text,last_used_at text not null default current_timestamp);create table if not exists local_settings(key text primary key,value text);create table if not exists local_file_sources(share_id text primary key,channel_id text not null,source_path text not null,shadow_git_path text not null,last_root_oid text,updated_at text not null default current_timestamp);create table if not exists file_materializations(share_id text primary key,local_path text not null,last_root_oid text,updated_at text not null default current_timestamp);create table if not exists file_share_cache(share_id text primary key,name text not null,contributor_name text not null,contributor_avatar_url text,remote_updated_at text not null default '',updated_at text not null default current_timestamp);create table if not exists local_jobs(id text primary key,dedupe_key text not null unique,kind text not null,share_id text not null,user_id text not null,state text not null check(state in ('pending','running','failed','completed')),generation integer not null default 1,attempts integer not null default 0,next_attempt_at integer not null,last_error text,created_at text not null default current_timestamp,updated_at text not null default current_timestamp,completed_at text);create index if not exists local_jobs_due on local_jobs(state,next_attempt_at);create table if not exists local_asset_references(user_id text not null,reference_id text not null,asset_id text not null,publication_id text not null,channel_id text not null,primary key(user_id,reference_id));create index if not exists local_asset_publication on local_asset_references(user_id,publication_id);").context("migrate local SQLite")?;
         store.execute_batch("create table if not exists local_session_sources(share_id text primary key,channel_id text not null,user_id text not null,source_path text not null,source_adapter text not null,source_thread_id text,last_byte_offset integer not null default 0,last_snapshot_id text,updated_at text not null default current_timestamp);create table if not exists session_materializations(share_id text not null,user_id text not null,snapshot_id text not null,raw_path text not null,updated_at text not null default current_timestamp,primary key(share_id,user_id));create table if not exists session_share_cache(share_id text primary key,name text not null,source_adapter text not null,contributor_name text not null,contributor_avatar_url text,remote_updated_at text not null default '',updated_at text not null default current_timestamp);create table if not exists local_session_catalog(catalog_id text primary key,provider text not null,thread_id text not null,name text not null,source_path text not null unique,source_adapter text not null,size_bytes integer not null,mtime_ns integer not null,updated_at integer not null);create index if not exists local_session_catalog_recent on local_session_catalog(updated_at desc);create index if not exists local_session_catalog_identity on local_session_catalog(provider,thread_id);").context("migrate Session cache")?;
         store.execute_batch("create table if not exists local_skill_catalog(source_id text primary key,source_path text not null unique,name text not null,description text,discovered_targets text not null,last_changed_at integer not null,content_fingerprint text not null,updated_at text not null default current_timestamp);create index if not exists local_skill_catalog_recent on local_skill_catalog(last_changed_at desc);create table if not exists local_skill_sources(share_id text primary key,channel_id text not null,user_id text not null,source_id text not null,source_path text not null,shadow_git_path text not null,last_root_oid text,updated_at text not null default current_timestamp);create table if not exists skill_share_cache(share_id text primary key,name text not null,description text,contributor_name text not null,contributor_avatar_url text,remote_updated_at text not null default '',updated_at text not null default current_timestamp);create table if not exists skill_materializations(share_id text not null,user_id text not null,local_path text not null,last_root_oid text not null,updated_at text not null default current_timestamp,primary key(share_id,user_id));create table if not exists skill_installations(share_id text not null,user_id text not null,target_agent text not null,installed_path text not null,installed_root_oid text not null,content_hash text not null,installed_at text not null default current_timestamp,primary key(share_id,user_id,target_agent));").context("migrate Skill cache")?;
+        feedback::migrate(&store)?;
         store.execute_batch("create table if not exists local_quick_transfers(transfer_id text primary key,read_token text not null,revoke_token text not null,expires_at text not null,item_kind text not null default '',item_name text not null default '',revoked_at text,created_at text not null default current_timestamp);create table if not exists received_transfer_items(transfer_id text not null,item_id text not null,kind text not null,name text not null,source_adapter text not null,local_path text not null,digest text not null,expires_at text not null,received_at text not null default current_timestamp,primary key(transfer_id,item_id));").context("migrate Quick Share receipts")?;
         store.execute_batch("create table if not exists agent_thread_bindings(channel_id text not null,blueprint_id text not null,runtime_id text not null,provider_thread_id text not null,adapter_version integer not null default 3,updated_at text not null default current_timestamp,primary key(channel_id,blueprint_id));create table if not exists agent_command_receipts(request_id text primary key,status text not null check(status in ('completed')),updated_at text not null default current_timestamp);").context("migrate Agent runtime bindings")?;
         store.execute_batch("create table if not exists canvas_replicas(account_id text not null,canvas_id text not null,schema_version integer not null default 1,snapshot_bytes blob not null,last_server_seq integer not null default 0,updated_at text not null default current_timestamp,primary key(account_id,canvas_id));create table if not exists canvas_outbox(account_id text not null,canvas_id text not null,client_update_id text not null,update_bytes blob not null,state text not null check(state in ('pending','acked')),attempt_count integer not null default 0,next_attempt_at integer not null default 0,last_error text,server_seq integer,created_at text not null default current_timestamp,updated_at text not null default current_timestamp,primary key(account_id,canvas_id,client_update_id));create index if not exists canvas_outbox_due on canvas_outbox(account_id,state,next_attempt_at);").context("migrate Canvas replicas")?;
@@ -545,6 +547,7 @@ impl AppState {
     /// do not require restarting Local Core.
     pub fn start_file_sync(&self) {
         work_events::start(self);
+        feedback::start(self);
         let state=self.clone();
         tokio::spawn(async move {
             if let Err(error)=assets::consolidate_sources(&state).await {
@@ -800,6 +803,12 @@ pub fn router(state: AppState, security: LocalSecurity) -> Router {
             "/v1/sessions/{share_id}",
             delete(sessions::withdraw_session),
         )
+        .route("/v1/feedbacks/settings",get(feedback::settings).put(feedback::configure))
+        .route("/v1/feedbacks/hook",axum::routing::post(feedback::hook))
+        .route("/v1/feedbacks/list-assets",axum::routing::post(feedback::list_assets))
+        .route("/v1/feedbacks/list-feedbacks",axum::routing::post(feedback::list_feedbacks))
+        .route("/v1/feedbacks/update-status",axum::routing::post(feedback::update_status))
+        .route("/v1/feedbacks/{id}/read",axum::routing::post(feedback::read))
         .route("/v1/skill-sources", get(skills::list_skill_sources))
         .route(
             "/v1/channels/{channel_id}/skills",
@@ -1078,14 +1087,16 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
 async fn current_user_id(state: &AppState) -> Result<String, LocalError> {
 colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.lib.current-user-id", async {
 
-    state
+    let user_id = state
         .inner
         .session
         .lock()
         .await
         .as_ref()
         .map(|session| session.user.id.clone())
-        .ok_or_else(|| LocalError::unauthorized("Sign in first"))
+        .ok_or_else(|| LocalError::unauthorized("Sign in first"))?;
+    colab_observability::record_user_id(&user_id);
+    Ok(user_id)
 
 }).await
 }
