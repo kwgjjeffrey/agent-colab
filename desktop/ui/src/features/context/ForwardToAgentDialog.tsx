@@ -1,6 +1,6 @@
 import { AgentButton } from "@/features/agent/AgentButton";
 import { traceTargets } from "@/api/trace-locators";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -33,6 +33,7 @@ export function ForwardToAgentDialog({
     [instruction, setInstruction] = useState(initialInstruction),
     [sending, setSending] = useState(false),
     [error, setError] = useState<string>();
+  useEffect(() => { setError(undefined); }, [open, contextLabel]);
   const chosen = agents.find((agent) => agent.id === target);
   return (
     <Dialog

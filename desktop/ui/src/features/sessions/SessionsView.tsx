@@ -111,6 +111,7 @@ const trackedFetch = operation.fetch;
     setSourcesLoading(false);
     if (!response.ok) return setError(await response.text());
     setSources(await response.json());
+    setError(undefined);
 
 });
 }
@@ -152,6 +153,7 @@ const trackedFetch = operation.fetch;
     );
     if (!response.ok) return setError(await response.text());
     const created = await response.json() as {id:string};
+    setError(undefined);
     await onCreated?.(created.id);
     completeTip("share");
     setSharing(false);

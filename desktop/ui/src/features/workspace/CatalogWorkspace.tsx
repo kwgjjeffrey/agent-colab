@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
+import { readableError } from "@/api/readable-error";
 import { runOperation } from "@/api/operation-runner";
 import { traceTargets } from "@/api/trace-locators";
 import {
@@ -120,10 +121,18 @@ export function CatalogWorkspace({
 }: Props) {
   const [branches, setBranches] = useState<Record<string, CatalogItem[]>>({});
   const loadEpoch = useRef(0);
+  const errorScope = useRef(0);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [selectedCatalog, setSelectedCatalog] = useState<CatalogItem>();
   const [error, setError] = useState<string>();
   const [readError, setReadError] = useState<string>();
+  // A rejected action is a notice, not the current asset's read state.
+  useEffect(() => {
+    if (!error) return;
+    const timer = window.setTimeout(() => setError(undefined), 8000);
+    return () => window.clearTimeout(timer);
+  }, [error]);
+  useEffect(() => { errorScope.current++; setError(undefined); }, [channelId, view, focus?.id, focus?.kind]);
   const [working, setWorking] = useState(false);
   const [form, setForm] = useState<{
     parent?: string;
@@ -204,24 +213,29 @@ export function CatalogWorkspace({
     setSelectedCatalog(undefined);
     setError(undefined);
     setReadError(undefined);
-    void load().then(() => setReadError(undefined)).catch((reason) => setReadError(String(reason)));
+    let active = true;
+    void load().then(() => { if (active) setReadError(undefined); }).catch((reason) => { if (active) setReadError(readableError(reason)); });
+    return () => { active = false; };
   }, [channelId]);
   useEffect(() => {
     setFocusedTrail([]);
     if (!focus) return;
+    let active = true;
     void catalogRequest<CatalogItem[]>(
       `/v1/channels/${channelId}/catalog-items/${focus.kind}/${focus.id}/trail`,
     )
       .then((path) => {
+        if (!active) return;
         setFocusedTrail(path);
         const current = path.at(-1);
         if (current?.kind === "catalog") setSelectedCatalog(current);
         for (const ancestor of path.slice(0, -1)) {
           setExpanded((value) => ({ ...value, [ancestor.id]: true }));
-          void load(ancestor.id).catch((reason) => setReadError(String(reason)));
+          void load(ancestor.id).catch((reason) => { if (active) setReadError(readableError(reason)); });
         }
       })
-      .catch((reason) => setReadError(String(reason)));
+      .catch((reason) => { if (active) setReadError(readableError(reason)); });
+    return () => { active = false; };
   }, [channelId, focus?.id, focus?.kind, trailRevision]);
   useEffect(() => {
     const listener = (event: Event) => {
@@ -234,17 +248,19 @@ export function CatalogWorkspace({
     return () => window.removeEventListener("colab:catalog-add", listener);
   }, [channelId, working, onSelect]);
   useEffect(() => {
+    let active = true;
     const refresh = () => {
       void Promise.all([
         load(),
         ...Object.keys(expanded)
           .filter((id) => expanded[id])
           .map((id) => load(id)),
-      ]).then(() => setReadError(undefined)).catch((reason) => setReadError(String(reason)));
+      ]).then(() => { if (active) setReadError(undefined); }).catch((reason) => { if (active) setReadError(readableError(reason)); });
     };
     const timer = window.setInterval(refresh, 10000);
     window.addEventListener("colab:catalog-changed", refresh);
     return () => {
+      active = false;
       window.clearInterval(timer);
       window.removeEventListener("colab:catalog-changed", refresh);
     };
@@ -276,7 +292,7 @@ export function CatalogWorkspace({
     onSelect(item);
     if (item.kind === "catalog") {
       setExpanded((current) => ({ ...current, [item.id]: true }));
-      void load(item.id).catch((reason) => setError(String(reason)));
+      void load(item.id).catch((reason) => setError(readableError(reason)));
     }
   }
   function add(kind: AddKind, parent?: string) {
@@ -310,6 +326,7 @@ export function CatalogWorkspace({
     action: (operation: OperationScope) => Promise<unknown>,
   ) {
     return runOperation("workspace.mutate", async (operation) => {
+      const scope = errorScope.current;
       setWorking(true);
       setError(undefined);
       try {
@@ -317,7 +334,7 @@ export function CatalogWorkspace({
         loadEpoch.current++;
         window.dispatchEvent(new Event("colab:catalog-changed"));
       } catch (reason) {
-        setError(String(reason));
+        if (scope === errorScope.current) setError(readableError(reason));
         throw reason;
       } finally {
         setWorking(false);
@@ -397,7 +414,7 @@ export function CatalogWorkspace({
                     setExpanded((current) => ({ ...current, [item.id]: open }));
                     if (open)
                       void load(item.id).catch((reason) =>
-                        setError(String(reason)),
+                        setError(readableError(reason)),
                       );
                   }}
                 >
@@ -772,9 +789,11 @@ export function CatalogWorkspace({
               </div>
             )}
             {(error || readError) && (
-              <p role="alert" className="px-6 py-2 text-sm text-destructive">
-                {error || readError}
-              </p>
+              <div role="alert" className="flex items-center gap-3 px-6 py-2 text-sm text-destructive">
+                <span className="min-w-0 flex-1 break-words">{error || readError}</span>
+                {error ? <Button size="sm" variant="ghost" onClick={() => setError(undefined)}>Dismiss</Button> :
+                  <Button size="sm" variant="outline" onClick={() => { setTrailRevision(value => value + 1); void load().then(() => setReadError(undefined)).catch(reason => setReadError(readableError(reason))); }}>Retry</Button>}
+              </div>
             )}
             {view === "catalog" ? (
               <ScrollArea className="min-h-0 flex-1">
