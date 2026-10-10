@@ -3,15 +3,10 @@ import { operations } from "@/api/trace-operations";
 import { runOperation } from "@/api/operation-runner";
 import { useEffect, useRef, useState } from "react";
 import { FileQuestionIcon, LoaderCircleIcon } from "lucide-react";
-import { trackedFetch } from "@/api/request-activity";
+import { TextFilePreview, textFileExtensions as TEXT_EXTENSIONS, textFileType } from "./TextFilePreview";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 
 const OFFICE_PREVIEW_LIMIT = 25 * 1024 * 1024;
-const TEXT_EXTENSIONS = new Set([
-  "c", "cc", "conf", "cpp", "css", "csv", "go", "h", "hpp", "html", "ini", "java",
-  "js", "json", "jsonl", "jsx", "log", "md", "mjs", "py", "rb", "rs", "sh", "sql",
-  "svg", "toml", "ts", "tsx", "txt", "xml", "yaml", "yml",
-]);
 const IMAGE_EXTENSIONS = new Set(["avif", "bmp", "gif", "jpeg", "jpg", "png", "webp"]);
 
 type Props = { shareId: string; path?: string; size?: number };
@@ -24,7 +19,7 @@ type PreviewState =
   | { kind: "sheet"; rows: string[][]; sheetName: string; truncated: boolean }
   | { kind: "unsupported"; message: string };
 
-const extensionOf = (path: string) => path.split(".").pop()?.toLowerCase() ?? "";
+const extensionOf = textFileType;
 const rawUrl = (shareId: string, path: string) =>
   `/v1/files/${shareId}/raw?path=${encodeURIComponent(path)}`;
 
@@ -124,7 +119,7 @@ const trackedFetch=operation.fetch;
       </ScrollArea>
     );
   }
-  return <ScrollArea className="size-full"><pre className="min-h-full p-5 font-mono text-sm whitespace-pre-wrap">{state.content}</pre><ScrollBar orientation="horizontal" /></ScrollArea>;
+  return <TextFilePreview key={`${shareId}:${path}`} content={state.content} path={path ?? ""} />;
 }
 
 function DocxPreview({ buffer }: { buffer: ArrayBuffer }) {
