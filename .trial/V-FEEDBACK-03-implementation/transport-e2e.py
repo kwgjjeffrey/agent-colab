@@ -8,7 +8,7 @@ with socket.socket() as sock:
 with socket.socket() as sock:
     sock.bind(('127.0.0.1',0));serverport=sock.getsockname()[1]
 PG=f'postgres://{__import__("getpass").getuser()}@127.0.0.1:{pgport}/postgres'
-SERVER=f'http://127.0.0.1:{serverport}' 
+SERVER=f'http://127.0.0.1:{serverport}'
 def sql(text):
     return subprocess.check_output([PSQL,PG,'-At','-v','ON_ERROR_STOP=1'],input=text,text=True,stderr=subprocess.PIPE).strip()
 def wait(fn):

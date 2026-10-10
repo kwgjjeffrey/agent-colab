@@ -1095,7 +1095,6 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
         .as_ref()
         .map(|session| session.user.id.clone())
         .ok_or_else(|| LocalError::unauthorized("Sign in first"))?;
-    colab_observability::record_user_id(&user_id);
     Ok(user_id)
 
 }).await
