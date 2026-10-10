@@ -51,6 +51,31 @@ pub(super) async fn recover_legacy(state: &AppState, user: &str, runtime: &str) 
     }
 }
 
+/// A completed reply does not prove that diagnostics were captured. Repair only sparse
+/// persisted work for exact journal identities; never rerun the Agent's task.
+async fn repair_recorded_work(state: &AppState) {
+    let rows = {
+        let db=state.inner.store.lock().await;
+        let Ok(mut query)=db.prepare("select request_id,user_id,thread_id from agent_executions where reported=1 and thread_id is not null order by rowid desc limit 50") else {return};
+        query.query_map([],|r|Ok((r.get::<_,String>(0)?,r.get::<_,String>(1)?,r.get::<_,String>(2)?)))
+            .map(|rows|rows.filter_map(Result::ok).collect::<Vec<_>>()).unwrap_or_default()
+    };
+    for (request,user,thread) in rows {
+        let Ok(token)=access_token_for_user(state,&user).await else {continue};
+        let Ok(response)=state.inner.http.get(format!("{}/v1/agent-requests/{request}/events",state.inner.server_url)).bearer_auth(token).timeout(std::time::Duration::from_secs(15)).send().await else {continue};
+        if !response.status().is_success(){continue}
+        let Ok(details)=response.json::<serde_json::Value>().await else {continue};
+        let meaningful=details["events"].as_array().is_some_and(|events|events.iter().any(|e|
+            e.pointer("/params/item/type").and_then(|v|v.as_str()).is_some_and(|t|t!="userMessage") ||
+            e.pointer("/params/turn/items").and_then(|v|v.as_array()).is_some_and(|items|items.iter().any(|i|i["type"]!="userMessage"))));
+        if meaningful {continue}
+        let Ok(Some(turn))=state.inner.codex.request_status(thread.clone(),request.clone()).await else {continue};
+        if !turn["items"].as_array().is_some_and(|items|items.iter().any(|i|i["type"]!="userMessage")){continue}
+        let events=vec![serde_json::json!({"method":"turn/completed","params":{"threadId":thread,"turn":turn}})];
+        if super::work_events::persist(state,&user,&request,events).await.is_ok(){eprintln!("Agent work repaired request={request}");}
+    }
+}
+
 pub(super) fn start(state: &AppState) {
     let state = state.clone();
     tokio::spawn(async move {
@@ -58,6 +83,7 @@ pub(super) fn start(state: &AppState) {
             eprintln!("Agent execution journal unavailable: {error}");
             return;
         }
+        repair_recorded_work(&state).await;
         loop {
             let rows = {
                 let db = state.inner.store.lock().await;

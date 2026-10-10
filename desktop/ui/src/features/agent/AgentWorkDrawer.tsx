@@ -1,17 +1,12 @@
 import { traceTargets } from "@/api/trace-locators";
 import { runOperation } from "@/api/operation-runner";
 import { useEffect, useState } from "react";
-import { ChevronRightIcon, WrenchIcon, XIcon } from "lucide-react";
+import { XIcon } from "lucide-react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Button } from "@/components/ui/button";
 import { workTranscript } from "./work-transcript";
-import { Badge } from "@/components/ui/badge";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+import { ToolExecutionCard } from "./ToolExecutionCard";
 import {
   Drawer,
   DrawerContent,
@@ -89,6 +84,7 @@ export function AgentWorkDrawer({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+  const [refresh, setRefresh] = useState(0);
   const [details, setDetails] = useState<WorkDetails>(),
     [error, setError] = useState<string>();
   useEffect(() => {
@@ -107,8 +103,9 @@ export function AgentWorkDrawer({
           if (cancelled) operation.cancel();
           else {
             setDetails(value);
+            setError(undefined);
             if (
-              (activeStates.has(value.state) || value.events.length === 0) &&
+              (activeStates.has(value.state) || !workTranscript(value.events).some(entry => entry.kind !== "instruction")) &&
               attempts++ < 15
             )
               timer = setTimeout(read, 2000);
@@ -123,7 +120,7 @@ export function AgentWorkDrawer({
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [open, request?.id, request?.state]);
+  }, [open, request?.id, request?.state, refresh]);
   const entries = workTranscript(details?.events ?? []);
   return (
     <Drawer open={open} onOpenChange={onOpenChange} swipeDirection="right">
@@ -175,46 +172,7 @@ export function AgentWorkDrawer({
             <div className="flex flex-col gap-5" data-testid="work-transcript">
               {entries.map((entry) =>
                 entry.kind === "tool" ? (
-                  <Collapsible
-                    key={entry.id}
-                    defaultOpen={false}
-                    className="rounded-md border"
-                  >
-                    <CollapsibleTrigger className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm">
-                      <ChevronRightIcon className="transition-transform in-data-open:rotate-90" />
-                      <WrenchIcon />
-                      <span className="min-w-0 flex-1 truncate">
-                        {entry.title}
-                      </span>
-                      <Badge variant="secondary">
-                        {entry.status || "Tool"}
-                      </Badge>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent>
-                      <div className="flex flex-col gap-3 border-t bg-muted/40 p-3">
-                        {entry.input && (
-                          <div>
-                            <div className="mb-1 text-xs font-medium text-muted-foreground">
-                              Input
-                            </div>
-                            <pre className="max-h-80 overflow-auto text-xs whitespace-pre-wrap break-words">
-                              {entry.input}
-                            </pre>
-                          </div>
-                        )}
-                        {entry.output && (
-                          <div>
-                            <div className="mb-1 text-xs font-medium text-muted-foreground">
-                              Output
-                            </div>
-                            <pre className="max-h-80 overflow-auto text-xs whitespace-pre-wrap break-words">
-                              {entry.output}
-                            </pre>
-                          </div>
-                        )}
-                      </div>
-                    </CollapsibleContent>
-                  </Collapsible>
+                  <ToolExecutionCard key={entry.id} entry={entry} />
                 ) : entry.kind === "instruction" ? (
                   <div
                     key={entry.id}
@@ -239,6 +197,13 @@ export function AgentWorkDrawer({
                   </div>
                 ),
               )}
+            </div>
+          )}
+          {details && !activeStates.has(details.state) && !entries.some(entry => entry.kind !== "instruction") && (
+            <div className="mt-4 flex flex-col gap-2">
+              {request?.summary && entries.length > 0 && <WorkMarkdown text={request.summary} />}
+              <p className="text-sm text-muted-foreground">Execution details have not arrived yet. The result and recorded process synchronize independently.</p>
+              <Button variant="outline" onClick={() => setRefresh(value => value + 1)}>Refresh work details</Button>
             </div>
           )}
         </ScrollArea>

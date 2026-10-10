@@ -327,6 +327,7 @@ impl Session {
                 "limit":20,"itemsView":"full","cursor":cursor}), Duration::from_secs(30))?;
             let result = &page["result"];
             if let Some(turn) = result["data"].as_array().and_then(|turns| turns.iter().find(|turn| turn_matches_request(turn, request_id))) {
+                let turn = super::codex_work_history::enrich(thread_id, request_id, turn);
                 let status = turn["status"].as_str().unwrap_or("unknown").to_string();
                 if ["completed", "failed", "interrupted"].contains(&status.as_str()) {
                     let event = json!({"method":"turn/completed", "params":{"threadId":thread_id,"turn":turn}});

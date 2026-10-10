@@ -2,11 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { catalogRequest } from "@/features/workspace/CatalogWorkspace";
 import { PreviewMarkdown } from "@/features/workspace/PreviewMarkdown";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+import { ToolExecutionCard } from "@/features/agent/ToolExecutionCard";
+import { workTranscript } from "@/features/agent/work-transcript";
 import { runOperation } from "@/api/operation-runner";
 import { traceTargets } from "@/api/trace-locators";
 import { StickToBottom, type StickToBottomContext } from "use-stick-to-bottom";
@@ -21,6 +18,10 @@ type Turn = {
     arguments?: unknown;
     text?: string;
     content?: string | Array<{ text?: string }>;
+    status?: string;
+    aggregatedOutput?: string;
+    result?: unknown;
+    output?: unknown;
   }>;
 };
 /** Selecting a Session reads a bounded page; discovery never reads conversations. */
@@ -81,7 +82,7 @@ export function SessionPreview({ id, feedback = false }: { id: string; feedback?
           "POST",
           {
             turnLimit: 5,
-            includeOutputs: false,
+            includeOutputs: true,
             maxOutputCharsPerItem: 2000,
             ...(cursor ? { cursor } : {}),
           },
@@ -175,7 +176,8 @@ export function SessionPreview({ id, feedback = false }: { id: string; feedback?
                     typeof item.content === "string" ||
                     Array.isArray(item.content) ||
                     item.type === "commandExecution" ||
-                    item.type === "mcpToolCall",
+                    item.type === "mcpToolCall" ||
+                    ["dynamicToolCall", "fileChange", "webSearch", "imageGeneration", "collabAgentToolCall"].includes(item.type ?? ""),
                 )
                 .map((item, index) => (
                   <div
@@ -201,33 +203,11 @@ export function SessionPreview({ id, feedback = false }: { id: string; feedback?
                         </div>
                       </>
                     ) : (
-                      <Collapsible>
-                        <CollapsibleTrigger
-                          render={<Button variant="ghost" size="sm" />}
-                        >
-                          {item.tool ??
-                            (item.type === "commandExecution"
-                              ? "Command"
-                              : (item.type ?? "Tool"))}
-                        </CollapsibleTrigger>
-                        <CollapsibleContent>
-                          <PreviewMarkdown>
-                            {item.text ??
-                              (typeof item.content === "string"
-                                ? item.content
-                                : item.content
-                                    ?.map((block) => block.text ?? "")
-                                    .join("\n")) ??
-                              (typeof item.command === "string"
-                                ? item.command
-                                : JSON.stringify(
-                                    item.arguments ?? item.command ?? {},
-                                    null,
-                                    2,
-                                  ))}
-                          </PreviewMarkdown>
-                        </CollapsibleContent>
-                      </Collapsible>
+                      <ToolExecutionCard entry={workTranscript([{
+                        method: "item/completed",
+                        params: { item: { ...item, id: item.id ?? `${turnIndex}:${index}`,
+                          aggregatedOutput: item.aggregatedOutput ?? item.text ?? (typeof item.content === "string" ? item.content : undefined) } },
+                      }])[0] ?? { id: `${turnIndex}:${index}`, kind: "tool", text: "", title: item.tool ?? item.type ?? "Tool", output: item.text }} />
                     )}
                   </div>
                 )),

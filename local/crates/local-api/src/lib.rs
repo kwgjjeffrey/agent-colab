@@ -39,6 +39,7 @@ mod update_status;
 mod assets;
 mod feedback;
 mod codex_runtime;
+mod codex_work_history;
 mod runtime_tools;
 mod agent_execution;
 mod collaboration;

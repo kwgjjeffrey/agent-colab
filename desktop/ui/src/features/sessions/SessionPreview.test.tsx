@@ -19,7 +19,7 @@ it("keeps tool content collapsed while showing conversation messages",async()=>{
   vi.mocked(catalogRequest).mockResolvedValueOnce({turns:[{items:[{type:"commandExecution",text:"Tool output detail"},{type:"agentMessage",text:"Visible response"}]}]});
   render(<SessionPreview id="tools"/>);
   await screen.findByText("Visible response");
-  expect(screen.getByRole("button",{name:"Command"}).getAttribute("aria-expanded")).toBe("false");
+  expect(screen.getByRole("button",{name:/Run command/}).getAttribute("aria-expanded")).toBe("false");
   expect(screen.queryByText("Tool output detail")).toBeNull();
 });
 it("reads selected Session and renders structured user content without a list or preview trigger",async()=>{
@@ -37,4 +37,12 @@ it("reads earlier pages using the server cursor and keeps the latest messages",a
   expect(await screen.findByText("Earlier message")).toBeTruthy();
   expect(screen.getByText("Latest message")).toBeTruthy();
   expect(catalogRequest).toHaveBeenLastCalledWith("/v1/sessions/paged/read","POST",expect.objectContaining({cursor:"opaque-cursor"}),expect.any(Object));
+});
+
+it("expands bounded execution input and output in the shared work-details card",async()=>{
+ vi.mocked(catalogRequest).mockResolvedValueOnce({turns:[{items:[{id:"call",type:"commandExecution",command:"pwd",aggregatedOutput:"/workspace",status:"completed"},{type:"agentMessage",text:"Finished task"}]}]});
+ render(<SessionPreview id="execution-card"/>); await screen.findByText("Finished task");
+ const trigger=screen.getByRole("button",{name:/Run command completed/});expect(trigger.getAttribute("aria-expanded")).toBe("false");
+ fireEvent.click(trigger);expect(await screen.findByText("pwd")).toBeTruthy();expect(screen.getByText("/workspace")).toBeTruthy();
+ expect(catalogRequest).toHaveBeenLastCalledWith("/v1/sessions/execution-card/read","POST",expect.objectContaining({turnLimit:5,includeOutputs:true,maxOutputCharsPerItem:2000}),expect.any(Object));
 });
