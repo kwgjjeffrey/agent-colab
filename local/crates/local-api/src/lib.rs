@@ -736,6 +736,7 @@ pub fn router(state: AppState, security: LocalSecurity) -> Router {
             "/v1/canvases/{canvas_id}/document",
             get(canvas::read_document),
         )
+        .route("/v1/canvases/{canvas_id}/replace-with-canvas", axum::routing::post(canvas::replace_with_canvas))
         .route(
             "/v1/canvases/{canvas_id}/apply-patch",
             axum::routing::post(canvas::apply_patch),

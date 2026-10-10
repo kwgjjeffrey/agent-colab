@@ -1397,3 +1397,6 @@ legacy parsing/patching, protected identities and Yjs replay. Clean Core and GUI
 production builds passed. Shell and Skill are unchanged.
 
 Operation Workbench implementation 2026-10-10: independent frontend, Settings entrance, authorized Skill feedbacks, independent updater and Core hosting. Feedback tests 3; setup tests 3 (selective update, malformed package recovery, legacy manifest); publisher tests 4 passed. TypeScript/Core check passed. Publication and installed acceptance pending; `.trial/V-WORKBENCH-01/README.md`.
+
+### Canvas local text and verified reference editing (2026-10-10)
+Reproduced the real planning document's lossy-list guard failure. Inline text edits now use ProseMirror transforms with exact projection-context checks and preserve surrounding tree/marks/trailing spaces. Added replace-with-canvas through Skill→Core: validate both Canvas IDs in the same authorized Channel, check read revision, and insert the target's authoritative title/identity. Text patches still refuse capsule identity and structured-component edits. Fixed another ACK cursor advance in the patch path. Codec and installed release acceptance pending.

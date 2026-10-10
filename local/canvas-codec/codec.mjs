@@ -1,3 +1,4 @@
+import {replaceInline} from './inline-edits.mjs';
 import Image from '@tiptap/extension-image';
 import {getSchema} from '@tiptap/core';
 import StarterKit from '@tiptap/starter-kit';
@@ -84,8 +85,20 @@ export function patch(node,oldText,newText){
  if(oldText===newText)return node;
  let commonStart=0;while(commonStart<oldText.length&&commonStart<newText.length&&oldText[commonStart]===newText[commonStart])commonStart++;
  let commonEnd=0;while(commonEnd<oldText.length-commonStart&&commonEnd<newText.length-commonStart&&oldText.at(-1-commonEnd)===newText.at(-1-commonEnd))commonEnd++;
- const start=at+commonStart,end=at+oldText.length-commonEnd;
- const replacement=newText.slice(commonStart,newText.length-commonEnd);
+ let start=at+commonStart,end=at+oldText.length-commonEnd;
+ let replacement=newText.slice(commonStart,newText.length-commonEnd);
+ // Anchor an insertion to its preceding existing character; the projection check
+ // below disambiguates repeated leaf text using the caller's exact context.
+ if(start===end && start>0){start--;replacement=before[start]+replacement;}
+ const removed=before.slice(start,end);
+ if(removed && !/[\\\n*_\[\]()`<>]/.test(removed+replacement)) {
+  try {
+   const next=replaceInline(node,removed,replacement,next=>render(next)===before.slice(0,start)+replacement+before.slice(end));
+   // The selected leaf must also correspond to this exact projection occurrence.
+   if(render(next)===before.slice(0,start)+replacement+before.slice(end) && JSON.stringify(protectedNodes(node))===JSON.stringify(protectedNodes(next)))return next;
+  } catch(error) { if(!String(error.message).includes('text selection'))throw error; }
+ }
+
  let offset=0,lo=-1,hi=-1,rangeStart=0,rangeEnd=0;
  for(let i=0;i<chunks.length;i++){
   const stop=offset+chunks[i].length;
@@ -110,7 +123,7 @@ export function run(input){
  if(doc.store.pendingStructs || doc.store.pendingDs)throw Error('canvas_sync_incomplete: document dependencies are missing');
  const root=doc.getXmlFragment('default');const node=yXmlFragmentToProseMirrorRootNode(root,schema);
  if(input.operation==='render')return {content:render(node)};
- const next=patch(node,input.old,input.new),vector=Y.encodeStateVector(doc);
+ const next=input.operation==='replace-canvas'?replaceInline(node,input.old,schema.nodes.mention.createChecked(JSON.parse(input.new))):patch(node,input.old,input.new),vector=Y.encodeStateVector(doc);
  prosemirrorToYXmlFragment(next,root);
  const actual=yXmlFragmentToProseMirrorRootNode(root,schema);
  if(!actual.eq(next))throw Error('codec_postcondition_failed');

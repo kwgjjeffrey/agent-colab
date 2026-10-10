@@ -31,7 +31,7 @@ test('actual document terminal space and hard break preserve on append',()=>{
  const next=patch(n,line,line+'\n\nResponse');assert(next.firstChild.eq(n.firstChild));assert.equal(next.lastChild.textContent,'Response');
 });
 test('ambiguous context rejects before mutation',()=>{assert.throws(()=>patch(fixture,'This is','Other'),/ambiguous/);});
-test('affected multiline heading refuses lossy edit',()=>{const n=schema.nodeFromJSON({type:'doc',content:[{type:'heading',attrs:{level:1},content:[t('one'),{type:'hardBreak'},t('two')]}]});assert.throws(()=>patch(n,'one','new'),/projection_not_representable/);});
+test('affected multiline heading refuses lossy edit',()=>{const n=schema.nodeFromJSON({type:'doc',content:[{type:'heading',attrs:{level:1},content:[t('one'),{type:'hardBreak'},t('two')]}]});const next=patch(n,'one','new');assert.equal(next.firstChild.child(1).type.name,'hardBreak');assert.equal(next.firstChild.textContent,'newtwo');});
 test('incremental update converges with unrelated remote edit',()=>{
  const a=prosemirrorJSONToYDoc(schema,fixture.toJSON(),'default'),b=new Y.Doc();Y.applyUpdate(b,Y.encodeStateAsUpdate(a));const sv=Y.encodeStateVector(b);
  const line=render(fixture).split('\n').find(l=>l.includes('reply me'));
@@ -90,4 +90,32 @@ test('legacy excerpt patches normalize to compact projection without losing attr
  const n=schema.nodeFromJSON({type:'doc',content:[p(t('Before '),mention,t(' after'))]});
  const legacy='Before [@Runtime Validation Agent](colab-mention:'+Buffer.from(JSON.stringify(n.firstChild.child(1).attrs)).toString('base64url')+') after';
  const next=patch(n,legacy,legacy.replace(' after',' updated'));assert.deepEqual(next.firstChild.child(1).attrs,n.firstChild.child(1).attrs);assert(next.textContent.endsWith(' updated'));
+});
+
+test('local inline edit and verified reference preserve lossy list formatting and existing identities',()=>{
+ const original=schema.nodeFromJSON({type:'doc',content:[{type:'bulletList',content:[{type:'listItem',content:[p({type:'text',text:'Project',marks:[{type:'bold'}]},t('  '),mention,t(' ')),{type:'bulletList',content:[{type:'listItem',content:[p(t('Outcome '))]}]}]}]}]});
+ const line=render(original).split('\n')[0];const renamed=patch(original,line,line.replace('Project','Roadmap'));
+ assert.equal(renamed.firstChild.firstChild.firstChild.child(0).text,'Roadmap');
+ assert(renamed.firstChild.firstChild.child(1).eq(original.firstChild.firstChild.child(1)));
+ assert(renamed.firstChild.firstChild.firstChild.lastChild.eq(original.firstChild.firstChild.firstChild.lastChild));
+ const doc=prosemirrorJSONToYDoc(schema,original.toJSON(),'default');
+ const attrs={kind:'canvas',id:'550e8400-e29b-41d4-a716-446655440000',label:'Progress',mentionId:'new'};
+ const result=run({operation:'replace-canvas',state:Buffer.from(Y.encodeStateAsUpdate(doc)).toString('base64'),old:'Project',new:JSON.stringify(attrs)});
+ Y.applyUpdate(doc,Buffer.from(result.update,'base64'));const next=yXmlFragmentToProseMirrorRootNode(doc.getXmlFragment('default'),schema);
+ const paragraph=next.firstChild.firstChild.firstChild;assert.equal(paragraph.firstChild.type.name,'mention');assert.equal(paragraph.firstChild.attrs.id,attrs.id);
+ assert.deepEqual(paragraph.child(2).attrs,original.firstChild.firstChild.firstChild.child(2).attrs);
+ assert(paragraph.lastChild.eq(original.firstChild.firstChild.firstChild.lastChild));
+ assert(next.firstChild.firstChild.child(1).eq(original.firstChild.firstChild.child(1)));
+});
+
+test('inline context resolves repeated words, preserves trailing spaces, and supports insertion',()=>{
+ const n=schema.nodeFromJSON({type:'doc',content:[p(t('First service ')),p(t('Second service '))]});
+ const next=patch(n,'First service','First support');assert.equal(next.firstChild.textContent,'First support ');assert(next.lastChild.eq(n.lastChild));
+ const inserted=patch(n,'First service','First service extra');assert.equal(inserted.firstChild.textContent,'First service extra ');
+});
+test('text operations cannot mutate structured components or add unchecked capsules',()=>{
+ const n=schema.nodeFromJSON({type:'doc',content:[{type:'codeBlock',attrs:{language:'colab-component'},content:[t('protected')]}]});
+ assert.throws(()=>patch(n,'protected','changed'),/protected_content_changed/);
+ const ordinary=schema.nodeFromJSON({type:'doc',content:[p(t('Project'))]});
+ assert.throws(()=>patch(ordinary,'Project','[@Progress](colab:canvas:550e8400-e29b-41d4-a716-446655440000)'),/protected_content_changed/);
 });

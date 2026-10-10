@@ -92,6 +92,13 @@ pub(super) fn patch(doc: &Doc, old: &str, new: &str) -> anyhow::Result<Vec<u8>> 
     Ok(bytes)
 }
 
+pub(super) fn replace_canvas(doc: &Doc, text: &str, attrs: &serde_json::Value) -> anyhow::Result<Vec<u8>> {
+    let value=invoke(doc,"replace-canvas",text,&serde_json::to_string(attrs)?)?;
+    let bytes=STANDARD.decode(value["update"].as_str().context("codec missing update")?)?;
+    doc.transact_mut().apply_update(Update::decode_v1(&bytes)?)?;
+    Ok(bytes)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

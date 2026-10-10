@@ -435,7 +435,7 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
     persist_outbox(&state, &account, &canvas, &client_update_id, &update).await?;
     save_replica_doc(&state, &account, &canvas, &doc, None).await?;
     let row = send_outbox_item(&state, &account, &canvas, &client_update_id, None).await?;
-    save_replica_doc(&state, &account, &canvas, &doc, Some(row.server_seq)).await?;
+    save_replica_doc(&state, &account, &canvas, &doc, None).await?;
     if doc.transact().has_missing_updates() {
         return Err(LocalError::internal("Canvas synchronization is incomplete; document dependencies are missing"));
     }
@@ -447,6 +447,44 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
     }))
 
 }).await
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all="camelCase")]
+pub(super) struct CanvasReferenceRequest {
+    channel_id: String,
+    target_canvas_id: String,
+    text: String,
+    revision: String,
+}
+
+pub(super) async fn replace_with_canvas(
+    State(state): State<AppState>, AxumPath(canvas): AxumPath<String>,
+    Json(body): Json<CanvasReferenceRequest>,
+) -> Result<Json<PatchResult>, LocalError> {
+    // Resolve both identities inside the same authorized Channel; callers cannot
+    // fabricate a capsule label or point it at a document in another Channel.
+    let Json(canvases) = list_canvases(State(state.clone()),AxumPath(body.channel_id)).await?;
+    if !canvases.iter().any(|row|row.id==canvas && row.can_edit) {
+        return Err(LocalError::bad_request("Source Canvas is not editable in this Channel"));
+    }
+    let target=canvases.iter().find(|row|row.id==body.target_canvas_id)
+        .ok_or_else(||LocalError::bad_request("Target Canvas must belong to the same Channel"))?;
+    let account=current_user_id(&state).await?;
+    sync_replica(&state,&account,&canvas).await?;
+    let (doc,_) = load_replica(&state,&account,&canvas).await?;
+    let content=render(&doc).map_err(LocalError::internal)?;
+    if projection_revision(&content)!=body.revision {
+        return Err(LocalError::conflict("Canvas changed; read again before replacing text"));
+    }
+    let attrs=serde_json::json!({"kind":"canvas","id":target.id,"label":target.title,"mentionId":Uuid::new_v4().to_string()});
+    let update=super::canvas_codec::replace_canvas(&doc,&body.text,&attrs)
+        .map_err(|error|LocalError::conflict(error.to_string()))?;
+    let id=Uuid::new_v4().to_string();
+    persist_outbox(&state,&account,&canvas,&id,&update).await?;
+    save_replica_doc(&state,&account,&canvas,&doc,None).await?;
+    let row=send_outbox_item(&state,&account,&canvas,&id,None).await?;
+    Ok(Json(PatchResult {status:"Done",revision:projection_revision(&render(&doc).map_err(LocalError::internal)?),last_server_seq:row.server_seq}))
 }
 
 async fn remote_updates(

@@ -84,6 +84,11 @@ def main() -> int:
     patching = operations.add_parser("apply-patch")
     patching.add_argument("--ref", required=True)
 
+    reference = operations.add_parser("replace-with-canvas", help="Replace exact unique text with a verified Canvas capsule")
+    reference.add_argument("--ref", required=True)
+    reference.add_argument("--text", required=True)
+    reference.add_argument("--target-ref", required=True)
+
     image_read = operations.add_parser("image-read")
     image_read.add_argument("--id", required=True)
     image_read.add_argument("--output", required=True)
@@ -139,6 +144,11 @@ def main() -> int:
                 if needle in line.casefold()
             ][: max(1, min(args.limit, 500))]
             return success({"ref": args.ref, "path": "document.md", "revision": document["revision"], "matches": matches})
+
+        if args.operation == "replace-with-canvas":
+            target = canvas(args.core, args.target_ref)
+            return success(request("POST", f"/v1/canvases/{row['id']}/replace-with-canvas", core=args.core,
+                body={"channelId": row["channelId"], "targetCanvasId": target["id"], "text": args.text, "revision": document["revision"]}))
 
         patch = sys.stdin.read()
         if not patch.strip():
