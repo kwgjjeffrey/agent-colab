@@ -40,7 +40,7 @@ export type MessageNode = {
     person?: import("@/features/people/organization-people").Person;
     id?: string;
     label?: string;
-    kind?: "agent" | "member" | "files" | "session" | "canvas" | "message";
+    kind?: "agent" | "member" | "files" | "session" | "skill" | "canvas" | "message";
   };
   content?: MessageNode[];
 };

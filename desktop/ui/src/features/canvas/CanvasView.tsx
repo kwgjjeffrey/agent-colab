@@ -11,6 +11,8 @@ import type React from "react";
 import type { Dispatch, MutableRefObject, SetStateAction } from "react";
 import { EditorContent, useEditor, ReactNodeViewRenderer } from "@tiptap/react";
 import { CanvasMention, CanvasMentionContext } from "./CanvasMention";
+import { AddMentionItem, type MentionItemKind } from "@/features/context/AddMentionItem";
+import { createMention } from "@/features/context/create-mention";
 import StarterKit from "@tiptap/starter-kit";
 import Collaboration from "@tiptap/extension-collaboration";
 import Mention from "@tiptap/extension-mention";
@@ -705,7 +707,7 @@ function LoadedCanvasEditor({
         person,
         avatarUrl: person.avatarUrl,
       })),
-      ...(context?.resources.slice().sort((a, b) => ({ session: 0, files: 1, canvas: 2, message: 3 }[a.kind] - { session: 0, files: 1, canvas: 2, message: 3 }[b.kind])).map((row) => ({
+      ...(context?.resources.slice().sort((a, b) => ({ session: 0, files: 1, skill: 2, canvas: 3, message: 4 }[a.kind] - { session: 0, files: 1, skill: 2, canvas: 3, message: 4 }[b.kind])).map((row) => ({
         id: row.id,
         label: row.name,
         kind: row.kind,
@@ -751,6 +753,13 @@ function LoadedCanvasEditor({
       ])
       .run();
     setSuggestion(undefined);
+  }
+  async function addMention(kind: MentionItemKind) {
+    if (!editor || !suggestion || !context?.createItem) return;
+    const range = suggestion;
+    setSuggestion(undefined);
+    await createMention(editor, range, () => context.createItem!(kind));
+    void context.refresh(true).catch(() => {});
   }
   function sectionMarkdown(position: number) {
     if (!editor) return "";
@@ -820,7 +829,7 @@ const canvasJson = operation.json;
       );
       const contextRefs = [
         ...section.matchAll(
-          /\b(files|session|canvas|message):([0-9a-f-]{36})\b/g,
+          /\b(files|session|skill|canvas|message):([0-9a-f-]{36})\b/g,
         ),
       ].map((match) => ({ kind: match[1], id: match[2] }));
       if (contextRefs.some((row) => !known.has(`${row.kind}:${row.id}`)))
@@ -1015,9 +1024,11 @@ const canvasJson=operation.json;
         )}
         {suggestion && (
           <div
-            className="fixed z-50 w-80 overflow-y-auto rounded-lg border bg-popover p-1 shadow-lg"
+            className="fixed z-50 w-80 rounded-lg border bg-popover p-1 shadow-lg"
             style={suggestionPosition}
           >
+            {context?.createItem && <AddMentionItem onChoose={kind => void addMention(kind)} />}
+            <div className="overflow-y-auto" style={{maxHeight: Math.max(40, (suggestionPosition?.maxHeight ?? 360) - 40)}}>
             {candidates.length ? (
               candidates.map((candidate) => (
                 <button
@@ -1038,6 +1049,7 @@ const canvasJson=operation.json;
                 No matching Agent or member
               </p>
             )}
+            </div>
           </div>
         )}
         <AgentWorkDrawer

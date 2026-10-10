@@ -510,6 +510,10 @@ on their next read. Repeated references require contextual patch text, as other
 ambiguous text does.
 
 
+## Skill context references
+
+Message/Canvas resource capsules support `skill` alongside Files, Session, Canvas and Message. Skill references retain the active Channel-share ID and Channel authorization; Agent context prompts include `colab-skill-tool ensure --ref 'colab://channel/<channel-id>/<share-id>' --target <runtime>`. Labels are presentation, not identity. This does not reinterpret legacy browser references or change source ownership.
+
 ## Operation Workbench
 
 Settings opens an independently packaged Operation Workbench frontend. Skill Feedbacks is the first module: authorized official/shared Skill assets, asset counts, complete Markdown/YAML evaluation and existing Session Reader. No new GUI filters. Server authenticates each request and requires asset ownership or an explicit reviewer grant; Channel membership is insufficient.

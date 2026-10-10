@@ -12,6 +12,8 @@ import { useChannelContext } from "@/features/context/ChannelContext";
 import type { ResourceKind } from "@/features/context/context-model";
 import { loadMessageDraft, saveMessageDraft } from "./message-drafts";
 import { ContextMentionNode } from "@/features/context/ContextMentionNode";
+import { AddMentionItem, type MentionItemKind } from "@/features/context/AddMentionItem";
+import { createMention } from "@/features/context/create-mention";
 
 import { useOrganizationPeople, mentionPeople, personKey, personLabel, type Person } from "@/features/people/organization-people";
 
@@ -203,7 +205,7 @@ export function AgentMessageComposer({
       })),
       ...(context?.resources
         .filter((row) => row.kind !== "message")
-        .sort((a, b) => ({ session: 0, files: 1, canvas: 2, message: 3 }[a.kind] - { session: 0, files: 1, canvas: 2, message: 3 }[b.kind]))
+        .sort((a, b) => ({ session: 0, files: 1, skill: 2, canvas: 3, message: 4 }[a.kind] - { session: 0, files: 1, skill: 2, canvas: 3, message: 4 }[b.kind]))
         .map((row) => ({
           id: row.id,
           label: row.name,
@@ -235,6 +237,13 @@ export function AgentMessageComposer({
       .run();
     setSuggestion(undefined);
   }
+  async function addMention(kind: MentionItemKind) {
+    if (!editor || !suggestion || !context?.createItem) return;
+    const range = suggestion;
+    setSuggestion(undefined);
+    await createMention(editor, range, () => context.createItem!(kind));
+    void context.refresh().catch(() => {});
+  }
   async function submitCurrent() {
     if (!editor || submitting || busy) return;
     const composed = serializeAgentDocument(editor.getJSON());
@@ -258,7 +267,9 @@ export function AgentMessageComposer({
       className="relative shrink-0 border-t bg-muted px-4 py-3"
     >
       {suggestion && (
-        <div className="absolute bottom-full left-4 z-20 mb-2 max-h-80 w-80 overflow-y-auto rounded-lg border bg-popover p-1 text-popover-foreground shadow-lg">
+        <div className="absolute bottom-full left-4 z-20 mb-2 w-80 rounded-lg border bg-popover p-1 text-popover-foreground shadow-lg">
+          {context?.createItem && <AddMentionItem onChoose={kind => void addMention(kind)} />}
+          <div className="max-h-80 overflow-y-auto">
           {candidates.length ? (
             candidates.map((candidate) => (
               <button
@@ -282,6 +293,7 @@ export function AgentMessageComposer({
               {directory.loading ? "Searching people…" : directory.error || "No matching Agent or member"}
             </p>
           )}
+          </div>
         </div>
       )}
       {replyingTo && (

@@ -12,6 +12,7 @@ import { messageRequest } from "@/features/messages/api";
 import { accountRealtime } from "@/api/realtime";
 import { ForwardToAgentDialog } from "./ForwardToAgentDialog";
 import { type ContextResource } from "./context-model";
+import type { MentionItemKind } from "./AddMentionItem";
 import type {
   Blueprint,
   ChannelMessage,
@@ -26,6 +27,7 @@ type Context = {
   agents: Blueprint[];
   error?: string;
   navigate: (resource: ContextResource) => void;
+  createItem?: (kind: MentionItemKind) => Promise<ContextResource | undefined>;
   forward: (resources: ContextResource[], messageIds?: string[], instruction?: string) => void;
   reloadPeople: () => Promise<void>;
   refresh: (includeMessages?: boolean) => Promise<void>;
@@ -40,11 +42,13 @@ export function ChannelContextProvider({
   channelId,
   channelName,
   navigate,
+  createItem,
   children,
 }: {
   channelId: string;
   channelName?: string;
   navigate: Context["navigate"];
+  createItem?: Context["createItem"];
   children: ReactNode;
 }) {
   const [resources, setResources] = useState<ContextResource[]>([]),
@@ -81,7 +85,7 @@ const messageRequest=operation.message;
   async function fetchResources(includeMessages: boolean) {return runOperation("context.resources", async (operation)=>{
 const messageRequest=operation.message;
 
-    const [files, sessions, canvases, messages] =
+    const [files, sessions, skills, canvases, messages] =
       await Promise.all([
         messageRequest<
           Array<{
@@ -101,6 +105,7 @@ const messageRequest=operation.message;
             updatedAt: string;
           }>
         >(`/v1/channels/${channelId}/sessions`, undefined, true),
+        messageRequest<Array<{id:string;name:string;contributorName:string;contributorMemberId?:string;updatedAt:string}>>(`/v1/channels/${channelId}/skills`, undefined, true),
         messageRequest<
           Array<{
             id: string;
@@ -124,6 +129,7 @@ const messageRequest=operation.message;
         channelId,
         kind: "session" as const,
       })),
+      ...skills.map(row=>({...row,channelId,kind:"skill" as const})),
       ...canvases.map((row) => ({
         id: row.id,
         name: row.title,
@@ -167,7 +173,7 @@ const messageRequest=operation.message;
 
     const cached = resources.find((row) => row.kind === kind && row.id === id);
     if (cached) return cached;
-    const path = kind === "files" ? "files" : kind === "session" ? "sessions" : kind === "canvas" ? "canvases" : null;
+    const path = kind === "files" ? "files" : kind === "session" ? "sessions" : kind === "skill" ? "skills" : kind === "canvas" ? "canvases" : null;
     if (!path) return undefined;
     const rows = await messageRequest<Array<Record<string, string>>>(
       `/v1/channels/${channelId}/${path}`, undefined, true,
@@ -218,6 +224,7 @@ const messageRequest=operation.message;
         agents,
         error,
         navigate,
+        createItem,
         forward: (rows, ids = [], instruction) =>
           setHandoff({ resources: rows, messageIds: ids, instruction }),
         refresh,

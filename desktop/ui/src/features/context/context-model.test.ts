@@ -39,14 +39,14 @@ it("keeps exact resource handles when catalog metadata is missing and deduplicat
 it("resource and human mentions never route as Agents", () => {
   const result = serializeAgentDocument({
     type: "doc",
-    content: ["files", "session", "canvas", "message", "member", "agent"].map(
+    content: ["files", "session", "skill", "canvas", "message", "member", "agent"].map(
       (kind) => ({ type: "mention", attrs: { kind, id: kind, label: kind } }),
     ),
   });
   expect(result.mentions.map((row) => row.blueprintId)).toEqual(["agent"]);
 });
 it("Canvas projection references preserve all four kinds and Unicode names", () => {
-  for (const kind of ["files", "session", "canvas", "message"] as const) {
+  for (const kind of ["files", "session", "skill", "canvas", "message"] as const) {
     const payload = btoa(
       String.fromCharCode(
         ...new TextEncoder().encode(
@@ -68,7 +68,7 @@ it("Canvas projection references preserve all four kinds and Unicode names", () 
 });
 
 it("compact Canvas resources retain reading instructions without encoded editor metadata", () => {
- for (const kind of ["files", "session", "canvas", "message"] as const) {
+ for (const kind of ["files", "session", "skill", "canvas", "message"] as const) {
   const markdown = `[@设计](colab:${kind}:${id})`;
   const rows = projectionResources(markdown + " " + markdown, channelId, []);
   expect(rows).toEqual([{kind,id,name:"设计",channelId}]);

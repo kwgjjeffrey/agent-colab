@@ -14,3 +14,12 @@ class CompactContextTests(unittest.TestCase):
     def test_member_and_invalid_identity_are_not_resource_context(self):
         self.assertEqual(references('[@Member](colab:member:550e8400-e29b-41d4-a716-446655440000)'),[])
         self.assertEqual(references('[@Canvas](colab:canvas:not-an-id)'),[])
+
+    def test_skill_in_both_editors_is_resource_context(self):
+        identity='550e8400-e29b-41d4-a716-446655440000'
+        for content in ['[@Team](colab:skill:'+identity+')', {'type':'mention','attrs':{'kind':'skill','id':identity,'label':'Team'}}]:
+            row=context_tools(content,'channel-id')[0]
+            self.assertEqual(row['kind'],'skill')
+            self.assertEqual(row['id'],identity)
+            self.assertIn('colab-skill-tool status --ref',row['readCommand'])
+            self.assertIn('colab://channel/channel-id/'+identity,row['readCommand'])

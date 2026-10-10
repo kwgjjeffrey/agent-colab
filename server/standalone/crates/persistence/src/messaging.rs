@@ -175,7 +175,7 @@ impl Database {
     }
     pub async fn context_reference_label(&self, channel: Uuid, kind: &str, id: Uuid) -> anyhow::Result<Option<String>> {
         let query = match kind {
-            "files" | "session" => "select name from channel_shares where id=$1 and channel_id=$2 and kind=$3 and state='active'",
+            "files" | "session" | "skill" => "select name from channel_shares where id=$1 and channel_id=$2 and kind=$3 and state='active'",
             "canvas" => "select title from canvases where id=$1 and channel_id=$2 and archived_at is null and $3='canvas'",
             "message" => "select 'Message '||seq::text from channel_messages where id=$1 and channel_id=$2 and $3='message'",
             _ => return Ok(None),
@@ -186,7 +186,7 @@ impl Database {
     pub async fn context_reference_visible(&self, user: Uuid, channel: Uuid, kind: &str, id: Uuid) -> anyhow::Result<bool> {
         if self.channel_actor(user, channel).await?.is_none() { return Ok(false); }
         let query = match kind {
-            "files" | "session" => "select exists(select 1 from channel_shares where id=$1 and channel_id=$2 and kind=$3 and state='active')",
+            "files" | "session" | "skill" => "select exists(select 1 from channel_shares where id=$1 and channel_id=$2 and kind=$3 and state='active')",
             "canvas" => "select exists(select 1 from canvases where id=$1 and channel_id=$2 and archived_at is null and $3='canvas')",
             "message" => "select exists(select 1 from channel_messages where id=$1 and channel_id=$2 and $3='message')",
             _ => return Ok(false),

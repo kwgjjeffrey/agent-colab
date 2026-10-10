@@ -214,18 +214,34 @@ function App() {
   const [homeTryBusy, setHomeTryBusy] = useState<string>();
   const [creationKind, setCreationKind] = useState<"session" | "files" | "skill">();
   const creationChannel = useRef<string | undefined>(undefined);
-  useEffect(() => { if (creationKind && creationChannel.current !== selectedId) setCreationKind(undefined); }, [selectedId]);
+  const creationToken = useRef(0);
+  const currentCreationToken = creationToken.current;
+  const mentionCreation = useRef<{channelId:string;kind:"session"|"files"|"skill";resolve:(resource:ContextResource|undefined)=>void} | undefined>(undefined);
+  function closeCreation() { creationToken.current+=1; mentionCreation.current?.resolve(undefined); mentionCreation.current=undefined; setCreationKind(undefined); }
+  useEffect(() => { if (creationChannel.current !== selectedId) closeCreation(); }, [selectedId]);
+  function createMentionItem(kind:"session"|"files"|"skill"):Promise<ContextResource|undefined> {
+    if (!selectedId) return Promise.resolve(undefined);
+    closeCreation(); setCatalogDestination(undefined); creationChannel.current=selectedId;
+    return new Promise(resolve=>{mentionCreation.current={channelId:selectedId,kind,resolve};setCreationKind(kind);});
+  }
   const [catalogDestination, setCatalogDestination] = useState<string>();
   useEffect(()=>{if(workspaceItem&&["canvas","session","files"].includes(workspaceItem.kind)&&selectedId)setContextFocus({...workspaceItem,kind:workspaceItem.kind as "canvas",channelId:selectedId});},[selectedId,workspaceItem?.id]);
   async function addWorkspaceItem(kind: AddKind, parentId?: string) {
+    closeCreation();
     setCatalogDestination(parentId);
     if(kind==="catalog"||kind==="canvas"){window.dispatchEvent(new CustomEvent("colab:catalog-add",{detail:{kind,parentId}}));return;}
     creationChannel.current = selectedId;
     setCreationKind(kind);
   }
-  async function placedShare(kind: string, id: string) {
+  async function placedShare(kind: string, id: string, token?:number) {
+    if(token!==undefined && token!==creationToken.current){window.dispatchEvent(new Event("colab:catalog-changed"));return;}
     if(catalogDestination && selectedId) await catalogRequest(`/v1/channels/${selectedId}/catalog-items/position`,"PATCH",{kind,itemId:id,parentId:catalogDestination});
-    if(selectedId){const trail=await catalogRequest<Array<{id:string;kind:string;name:string}>>(`/v1/channels/${selectedId}/catalog-items/${kind}/${id}/trail`);const item=trail.at(-1);if(item){setWorkspaceItem(item);if(kind!=="skill")setContextFocus({...item,kind:kind as "session",channelId:selectedId});setWorkspaceTab(kind==="session"?"sessions":kind==="skill"?"skills":kind);}}
+    if(selectedId){const trail=await catalogRequest<Array<{id:string;kind:string;name:string}>>(`/v1/channels/${selectedId}/catalog-items/${kind}/${id}/trail`);const item=trail.at(-1);if(item){
+      if(token!==undefined && token!==creationToken.current)return;
+      const pending=mentionCreation.current;
+      if(pending?.channelId===selectedId && pending.kind===kind){mentionCreation.current=undefined;pending.resolve({...item,kind:kind as ContextResource["kind"],channelId:selectedId});}
+      else if(creationChannel.current===selectedId){setWorkspaceItem(item);if(kind!=="skill")setContextFocus({...item,kind:kind as "session",channelId:selectedId});setWorkspaceTab(kind==="session"?"sessions":kind==="skill"?"skills":kind);}
+    }}
     window.dispatchEvent(new Event("colab:catalog-changed"));
   }
   const loginReady = useRef(false);
@@ -886,6 +902,7 @@ const trackedFetch=operation.fetch;
   async function shareFiles(path: string, syncExcludes: string[], parent?: OperationScope) {
 return runOperation("files.share", async (operation) => {
 const api = operation.response;
+    const token = creationKind ? currentCreationToken : undefined;
 
     if (!selectedId) return;
     setBusy(true);
@@ -898,7 +915,7 @@ const api = operation.response;
         body: JSON.stringify({ localPath: path, syncExcludes }),
       });
       const created = await sharedResponse.json() as {id:string};
-      await placedShare("files",created.id);
+      await placedShare("files",created.id,token);
       await loadFileShares(false, operation);
       setNotice(
         "Files shared with this Channel. Future changes sync automatically.",
@@ -1167,7 +1184,7 @@ const api = operation.response;
               action={<Button onClick={() => { setInitialLoading(true); setWorkspaceLoadError(undefined); void refreshOrganizations().then(() => refreshChannels()).catch((reason) => setWorkspaceLoadError(readableError(reason))).finally(() => setInitialLoading(false)); }}>Retry</Button>}
             />
           ) : selected ? (
-            <ChannelContextProvider key={selected.id} channelId={selected.id} channelName={selected.name} navigate={resource => { setWorkspaceItem(resource.kind==="message"?undefined:resource);setContextFocus({ ...resource }); setWorkspaceTab(resource.kind === "session" ? "sessions" : resource.kind === "message" ? "messages" : resource.kind); }}><Tabs value={workspaceTab} onValueChange={setWorkspaceTab} className="flex min-h-0 flex-1 flex-col gap-0">
+            <ChannelContextProvider key={selected.id} channelId={selected.id} channelName={selected.name} createItem={createMentionItem} navigate={resource => { setWorkspaceItem(resource.kind==="message"?undefined:resource);setContextFocus({ ...resource }); setWorkspaceTab(resource.kind === "session" ? "sessions" : resource.kind === "message" ? "messages" : resource.kind === "skill" ? "skills" : resource.kind); }}><Tabs value={workspaceTab} onValueChange={setWorkspaceTab} className="flex min-h-0 flex-1 flex-col gap-0">
               <CatalogWorkspace key={selected.id} heading={<ChannelHeading channel={selected} members={members} onEdit={()=>setChannelDialog("identity")} onMembers={()=>setChannelDialog("members")} />} activity={agentActivity} quickShare={<QuickShareControl submenu
                   defaultAgent={installation?.defaultAgent ?? "codex"}
                   installedAgents={installation?.targets ?? {}}
@@ -1228,9 +1245,9 @@ const api = operation.response;
               </TabsContent>
               </CatalogWorkspace>
               {/* Creation preserves the selected preview; placedShare navigates only after success. */}
-              {creationKind === "session" && <SessionsView creationOnly onCreationClose={()=>setCreationKind(undefined)} onCreated={id=>placedShare("session",id)} channelId={selected.id} channelName={selected.name} shares={[]} busy={busy} defaultAgent={installation?.defaultAgent ?? "codex"} installedAgents={installation?.targets ?? {}} onRefresh={loadSessionShares} onWithdraw={withdrawSession} />}
-              {creationKind === "files" && <FilesView creationOnly onCreationClose={()=>setCreationKind(undefined)} creationParentRef={catalogDestination ? `colab://resource/${selected.id}/catalog/${catalogDestination}` : `colab://channel/${encodeURIComponent(selected.name)}`} shares={[]} busy={busy} onChoose={chooseFiles} onShare={shareFiles} onEnsureLocal={ensureLocalFiles} onWithdraw={withdrawFiles} onRetry={share=>void retryFiles(share)} defaultAgent={installation?.defaultAgent ?? "codex"} installedAgents={installation?.targets ?? {}} />}
-              {creationKind === "skill" && <SkillsView creationOnly onCreationClose={()=>setCreationKind(undefined)} creationParentRef={catalogDestination ? `colab://resource/${selected.id}/catalog/${catalogDestination}` : `colab://channel/${encodeURIComponent(selected.name)}`} onCreated={id=>placedShare("skill",id)} channelId={selected.id} channelName={selected.name} busy={busy} defaultAgent={installation?.defaultAgent ?? "codex"} installedAgents={installation?.targets ?? {}} onChoose={chooseFiles} />}
+              {creationKind === "session" && <SessionsView creationOnly onCreationClose={closeCreation} onCreated={id=>placedShare("session",id,currentCreationToken)} channelId={selected.id} channelName={selected.name} shares={[]} busy={busy} defaultAgent={installation?.defaultAgent ?? "codex"} installedAgents={installation?.targets ?? {}} onRefresh={loadSessionShares} onWithdraw={withdrawSession} />}
+              {creationKind === "files" && <FilesView creationOnly onCreationClose={closeCreation} creationParentRef={catalogDestination ? `colab://resource/${selected.id}/catalog/${catalogDestination}` : `colab://channel/${encodeURIComponent(selected.name)}`} shares={[]} busy={busy} onChoose={chooseFiles} onShare={shareFiles} onEnsureLocal={ensureLocalFiles} onWithdraw={withdrawFiles} onRetry={share=>void retryFiles(share)} defaultAgent={installation?.defaultAgent ?? "codex"} installedAgents={installation?.targets ?? {}} />}
+              {creationKind === "skill" && <SkillsView creationOnly onCreationClose={closeCreation} creationParentRef={catalogDestination ? `colab://resource/${selected.id}/catalog/${catalogDestination}` : `colab://channel/${encodeURIComponent(selected.name)}`} onCreated={id=>placedShare("skill",id,currentCreationToken)} channelId={selected.id} channelName={selected.name} busy={busy} defaultAgent={installation?.defaultAgent ?? "codex"} installedAgents={installation?.targets ?? {}} onChoose={chooseFiles} />}
               <Dialog open={Boolean(channelDialog)} onOpenChange={open=>{if(!open)setChannelDialog(undefined);}}>
                 <DialogContent data-trace-region="channel-settings" className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
                   <DialogHeader><DialogTitle>{channelDialog==="members"?"Members":"Edit Channel"}</DialogTitle></DialogHeader>

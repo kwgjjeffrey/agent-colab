@@ -8,7 +8,7 @@ pub(super) fn references(value: &serde_json::Value) -> Vec<ContextRef> {
     fn visit(value: &serde_json::Value, rows: &mut Vec<ContextRef>) {
         if value["type"] == "mention" {
             if let (Some(kind), Some(id)) = (value["attrs"]["kind"].as_str(), value["attrs"]["id"].as_str().and_then(|raw| Uuid::parse_str(raw).ok())) {
-                if ["files", "session", "canvas", "message"].contains(&kind) && !rows.iter().any(|row| row.kind == kind && row.id == id) { rows.push(ContextRef { kind: kind.into(), id }); }
+                if ["files", "session", "skill", "canvas", "message"].contains(&kind) && !rows.iter().any(|row| row.kind == kind && row.id == id) { rows.push(ContextRef { kind: kind.into(), id }); }
             }
         }
         if let Some(children) = value["content"].as_array() { for child in children { visit(child, rows); } }
@@ -21,7 +21,7 @@ pub(super) fn projection(value: &serde_json::Value) -> String {
         Some("mention") => {
             let label = value["attrs"]["label"].as_str().unwrap_or("Context");
             let kind = value["attrs"]["kind"].as_str().unwrap_or("agent");
-            if ["files", "session", "canvas", "message"].contains(&kind) { format!("[{label} · {kind}:{}]", value["attrs"]["id"].as_str().unwrap_or("")) } else { format!("@{label}") }
+            if ["files", "session", "skill", "canvas", "message"].contains(&kind) { format!("[{label} · {kind}:{}]", value["attrs"]["id"].as_str().unwrap_or("")) } else { format!("@{label}") }
         }
         Some("hardBreak") => "\n".into(),
         _ => format!("{}{}", value["content"].as_array().map(|rows| rows.iter().map(projection).collect::<String>()).unwrap_or_default(), if value["type"] == "paragraph" { "\n" } else { "" }),
@@ -32,12 +32,13 @@ pub(super) fn message_text(row: &colab_server_persistence::ChannelMessage) -> St
 }
 pub(super) fn instructions(channel: Uuid, rows: &[ContextRef]) -> String {
     let root = "@COLAB_SKILL_BIN@";
-    ["files", "session", "canvas", "message"].iter().filter_map(|kind| {
+    ["files", "session", "skill", "canvas", "message"].iter().filter_map(|kind| {
         let ids = rows.iter().filter(|row| row.kind == *kind).map(|row| row.id).collect::<std::collections::BTreeSet<_>>();
         if ids.is_empty() { return None; }
         let commands = ids.into_iter().map(|id| match *kind {
             "files" => format!("{root}/colab-browser use --ref 'colab://channel/{channel}/{id}'"),
             "session" => format!("{root}/colab-session-reader read --ref 'colab://channel/{channel}/{id}' --turn-limit 20 --include-outputs --max-output-chars-per-item 4000"),
+            "skill" => format!("{root}/colab-skill-tool ensure --ref 'colab://channel/{channel}/{id}' --target codex"),
             "canvas" => format!("{root}/colab-canvas read --ref 'colab://channel/{channel}/canvas/{id}'"),
             _ => format!("{root}/colab-messages messages read --channel '{channel}' --id '{id}'"),
         }).collect::<Vec<_>>().join("\n");
@@ -57,4 +58,19 @@ pub(super) fn configured_skill_name() -> anyhow::Result<String> {
 pub(super) fn legacy_prompt(template: &str) -> String {
     let name = configured_skill_name().expect("artifact configuration validated at startup");
     template.replace("@COLAB_SKILL_BIN@", &format!("~/.agents/skills/{name}/bin"))
+}
+
+#[cfg(test)]
+mod mention_tests {
+    use super::*;
+    #[test]
+    fn skill_reference_has_an_install_consumer() {
+        let id=Uuid::new_v4();let channel=Uuid::new_v4();
+        let doc=serde_json::json!({"type":"mention","attrs":{"kind":"skill","id":id,"label":"Team skill"}});
+        let rows=references(&doc);assert_eq!(rows.len(),1);assert_eq!(rows[0].kind,"skill");
+        assert!(projection(&doc).contains("skill:"));
+        let prompt=instructions(channel,&rows);
+        assert!(prompt.contains("colab-skill-tool ensure --ref"));assert!(prompt.contains("--target codex"));
+        assert!(!prompt.contains("colab-browser use"));
+    }
 }

@@ -4,7 +4,7 @@ import {
 } from "@/features/agent/AgentPromptDialog";
 import type { MessageNode, ChannelMessage } from "@/features/messages/types";
 
-export type ResourceKind = "files" | "session" | "canvas" | "message";
+export type ResourceKind = "files" | "session" | "skill" | "canvas" | "message";
 export type ContextResource = {
   kind: ResourceKind;
   id: string;
@@ -17,7 +17,7 @@ export type ContextResource = {
   excerpt?: string;
 };
 export function isResourceKind(kind?: string): kind is ResourceKind {
-  return ["files", "session", "canvas", "message"].includes(kind ?? "");
+  return ["files", "session", "skill", "canvas", "message"].includes(kind ?? "");
 }
 export function resourceRef(
   resource: Pick<ContextResource, "kind" | "id" | "channelId">,
@@ -34,7 +34,7 @@ export function readInstructions(
   const unique = [
     ...new Map(resources.map((row) => [`${row.kind}:${row.id}`, row])).values(),
   ];
-  return (["files", "session", "canvas", "message"] as const)
+  return (["files", "session", "skill", "canvas", "message"] as const)
     .flatMap((kind) => {
       const rows = unique.filter((row) => row.kind === kind);
       if (!rows.length) return [];
@@ -42,6 +42,7 @@ export function readInstructions(
         agent,
         kind === "files"
           ? "colab-browser"
+          : kind === "skill" ? "colab-skill-tool"
           : kind === "session"
             ? "colab-session-reader"
             : kind === "canvas"
@@ -49,7 +50,7 @@ export function readInstructions(
               : "colab-messages",
       );
       return [
-        `How to read ${kind === "session" ? "sessions" : kind === "message" ? "messages" : kind}:\n${rows.map((row) => (kind === "message" ? `${command} messages read --channel ${shellQuote(row.channelId)} --id ${shellQuote(row.id)}` : `${command} ${kind === "files" ? "use" : "read"} --ref ${shellQuote(resourceRef(row))}${kind === "session" ? " --turn-limit 20 --include-outputs --max-output-chars-per-item 4000" : ""}`)).join("\n")}`,
+        `How to read ${kind === "session" ? "sessions" : kind === "message" ? "messages" : kind}:\n${rows.map((row) => (kind === "message" ? `${command} messages read --channel ${shellQuote(row.channelId)} --id ${shellQuote(row.id)}` : `${command} ${kind === "files" ? "use" : kind === "skill" ? "ensure" : "read"} --ref ${shellQuote(resourceRef(row))}${kind === "skill" ? ` --target ${agent}` : kind === "session" ? " --turn-limit 20 --include-outputs --max-output-chars-per-item 4000" : ""}`)).join("\n")}`,
       ];
     })
     .join("\n\n");
@@ -117,7 +118,7 @@ export function projectionResources(
   catalog: ContextResource[],
 ): ContextResource[] {
   const rows: ContextResource[] = [];
-  for (const match of markdown.matchAll(/\[@((?:\\.|[^\]])*)\]\(colab:(files|session|canvas|message):([^()]+)\)/g)) {
+  for (const match of markdown.matchAll(/\[@((?:\\.|[^\]])*)\]\(colab:(files|session|skill|canvas|message):([^()]+)\)/g)) {
     try {
       const kind = match[2] as ResourceKind, id = decodeURIComponent(match[3]);
       rows.push(catalog.find(row => row.kind === kind && row.id === id) ?? {
@@ -126,7 +127,7 @@ export function projectionResources(
     } catch { /* A malformed URI is not a context reference. */ }
   }
   for (const match of markdown.matchAll(
-    /\(colab-(?:mention:|resource:(?:files|session|canvas|message):[A-Za-z0-9-]+:)([A-Za-z0-9_-]+)\)/g,
+    /\(colab-(?:mention:|resource:(?:files|session|skill|canvas|message):[A-Za-z0-9-]+:)([A-Za-z0-9_-]+)\)/g,
   )) {
     try {
       const binary = atob(match[1].replaceAll("-", "+").replaceAll("_", "/"));

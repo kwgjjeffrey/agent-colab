@@ -1,5 +1,9 @@
 # Colab 交互设计
 
+### 从 @ 添加上下文
+
+Message 和 Canvas 的 @ 选择器提供 `Add new item`，hover 打开 Sessions、Files、Skills；键盘也可打开和选择。复用对应的分享弹层和原有注册逻辑。成功后在原 @ 位置插入该频道引用的胶囊，不跳转到新 item；名称取最新 Catalog trail，身份使用稳定 ID。取消、切换频道或原 @ 文本已被替换时不插入。Canvas 并发编辑期间映射原位置，不覆盖其他内容。
+
 Sharing the same local source again adds a Channel reference, not a second
 uploader. Repeating the action in the same Channel returns its existing item.
 Second-reference registration must not wait for the first upload or overwrite

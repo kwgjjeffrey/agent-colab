@@ -1,5 +1,9 @@
 # 技术验证计划
 
+### 2026-10-10 — Create context from @
+
+Frontend: 54 files / 156 tests passed; TypeScript and Vite production build passed. New mapped-insertion tests cover saved caret, concurrent edits, cancellation, invalidated text, destroyed editor and failed creation. Menu tests cover hover and all three choices. Rust `skill_reference_has_an_install_consumer` and Python compact-context 3 tests passed. `context.references.add-mention` passed six actual GUI registration paths and cancellation in Run `20261010T081158Z-a1e5052c`; only native path picking and Session discovery metadata are fixture boundaries, registration/placement/storage remain real. Initial preflight/helper/adapter fixture errors remain in execution records. Source Skill validation requires packaging substitution of its existing `@COLAB_SKILL_NAME@` template; raw template is not installable YAML. Release acceptance remains pending.
+
 ### 2026-10-10 Private chunk storage rollout — verified
 
 After public stable213 acceptance, the isolated integration completed real Rust

@@ -8,7 +8,7 @@ import uuid
 from pathlib import Path
 from urllib.parse import quote, unquote, urlparse
 
-KINDS = {"files", "session", "canvas", "message"}
+KINDS = {"files", "session", "skill", "canvas", "message"}
 
 def references(content):
     found = []
@@ -52,8 +52,9 @@ def context_tools(content, channel):
         if kind == "message":
             command = f"{shlex.quote(str(root / 'colab-messages'))} messages read --channel {shlex.quote(channel)} --id {shlex.quote(identity)}"
         else:
-            tool = {"files": "colab-browser", "session": "colab-session-reader", "canvas": "colab-canvas"}[kind]
-            command = f"{shlex.quote(str(root / tool))} {'use' if kind == 'files' else 'read'} --ref {shlex.quote(ref)}"
+            tool = {"files": "colab-browser", "session": "colab-session-reader", "skill": "colab-skill-tool", "canvas": "colab-canvas"}[kind]
+            action = "use" if kind == "files" else "status" if kind == "skill" else "read"
+            command = f"{shlex.quote(str(root / tool))} {action} --ref {shlex.quote(ref)}"
             if kind == "session":
                 command += " --turn-limit 20 --include-outputs --max-output-chars-per-item 4000"
         result.append({**row, "readCommand": command})
