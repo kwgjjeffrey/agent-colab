@@ -241,6 +241,16 @@ fn freeze_source(
             break;
         }
         if n > 1024 * 1024 {
+            // Earlier images/tool payloads are outside the selected turn. Drain without
+            // retaining them; they must not prevent capture of a later bounded task.
+            if !current {
+                while !line.ends_with(b"\n") {
+                    line.clear();
+                    if reader.by_ref().take(1024 * 1024 + 1).read_until(b'\n', &mut line)
+                        .map_err(LocalError::internal)? == 0 { break; }
+                }
+                continue;
+            }
             return Err(LocalError::bad_request("Oversized transcript record"));
         }
         if !line.ends_with(b"\n") {
@@ -481,6 +491,7 @@ mod fragment_tests {
         fs::create_dir_all(&dir).unwrap();
         let source = dir.join("source.jsonl");
         let mut rows = vec![json!({"type":"session_meta","payload":{"id":"session"}})];
+        rows.push(json!({"type":"response_item","payload":{"type":"function_call_output","output":"x".repeat(2 * 1024 * 1024)}}));
         for text in [
             "older",
             "one",
