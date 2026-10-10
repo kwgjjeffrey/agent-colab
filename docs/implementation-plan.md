@@ -1386,3 +1386,9 @@ and end-to-end run 20261010T063417Z-5a67dbcb passed 8 assertions using the actua
 Core with a controlled rename 403 matching the reported envelope. Dismissal,
 navigation, expiry and durable fixture cleanup were verified; screenshot reviewed.
 This verifies notice recovery, not the cause of the original authorization denial.
+
+Release acceptance: signed promotion 0.1.224-dev published through the canonical
+R2 publisher; immutable GUI ZIP public readback verified SHA-256
+`e323b7ab60d9b5dcc46825797a732c722f73d0f8c7f8515d02c053bb9c640eda`
+and 1,335,487 bytes. Normal updater installed GUI 0.1.170-dev; all 39 installed
+files match the clean release build, and live /ui.json reports the same version.
