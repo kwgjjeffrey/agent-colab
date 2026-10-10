@@ -1395,3 +1395,15 @@ files match the clean release build, and live /ui.json reports the same version.
 
 ### Canvas ordered cursor repair (2026-10-10)
 Located a shared Core defect: upload ACK advanced the pull cursor over unseen predecessors; stale concurrent replica saves could erase integrated updates. Core now advances cursors only through contiguous pulls, merges saves under the SQLite writer lock, replays legacy cursors once without deleting edits/outbox, and rejects projection of missing dependencies. Codec regression: 14 passed; replica save/cursor regression passed. Public225/Core116 and enterprise13/Core9 uploaded with full readback; enterprise installed Skill recovered the unchanged real document to4746 characters atseq76/synced. Public225/Core116 installed acceptance passed: authenticated existing account and nonempty existing Canvas read/synced. GUI/Shell/Skill versions retained.
+
+
+### Compact Canvas references — 2026-10-10
+
+Core 0.1.117-dev projects mentions as readable `colab:<kind>:<stable-id>` links
+instead of Base64 editor attribute capsules. GUI 0.1.171-dev renders compact and
+legacy links consistently in Agent work details. Existing CRDT documents need no
+migration; protected editor metadata is recovered from the authoritative replica
+when applying patches. Legacy excerpts remain patchable. Codec tests passed
+16/16, covering repeated mentions, exact occurrence preservation, escaped labels,
+legacy parsing/patching, protected identities and Yjs replay. Clean Core and GUI
+production builds passed. Shell and Skill are unchanged.

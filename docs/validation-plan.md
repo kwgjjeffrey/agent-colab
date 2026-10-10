@@ -1383,3 +1383,15 @@ files match the clean release build, and live /ui.json reports the same version.
 
 ### Canvas missing dependency regression (2026-10-10)
 Real enterprise Canvas f19779cd-dffb-4dcc-954f-ce9d825a1955: installed Skill read returned newline at cursor76; fresh replay of all76 Server updates yielded4746 characters with no pending dependencies. Codec tests14 passed, including dependent-only update refusal and idempotent baseline repair. SQLite production save helper verifies stale callers retain both updates and upload ACK does not advance cursor. Enterprise13/Core9 installed acceptance passed; real installed Skill returned4746 characters (SHA2563562e9d8fdd1e88dcf55960fc2e354cab0d767936f353353889f3a73e6de1877), seq76/synced; no Server content mutation. Enterprise install preserved public installation hashes. Evidence: ignored integration/kuaishou/evidence/client/canvas-recovery-acceptance.json. Both stable channels promoted; macOS arm64 only. Public225/Core116 installed acceptance passed: authenticated existing account and nonempty existing Canvas read/synced. GUI/Shell/Skill versions retained.
+
+
+### Compact Canvas references — 2026-10-10
+
+Core 0.1.117-dev projects mentions as readable `colab:<kind>:<stable-id>` links
+instead of Base64 editor attribute capsules. GUI 0.1.171-dev renders compact and
+legacy links consistently in Agent work details. Existing CRDT documents need no
+migration; protected editor metadata is recovered from the authoritative replica
+when applying patches. Legacy excerpts remain patchable. Codec tests passed
+16/16, covering repeated mentions, exact occurrence preservation, escaped labels,
+legacy parsing/patching, protected identities and Yjs replay. Clean Core and GUI
+production builds passed. Shell and Skill are unchanged.
