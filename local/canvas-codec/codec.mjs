@@ -15,7 +15,19 @@ md.inline.ruler.before('html_inline','explicit_break',(state,silent)=>{
  const m=/^<br\s*\/?\s*>/.exec(state.src.slice(state.pos));if(!m)return false;
  if(!silent)state.push('hardbreak','br',0);state.pos+=m[0].length;return true;
 });
+function mentionText(attrs){
+ const label=String(attrs.label??attrs.id).replace(/[\\[\]]/g,'\\$&');
+ return `[@${label}](colab:${encodeURIComponent(attrs.kind)}:${encodeURIComponent(attrs.id)})`;
+}
 md.inline.ruler.before('link','identity',(state,silent)=>{
+ const compact=/^\[@((?:\\.|[^\]])*)\]\(colab:([^:()]+):([^()]+)\)/.exec(state.src.slice(state.pos));
+ if(compact){
+  const key=compact[0], originals=state.env.mentions?.get(key);
+  const attrs=originals?.length?originals[0]:{kind:decodeURIComponent(compact[2]),id:decodeURIComponent(compact[3]),label:compact[1].replace(/\\(.)/g,'$1')};
+  if(!silent){if(originals?.length)originals.shift();const t=state.push('identity','',0);t.meta=attrs;}
+  state.pos+=key.length;return true;
+ }
+ // Legacy projections remain readable for callers holding an older excerpt.
  const m=/^\[@[^\]]*\]\(colab-(?:mention:|resource:(files|session|canvas|message):([A-Za-z0-9-]+):)([A-Za-z0-9_-]+)\)/.exec(state.src.slice(state.pos));
  if(!m)return false;
  const attrs=JSON.parse(Buffer.from(m[3],'base64url').toString());
@@ -45,17 +57,26 @@ export const serializer=new MarkdownSerializer({
  hardBreak:(s,n,parent,index)=>{if(index===parent.childCount-1)s.write('<br>');else base.nodes.hard_break(s,n,parent,index);},
  orderedList:(s,n)=>s.renderList(n,'  ',i=>`${n.attrs.start+i}. `),
  codeBlock:(s,n)=>base.nodes.code_block(s,{...n,attrs:{params:n.attrs.language},textContent:n.textContent}),
- mention:(s,n)=>s.text(`[@${String(n.attrs.label??n.attrs.id).replace(/[\[\]]/g,'')}](colab-${['files','session','canvas','message'].includes(n.attrs.kind)?`resource:${n.attrs.kind}:${n.attrs.id}:`:'mention:'}${Buffer.from(JSON.stringify(n.attrs)).toString('base64url')})`,false),
+ mention:(s,n)=>s.text(mentionText(n.attrs),false),
 },{...base.marks,bold:base.marks.strong,italic:base.marks.em,strike:{open:'~~',close:'~~',mixable:true}},{hardBreakNodeName:'hardBreak'});
 
 function blockMarkdown(node){return serializer.serialize(schema.nodes.doc.create(null,node));}
 function parts(node){const out=[];node.forEach(n=>out.push(blockMarkdown(n)));return out;}
 export function render(node){return parts(node).join('\n\n')+'\n';}
+// The replica owns occurrence IDs and editor attributes. Resolve unchanged short
+// references against it when parsing a patch, rather than exposing that metadata.
+export function parseProjection(node,text){
+ const mentions=new Map();node.descendants(n=>{if(n.type.name==='mention'){const key=mentionText(n.attrs);if(!mentions.has(key))mentions.set(key,[]);mentions.get(key).push(n.attrs);}});
+ return parser.parse(text,{mentions});
+}
 function protectedNodes(node){const out=[];node.descendants(n=>{if(n.type.name==='mention'||(n.type.name==='codeBlock'&&n.attrs.language==='colab-component'))out.push(JSON.stringify(n.toJSON()));});return out;}
 
 // Preserve all unaffected root nodes, including attributes and empty paragraphs that plain
 // Markdown cannot encode. Only the changed root range is reparsed, then reconciled by binding.
 export function patch(node,oldText,newText){
+ // Normalize retained legacy excerpts without changing their protected identities.
+ const normalize=text=>text.replace(/\[@[^\]]*\]\(colab-(?:mention:|resource:(?:files|session|canvas|message):[A-Za-z0-9-]+:)([A-Za-z0-9_-]+)\)/g,(_,payload)=>mentionText(JSON.parse(Buffer.from(payload,'base64url').toString())));
+ oldText=normalize(oldText);newText=normalize(newText);
  const chunks=parts(node),before=chunks.join('\n\n')+'\n';
  const at=before.indexOf(oldText);
  if(at<0)throw Error('patch_conflict: context not found');
@@ -76,9 +97,9 @@ export function patch(node,oldText,newText){
  const nodes=[];for(let i=lo;i<=hi;i++)nodes.push(node.child(i));
  const affected=schema.nodes.doc.create(null,nodes);
  // A lossy baseline cannot safely be reparsed. Fail before any Yjs mutation.
- if(!parser.parse(render(affected)).eq(affected))throw Error('projection_not_representable: affected region cannot round-trip safely');
+ if(!parseProjection(affected,render(affected)).eq(affected))throw Error('projection_not_representable: affected region cannot round-trip safely');
  const fragment=before.slice(rangeStart,start)+replacement+before.slice(end,rangeEnd);
- const parsed=parser.parse(fragment);
+ const parsed=parseProjection(affected,fragment);
  if(JSON.stringify(protectedNodes(affected))!==JSON.stringify(protectedNodes(parsed)))throw Error('protected_content_changed: mention identities and component fences must be preserved');
  const result=[];for(let i=0;i<lo;i++)result.push(node.child(i));parsed.forEach(n=>result.push(n));for(let i=hi+1;i<node.childCount;i++)result.push(node.child(i));
  const next=schema.nodes.doc.createChecked(null,result);

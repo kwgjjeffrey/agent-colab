@@ -51,7 +51,7 @@ function WorkMarkdown({ text }: { text: string }) {
         remarkPlugins={[remarkGfm]}
         components={{
           a: ({ children, href }) =>
-            href?.startsWith("colab-mention:") ? (
+            href && /^(colab:|colab-mention:|colab-resource:)/.test(href) ? (
               <span className="rounded bg-accent px-1 font-medium">
                 {children}
               </span>
@@ -67,7 +67,7 @@ function WorkMarkdown({ text }: { text: string }) {
             ),
         }}
         urlTransform={(url) =>
-          url.startsWith("colab-mention:")
+          /^(colab:|colab-mention:|colab-resource:)/.test(url)
             ? url
             : /^(https?:|mailto:)/i.test(url)
               ? url

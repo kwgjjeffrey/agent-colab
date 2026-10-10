@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {schema,parser,render,patch,run} from './codec.mjs';
+import {schema,parser,render,patch,run,parseProjection} from './codec.mjs';
 import * as Y from 'yjs';
 import {prosemirrorJSONToYDoc,yXmlFragmentToProseMirrorRootNode} from '@tiptap/y-tiptap';
 const t=text=>({type:'text',text}),p=(...content)=>({type:'paragraph',content});
@@ -9,13 +9,13 @@ const fixture=schema.nodeFromJSON({type:'doc',content:[{type:'heading',attrs:{le
 for(const kind of ['files','session','canvas','message'])test(`${kind} resource capsule round-trip and adjacent patch preserve exact identity`,()=>{
  const id='b9b0bf8c-98e7-48db-9a88-4fb5926d51af';
  const n=schema.nodeFromJSON({type:'doc',content:[p(t('Read '),{type:'mention',attrs:{kind,id,label:'设计 [方案]',mentionId:'occurrence'}},t(' before acting'))]});
- const md=render(n);assert(md.includes(`colab-resource:${kind}:${id}:`));assert(parser.parse(md).eq(n));
+ const md=render(n);assert(md.includes(`colab:${kind}:${id}`));assert(parseProjection(n,md).eq(n));
  const next=patch(n,' before acting',' before implementing');assert.deepEqual(next.firstChild.child(1).attrs,n.firstChild.child(1).attrs);
  assert.throws(()=>patch(n,id,'a9b0bf8c-98e7-48db-9a88-4fb5926d51af'),/protected_content_changed|projection/);
 });
 test('user and agent capsules plus component fence round-trip without identity loss',()=>{
  const n=schema.nodeFromJSON({type:'doc',content:[p(mention,t(' '),{type:'mention',attrs:{id:'user-id',label:'Same display name',kind:'user',mentionId:'user-occurrence'}}),{type:'codeBlock',attrs:{language:'colab-component'},content:[t('{"id":"query-id","filter":{"owner":"user-id"}}')]}]});
- assert(parser.parse(render(n)).eq(n));
+ assert(parseProjection(n,render(n)).eq(n));
  assert.throws(()=>patch(n,'"user-id"','"another-user"'),/protected_content_changed/);
 });
 test('real request shape appends paragraphs and preserves both mentions and blank paragraph',()=>{
@@ -23,10 +23,10 @@ test('real request shape appends paragraphs and preserves both mentions and blan
  const next=patch(fixture,line,line+'\n\nAppended response');
  assert.equal(next.childCount,5);assert.equal(next.child(2).textContent,'Appended response');assert(next.child(1).eq(fixture.child(1)));assert(next.child(3).eq(fixture.child(2)));assert(next.lastChild.eq(fixture.lastChild));
 });
-test('protect mention identity',()=>{const s=render(fixture);const link=s.match(/\[@Runtime[^\n]+?\)/)[0];assert.throws(()=>patch(fixture,link,'removed'),/protected_content_changed/);});
+test('protect mention identity',()=>{const s=render(fixture);const link=s.match(/\[@Runtime[^\n]+?\)/)[0];assert.throws(()=>patch(fixture,'reply me exactly what you see, and append below this line '+link,'removed'),/protected_content_changed/);});
 test('actual document terminal space and hard break preserve on append',()=>{
  const n=schema.nodeFromJSON({type:'doc',content:[p(t('First line'),{type:'hardBreak'},t('Append here '),mention,t(' '),{type:'hardBreak'})]});
- assert(parser.parse(render(n)).eq(n));
+ assert(parseProjection(n,render(n)).eq(n));
  const line=render(n).split('\n').find(l=>l.includes('Append here'));
  const next=patch(n,line,line+'\n\nResponse');assert(next.firstChild.eq(n.firstChild));assert.equal(next.lastChild.textContent,'Response');
 });
@@ -76,3 +76,12 @@ test('dependent update without its baseline fails instead of reading empty; repl
  Y.applyUpdate(receiver,seed);assert.equal(read().content,'Planning items\n');
  Y.applyUpdate(receiver,seed);assert.equal(read().content,'Planning items\n');
 });
+
+ test('compact member references omit editor metadata and preserve distinct occurrences',()=>{
+ const attrs={id:'df6668c8-dc29-4548-a1e6-92c0805c56c7',kind:'member',label:'郭航宇',mentionId:'first'};
+ const n=schema.nodeFromJSON({type:'doc',content:[p({type:'mention',attrs},t(' and '),{type:'mention',attrs:{...attrs,mentionId:'second'}},t(' task'))]});
+ const text=render(n);assert(text.includes('[@郭航宇](colab:member:'+attrs.id+')'));assert(!text.includes('mentionId'));assert(!text.includes('eyJ'));assert(text.length<160);
+ const next=patch(n,' task',' work');assert.deepEqual(next.firstChild.child(0).attrs,n.firstChild.child(0).attrs);assert.deepEqual(next.firstChild.child(2).attrs,n.firstChild.child(2).attrs);
+ assert.throws(()=>patch(n,attrs.id,'another'),/ambiguous|protected_content_changed/);
+ const legacy='[@郭航宇](colab-mention:'+Buffer.from(JSON.stringify(n.firstChild.child(0).attrs)).toString('base64url')+')';assert.deepEqual(parser.parse(legacy).firstChild.firstChild.attrs,n.firstChild.child(0).attrs);
+ });
