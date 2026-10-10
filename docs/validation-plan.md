@@ -1452,3 +1452,8 @@ COLAB_RETAINED_COMPONENTS list can guard unchanged components during promotion.
 These are local single-host safeguards, not cross-host CAS or global immutable
 version reservation. Company signing/notarization and Windows are outside this
 macOS arm64 acceptance.
+
+
+## Operation Workbench installed acceptance (2026-10-10)
+
+Settings opens an independent frontend artifact; Skill Feedbacks includes authorized shared assets and builtin Agent Colab. Published and installed Workbench 0.1.3-dev with GUI 0.1.173-dev. Desktop validation passed asset counts, Markdown/YAML comments, prior-three-query raw Session reader and real update check. Workbench-only update preserved Core PID and other component versions. No-auth API 401 and invalid Host 400 verified. See `.trial/V-WORKBENCH-01/README.md` for versions, digest and test scope.
