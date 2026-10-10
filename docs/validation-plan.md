@@ -1302,3 +1302,16 @@ Message composer now saves the full Tiptap document locally per authenticated ac
 Validation: clean isolated GUI `0.1.162-dev` artifact built successfully. End-to-end Run `20261010T031624Z-1ee846d1`, `communication.messages.draft`: seven assertions passed for navigation, reload, failed-send retention, real successful submit and post-reload clearing. Screenshot reviewed. Initial Run `20261010T031456Z-16fa6607` failed because an empty contenteditable reads as a newline; fixed the empty assertion and preserved its evidence. Focused serializer/draft identity tests: four passed. Public promotion `0.1.216-dev` updates GUI to `0.1.163-dev` only. The initial immutable `0.1.162-dev` URL had a cached pre-upload 404; a fresh version passed canonical curl size/SHA-256 verification without changing feature code.
 
 Installed acceptance: the concurrent normal updater installed GUI `0.1.163-dev`; the live GUI proxy `/ui.json` reports that version and every installed GUI file matches the published build byte-for-byte.
+
+
+### 2026-10-10 — organization-person mentions
+
+Verified: UI TypeScript check; Server and Local Core cargo checks; 16 focused frontend tests across organization-people, PersonSelect, UserIdentity invitation behavior, AgentMessageComposer serialization and MessageTimeline; isolated colab_sso_acceptance PostgreSQL directory test including persisted username, organization search, provider/subject membership resolution and cross-organization rejection. Core cargo check reports the existing unused proxy_json warning. Live desktop/server/CDN release acceptance remains pending; no production promotion was made.
+
+### Message draft retention — 2026-10-10
+
+Message composer now saves the full Tiptap document locally per authenticated account and stable Channel ID, preserving formatting and immutable mention identities. Navigation/unmount and page reload restore the draft; only a successful submit or explicitly emptying the editor clears it. Failed sends retain the input. Storage failures fall back to an in-memory cache. This is GUI-only; existing server-backed sent messages remain unchanged.
+
+Validation: clean isolated GUI `0.1.162-dev` artifact built successfully. End-to-end Run `20261010T031624Z-1ee846d1`, `communication.messages.draft`: seven assertions passed for navigation, reload, failed-send retention, real successful submit and post-reload clearing. Screenshot reviewed. Initial Run `20261010T031456Z-16fa6607` failed because an empty contenteditable reads as a newline; fixed the empty assertion and preserved its evidence. Focused serializer/draft identity tests: four passed. Public promotion `0.1.216-dev` updates GUI to `0.1.163-dev` only. The initial immutable `0.1.162-dev` URL had a cached pre-upload 404; a fresh version passed canonical curl size/SHA-256 verification without changing feature code.
+
+Installed acceptance: the concurrent normal updater installed GUI `0.1.163-dev`; the live GUI proxy `/ui.json` reports that version and every installed GUI file matches the published build byte-for-byte.

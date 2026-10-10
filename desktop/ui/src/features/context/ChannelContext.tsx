@@ -20,12 +20,14 @@ import type {
 
 type Context = {
   channelId: string;
+  channelName?: string;
   resources: ContextResource[];
   people: Participant[];
   agents: Blueprint[];
   error?: string;
   navigate: (resource: ContextResource) => void;
   forward: (resources: ContextResource[], messageIds?: string[], instruction?: string) => void;
+  reloadPeople: () => Promise<void>;
   refresh: (includeMessages?: boolean) => Promise<void>;
   lookup: (kind: ContextResource["kind"], id: string, parent?: Operation) => Promise<ContextResource | undefined>;
 };
@@ -36,10 +38,12 @@ export function useChannelContext() {
 /** Identity is loaded on channel entry; resource choices are loaded only on demand. */
 export function ChannelContextProvider({
   channelId,
+  channelName,
   navigate,
   children,
 }: {
   channelId: string;
+  channelName?: string;
   navigate: Context["navigate"];
   children: ReactNode;
 }) {
@@ -192,7 +196,7 @@ const messageRequest=operation.message;
     const off = accountRealtime.subscribe((frame) => {
       if (
         frame.type === "realtime.connected" ||
-        (frame.channelId === channelId && frame.type.includes("agent"))
+        (frame.channelId === channelId && (frame.type.includes("agent") || frame.type.includes("member")))
       )
         reloadPeople();
     });
@@ -208,6 +212,7 @@ const messageRequest=operation.message;
     <ChannelContext.Provider
       value={{
         channelId,
+        channelName,
         resources,
         people,
         agents,
@@ -216,6 +221,7 @@ const messageRequest=operation.message;
         forward: (rows, ids = [], instruction) =>
           setHandoff({ resources: rows, messageIds: ids, instruction }),
         refresh,
+        reloadPeople: fetchPeople,
         lookup,
       }}
     >

@@ -31,6 +31,8 @@ pub(super) struct AgentBlueprint {
 #[serde(rename_all = "camelCase")]
 pub(super) struct ChannelParticipant {
     member_id: String,
+    #[serde(default)]
+    username: Option<String>,
     display_name: String,
     email: String,
     avatar_url: Option<String>,

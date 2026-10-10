@@ -5,11 +5,11 @@ pub(super) struct Identity { pub provider:String,pub subject:String }
 #[derive(Deserialize,Serialize)]
 #[serde(rename_all="camelCase")]
 pub(super) struct Person {
-    pub user_id:Option<uuid::Uuid>,pub email:String,pub display_name:Option<String>,pub avatar_url:Option<String>,
+    #[serde(default)] pub member_id:Option<uuid::Uuid>,pub user_id:Option<uuid::Uuid>,pub email:String,pub display_name:Option<String>,pub avatar_url:Option<String>,
     pub username:Option<String>,pub department:Option<String>,pub identity:Option<Identity>,
 }
 impl From<colab_server_persistence::OrganizationPerson> for Person {
-    fn from(p:colab_server_persistence::OrganizationPerson)->Self {Self {user_id:Some(p.user_id),email:p.email,display_name:p.display_name,avatar_url:p.avatar_url,username:None,department:None,identity:None}}
+    fn from(p:colab_server_persistence::OrganizationPerson)->Self {Self {member_id:Some(p.member_id),user_id:Some(p.user_id),email:p.email,display_name:p.display_name,avatar_url:p.avatar_url,username:p.username,department:None,identity:None}}
 }
 async fn lookup(state:&AppState,actor:uuid::Uuid,query:&str,subject:Option<&str>)->Result<Vec<Person>,ApiError> {
     if query.chars().count()>128 {return Err(ApiError::bad_request("invalid_people_query"));}
@@ -28,7 +28,17 @@ async fn lookup(state:&AppState,actor:uuid::Uuid,query:&str,subject:Option<&str>
 }
 pub(super) async fn search(state:&AppState,actor:uuid::Uuid,channel:uuid::Uuid,q:&str)->Result<Vec<Person>,ApiError>{
     if state.database.list_members(actor,channel).await.map_err(|_|ApiError::internal("member_list_failed"))?.is_none(){return Err(ApiError::forbidden("channel_access_forbidden"));}
-    lookup(state,actor,q,None).await
+    let mut people=lookup(state,actor,q,None).await?;
+    for person in &mut people {
+        // Ignore IDs supplied by the adapter: membership is owned by Colab.
+        person.user_id=None; person.member_id=None;
+        if let Some(identity)=&person.identity {
+            if let Some((user,member))=state.database.directory_member(channel,&identity.provider,&identity.subject).await.map_err(|_|ApiError::internal("member_read_failed"))? {
+                person.user_id=Some(user);person.member_id=Some(member);
+            }
+        }
+    }
+    Ok(people)
 }
 pub(super) async fn add(state:&AppState,actor:uuid::Uuid,channel:uuid::Uuid,request:&AddMemberRequest)->Result<(StatusCode,Json<AddMemberResponse>),ApiError>{
     let identity=request.identity.as_ref().ok_or_else(||ApiError::bad_request("person_selection_required"))?;

@@ -1163,7 +1163,7 @@ const api = operation.response;
               action={<Button onClick={() => { setInitialLoading(true); setWorkspaceLoadError(undefined); void refreshOrganizations().then(() => refreshChannels()).catch((reason) => setWorkspaceLoadError(readableError(reason))).finally(() => setInitialLoading(false)); }}>Retry</Button>}
             />
           ) : selected ? (
-            <ChannelContextProvider key={selected.id} channelId={selected.id} navigate={resource => { setWorkspaceItem(resource.kind==="message"?undefined:resource);setContextFocus({ ...resource }); setWorkspaceTab(resource.kind === "session" ? "sessions" : resource.kind === "message" ? "messages" : resource.kind); }}><Tabs value={workspaceTab} onValueChange={setWorkspaceTab} className="flex min-h-0 flex-1 flex-col gap-0">
+            <ChannelContextProvider key={selected.id} channelId={selected.id} channelName={selected.name} navigate={resource => { setWorkspaceItem(resource.kind==="message"?undefined:resource);setContextFocus({ ...resource }); setWorkspaceTab(resource.kind === "session" ? "sessions" : resource.kind === "message" ? "messages" : resource.kind); }}><Tabs value={workspaceTab} onValueChange={setWorkspaceTab} className="flex min-h-0 flex-1 flex-col gap-0">
               <CatalogWorkspace key={selected.id} heading={<ChannelHeading channel={selected} members={members} onEdit={()=>setChannelDialog("identity")} onMembers={()=>setChannelDialog("members")} />} activity={agentActivity} quickShare={<QuickShareControl submenu
                   defaultAgent={installation?.defaultAgent ?? "codex"}
                   installedAgents={installation?.targets ?? {}}

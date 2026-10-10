@@ -1,5 +1,6 @@
 export type Participant = {
   memberId: string;
+  username?: string;
   displayName: string;
   email: string;
   avatarUrl?: string;
@@ -36,6 +37,7 @@ export type MessageNode = {
   type?: string;
   text?: string;
   attrs?: {
+    person?: import("@/features/people/organization-people").Person;
     id?: string;
     label?: string;
     kind?: "agent" | "member" | "files" | "session" | "canvas" | "message";

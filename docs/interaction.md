@@ -351,3 +351,8 @@ Home 的顺序为动效 banner、Recent activity、操作引导、场景引导�
 
 
 Canvas image editing: paste/drop image files or choose Add image. Upload has a visible pending state and Retry/Dismiss on failure. Validated uploads insert at the original editing location, mapped through intervening editor transactions. Drag image handles to resize while preserving aspect ratio; ordinary document undo/delete removes the node. Interpretation metadata is never shown as a caption or required from the user.
+
+
+### Organization people in message mentions (2026-10-10)
+
+Message `@` uses the same organization-person search endpoint as Add member. Channel participants remain locally available; a nonempty query also searches the configured organization directory. People match display name, persisted enterprise username, or email. Exact matches take priority; otherwise at most three people appear. Agent and resource matching stays separate. Person mentions retain provider/subject and profile metadata in atomic node attributes, without entering Agent routing. Click or hover opens the shared identity card. A person outside this Channel has an Invite to this Channel action: re-query current organization membership, add an existing organization member through the authorized member API, or open the existing invitation prompt for an unregistered person. Server permissions and failures remain visible.

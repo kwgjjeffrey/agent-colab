@@ -131,6 +131,8 @@ pub struct ChannelMember {
 #[serde(rename_all = "camelCase")]
 pub struct OrganizationPerson {
     pub user_id: Uuid,
+    pub member_id: Uuid,
+    pub username: Option<String>,
     pub email: String,
     pub display_name: Option<String>,
     pub avatar_url: Option<String>,
@@ -485,7 +487,7 @@ impl Database {
             return Ok(None);
         };
         let pattern = format!("%{}%", query.trim());
-        let people=sqlx::query_as::<_,OrganizationPerson>("select u.id user_id,u.email,u.display_name,u.avatar_url from organization_members om join users u on u.id=om.user_id where om.organization_id=$1 and (u.email ilike $2 or coalesce(u.display_name,'') ilike $2) order by u.display_name nulls last,u.email limit 20").bind(organization).bind(pattern).fetch_all(&self.pool).await?;
+        let people=sqlx::query_as::<_,OrganizationPerson>("select u.id user_id,om.id member_id,i.subject username,u.email,u.display_name,u.avatar_url from organization_members om join users u on u.id=om.user_id left join auth_identities i on i.user_id=u.id and i.provider=$3 where om.organization_id=$1 and (u.email ilike $2 or coalesce(u.display_name,'') ilike $2 or coalesce(i.subject,'') ilike $2) order by u.display_name nulls last,u.email limit 50").bind(organization).bind(pattern).bind(self.external_policy.as_ref().map(|p| p.provider.as_str())).fetch_all(&self.pool).await?;
         Ok(Some(people))
     }
 

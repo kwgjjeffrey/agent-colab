@@ -133,7 +133,7 @@ paths:
         - { name: channelId, in: path, required: true, schema: { type: string, format: uuid } }
         - { name: q, in: query, schema: { type: string, maxLength: 128 } }
       responses:
-        "200": { description: Array of people; identity is provider/subject, optional userId for a registered account }
+        "200": { description: Array of people; identity is provider/subject, optional userId and memberId resolved by Colab within the Channel organization; username is the persisted enterprise provider subject }
         "403": { description: Not a Channel member }
   /v1/channels/{channelId}/members:
     post:

@@ -1,10 +1,10 @@
 import { NodeViewWrapper, type NodeViewProps } from "@tiptap/react";
 import { MentionCapsule } from "./MentionCapsule";
 export function ContextMentionNode({ node }: NodeViewProps) {
-  const { id, label, kind } = node.attrs;
+  const { id, label, kind, person } = node.attrs;
   return (
     <NodeViewWrapper as="span" className="inline" contentEditable={false}>
-      <MentionCapsule kind={kind} id={id} label={label} />
+      <MentionCapsule kind={kind} id={id} label={label} person={person} />
     </NodeViewWrapper>
   );
 }

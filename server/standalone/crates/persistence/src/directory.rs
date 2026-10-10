@@ -3,6 +3,10 @@ impl Database {
     pub async fn external_subject(&self,user:Uuid,provider:&str)->anyhow::Result<Option<String>> {
         Ok(sqlx::query_scalar("select subject from auth_identities where user_id=$1 and provider=$2").bind(user).bind(provider).fetch_optional(&self.pool).await?)
     }
+    /// Resolve only within the requested organization; directory hits never provision accounts.
+    pub async fn directory_member(&self,channel:Uuid,provider:&str,subject:&str)->anyhow::Result<Option<(Uuid,Uuid)>> {
+        Ok(sqlx::query_as("select om.user_id,om.id from channels c join organization_members om on om.organization_id=c.organization_id join auth_identities i on i.user_id=om.user_id where c.id=$1 and i.provider=$2 and i.subject=$3").bind(channel).bind(provider).bind(subject).fetch_optional(&self.pool).await?)
+    }
     pub async fn can_manage_channel(&self,actor:Uuid,channel:Uuid)->anyhow::Result<bool>{
         Ok(sqlx::query_scalar("select exists(select 1 from channel_members cm join organization_members om on om.id=cm.organization_member_id where cm.channel_id=$1 and om.user_id=$2 and cm.role in ('owner','admin'))").bind(channel).bind(actor).fetch_one(&self.pool).await?)
     }
@@ -43,6 +47,13 @@ mod tests {
         assert!(db.external_subject(session.user.id,provider).await.unwrap().is_some());
         assert!(db.add_external_member(session.user.id,channel.id,provider,&subject,&email,Some("Employee"),None,"member").await.unwrap());
         let user:Uuid=sqlx::query_scalar("select user_id from auth_identities where provider=$1 and subject=$2").bind(provider).bind(&subject).fetch_one(&db.pool).await.unwrap();
+        let participants=db.list_channel_participants(session.user.id,channel.id).await.unwrap().unwrap();
+        assert_eq!(participants.iter().find(|p|p.email==email).unwrap().username.as_deref(),Some(subject.as_str()));
+        let people=db.search_organization_people(session.user.id,channel.id,&subject).await.unwrap().unwrap();
+        let person=people.iter().find(|p|p.user_id==user).unwrap();
+        assert_eq!(person.username.as_deref(),Some(subject.as_str()));
+        assert_eq!(db.directory_member(channel.id,provider,&subject).await.unwrap(),Some((user,person.member_id)));
+        assert!(db.directory_member(Uuid::new_v4(),provider,&subject).await.unwrap().is_none());
         assert!(!db.external_login_allowed(user).await.unwrap());
         assert!(db.add_external_member(session.user.id,channel.id,provider,&subject,&email,None,None,"admin").await.unwrap());
         let members=db.list_members(session.user.id,channel.id).await.unwrap().unwrap();

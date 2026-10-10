@@ -10,11 +10,13 @@ export function MentionCapsule({
   id,
   label,
   currentMemberId,
+  person,
 }: {
   kind?: string;
   id?: string;
   label: string;
   currentMemberId?: string;
+  person?: import("@/features/people/organization-people").Person;
 }) {
   const context = useChannelContext();
   currentMemberId ??= context?.people?.find(person => person.isCurrent)?.memberId;
@@ -22,7 +24,7 @@ export function MentionCapsule({
     return <ContextCapsule kind={kind} id={id ?? ""} label={label} />;
   if (kind === "member")
     return (
-      <UserIdentity id={id} name={label}>
+      <UserIdentity id={id} name={label} directoryPerson={person}>
         <span
           className={`member-mention ${id && id === currentMemberId ? "member-mention-me" : ""}`}
         >

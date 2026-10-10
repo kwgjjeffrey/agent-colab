@@ -347,6 +347,7 @@ function renderNodes(
     ) : item.type === "mention" ? (
       <span key={index} className="mx-1">
         <MentionCapsule
+          person={item.attrs?.person}
           kind={item.attrs?.kind}
           id={item.attrs?.id}
           label={item.attrs?.label ?? "Context"}

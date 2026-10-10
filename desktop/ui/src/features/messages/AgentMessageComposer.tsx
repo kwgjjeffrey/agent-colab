@@ -13,6 +13,8 @@ import type { ResourceKind } from "@/features/context/context-model";
 import { loadMessageDraft, saveMessageDraft } from "./message-drafts";
 import { ContextMentionNode } from "@/features/context/ContextMentionNode";
 
+import { useOrganizationPeople, mentionPeople, personKey, personLabel, type Person } from "@/features/people/organization-people";
+
 export type AgentMention = { blueprintId: string; label: string };
 export type ComposedAgentMessage = {
   plainText: string;
@@ -31,6 +33,7 @@ type MentionCandidate = {
   kind: "agent" | "member" | ResourceKind;
   description: string;
   avatarUrl?: string;
+  person?: Person;
 };
 
 /** Plain text preserves the visible mention; routing identity lives only in atomic node attrs. */
@@ -101,7 +104,7 @@ export function AgentMessageComposer({
       Mention.extend({
         addNodeView() { return ReactNodeViewRenderer(ContextMentionNode); },
         addAttributes() {
-          return { ...this.parent?.(), kind: { default: "agent" } };
+          return { ...this.parent?.(), kind: { default: "agent" }, person: { default: null, rendered: false } };
         },
       }).configure({
         renderHTML: ({ node }) => [
@@ -179,6 +182,7 @@ export function AgentMessageComposer({
     if (suggestion)
       void context?.refresh().catch(() => {});
   }, [context?.channelId, suggestion?.from]);
+  const directory = useOrganizationPeople(context?.channelId, suggestion?.query ?? "", Boolean(suggestion));
   const candidates = useMemo<MentionCandidate[]>(() => {
     if (!suggestion) return [];
     const query = suggestion.query.toLocaleLowerCase();
@@ -190,12 +194,12 @@ export function AgentMessageComposer({
         description: `${agent.ownerName}'s Agent`,
         avatarUrl: agent.ownerAvatarUrl,
       })),
-      ...participants.map((person) => ({
-        id: person.memberId,
-        label: person.displayName,
-        kind: "member" as const,
-        description: "",
-        avatarUrl: person.avatarUrl,
+      ...mentionPeople([
+        ...participants.map(person => ({memberId:person.memberId,email:person.email,displayName:person.displayName,username:person.username,avatarUrl:person.avatarUrl})).filter(person => !query || [person.displayName,person.username,person.email].some(value=>value?.toLocaleLowerCase().includes(query))),
+        ...directory.rows.filter(person => !participants.some(member => member.memberId===person.memberId || member.email===person.email)),
+      ], query).map(person => ({
+        id: personKey(person), label:personLabel(person),kind:"member" as const,
+        description:person.username || person.email,avatarUrl:person.avatarUrl,person,
       })),
       ...(context?.resources
         .filter((row) => row.kind !== "message")
@@ -207,9 +211,8 @@ export function AgentMessageComposer({
           description: "",
         })) ?? []),
     ]
-      .filter((item) => item.label.toLocaleLowerCase().includes(query))
-      .slice(0, 20);
-  }, [agents, participants, suggestion, context?.resources]);
+      .filter((item) => item.kind === "member" || item.label.toLocaleLowerCase().includes(query));
+  }, [agents, participants, suggestion, context?.resources, directory.rows]);
 
   function choose(candidate: MentionCandidate) {
     if (!editor || !suggestion) return;
@@ -224,6 +227,7 @@ export function AgentMessageComposer({
             id: candidate.id,
             label: candidate.label,
             kind: candidate.kind,
+            person:candidate.person,
           },
         },
         { type: "text", text: " " },
@@ -268,14 +272,14 @@ export function AgentMessageComposer({
                 <span className="min-w-0 truncate font-medium">
                   {candidate.label}
                 </span>
-                {candidate.kind === "agent" && candidate.description && (
+                {candidate.description && (
                   <span className="max-w-28 shrink-0 truncate text-xs text-muted-foreground">{candidate.description}</span>
                 )}
               </button>
             ))
           ) : (
             <p className="p-2 text-sm text-muted-foreground">
-              No matching Agent or member
+              {directory.loading ? "Searching people…" : directory.error || "No matching Agent or member"}
             </p>
           )}
         </div>

@@ -205,6 +205,8 @@ struct ChannelMember {
 #[derive(Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct OrganizationPerson {
+    #[serde(default)]
+    member_id: Option<String>,
     user_id: Option<String>,
     #[serde(default)]
     identity: Option<serde_json::Value>,

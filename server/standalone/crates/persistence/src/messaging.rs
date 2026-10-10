@@ -72,6 +72,7 @@ pub struct AgentRuntime {
 #[serde(rename_all = "camelCase")]
 pub struct ChannelParticipant {
     pub member_id: Uuid,
+    pub username: Option<String>,
     pub display_name: String,
     pub email: String,
     pub avatar_url: Option<String>,
@@ -218,8 +219,8 @@ Ok(sqlx::query_as::<_,ChannelMessage>("with recursive chain(id,reply_to_message_
             return Ok(None);
         }
         let rows = sqlx::query_as::<_, ChannelParticipant>(
-            "select om.id member_id,coalesce(u.display_name,u.email) display_name,u.email,u.avatar_url,(u.id=$2) is_current,count(ca.blueprint_id)::bigint agent_count from channel_members cm join organization_members om on om.id=cm.organization_member_id join users u on u.id=om.user_id left join agent_blueprints ab on ab.owner_member_id=om.id left join channel_agents ca on ca.blueprint_id=ab.id and ca.channel_id=cm.channel_id where cm.channel_id=$1 group by om.id,u.id,u.display_name,u.email,u.avatar_url order by (u.id=$2) desc,coalesce(u.display_name,u.email)"
-        ).bind(channel_id).bind(user_id).fetch_all(&self.pool).await?;
+            "select om.id member_id,(select subject from auth_identities i where i.user_id=u.id and i.provider=$3) username,coalesce(u.display_name,u.email) display_name,u.email,u.avatar_url,(u.id=$2) is_current,count(ca.blueprint_id)::bigint agent_count from channel_members cm join organization_members om on om.id=cm.organization_member_id join users u on u.id=om.user_id left join agent_blueprints ab on ab.owner_member_id=om.id left join channel_agents ca on ca.blueprint_id=ab.id and ca.channel_id=cm.channel_id where cm.channel_id=$1 group by om.id,u.id,u.display_name,u.email,u.avatar_url order by (u.id=$2) desc,coalesce(u.display_name,u.email)"
+        ).bind(channel_id).bind(user_id).bind(self.external_policy.as_ref().map(|p| p.provider.as_str())).fetch_all(&self.pool).await?;
         Ok(Some(rows))
     }
 

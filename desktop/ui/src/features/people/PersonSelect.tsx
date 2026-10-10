@@ -2,31 +2,18 @@ import { useEffect, useId, useRef, useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { runOperation } from "@/api/operation-runner";
-export type Person = {userId?: string; email: string; displayName?: string; avatarUrl?: string; username?: string; department?: string; identity?: {provider: string; subject: string}};
-function label(p: Person) { return p.displayName || p.username || p.email; }
+import { useOrganizationPeople, personLabel as label, type Person } from "./organization-people";
+export type { Person } from "./organization-people";
 export function PersonSelect({channelId, enterprise, excluded, disabled}: {channelId: string; enterprise: boolean; excluded: string[]; disabled?: boolean}) {
   const [query,setQuery]=useState(""); const [selected,setSelected]=useState<Person>();
-  const [open,setOpen]=useState(false);const [rows,setRows]=useState<Person[]>([]);const [loading,setLoading]=useState(false);const [error,setError]=useState("");const [active,setActive]=useState(-1);
+  const [open,setOpen]=useState(false);const [active,setActive]=useState(-1);
+  const {rows,loading,error}=useOrganizationPeople(channelId,query,open && !selected);
   const input=useRef<HTMLInputElement>(null);const id=useId();
-  useEffect(()=>{const form=input.current?.form;const reset=()=>{setQuery("");setSelected(undefined);setRows([]);setOpen(false);};form?.addEventListener("reset",reset);return()=>form?.removeEventListener("reset",reset);},[]);
-  useEffect(()=>{
-    if(!open || selected)return;
-    if(!query.trim()){setRows([]);setError("");setLoading(false);setActive(-1);return;}
-    const controller=new AbortController();setLoading(true);setError("");setRows([]);setActive(-1);
-    const timer=setTimeout(()=>{void runOperation("members.search",async(operation)=>{
-      try {const r=await operation.fetch(`/v1/channels/${channelId}/organization/people?q=${encodeURIComponent(query.trim())}`,{signal:controller.signal});
-        if(!r.ok)throw new Error("Could not search people. Please try again.");
-        const found:Person[]=await r.json();if(!controller.signal.aborted)setRows(found);
-      }catch(e){if(!controller.signal.aborted){operation.fail();setError(e instanceof Error?e.message:"Could not search people.");}}
-      finally{if(!controller.signal.aborted)setLoading(false);}
-    });},200);
-    return()=>{clearTimeout(timer);controller.abort();};
-  },[channelId,query,open,selected]);
+  useEffect(()=>{const form=input.current?.form;const reset=()=>{setQuery("");setSelected(undefined);setOpen(false);};form?.addEventListener("reset",reset);return()=>form?.removeEventListener("reset",reset);},[]);
   useEffect(()=>{input.current?.setCustomValidity(enterprise && !selected ? "Select a person from your organization." : "");},[enterprise,selected]);
   const email=selected?.email || (!enterprise && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(query.trim())?query.trim():"");
   const allowed=rows.filter(p=>!excluded.includes(p.email));
-  function choose(p:Person){setSelected(p);setQuery(label(p));setOpen(false);setError("");}
+  function choose(p:Person){setSelected(p);setQuery(label(p));setOpen(false);}
   return <div className="relative" onBlur={event=>{if(!event.currentTarget.contains(event.relatedTarget))setOpen(false);}}>
     <div className="flex h-9 min-w-0 items-center gap-1 rounded-lg border border-input bg-transparent px-2 focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50">
     {selected && <div className="flex min-w-0 max-w-full items-center gap-2 rounded-full bg-muted px-2 py-0.5 text-sm" data-slot="selected-person">
