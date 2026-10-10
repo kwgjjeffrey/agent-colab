@@ -110,13 +110,21 @@ export function messagesPrompt(
   )}`.trim();
 }
 
-/** Decode only product mention attributes, never Yjs state or private source maps. */
+/** Resolve compact product identities; legacy envelopes remain read-compatible. */
 export function projectionResources(
   markdown: string,
   channelId: string,
   catalog: ContextResource[],
 ): ContextResource[] {
   const rows: ContextResource[] = [];
+  for (const match of markdown.matchAll(/\[@((?:\\.|[^\]])*)\]\(colab:(files|session|canvas|message):([^()]+)\)/g)) {
+    try {
+      const kind = match[2] as ResourceKind, id = decodeURIComponent(match[3]);
+      rows.push(catalog.find(row => row.kind === kind && row.id === id) ?? {
+        kind, id, name: match[1].replace(/\\(.)/g, "$1"), channelId,
+      });
+    } catch { /* A malformed URI is not a context reference. */ }
+  }
   for (const match of markdown.matchAll(
     /\(colab-(?:mention:|resource:(?:files|session|canvas|message):[A-Za-z0-9-]+:)([A-Za-z0-9_-]+)\)/g,
   )) {

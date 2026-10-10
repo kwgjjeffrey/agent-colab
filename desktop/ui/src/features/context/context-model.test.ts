@@ -66,3 +66,13 @@ it("Canvas projection references preserve all four kinds and Unicode names", () 
     expect(readInstructions(rows, "codex")).toContain(id);
   }
 });
+
+it("compact Canvas resources retain reading instructions without encoded editor metadata", () => {
+ for (const kind of ["files", "session", "canvas", "message"] as const) {
+  const markdown = `[@设计](colab:${kind}:${id})`;
+  const rows = projectionResources(markdown + " " + markdown, channelId, []);
+  expect(rows).toEqual([{kind,id,name:"设计",channelId}]);
+  expect(readInstructions(rows,"codex")).toContain(id);
+ }
+ expect(projectionResources(`[@Alice](colab:member:${id}) [@Agent](colab:agent:${id})`, channelId, [])).toEqual([]);
+});
