@@ -48,7 +48,8 @@ struct SendMention {
     user_query: String,
 }
 #[derive(Serialize)]
-struct CanvasAgentPrompt { prompt: String }
+#[serde(rename_all = "camelCase")]
+struct CanvasAgentPrompt { prompt: String, prompt_template: String }
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct SubmitUpdate {
@@ -156,7 +157,7 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
     let user = authenticated_user(&state, &headers).await?;
     let (_, prompt) = build_agent_prompt(&state, user, canvas, &body).await?;
     colab_observability::prompt("canvas.preview", None, &prompt, "server/standalone/crates/api/src/canvas.rs", "agent_prompt");
-    Ok(Json(CanvasAgentPrompt { prompt }))
+    Ok(Json(CanvasAgentPrompt { prompt: super::context_prompt::legacy_prompt(&prompt), prompt_template: prompt }))
 
 }).await
 }

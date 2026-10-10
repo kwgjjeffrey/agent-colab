@@ -119,6 +119,7 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
     let _ = dotenvy::from_filename(".env.local");
     let _telemetry = colab_observability::init("colab-server", option_env!("COLAB_SERVER_VERSION").unwrap_or("development"));
     let config = Config::from_env()?;
+    context_prompt::configured_skill_name()?;
     let blob_store = blob_store::BlobStore::from_env(config.blob_root.clone())?;
     let canvas_image_store = blob_store::BlobStore::canvas_images_from_env(config.blob_root.join("canvas-images"))?;
     let external_auth = external_auth::Config::load()?;

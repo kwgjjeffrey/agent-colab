@@ -252,7 +252,7 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
 }).await
 }
 fn bind_prompt_response(value: &mut serde_json::Value) -> Result<(), LocalError> {
-    if let Some(prompt) = value["prompt"].as_str() {
+    if let Some(prompt) = value.get("promptTemplate").and_then(|p|p.as_str()).or_else(||value["prompt"].as_str()) {
         value["prompt"] = super::runtime_tools::bind(prompt)?.into();
     }
     Ok(())
@@ -641,7 +641,7 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
         .ok_or_else(|| LocalError::internal("missing Channel id"))?
         .to_string();
     let prompt = value
-        .get("prompt")
+        .get("promptTemplate").or_else(|| value.get("prompt"))
         .and_then(|v| v.as_str())
         .ok_or_else(|| LocalError::internal("missing Agent prompt"))?
         .to_string();

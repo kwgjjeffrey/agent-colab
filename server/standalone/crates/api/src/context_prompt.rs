@@ -44,3 +44,17 @@ pub(super) fn instructions(channel: Uuid, rows: &[ContextRef]) -> String {
         Some(format!("How to read {}:\n{commands}", match *kind { "session" => "sessions", "message" => "messages", other => other }))
     }).collect::<Vec<_>>().join("\n\n")
 }
+
+// Older Cores do not understand semantic prompt fields. Keep their wire field executable
+// during rolling upgrades, using the same deployment configuration as the client artifacts.
+pub(super) fn configured_skill_name() -> anyhow::Result<String> {
+    let Some(path) = std::env::var_os("COLAB_ARTIFACT_CONFIG") else { return Ok("agent-colab".into()) };
+    let value: serde_json::Value = serde_json::from_slice(&std::fs::read(path)?)?;
+    let name = value["skill"]["name"].as_str().ok_or_else(||anyhow::anyhow!("artifact configuration is missing skill.name"))?;
+    anyhow::ensure!(!name.is_empty() && name.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-'), "Invalid configured Skill name");
+    Ok(name.into())
+}
+pub(super) fn legacy_prompt(template: &str) -> String {
+    let name = configured_skill_name().expect("artifact configuration validated at startup");
+    template.replace("@COLAB_SKILL_BIN@", &format!("~/.agents/skills/{name}/bin"))
+}

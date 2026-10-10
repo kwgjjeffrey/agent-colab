@@ -119,7 +119,8 @@ pub(super) struct SendMention {
     user_query: String,
 }
 #[derive(Deserialize, Serialize)]
-pub(super) struct CanvasAgentPrompt { prompt: String }
+#[serde(rename_all = "camelCase")]
+pub(super) struct CanvasAgentPrompt { prompt: String, #[serde(default)] prompt_template: Option<String> }
 #[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub(super) struct AgentRequest {
@@ -252,7 +253,7 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
         &state,
         &body,
     ).await?;
-    value.prompt = super::runtime_tools::bind(&value.prompt)?;
+    value.prompt = super::runtime_tools::bind(value.prompt_template.as_deref().unwrap_or(&value.prompt))?;
     Ok(Json(value))
 
 }).await
