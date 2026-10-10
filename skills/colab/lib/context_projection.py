@@ -23,6 +23,10 @@ def references(content):
     if isinstance(content, dict):
         visit(content)
     elif isinstance(content, str):
+        for label,kind,identity in re.findall(r"\[@((?:\\.|[^\]])*)\]\(colab:([^:()]+):([^()]+)\)", content):
+            kind = unquote(kind)
+            if kind in KINDS:
+                found.append({"kind": kind, "id": unquote(identity), "label": re.sub(r"\\(.)", r"\1", label)})
         for payload in re.findall(r"\(colab-(?:mention:|resource:(?:files|session|canvas|message):[A-Za-z0-9-]+:)([A-Za-z0-9_-]+)\)", content):
             try:
                 attrs = json.loads(base64.urlsafe_b64decode(payload + "=" * (-len(payload) % 4)))
