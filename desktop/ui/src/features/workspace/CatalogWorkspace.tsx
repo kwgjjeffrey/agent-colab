@@ -292,7 +292,7 @@ export function CatalogWorkspace({
     onSelect(item);
     if (item.kind === "catalog") {
       setExpanded((current) => ({ ...current, [item.id]: true }));
-      void load(item.id).catch((reason) => setError(readableError(reason)));
+      void load(item.id).catch((reason) => setReadError(readableError(reason)));
     }
   }
   function add(kind: AddKind, parent?: string) {
@@ -414,7 +414,7 @@ export function CatalogWorkspace({
                     setExpanded((current) => ({ ...current, [item.id]: open }));
                     if (open)
                       void load(item.id).catch((reason) =>
-                        setError(readableError(reason)),
+                        setReadError(readableError(reason)),
                       );
                   }}
                 >
