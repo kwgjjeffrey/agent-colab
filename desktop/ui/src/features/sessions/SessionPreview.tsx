@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { catalogRequest } from "@/features/workspace/CatalogWorkspace";
 import { PreviewMarkdown } from "@/features/workspace/PreviewMarkdown";
-import { ToolExecutionCard } from "@/features/agent/ToolExecutionCard";
+import { ToolExecutionGroup, groupConsecutiveTools } from "@/features/agent/ToolExecutionCard";
 import { workTranscript } from "@/features/agent/work-transcript";
 import { runOperation } from "@/api/operation-runner";
 import { traceTargets } from "@/api/trace-locators";
@@ -169,7 +169,7 @@ export function SessionPreview({ id, feedback = false }: { id: string; feedback?
               </Button>
             )}
             {turns.flatMap((turn, turnIndex) =>
-              turn.items
+              groupConsecutiveTools(turn.items
                 .filter(
                   (item) =>
                     typeof item.text === "string" ||
@@ -179,7 +179,7 @@ export function SessionPreview({ id, feedback = false }: { id: string; feedback?
                     item.type === "mcpToolCall" ||
                     ["dynamicToolCall", "fileChange", "webSearch", "imageGeneration", "collabAgentToolCall"].includes(item.type ?? ""),
                 )
-                .map((item, index) => (
+                , item => item.type !== "userMessage" && item.type !== "agentMessage").map((group, index) => { const item = group[0]; return (
                   <div
                     key={`${turn.id ?? turnIndex}:${item.id ?? index}`}
                     className="flex flex-col gap-1"
@@ -203,14 +203,14 @@ export function SessionPreview({ id, feedback = false }: { id: string; feedback?
                         </div>
                       </>
                     ) : (
-                      <ToolExecutionCard entry={workTranscript([{
+                      <ToolExecutionGroup entries={group.map((item, toolIndex) => workTranscript([{
                         method: "item/completed",
-                        params: { item: { ...item, id: item.id ?? `${turnIndex}:${index}`,
+                        params: { item: { ...item, id: item.id ?? `${turnIndex}:${index}:${toolIndex}`,
                           aggregatedOutput: item.aggregatedOutput ?? item.text ?? (typeof item.content === "string" ? item.content : undefined) } },
-                      }])[0] ?? { id: `${turnIndex}:${index}`, kind: "tool", text: "", title: item.tool ?? item.type ?? "Tool", output: item.text }} />
+                      }])[0] ?? { id: `${turnIndex}:${index}`, kind: "tool", text: "", title: item.tool ?? item.type ?? "Tool", output: item.text })} />
                     )}
                   </div>
-                )),
+                ); }),
             )}
           </div>
         )}

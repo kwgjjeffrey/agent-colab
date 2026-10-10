@@ -6,7 +6,7 @@ import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Button } from "@/components/ui/button";
 import { workTranscript } from "./work-transcript";
-import { ToolExecutionCard } from "./ToolExecutionCard";
+import { ToolExecutionGroup, groupConsecutiveTools } from "./ToolExecutionCard";
 import {
   Drawer,
   DrawerContent,
@@ -170,9 +170,9 @@ export function AgentWorkDrawer({
             </p>
           ) : (
             <div className="flex flex-col gap-5" data-testid="work-transcript">
-              {entries.map((entry) =>
+              {groupConsecutiveTools(entries, entry => entry.kind === "tool").map((group) => { const entry = group[0]; return (
                 entry.kind === "tool" ? (
-                  <ToolExecutionCard key={entry.id} entry={entry} />
+                  <ToolExecutionGroup key={entry.id} entries={group} />
                 ) : entry.kind === "instruction" ? (
                   <div
                     key={entry.id}
@@ -195,8 +195,8 @@ export function AgentWorkDrawer({
                     </div>
                     <WorkMarkdown text={entry.text} />
                   </div>
-                ),
-              )}
+                ));
+              })}
             </div>
           )}
           {details && !activeStates.has(details.state) && !entries.some(entry => entry.kind !== "instruction") && (

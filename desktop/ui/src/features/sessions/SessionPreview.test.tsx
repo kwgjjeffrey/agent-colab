@@ -46,3 +46,19 @@ it("expands bounded execution input and output in the shared work-details card",
  fireEvent.click(trigger);expect(await screen.findByText("pwd")).toBeTruthy();expect(screen.getByText("/workspace")).toBeTruthy();
  expect(catalogRequest).toHaveBeenLastCalledWith("/v1/sessions/execution-card/read","POST",expect.objectContaining({turnLimit:5,includeOutputs:true,maxOutputCharsPerItem:2000}),expect.any(Object));
 });
+
+it("groups adjacent executions without merging across an Agent response", async () => {
+ vi.mocked(catalogRequest).mockResolvedValueOnce({turns:[{items:[
+  {id:"a",type:"commandExecution",command:"first"},
+  {id:"b",type:"commandExecution",command:"second"},
+  {type:"agentMessage",text:"Message boundary"},
+  {id:"c",type:"commandExecution",command:"third"},
+  {id:"d",type:"commandExecution",command:"fourth"},
+ ]}]});
+ render(<SessionPreview id="groups"/>);await screen.findByText("Message boundary");
+ const groups=screen.getAllByRole("button",{name:"2 tool calls"});expect(groups).toHaveLength(2);
+ expect(screen.queryByRole("button",{name:/Run command/})).toBeNull();
+ fireEvent.click(groups[0]);expect(screen.getAllByRole("button",{name:/Run command/})).toHaveLength(2);
+ fireEvent.click(screen.getAllByRole("button",{name:/Run command/})[0]);expect(screen.getByText("first")).toBeTruthy();
+ expect(screen.queryByText("third")).toBeNull();
+});

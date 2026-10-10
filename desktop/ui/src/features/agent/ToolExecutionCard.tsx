@@ -10,13 +10,13 @@ export function ToolExecutionCard({ entry }: { entry: WorkEntry }) {
                     defaultOpen={false}
                     className="rounded-md border"
                   >
-                    <CollapsibleTrigger aria-label={`${entry.title ?? "Tool call"} ${entry.status || "Tool"}`} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm">
-                      <ChevronRightIcon className="transition-transform in-data-open:rotate-90" />
-                      <WrenchIcon />
+                    <CollapsibleTrigger aria-label={`${entry.title ?? "Tool call"} ${entry.status || "Tool"}`} className="flex w-full items-center gap-1.5 px-2 py-1.5 text-left text-xs text-muted-foreground">
+                      <ChevronRightIcon className="size-3 shrink-0 transition-transform in-data-open:rotate-90" />
+                      <WrenchIcon className="size-3 shrink-0" />
                       <span className="min-w-0 flex-1 truncate">
                         {entry.title}
                       </span>
-                      <Badge variant="secondary">
+                      <Badge variant="secondary" className="px-1.5 py-0 text-[10px] font-normal">
                         {entry.status || "Tool"}
                       </Badge>
                     </CollapsibleTrigger>
@@ -46,4 +46,29 @@ export function ToolExecutionCard({ entry }: { entry: WorkEntry }) {
                     </CollapsibleContent>
                   </Collapsible>
   );
+}
+
+/** Only adjacent executions coalesce; a message always ends the group. */
+export function groupConsecutiveTools<T>(items: T[], isTool: (item: T) => boolean): T[][] {
+  const groups: T[][] = [];
+  for (const item of items) {
+    const previous = groups[groups.length - 1];
+    if (isTool(item) && previous && isTool(previous[0])) previous.push(item);
+    else groups.push([item]);
+  }
+  return groups;
+}
+
+export function ToolExecutionGroup({ entries }: { entries: WorkEntry[] }) {
+  if (entries.length === 1) return <ToolExecutionCard entry={entries[0]} />;
+  return <Collapsible defaultOpen={false} className="rounded-md border border-border/60" data-tool-group>
+    <CollapsibleTrigger aria-label={`${entries.length} tool calls`} className="flex w-full items-center gap-1.5 px-2 py-1.5 text-left text-xs text-muted-foreground">
+      <ChevronRightIcon className="size-3 shrink-0 transition-transform in-data-open:rotate-90" />
+      <WrenchIcon className="size-3 shrink-0" />
+      <span>{entries.length} tool {entries.length === 1 ? "call" : "calls"}</span>
+    </CollapsibleTrigger>
+    <CollapsibleContent className="space-y-1 border-t border-border/60 p-2">
+      {entries.map(entry => <ToolExecutionCard key={entry.id} entry={entry} />)}
+    </CollapsibleContent>
+  </Collapsible>;
 }
