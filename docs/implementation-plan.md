@@ -1519,3 +1519,9 @@ The private enterprise channel now includes an independently versioned Workbench
 ## Feedback hook installation correction
 
 Both installed variants now register their own PostToolUse and Stop hooks, with explicit upload/model consent. Core builtin detection is bound to COLAB_SETUP_PATH so another variant cannot be reported through this Core. Installed end-to-end verification pending.
+
+### Installed Feedback follow-up acceptance
+
+Both user-global Codex feedback hook definitions are installed and host-trusted; upload and ephemeral local analysis enabled with user authorization. Genuine desktop PostToolUse delivery and per-installation builtin recognition verified; public-only use does not enter the enterprise observation store. Core 0.1.127-dev and private derivative deployed. Seven capture/consent/detection tests plus image-to-model projection and Python hook ownership tests passed. Historical oversized records no longer block later tasks; screenshots remain in raw evidence and use separate model image inputs.
+
+Two completed real turns from the hook-selected desktop conversation were replayed (not fabricated tasks). Both produced raw uploads, completed model comments, server readback, existing Session Reader access, and native Workbench items. Each has three preceding user queries. This validates the transport/analysis/display chain using real content; it is not fresh live Stop acceptance. The current turn's automatic Stop/upload/comment completion remains pending until the turn ends. Local evidence: .trial/V-FEEDBACK-03-installed/acceptance.json.
