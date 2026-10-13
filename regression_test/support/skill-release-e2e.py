@@ -46,6 +46,7 @@ try:
         with urllib.request.urlopen(req,timeout=30) as response:return json.load(response)
     org=api('POST','/v1/organizations',{'name':'Skill Release Test'})
     channel=api('POST',f"/v1/organizations/{org['id']}/channels",{'name':'Colab self publication'})
+    sql(f"insert into channel_members(channel_id,organization_id,organization_member_id,role) select '{channel['id']}','{org['id']}',id,'member' from organization_members where organization_id='{org['id']}' and user_id='{users['owner']}' on conflict do nothing;")
     reporter=users['reporter'];member=str(uuid.uuid4())
     sql(f"insert into organization_members(id,organization_id,user_id,role) values('{member}','{org['id']}','{reporter}','member'); insert into channel_members(channel_id,organization_id,organization_member_id,role) values('{channel['id']}','{org['id']}','{member}','member');")
     discovery=root/'discovery.json';dbpath=root/'client.sqlite3'
@@ -120,6 +121,39 @@ try:
         updated=install('ensure');assert (target/'RELEASE-TEST.txt').read_text()=='second version'
     finally:
         if target.exists():install('uninstall')
+    delivery=root/'marked-delivery'
+    delivered=cli('deliver','--reference-id',first['referenceId'],'--version',version,'--output-directory',str(delivery))['data']
+    assert delivered['identityVerified'] and (delivery/'.colab/identity.json').is_file()
+    relocated=root/'project-installer/versions/release';relocated.parent.mkdir(parents=True);delivery.rename(relocated)
+    alias=root/'codex-skill';alias.symlink_to(relocated,target_is_directory=True)
+    local('/v1/feedbacks/settings','PUT',{'enabled':True,'consentUpload':True,'analysisEnabled':False})
+    session=str(uuid.uuid4());turn=str(uuid.uuid4())
+    def observe(path,turn):
+        local('/v1/feedbacks/hook','POST',{'session_id':session,'turn_id':turn,'hook_event_name':'PostToolUse','cwd':str(root),'tool_name':'Read','tool_input':{'file_path':str(path)}})
+    observe(alias/'SKILL.md',turn)
+    rows=db.execute('select skill_version from feedback_observations where session_id=? and turn_id=?',(session,turn)).fetchall()
+    assert len(rows)==1 and len(rows[0][0])==40,rows
+    transcript=pathlib.Path.home()/'.codex/sessions'/('colab-identity-test-'+session+'.jsonl')
+    transcript.parent.mkdir(parents=True,exist_ok=True)
+    evidence=[{'type':'session_meta','payload':{'id':session,'cli_version':'test'}},{'type':'event_msg','payload':{'type':'task_started','turn_id':turn}}]
+    for role,text in [('user','Test portable Skill identity'),('assistant','Portable Skill verification complete')]:evidence.append({'type':'response_item','payload':{'type':'message','role':role,'content':[{'text':text}]}})
+    transcript.write_text(''.join(json.dumps(row)+'\n' for row in evidence))
+    try:
+        local('/v1/feedbacks/hook','POST',{'session_id':session,'turn_id':turn,'hook_event_name':'Stop','transcript_path':str(transcript),'cwd':str(root)})
+        wait(lambda:db.execute('select uploaded from feedback_records where session_id=? and turn_id=?',(session,turn)).fetchone()==(1,),attempts=600)
+    finally:transcript.unlink(missing_ok=True)
+    (relocated/'SKILL.md').write_text((relocated/'SKILL.md').read_text()+' changed')
+    changedturn=str(uuid.uuid4());observe(alias/'SKILL.md',changedturn)
+    assert db.execute('select count(*) from feedback_observations where session_id=? and turn_id=?',(session,changedturn)).fetchone()[0]==0
+    installer=root/'installer.py';installer.write_text('import os,shutil,sys\nshutil.copytree(os.environ["COLAB_SKILL_DELIVERY_DIRECTORY"],sys.argv[1])\n')
+    installed=root/'custom-installed'
+    receipt=cli('deliver','--reference-id',first['referenceId'],'--version',version,'--output-directory',str(root/'installer-delivery'),'--installer-json',json.dumps(['python3',str(installer),str(installed)]),'--installed-directory',str(installed))['data']
+    assert receipt['identityVerified']
+    installedturn=str(uuid.uuid4());observe(installed/'bin/colab-browser',installedturn)
+    assert db.execute('select count(*) from feedback_observations where session_id=? and turn_id=?',(session,installedturn)).fetchone()[0]==1
+    badinstaller=root/'bad-installer.py';badinstaller.write_text(installer.read_text()+'shutil.rmtree(sys.argv[1]+"/.colab")\n')
+    failure=cli('deliver','--reference-id',first['referenceId'],'--version',version,'--output-directory',str(root/'bad-delivery'),'--installer-json',json.dumps(['python3',str(badinstaller),str(root/'bad-installed')]),'--installed-directory',str(root/'bad-installed'),ok=False)
+    assert '409' in failure['error']['message']
     legacy=root/'legacy-skill';legacy.mkdir();entry=legacy/'SKILL.md';entry.write_text('---\nname: legacy-directory-skill\ndescription: Existing source adapter verification\n---\nExisting content')
     old=local('/v1/channels/'+channel['id']+'/skills/share','POST',{'sourcePath':str(legacy)})
     old=wait(lambda:next((r for r in local('/v1/channels/'+channel['id']+'/skills') if r['id']==old['id'] and r['currentRootOid']),None))
@@ -139,7 +173,7 @@ try:
     third=cli(*base,'--version','selftest-3','--reference-id',first['referenceId'])['data'];assert third['referenceId']==first['referenceId']
     switch('owner');cli('revoke','--reference-id',first['referenceId'],'--user-id',reporter)
     switch('reporter');denied=cli(*base,'--version','selftest-4','--reference-id',first['referenceId'],ok=False);assert '403' in denied['error']['message']
-    summary={'selfSkillArchivePublished':True,'immutableRetryReused':True,'changedSameVersionRejected':True,'stableChannelReference':True,'twoVersionsRetained':True,'existingPreviewConsumer':True,'noSourceWatcherRegistered':True,'nativeInstallationAndEntrypoint':True,'rollbackAndUpdate':True,'collaboratorPublication':True,'revocationEnforced':True,'scaffoldTarget':True,'genericProjectScaffold':True,'directorySyncUnchanged':True}
+    summary={'selfSkillArchivePublished':True,'immutableRetryReused':True,'changedSameVersionRejected':True,'stableChannelReference':True,'twoVersionsRetained':True,'existingPreviewConsumer':True,'noSourceWatcherRegistered':True,'nativeInstallationAndEntrypoint':True,'rollbackAndUpdate':True,'collaboratorPublication':True,'revocationEnforced':True,'scaffoldTarget':True,'genericProjectScaffold':True,'portableIdentity':True,'relocatedIdentityFeedbackUploaded':True,'projectInstallerIdentityVerified':True,'tamperedPayloadRejected':True,'directorySyncUnchanged':True}
     print(json.dumps(summary));(REPO/'.trial/skill-releases/evidence.json').write_text(json.dumps(summary,indent=2))
 except Exception:
     print((root/'server.log').read_text()[-2500:] if (root/'server.log').exists() else '')

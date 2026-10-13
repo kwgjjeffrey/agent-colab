@@ -78,6 +78,8 @@ async fn publish_inner(
     };
     let _guard = assets::publication_guard(s, "skill-release", &reference).await;
     let binding = assets::binding(s, &reference).await?;
+    let user = current_user_id(s).await?;
+    s.inner.store.lock().await.execute("update local_asset_references set channel_id=?1 where reference_id=?2 and user_id=?3",rusqlite::params![channel,reference,user]).map_err(LocalError::internal)?;
     let repo = staging.join("projection.git");
     files::init_shadow(&repo, &source)?;
     files::git(&repo, &source, &["add", "-A", "--", "."])?;
@@ -121,7 +123,7 @@ async fn publish_inner(
         json!({"referenceId":reference,"assetId":binding.asset_id,"channelId":channel,"version":release["version"],"releaseId":release["id"],"artifactSha256":release["artifactSha256"],"rootOid":release["rootOid"],"stableRef":format!("colab://channel/{channel}/{reference}")}),
     )
 }
-fn extract_archive(bytes: &[u8], target: &Path) -> anyhow::Result<PathBuf> {
+pub(crate) fn extract_archive(bytes: &[u8], target: &Path) -> anyhow::Result<PathBuf> {
     let mut archive = zip::ZipArchive::new(std::io::Cursor::new(bytes))?;
     if archive.len() > 5000 {
         anyhow::bail!("Too many Skill files")

@@ -5,6 +5,7 @@
 //! shared version identity; installation receipts never introduce a second version scheme.
 
 use super::*;
+pub(crate) mod identity;
 use notify::{RecommendedWatcher, RecursiveMode, Watcher};
 use serde::Deserialize;
 use serde_json::{json, Value};
@@ -772,7 +773,8 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
             }
         }
     }
-    install_directory_atomically(&source, &destination)?;
+    let identity = identity::issue(&state, &share_id, &current_root, &source, &current_root).await?;
+    install_directory_atomically(&source, &destination, Some(&identity))?;
     let hash = directory_hash(&destination).map_err(LocalError::internal)?;
     {
         let store = state.inner.store.lock().await;
@@ -975,10 +977,13 @@ fn collect_files(root: &Path, current: &Path, result: &mut Vec<PathBuf>) -> anyh
     Ok(())
 }
 
-fn install_directory_atomically(source: &Path, destination: &Path) -> Result<(), LocalError> {
+fn install_directory_atomically(source: &Path, destination: &Path, identity: Option<&identity::Identity>) -> Result<(), LocalError> {
     fs::create_dir_all(destination.parent().unwrap()).map_err(LocalError::internal)?;
     let stage = destination.with_extension(format!("colab-stage-{}", Uuid::new_v4()));
     copy_directory(source, &stage)?;
+    if let Some(identity) = identity {
+        if let Err(error) = identity::write(&stage, identity) { let _ = fs::remove_dir_all(&stage); return Err(error); }
+    }
     let backup = destination.with_extension(format!("colab-backup-{}", Uuid::new_v4()));
     if destination.exists() {
         fs::rename(destination, &backup).map_err(LocalError::internal)?

@@ -248,3 +248,9 @@ colab-feedback configure --enable --consent-upload --install-codex-hooks
 只有用户另外同意使用本机模型额度时加`--analysis enabled`。Codex宿主仍需信任新增hook；配置脚本不改信任摘要。关闭命令`colab-feedback configure --disable --install-codex-hooks`仅移除本模块hook，保留其他所有者。
 
 内置Skill的reviewer由Server部署配置`COLAB_FEEDBACK_REVIEWER_IDS`指定已存在用户UUID（逗号分隔）；提供该配置时替换名单，空字符串撤销名单；未提供时使用已有明确授权记录，默认无reviewer。共享Skill自动按asset owner授权。
+
+## Portable delivery identity
+
+Local Core issues `.colab/identity.json` on managed installation and on explicit release delivery, independent of the publisher's ZIP. The original ZIP download remains byte-exact. Identity records bind authenticated user, Server instance, canonical asset, requested Channel, release/root version and payload digest; SQLite holds the issuing receipt independently of destination path. PostToolUse discovers the marker upward from an actual consumed path after resolving symlinks, verifies the issuing receipt and package bytes, then records the ordinary asset observation. Relocation and project-version directories therefore preserve identity. There is no Session sweep or automatic consent change.
+
+`colab-skill-release deliver --reference-id ID --version VERSION --output-directory /absolute/new-directory` performs authorized bounded download, archive hash validation, safe extraction, marked atomic delivery and final verification. Optional `--installer-json '["python3","/project/install.py"]' --installed-directory /absolute/final-skill-root` runs one argv installer with `COLAB_SKILL_DELIVERY_DIRECTORY` pointing to the marked source, then verifies its final output. Installer failure or lost/changed identity is an error; delivery is retained for diagnosis. Core does not infer project-specific installation rules. Already moved unmarked installations require a new marked delivery; historical tasks are not silently captured.

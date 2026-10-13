@@ -171,6 +171,14 @@
         "path": "local/crates/local-api/src/feedback.rs",
         "function": "update_access"
       }
+    },
+    {
+      "id": "core.skills.deliver",
+      "description": "Deliver a verified Skill release with portable identity and optional project installer",
+      "source": {
+        "path": "local/crates/local-api/src/skills/identity.rs",
+        "function": "deliver"
+      }
     }
   ],
   "spans": [

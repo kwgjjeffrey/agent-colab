@@ -816,6 +816,7 @@ pub fn router(state: AppState, security: LocalSecurity) -> Router {
         .route("/v1/channels/{channel_id}/skill-releases",axum::routing::post(skill_releases::publish))
         .route("/v1/skills/{share_id}/releases",get(skill_releases::list))
         .route("/v1/skills/{share_id}/releases/{version}/artifact",get(skill_releases::download))
+        .route("/v1/skills/{share_id}/releases/{version}/deliver",axum::routing::post(skills::identity::deliver))
         .route("/v1/skills/{share_id}/releases/promote",axum::routing::post(skill_releases::promote))
         .route("/v1/skills/{share_id}/publishers",axum::routing::put(skill_releases::publisher))
         .route("/v1/feedbacks/settings",get(feedback::settings).put(feedback::configure))

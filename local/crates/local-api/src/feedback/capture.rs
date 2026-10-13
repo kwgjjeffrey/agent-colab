@@ -161,7 +161,12 @@ pub(super) async fn observe(
         .filter_map(|(root, _, _, _)| fs::canonicalize(root).ok())
         .collect();
     let mut identities = vec![];
+    let portable_roots: std::collections::BTreeSet<_> = paths.iter().filter_map(|path| skills::identity::marker_root(path)).collect();
+    for root in portable_roots {
+        if let Some(identity) = skills::identity::recognize(s, u, &root.join("SKILL.md")).await? { identities.push(identity); }
+    }
     for (root, asset, channel, version) in receipts {
+        if identities.iter().any(|identity| identity.0 == format!("asset:{asset}")) { continue; }
         if let Ok(root) = fs::canonicalize(root) {
             if paths.iter().any(|p| p.starts_with(&root)) {
                 identities.push((
@@ -200,6 +205,7 @@ pub(super) async fn observe(
             }
         }
     }
+    identities.sort(); identities.dedup();
     let store = s.inner.store.lock().await;
     for (asset, channel, version, name) in identities {
         store.execute("insert or ignore into feedback_observations(user_id,session_id,turn_id,asset_key,channel_key,skill_version,skill_name) values(?1,?2,?3,?4,?5,?6,?7)",rusqlite::params![u,session,turn,asset,channel,version,name]).map_err(LocalError::internal)?;

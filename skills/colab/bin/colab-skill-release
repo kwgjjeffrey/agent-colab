@@ -45,10 +45,14 @@ def main():
     publish.add_argument('--source-commit')
     publish.add_argument('--notes', default='')
     publish.add_argument('--parent')
-    for name in ('history', 'promote', 'download', 'grant', 'revoke'):
+    for name in ('history', 'promote', 'download', 'deliver', 'grant', 'revoke'):
         c = commands.add_parser(name)
         c.add_argument('--reference-id', required=True)
-        if name in ('promote', 'download'): c.add_argument('--version', required=True)
+        if name in ('promote', 'download', 'deliver'): c.add_argument('--version', required=True)
+        if name == 'deliver':
+            c.add_argument('--output-directory', required=True)
+            c.add_argument('--installer-json', help='Project installer argv as a JSON array; delivery root is in COLAB_SKILL_DELIVERY_DIRECTORY')
+            c.add_argument('--installed-directory')
         if name == 'download': c.add_argument('--output', required=True)
         if name in ('grant', 'revoke'): c.add_argument('--user-id', required=True)
     args = p.parse_args()
@@ -98,6 +102,9 @@ def main():
         if args.operation == 'history':
             rows = request('GET', path+'/releases', core=args.core)
             return success({'releases': [{k: row[k] for k in ('version','releaseNotes','sourceCommit','createdAt')} for row in rows]})
+        if args.operation == 'deliver':
+            import json
+            return success(request('POST', path+f'/releases/{quote(args.version, safe="")}/deliver', core=args.core, timeout=900, body={'outputDirectory':str(Path(args.output_directory).expanduser().absolute()), 'installer':json.loads(args.installer_json) if args.installer_json else None, 'installedDirectory':str(Path(args.installed_directory).expanduser().absolute()) if args.installed_directory else None}))
         if args.operation == 'download':
             return success(download(path+f'/releases/{quote(args.version, safe="")}/artifact', args.output, core=args.core, limit=25*1024*1024))
         if args.operation == 'promote':

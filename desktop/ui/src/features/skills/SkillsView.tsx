@@ -225,9 +225,19 @@ const trackedFetch = operation.fetch;
     const row = agentPrompt.rows.find((item) => item.targetAgent === agent);
     const ref = readableRef(agentPrompt.share);
     if (row?.state === "installed" && row.installedPath) {
-      return `The user's task may benefit from the shared Skill “${agentPrompt.share.name}”. It is installed at ${row.installedPath}; load it and follow its instructions to complete the task.`;
+      return `The user's task may benefit from the shared Skill “${agentPrompt.share.name}”. Colab records an installation at ${row.installedPath}. Check that this path and version match the current Agent configuration and project installation instructions before loading it; use the project installer if they differ. Then follow its instructions to complete the task.`;
     }
-    return `The user's task may benefit from the shared Skill “${agentPrompt.share.name}”. Run this idempotent command first to install or update it for the current coding agent:\n\n${agentSkillCommand(agent, "colab-skill-tool")} ensure --ref '${ref}' --target ${agent}\n\nThen load the Skill returned by the command and follow its instructions to complete the task.`;
+    const tool = agentSkillCommand(agent, "colab-skill-release");
+    return `The user's task may benefit from the shared Skill “${agentPrompt.share.name}”. Follow the current Agent configuration and project AGENTS.md/installer requirements before installing.
+
+If Colab's default location matches those requirements:
+${agentSkillCommand(agent, "colab-skill-tool")} ensure --ref '${ref}' --target ${agent}
+
+For an artifact release requiring a project installer, use one operation:
+${tool} history --reference-id '${agentPrompt.share.id}'
+${tool} deliver --reference-id '${agentPrompt.share.id}' --version '<exact-release-version>' --output-directory '<new-absolute-directory>' --installer-json '<installer-argv-json>' --installed-directory '<final-skill-root>'
+
+The installer receives COLAB_SKILL_DELIVERY_DIRECTORY and must preserve .colab. Delivery runs the installer and verifies its final identity. Replace placeholders with actual project settings; do not install to the default location and move it manually. Check the installed path/version, then load the Skill and complete the task.`;
   }
 
   const sourceRows = useMemo(() => sources, [sources]);
