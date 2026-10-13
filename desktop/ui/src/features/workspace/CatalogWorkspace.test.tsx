@@ -16,6 +16,21 @@ vi.mock("@/api/request-activity", () => ({
 }));
 
 describe("Catalog workspace", () => {
+  it("expands Catalog content branches without navigating and opens leaf destinations", async () => {
+    const root={id:"root-catalog",kind:"catalog",name:"Planning",parentId:null,updatedAt:"today"};
+    const nested={id:"nested",kind:"catalog",name:"Progress",parentId:root.id,updatedAt:"today",childCount:1};
+    const leaf={id:"document",kind:"canvas",name:"Milestones",parentId:nested.id,updatedAt:"today"};
+    vi.stubGlobal("fetch",vi.fn(async (path:string)=>new Response(JSON.stringify(path.endsWith("/trail")?[root]:path.includes("parentId=nested")?[leaf]:path.includes("parentId=root-catalog")?[nested]:[root]),{status:200})));
+    const onSelect=vi.fn();
+    render(<CatalogWorkspace channelId="channel" channelName="Team" view="catalog" focus={{id:root.id,kind:"catalog"}} onSelect={onSelect} onAdd={vi.fn()}>Preview</CatalogWorkspace>);
+    const list=within(screen.getByLabelText("Catalog contents"));
+    fireEvent.click(await list.findByRole("button",{name:"Expand Progress"}));
+    expect(onSelect).not.toHaveBeenCalled();
+    fireEvent.click(await list.findByRole("button",{name:"Milestones"}));
+    expect(onSelect).toHaveBeenCalledWith(leaf);
+    fireEvent.click(list.getByRole("button",{name:"Collapse Progress"}));
+    await waitFor(()=>expect(list.queryByRole("button",{name:"Milestones"})).toBeNull());
+  });
   it("places primary Add above Home and retains its item menu", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response("[]", {status:200})));
     render(<CatalogWorkspace channelId="channel" channelName="Team" view="home" onSelect={vi.fn()} onAdd={vi.fn()}>Home</CatalogWorkspace>);

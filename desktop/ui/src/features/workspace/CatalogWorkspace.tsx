@@ -52,6 +52,8 @@ import type { OperationScope } from "@/api/operation-runner";
 import { UserIdentity } from "@/features/context/UserIdentity";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { ItemIcon } from "./ItemIcon";
+import { useUnreadMessages } from "@/features/messages/unread-state";
+import { UnreadBadge } from "@/features/messages/UnreadBadge";
 import { CreationHint } from "./CreationHint";
 import { CatalogDragTarget, type DropPosition } from "./CatalogDragTarget";
 import {
@@ -119,6 +121,7 @@ export function CatalogWorkspace({
   heading,
   activity,
 }: Props) {
+  const unread = useUnreadMessages()[channelId]?.unreadCount ?? 0;
   const [branches, setBranches] = useState<Record<string, CatalogItem[]>>({});
   const loadEpoch = useRef(0);
   const errorScope = useRef(0);
@@ -228,7 +231,10 @@ export function CatalogWorkspace({
         if (!active) return;
         setFocusedTrail(path);
         const current = path.at(-1);
-        if (current?.kind === "catalog") setSelectedCatalog(current);
+        if (current?.kind === "catalog") {
+          setSelectedCatalog(current);
+          void load(current.id).catch((reason) => { if (active) setReadError(readableError(reason)); });
+        }
         for (const ancestor of path.slice(0, -1)) {
           setExpanded((value) => ({ ...value, [ancestor.id]: true }));
           void load(ancestor.id).catch((reason) => { if (active) setReadError(readableError(reason)); });
@@ -388,7 +394,7 @@ export function CatalogWorkspace({
       /* mutate exposes the authoritative failure; no optimistic success. */
     }
   }
-  function rows(parent?: string, depth = 0): ReactNode {
+  function rows(parent?: string, depth = 0, surface: "sidebar" | "content" = "sidebar"): ReactNode {
     if (depth > 64) return null;
     return (branches[parent ?? "root"] ?? []).map((item) => {
       return (
@@ -400,7 +406,7 @@ export function CatalogWorkspace({
             onDrop={(source, position) => void drop(source, item, position)}
           >
             <div
-              data-catalog-row={item.id}
+              data-catalog-row={surface === "sidebar" ? item.id : undefined}
               data-selected={selected?.id === item.id ? "true" : "false"}
               className={cn("group relative flex min-w-0 items-center gap-0 rounded-lg pr-1 transition-colors hover:bg-muted", selected?.id === item.id && "bg-secondary")}
             >
@@ -408,7 +414,8 @@ export function CatalogWorkspace({
                 <Button
                   variant="ghost"
                   size="icon-xs"
-                  aria-label={`Expand ${item.name}`}
+                  aria-label={`${expanded[item.id] ? "Collapse" : "Expand"} ${item.name}`}
+                  aria-expanded={Boolean(expanded[item.id])}
                   onClick={() => {
                     const open = !expanded[item.id];
                     setExpanded((current) => ({ ...current, [item.id]: open }));
@@ -446,12 +453,14 @@ export function CatalogWorkspace({
                 <Button
                   variant="ghost"
                   className={cn(
+                    surface === "content" && "h-11",
                     "min-w-0 flex-1 justify-start bg-transparent hover:bg-transparent dark:hover:bg-transparent aria-expanded:bg-transparent",
                     item.kind === "catalog" && "pl-1 group-hover:pr-7 group-focus-within:pr-7",
                   )}
                   title={item.name}
-                  data-item-id={item.id}
-                  data-item-kind={item.kind}
+                  data-item-id={surface === "sidebar" ? item.id : undefined}
+                  data-list-item-id={surface === "content" ? item.id : undefined}
+                  data-item-kind={surface === "sidebar" ? item.kind : undefined}
                   data-trace-nav="workspace.item"
                   data-trace-target={
                     item.kind === "files"
@@ -520,7 +529,7 @@ export function CatalogWorkspace({
           </CatalogDragTarget>
           {item.kind === "catalog" && (
             <CollapsibleContent>
-              <div className="ml-4">{rows(item.id, depth + 1)}</div>
+              <div className="ml-4">{rows(item.id, depth + 1, surface)}</div>
             </CollapsibleContent>
           )}
         </Collapsible>
@@ -588,6 +597,8 @@ export function CatalogWorkspace({
             </Button>
             <Button
               variant={view === "messages" ? "secondary" : "ghost"}
+              aria-label="Message"
+              aria-description={unread ? `${unread} unread messages` : undefined}
               className="justify-start"
               onClick={() => {
                 setSelectedCatalog(undefined);
@@ -596,6 +607,7 @@ export function CatalogWorkspace({
             >
               <MessageSquareIcon data-icon="inline-start" />
               Message
+              <UnreadBadge count={unread} className="ml-auto" />
             </Button>
             <ScrollArea className="min-h-0 flex-1">
               <CatalogDragTarget
@@ -811,18 +823,12 @@ export function CatalogWorkspace({
                       </Button>
                     ))}
                   </div>
-                  {(branches[selectedCatalog?.id ?? "root"] ?? []).map(
-                    (item) => (
-                      <Button
-                        key={item.id}
-                        variant="ghost"
-                        className="justify-start"
-                        onClick={() => select(item)}
-                      >
-                        {item.name}
-                      </Button>
-                    ),
-                  )}
+                  <div aria-label="Catalog contents" className="flex flex-col gap-1">
+                    {rows(selectedCatalog?.id, 0, "content")}
+                    {branches[selectedCatalog?.id ?? "root"]?.length === 0 && (
+                      <p className="py-6 text-sm text-muted-foreground">This catalog is empty.</p>
+                    )}
+                  </div>
                 </div>
               </ScrollArea>
             ) : (
