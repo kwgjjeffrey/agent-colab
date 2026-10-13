@@ -1,6 +1,6 @@
 {
   "name": "colab-skill",
-  "version": "0.1.64-dev",
+  "version": "0.1.71-dev",
   "localApi": ">=0.1.0 <0.2.0",
   "entrypoints": [
     "bin/colab-open",
@@ -14,6 +14,7 @@
     "bin/colab-transfer",
     "setup/colab-setup",
     "bin/colab-feedback",
-    "bin/colab-feedback-hook"
+    "bin/colab-feedback-hook",
+    "bin/colab-skill-release"
   ]
 }

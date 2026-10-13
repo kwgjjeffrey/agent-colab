@@ -29,6 +29,7 @@ import {
 } from "@/features/agent/AgentPromptDialog";
 
 type SkillShare = {
+  sourceAdapter?: string;
   id: string;
   channelId: string;
   name: string;
@@ -95,6 +96,17 @@ export function SkillsView({ creationOnly, onCreationClose, creationParentRef, f
   const [error, setError] = useState<string>();
   const [agentPrompt, setAgentPrompt] = useState<{ share: SkillShare; rows: Installation[] }>();
   const [preview, setPreview] = useState<string>();
+  const [releases, setReleases] = useState<{version:string;rootOid:string;releaseNotes:string;createdAt:string}[]>([]);
+  useEffect(() => {
+    let active = true; setReleases([]);
+    if (focusId && shares.find(s => s.id === focusId)?.sourceAdapter === "skill-release-v1") {
+      void trackedFetch(`/v1/skills/${focusId}/releases`).then(async r => {
+        if (!r.ok) throw new Error(await r.text());
+        const value = await r.json(); if (active) setReleases(value);
+      }).catch(reason => { if (active) setError(String(reason)); });
+    }
+    return () => { active = false; };
+  }, [focusId, shares]);
   useEffect(() => {
     let active = true;
     setPreview(undefined); setError(undefined);
@@ -234,6 +246,7 @@ const trackedFetch = operation.fetch;
                 <WorkspaceActions primary><AgentButton onClick={() => setAgentPrompt({ share, rows: installations[share.id] ?? [] })}>Give to Agent</AgentButton></WorkspaceActions><WorkspaceActions>
                 {share.canWithdraw && <Button data-trace-target={traceTargets("skills.withdraw")} variant="destructive" disabled={working === share.id} onClick={() => void withdraw(share)}>Withdraw</Button>}</WorkspaceActions>
               </div>
+              {releases.length > 0 && <details className="rounded-lg bg-muted/40 px-3 py-2"><summary className="cursor-pointer text-xs text-muted-foreground">Version {releases.find(r => r.rootOid === share.currentRootOid)?.version ?? "—"} · {releases.length} recent releases</summary><ol className="mt-3 space-y-3">{releases.map(release => <li key={release.version}><span className="font-medium">{release.version}</span><span className="ml-2 text-xs text-muted-foreground">{new Date(release.createdAt).toLocaleString()}</span>{release.releaseNotes && <p className="mt-1 whitespace-pre-wrap text-muted-foreground">{release.releaseNotes}</p>}</li>)}</ol></details>}
               {preview !== undefined ? <article data-trace-region="skill-preview">{share.description && <p className="text-sm text-muted-foreground">{share.description}</p>}<PreviewMarkdown>{preview.replace(/^---\r?\n[\s\S]*?\r?\n---(?:\r?\n|$)/, "")}</PreviewMarkdown></article> : !error && <p className="text-muted-foreground">Loading Skill preview…</p>}
               {share.canWithdraw && <div><SkillFeedback shareId={share.id} /></div>}
               <WorkspaceActions><Popover>

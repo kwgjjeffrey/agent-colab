@@ -1,3 +1,5 @@
+mod skill_releases;
+pub use skill_releases::SkillRelease;
 use anyhow::Context;
 use serde::Serialize;
 use sha2::{Digest, Sha256};
@@ -168,6 +170,7 @@ pub struct FileShare {
 #[derive(Debug, Serialize, sqlx::FromRow)]
 #[serde(rename_all = "camelCase")]
 pub struct SkillShare {
+    pub source_adapter: String,
     pub id: Uuid,
     pub channel_id: Uuid,
     pub name: String,
@@ -701,7 +704,7 @@ let rows=sqlx::query_as::<_,FileShare>("select fs.id,fs.channel_id,fs.name,fs.co
     ) -> anyhow::Result<Option<Vec<SkillShare>>> {
         let actor:Option<Uuid>=sqlx::query_scalar("select cm.organization_member_id from channel_members cm join organization_members om on om.id=cm.organization_member_id where cm.channel_id=$1 and om.user_id=$2").bind(channel_id).bind(user_id).fetch_optional(&self.pool).await?;
         let Some(actor) = actor else { return Ok(None) };
-        Ok(Some(sqlx::query_as("select s.id,s.channel_id,s.name,s.description,coalesce(u.display_name,u.email) contributor_name,u.avatar_url contributor_avatar_url,s.state,s.current_root_oid,(s.contributor_member_id=$2) can_withdraw,s.updated_at::text updated_at from channel_shares s join organization_members om on om.id=s.contributor_member_id join users u on u.id=om.user_id where s.channel_id=$1 and s.kind='skill' and s.state='active' order by s.updated_at desc").bind(channel_id).bind(actor).fetch_all(&self.pool).await?))
+        Ok(Some(sqlx::query_as("select s.source_adapter,s.id,s.channel_id,s.name,s.description,coalesce(u.display_name,u.email) contributor_name,u.avatar_url contributor_avatar_url,s.state,s.current_root_oid,(s.contributor_member_id=$2) can_withdraw,s.updated_at::text updated_at from channel_shares s join organization_members om on om.id=s.contributor_member_id join users u on u.id=om.user_id where s.channel_id=$1 and s.kind='skill' and s.state='active' order by s.updated_at desc").bind(channel_id).bind(actor).fetch_all(&self.pool).await?))
     }
 
     pub async fn create_skill_share(
@@ -716,7 +719,7 @@ let rows=sqlx::query_as::<_,FileShare>("select fs.id,fs.channel_id,fs.name,fs.co
             return Ok(None);
         };
         let id = Uuid::new_v4();
-        Ok(Some(sqlx::query_as("insert into channel_shares(id,channel_id,contributor_member_id,name,description,kind,source_adapter) values($1,$2,$3,$4,$5,'skill','shadow-git-v1') returning id,channel_id,name,description,(select coalesce(u.display_name,u.email) from organization_members om join users u on u.id=om.user_id where om.id=$3) contributor_name,(select u.avatar_url from organization_members om join users u on u.id=om.user_id where om.id=$3) contributor_avatar_url,state,current_root_oid,true can_withdraw,updated_at::text updated_at").bind(id).bind(channel_id).bind(member).bind(name).bind(description).fetch_one(&self.pool).await?))
+        Ok(Some(sqlx::query_as("insert into channel_shares(id,channel_id,contributor_member_id,name,description,kind,source_adapter) values($1,$2,$3,$4,$5,'skill','shadow-git-v1') returning source_adapter,id,channel_id,name,description,(select coalesce(u.display_name,u.email) from organization_members om join users u on u.id=om.user_id where om.id=$3) contributor_name,(select u.avatar_url from organization_members om join users u on u.id=om.user_id where om.id=$3) contributor_avatar_url,state,current_root_oid,true can_withdraw,updated_at::text updated_at").bind(id).bind(channel_id).bind(member).bind(name).bind(description).fetch_one(&self.pool).await?))
     }
 
     pub async fn create_skill_revision(
@@ -783,7 +786,7 @@ let rows=sqlx::query_as::<_,FileShare>("select fs.id,fs.channel_id,fs.name,fs.co
             .bind(user_id)
             .execute(&mut *tx)
             .await?;
-        let allowed:Option<Uuid>=sqlx::query_scalar("select a.id from shared_assets a where a.publication_share_id=$1 and a.kind=$2 and a.owner_user_id=$3 and a.current_root_oid is not distinct from $4 and exists(select 1 from channel_shares s where s.asset_id=a.id and s.state='active') for update").bind(share_id).bind(kind).bind(user_id).bind(parent_root_oid).fetch_optional(&mut *tx).await?;
+        let allowed:Option<Uuid>=sqlx::query_scalar("select a.id from shared_assets a where a.publication_share_id=$1 and a.kind=$2 and a.owner_user_id=$3 and a.source_adapter<>'skill-release-v1' and a.current_root_oid is not distinct from $4 and exists(select 1 from channel_shares s where s.asset_id=a.id and s.state='active') for update").bind(share_id).bind(kind).bind(user_id).bind(parent_root_oid).fetch_optional(&mut *tx).await?;
         if allowed.is_none() {
             return Ok(None);
         }
@@ -804,7 +807,7 @@ let rows=sqlx::query_as::<_,FileShare>("select fs.id,fs.channel_id,fs.name,fs.co
     /// shares and expired/revoked Quick Shares are intentionally absent and become collectible.
     pub async fn referenced_blob_keys(&self) -> anyhow::Result<Vec<String>> {
         sqlx::query_scalar(
-            "select r.blob_key from file_revisions r join shared_assets a on a.publication_share_id=r.share_id where a.retained_until is null or a.retained_until>now() union select sg.blob_key from session_segments sg join session_snapshots ss on ss.id=sg.snapshot_id join shared_assets a on a.publication_share_id=ss.share_id where a.retained_until is null or a.retained_until>now() union select ss.read_index_blob_key from session_snapshots ss join shared_assets a on a.publication_share_id=ss.share_id where ss.read_index_blob_key is not null and (ss.id=a.current_snapshot_id or ss.created_at>now()-interval '24 hours') and (a.retained_until is null or a.retained_until>now()) union select session_blob_key from feedback_records where session_blob_key is not null union select blob_key from canvas_images where blob_key is not null union select qi.blob_key from quick_transfer_items qi join quick_transfers qt on qt.id=qi.transfer_id where qi.blob_key is not null and qt.state in ('uploading','ready') and qt.expires_at>now()"
+            "select r.blob_key from file_revisions r join shared_assets a on a.publication_share_id=r.share_id where a.retained_until is null or a.retained_until>now() union select sg.blob_key from session_segments sg join session_snapshots ss on ss.id=sg.snapshot_id join shared_assets a on a.publication_share_id=ss.share_id where a.retained_until is null or a.retained_until>now() union select ss.read_index_blob_key from session_snapshots ss join shared_assets a on a.publication_share_id=ss.share_id where ss.read_index_blob_key is not null and (ss.id=a.current_snapshot_id or ss.created_at>now()-interval '24 hours') and (a.retained_until is null or a.retained_until>now()) union select r.blob_key from file_revisions r join skill_releases sr on sr.revision_id=r.id union select artifact_blob_key from skill_releases union select session_blob_key from feedback_records where session_blob_key is not null union select blob_key from canvas_images where blob_key is not null union select qi.blob_key from quick_transfer_items qi join quick_transfers qt on qt.id=qi.transfer_id where qi.blob_key is not null and qt.state in ('uploading','ready') and qt.expires_at>now()"
         ).fetch_all(&self.pool).await.map_err(Into::into)
     }
 

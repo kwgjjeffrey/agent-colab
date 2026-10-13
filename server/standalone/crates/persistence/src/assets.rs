@@ -395,7 +395,7 @@ impl Database {
     }
     pub async fn reclaim_expired_assets(&self) -> anyhow::Result<u64> {
         let mut tx = self.pool.begin().await?;
-        let expired:Vec<Uuid>=sqlx::query_scalar("select a.id from shared_assets a where a.retained_until<=now() and not exists(select 1 from channel_shares s where s.asset_id=a.id and s.state='active') order by a.id for update of a skip locked").fetch_all(&mut *tx).await?;
+        let expired:Vec<Uuid>=sqlx::query_scalar("select a.id from shared_assets a where a.source_adapter<>'skill-release-v1' and a.retained_until<=now() and not exists(select 1 from channel_shares s where s.asset_id=a.id and s.state='active') order by a.id for update of a skip locked").fetch_all(&mut *tx).await?;
         if expired.is_empty() {
             return Ok(0);
         }

@@ -49,6 +49,7 @@ mod work_events;
 mod activity;
 mod sessions;
 mod skills;
+mod skill_releases;
 mod system;
 mod transfers;
 #[cfg(test)]
@@ -810,6 +811,11 @@ pub fn router(state: AppState, security: LocalSecurity) -> Router {
             "/v1/sessions/{share_id}",
             delete(sessions::withdraw_session),
         )
+        .route("/v1/channels/{channel_id}/skill-releases",axum::routing::post(skill_releases::publish))
+        .route("/v1/skills/{share_id}/releases",get(skill_releases::list))
+        .route("/v1/skills/{share_id}/releases/{version}/artifact",get(skill_releases::download))
+        .route("/v1/skills/{share_id}/releases/promote",axum::routing::post(skill_releases::promote))
+        .route("/v1/skills/{share_id}/publishers",axum::routing::put(skill_releases::publisher))
         .route("/v1/feedbacks/settings",get(feedback::settings).put(feedback::configure))
         .route("/v1/feedbacks/hook",axum::routing::post(feedback::hook))
         .route("/v1/feedbacks/list-feedback-access", axum::routing::post(feedback::list_access))

@@ -19,7 +19,9 @@ const JOB_MATERIALIZE: &str = "materialize_skill";
 #[derive(Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub(super) struct SkillShare {
-    id: String,
+    #[serde(default)]
+    source_adapter: String,
+    pub(super) id: String,
     channel_id: String,
     name: String,
     description: Option<String>,
@@ -565,10 +567,11 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
     }
     let revisions: Vec<Revision> = response.json().await.map_err(LocalError::internal)?;
     let user_id=current_user_id(state).await?;
-    let asset_id=assets::binding(state,share_id).await?.asset_id;
+    let binding=assets::binding(state,share_id).await?;
+    let asset_id=binding.asset_id;
     let _materialization_guard=assets::publication_guard(state,"materialize_skill",&format!("{user_id}:{asset_id}")).await;
-    let latest = revisions
-        .last()
+    // The durable asset head can point to an older release after rollback.
+    let latest = revisions.iter().find(|r| Some(&r.root_oid)==binding.current_root_oid.as_ref())
         .ok_or_else(|| LocalError::bad_request("No Skill snapshot has been published"))?;
     let repo = state
         .inner
@@ -670,6 +673,7 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
     let (local_path,root):(String,String)=store.query_row("select local_path,last_root_oid from skill_materializations where share_id=coalesce((select asset_id from local_asset_references where reference_id=?1 and user_id=?2),?1) and user_id=?2",[share_id,user_id],|row|Ok((row.get(0)?,row.get(1)?))).map_err(LocalError::internal)?;
     let (name,description,contributor,avatar,updated):(String,Option<String>,String,Option<String>,String)=store.query_row("select name,description,contributor_name,contributor_avatar_url,remote_updated_at from skill_share_cache where share_id=?1",[share_id],|row|Ok((row.get(0)?,row.get(1)?,row.get(2)?,row.get(3)?,row.get(4)?))).map_err(LocalError::internal)?;
     Ok(SkillShare {
+        source_adapter: String::new(),
         id: share_id.into(),
         channel_id: String::new(),
         name,
@@ -860,23 +864,7 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
     if local.is_some() {
         return Ok(local);
     }
-    let token = access_token(state).await?;
-    let response = state
-        .inner
-        .http
-        .get(format!(
-            "{}/v1/skills/{share_id}/revisions",
-            state.inner.server_url
-        ))
-        .bearer_auth(token)
-        .send()
-        .await
-        .map_err(LocalError::internal)?;
-    if !response.status().is_success() {
-        return Err(remote_error(response).await);
-    }
-    let revisions: Vec<Revision> = response.json().await.map_err(LocalError::internal)?;
-    Ok(revisions.last().map(|item| item.root_oid.clone()))
+    Ok(assets::binding(state, share_id).await?.current_root_oid)
 
 }).await
 }

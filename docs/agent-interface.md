@@ -524,3 +524,7 @@ Canvas text-to-document reference: `colab-canvas replace-with-canvas --ref '<sou
 
 
 Workbench Skill Feedbacks uses a Skill selector list and directly visible evaluation items, rather than asset cards or a counted-entry dialog. Each item renders full Markdown/YAML and links to the existing raw Session reader. The access dialog lists real account identities and owner/manager/reviewer roles. Owners and explicit builtin managers can grant/revoke reviewer access by an existing account email; reviewers cannot delegate. Server validates mutations and stores an audit event. Initial builtin operator reviewer grants seed managers once; environment bootstrap cannot overwrite subsequent GUI grants.
+
+## Skill artifact releases
+
+`colab-skill-release publish` requires `--channel`, `--package`, `--version` and `--artifact`. It publishes an immutable Skill ZIP through Local Core, verifies full archive readback and returns the stable consumer reference. `history`, `download`, `promote`, `grant` and `revoke` manage this additional source adapter. Existing directory sharing and `colab-skill-tool ensure` are unchanged. See [Skill artifact releases](skill-artifact-releases.md).

@@ -1547,3 +1547,10 @@ Published/installed public promotion 0.1.245-dev with GUI 0.1.181-dev and enterp
 ### 2026-10-10 — Remove permanent Canvas Add image entrance
 
 Removed the file picker and permanent Add image button; the upload-status container renders nothing when no upload exists. Existing paste/drop handlers and upload retry/dismiss remain unchanged. TypeScript/build passed. Installed public and enterprise Canvas browser checks confirmed an editable document with no Add image button. Public246/GUI182 and enterprise27/GUI19 published and installed with canonical artifact readback and enterprise client/isolation checks; all other components retained.
+
+## Skill artifact publication — 2026-10-13
+
+- Implemented the additional release source adapter, immutable archive/history, publisher delegation/revocation, exact archive download and rollback, without registering source watchers or changing directory synchronization.
+- Added the thin `colab-skill-release` publisher and canonical `packaging/publish-skill-to-colab.py` scaffold target; first publication requires Channel selection.
+- Existing Skill preview, native installation/update and feedback identities are reused; GUI exposes current version and recent release history.
+- Scoped real Core/Server/PostgreSQL regression `20261013T050455Z-450b9297` passed using the canonical Colab Skill ZIP, including distinct collaborator, revocation, native consumption and rollback/update. Remote release acceptance remains pending.

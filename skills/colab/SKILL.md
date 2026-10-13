@@ -118,3 +118,14 @@ and preserves surrounding formatting and existing capsules. Ambiguous text or a 
 read revision fails without mutation. Do not fabricate encoded mention attributes in patches.
 
 When text occurs more than once, pass `--context '<exact unique Markdown line or excerpt from read>'` to select the intended occurrence. Do not guess an occurrence number.
+
+## Publish a Skill artifact to a Channel
+
+Use this path when Colab is the release source. It does not register a watched local Skill directory or change directory-sync assets. Build a ZIP containing one Skill root with `SKILL.md`; retain the same package identity across releases.
+
+```sh
+bin/colab-skill-release publish --channel '<Channel name or ID>' --package '<stable-package-name>' --version '<version>' --artifact '/absolute/path/skill.zip' --source-commit '<commit>'
+bin/colab-skill-release history --reference-id '<referenceId from publication>'
+```
+
+A version is immutable: retries with the same bytes reuse it; changed bytes require a new version. Consumers use the returned `stableRef` with the existing `colab-skill-tool ensure` command; preview, comments and installation use the ordinary Channel Skill asset. To let another developer publish new versions, the owner runs `colab-skill-release grant --reference-id '<id>' --user-id '<member user ID>'`. That developer publishes with the same Channel, package identity and `--reference-id '<id>'`. Use `revoke` to remove publishing permission and `promote --reference-id '<id>' --version '<existing-version>'` to roll back the installable version.

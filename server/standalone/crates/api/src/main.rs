@@ -24,6 +24,7 @@ mod session_indexes;
 #[cfg(test)]
 mod session_protocol_tests;
 mod assets;
+mod skill_releases;
 mod feedback;
 mod canvas;
 mod canvas_images;
@@ -262,6 +263,11 @@ fn router(state: AppState) -> Router {
             "/v1/file-revisions/{revision_id}/content",
             get(download_file_revision),
         )
+        .route("/v1/channels/{channel_id}/skill-packages", post(skill_releases::register))
+        .route("/v1/skills/{share_id}/releases", get(skill_releases::list).post(skill_releases::publish).layer(axum::extract::DefaultBodyLimit::max(80*1024*1024)))
+        .route("/v1/skills/{share_id}/releases/promote", post(skill_releases::promote))
+        .route("/v1/skills/{share_id}/releases/{version}/artifact", get(skill_releases::download))
+        .route("/v1/skills/{share_id}/publishers", axum::routing::put(skill_releases::publisher))
         .route(
             "/v1/channels/{channel_id}/skills",
             get(list_skill_shares).post(create_skill_share),

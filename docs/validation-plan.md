@@ -1539,3 +1539,9 @@ Published/installed public promotion 0.1.245-dev with GUI 0.1.181-dev and enterp
 ### 2026-10-10 — Remove permanent Canvas Add image entrance
 
 Removed the file picker and permanent Add image button; the upload-status container renders nothing when no upload exists. Existing paste/drop handlers and upload retry/dismiss remain unchanged. TypeScript/build passed. Installed public and enterprise Canvas browser checks confirmed an editable document with no Add image button. Public246/GUI182 and enterprise27/GUI19 published and installed with canonical artifact readback and enterprise client/isolation checks; all other components retained.
+
+## Skill artifact release validation — 2026-10-13
+
+- Core and Server builds and GUI TypeScript check passed; archive parser tests passed for wrapped roots/nested files and rejected traversal, Git metadata or absent Skill roots.
+- Agent Dev Suite Run `20261013T050455Z-450b9297`: `skills.releases.publication` passed. It used isolated PostgreSQL, Server and Core plus the canonical Colab Skill archive; validated original ZIP full digest readback, idempotent retry, immutable-version conflict, stable Channel reference, retained history, existing preview, no watched source, native installed entrypoint, rollback/update, distinct collaborator publication and revoked publisher rejection. The temporary Claude installation and owned processes were removed.
+- This record proves the implemented local end-to-end path. Public/enterprise deployment and a real account Channel publication are not yet recorded as accepted.

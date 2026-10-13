@@ -374,3 +374,5 @@ The operation-workbench artifact owns desktop/operation-workbench, VERSION, ZIP 
 
 
 Workbench Skill Feedbacks uses a Skill selector list and directly visible evaluation items, rather than asset cards or a counted-entry dialog. Each item renders full Markdown/YAML and links to the existing raw Session reader. The access dialog lists real account identities and owner/manager/reviewer roles. Owners and explicit builtin managers can grant/revoke reviewer access by an existing account email; reviewers cannot delegate. Server validates mutations and stores an audit event. Initial builtin operator reviewer grants seed managers once; environment bootstrap cannot overwrite subsequent GUI grants.
+
+Artifact-published Skills use the ordinary Catalog placement and Skill preview. The preview shows the current version and an expandable recent release history. Artifact publication is a developer command workflow with an explicit Channel; it does not add an upload-configuration dialog.

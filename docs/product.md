@@ -268,3 +268,5 @@ The operation-workbench artifact owns desktop/operation-workbench, VERSION, ZIP 
 
 
 Workbench Skill Feedbacks uses a Skill selector list and directly visible evaluation items, rather than asset cards or a counted-entry dialog. Each item renders full Markdown/YAML and links to the existing raw Session reader. The access dialog lists real account identities and owner/manager/reviewer roles. Owners and explicit builtin managers can grant/revoke reviewer access by an existing account email; reviewers cannot delegate. Server validates mutations and stores an audit event. Initial builtin operator reviewer grants seed managers once; environment bootstrap cannot overwrite subsequent GUI grants.
+
+Skill developers may choose Colab as the artifact distribution source, publishing a versioned ZIP into an explicit Channel through the release tool. These assets have the same preview, consumption and feedback identity as directory-shared Skills; future versions do not require the original uploader's machine to install or synchronize them.

@@ -1,0 +1,74 @@
+#!/usr/bin/env python3
+"""Publish immutable Skill artifacts through the user's authenticated Local Core."""
+from __future__ import annotations
+import argparse
+import hashlib
+import sys
+import tempfile
+from pathlib import Path
+from urllib.parse import quote
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'lib'))
+from local_api import DEFAULT_CORE, LocalApiError, download, request
+from output import failure, success
+
+
+def channel_id(core, value):
+    rows = request('GET', '/v1/channels', core=core)
+    exact = [r for r in rows if r['id'] == value]
+    found = exact or [r for r in rows if r['name'].casefold() == value.casefold()]
+    if len(found) != 1:
+        raise ValueError('Channel must identify exactly one existing Channel')
+    return found[0]['id']
+
+
+def main():
+    p = argparse.ArgumentParser(description=__doc__)
+    p.add_argument('--core', default=DEFAULT_CORE)
+    commands = p.add_subparsers(dest='operation', required=True)
+    publish = commands.add_parser('publish')
+    publish.add_argument('--channel', required=True)
+    publish.add_argument('--artifact', required=True)
+    publish.add_argument('--package', required=True, help='Stable package identity, reused across releases')
+    publish.add_argument('--version', required=True)
+    publish.add_argument('--reference-id', help='Existing published Skill reference for collaborator publishing')
+    publish.add_argument('--source-commit')
+    publish.add_argument('--notes', default='')
+    for name in ('history', 'promote', 'download', 'grant', 'revoke'):
+        c = commands.add_parser(name)
+        c.add_argument('--reference-id', required=True)
+        if name in ('promote', 'download'): c.add_argument('--version', required=True)
+        if name == 'download': c.add_argument('--output', required=True)
+        if name in ('grant', 'revoke'): c.add_argument('--user-id', required=True)
+    args = p.parse_args()
+    try:
+        if args.operation == 'publish':
+            artifact = Path(args.artifact).expanduser().resolve(strict=True)
+            channel = channel_id(args.core, args.channel)
+            receipt = request('POST', f'/v1/channels/{channel}/skill-releases', core=args.core, timeout=180,
+                body={'artifactPath': str(artifact), 'packageKey': hashlib.sha256(args.package.encode()).hexdigest(),
+                      'version': args.version, 'referenceId': args.reference_id,
+                      'sourceCommit': args.source_commit, 'releaseNotes': args.notes})
+            # Read the durable archive back through Core before declaring publication successful.
+            with tempfile.TemporaryDirectory() as temp:
+                readback = download(f"/v1/skills/{receipt['referenceId']}/releases/{quote(args.version, safe='')}/artifact",
+                                    Path(temp) / 'artifact.zip', core=args.core, limit=25*1024*1024)
+            if readback['sha256'] != receipt['artifactSha256'] or readback['sha256'] != hashlib.sha256(artifact.read_bytes()).hexdigest():
+                raise ValueError('Published artifact readback differs from the source package')
+            return success({k: receipt[k] for k in ('referenceId', 'stableRef', 'version', 'releaseId')})
+        reference = quote(args.reference_id, safe='')
+        path = f'/v1/skills/{reference}'
+        if args.operation == 'history':
+            rows = request('GET', path+'/releases', core=args.core)
+            return success({'releases': [{k: row[k] for k in ('version','releaseNotes','sourceCommit','createdAt')} for row in rows]})
+        if args.operation == 'download':
+            return success(download(path+f'/releases/{quote(args.version, safe="")}/artifact', args.output, core=args.core, limit=25*1024*1024))
+        if args.operation == 'promote':
+            return success(request('POST', path+'/releases/promote', core=args.core, body={'version': args.version}))
+        return success(request('PUT', path+'/publishers', core=args.core, body={'userId': args.user_id, 'enabled': args.operation == 'grant'}))
+    except (ValueError, OSError) as error:
+        return failure('invalid_argument', str(error), 2)
+    except LocalApiError as error:
+        return failure('local_api_error', str(error), error.exit_code)
+
+if __name__ == '__main__':
+    sys.exit(main())
