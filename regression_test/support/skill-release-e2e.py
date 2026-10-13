@@ -72,6 +72,20 @@ try:
             for entry in original.infolist():z.writestr(entry,original.read(entry.filename))
             if extra:z.writestr((REPO/'skills/colab/VERSION').read_text().strip()+'/RELEASE-TEST.txt',extra)
     package()
+    project=root/'developer-project'; project.mkdir()
+    with zipfile.ZipFile(artifact) as z:
+        prefix=z.namelist()[0].split('/')[0]+'/'
+        for name in z.namelist():
+            if not name.endswith('/'):
+                dest=project/name.removeprefix(prefix);dest.parent.mkdir(parents=True,exist_ok=True);dest.write_bytes(z.read(name))
+    subprocess.run(['git','init',str(project)],check=True,capture_output=True)
+    for key,value in [('user.email','test@example.invalid'),('user.name','Release test')]:subprocess.run(['git','-C',str(project),'config',key,value],check=True)
+    cli('init','--project',str(project),'--skill-dir','.','--channel',channel['id'],'--package','developer-project')
+    subprocess.run(['git','-C',str(project),'add','.'],check=True)
+    subprocess.run(['git','-C',str(project),'commit','-m','Release scaffold'],check=True,capture_output=True)
+    generated=subprocess.run(['python3',str(project/'scripts/publish-colab-skill.py'),'--version','project-1'],env=env,text=True,capture_output=True,timeout=180)
+    assert generated.returncode==0,generated.stdout+generated.stderr
+    assert json.loads(generated.stdout)['ok']
     base=['publish','--channel',channel['id'],'--package','agent-colab','--artifact',str(artifact)]
     version=(REPO/'skills/colab/VERSION').read_text().strip()
     result=subprocess.run(['python3',str(REPO/'packaging/publish-skill-to-colab.py'),'--channel',channel['id'],'--package','agent-colab','--artifact',str(artifact),'--version',version,'--receipt',str(root/'receipt.json')],env=env,text=True,capture_output=True,timeout=180)
@@ -89,7 +103,7 @@ try:
             raw=response.read();return json.loads(raw) if raw else None
     preview=local('/v1/skills/'+first['referenceId']+'/preview');assert 'Agent Colab' in preview['content']
     assert db.execute('select count(*) from local_skill_sources').fetchone()[0]==0
-    assert sql('select count(*) from skill_releases')=='2'
+    assert sql('select count(*) from skill_releases')=='3'
     # Exercise ordinary installation with the actual Colab package in an unused Agent target.
     target=pathlib.Path.home()/'.claude/skills/agent-colab'
     assert not target.exists() and not target.is_symlink(), 'Acceptance target already exists'

@@ -129,3 +129,13 @@ bin/colab-skill-release history --reference-id '<referenceId from publication>'
 ```
 
 A version is immutable: retries with the same bytes reuse it; changed bytes require a new version. Consumers use the returned `stableRef` with the existing `colab-skill-tool ensure` command; preview, comments and installation use the ordinary Channel Skill asset. To let another developer publish new versions, the owner runs `colab-skill-release grant --reference-id '<id>' --user-id '<member user ID>'`. That developer publishes with the same Channel, package identity and `--reference-id '<id>'`. Use `revoke` to remove publishing permission and `promote --reference-id '<id>' --version '<existing-version>'` to roll back the installable version.
+
+### Publish another Skill project as an artifact
+
+Initialize a project-owned release target:
+
+```sh
+bin/colab-skill-release init --project /absolute/project --skill-dir skills/my-skill --channel CHANNEL_ID --package my-skill
+```
+
+Edit `colab-release.json`: `buildCommands` and `validationCommands` are arrays of argv arrays. Set optional `artifactFile` to reuse an existing project-relative distributable ZIP, or leave it unset to package tracked files under `skillDirectory`. Commit the scaffold and source, then run `python3 scripts/publish-colab-skill.py --version VERSION --notes 'Release notes'`. The generated script uses the installed publisher; `COLAB_SKILL_RELEASE_TOOL` overrides its location on another host. The authenticated Local Core uploads and validates the archive; full download verification precedes success. Receipts and immutable local packages live in ignored `.colab-release/`. Reuse the package identity for updates. Optional `referenceId` targets an existing publication for an authorized collaborator.

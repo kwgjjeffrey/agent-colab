@@ -20,3 +20,5 @@ python3 packaging/publish-skill-to-colab.py --channel '<Channel>' \
 ```
 
 GUI Skill preview exposes the current release version and expandable recent version history. Installing, updating and reading feedback continues through the existing interfaces. Native Agent installation changes require a new Agent session to load the new version.
+
+Other Skill projects can initialize `colab-release.json` and `scripts/publish-colab-skill.py` with `colab-skill-release init`. The scaffold packages tracked Skill files or reuses `artifactFile`, executes configured build/test argv arrays, requires committed source, and retains immutable ZIPs and publication receipts in ignored `.colab-release/`. `--parent` validates the selected same-Channel Catalog before publishing and places the stable reference after archive readback; a placement failure can be retried with the same immutable version. Share a Skill exposes a separate Publish as Artifact prompt containing the current Channel ID and selected parent, alongside directory synchronization.
