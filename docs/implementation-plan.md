@@ -1574,3 +1574,8 @@ Verified TypeScript build, isolated real Core/Server/PostgreSQL publication Run 
 Catalog content reuses the sidebar mixed-tree renderer, branch data, expansion and selection callbacks. Rows show item icons, direct child counts and shared-item contributor/profile controls; branches expand/collapse without navigation, names open the existing destination. Direct Catalog focus loads its children. Content uses distinct item attributes to preserve sidebar navigation selectors. No new tree model or Server/Core protocol.
 
 Seven Catalog component checks passed. Installed GUI end-to-end Run 20261013T081748Z-bf814319 passed actual branch expand/collapse/re-expand and Canvas navigation, with screenshot review and owned fixture cleanup. Public promotion 0.1.249-dev installs GUI 0.1.185-dev; enterprise promotion 0.1.30-ks.1 installs GUI 0.1.22-ks.1. Artifact readback, installed client acceptance and stable promotion passed; Core, Skill, Shell and Server retained.
+
+
+### Portable Skill delivery identity — 2026-10-13
+
+Implemented one-command artifact delivery with automatic `.colab/identity.json` seeding, optional project installer and final identity verification. Hook recognition uses the issued identity and payload digest after relocation or symlink resolution. Public promotion 0.1.250-dev and enterprise promotion 0.1.31-ks.1 are published; enterprise installed-client acceptance passed.
