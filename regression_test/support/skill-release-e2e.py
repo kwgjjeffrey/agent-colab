@@ -80,7 +80,7 @@ try:
                 dest=project/name.removeprefix(prefix);dest.parent.mkdir(parents=True,exist_ok=True);dest.write_bytes(z.read(name))
     subprocess.run(['git','init',str(project)],check=True,capture_output=True)
     for key,value in [('user.email','test@example.invalid'),('user.name','Release test')]:subprocess.run(['git','-C',str(project),'config',key,value],check=True)
-    cli('init','--project',str(project),'--skill-dir','.','--channel',channel['id'],'--package','developer-project')
+    cli('init','--project',str(project),'--skill-dir','.','--channel',channel['id'],'--package','developer-project','--parent','colab://channel/'+channel['id'])
     subprocess.run(['git','-C',str(project),'add','.'],check=True)
     subprocess.run(['git','-C',str(project),'commit','-m','Release scaffold'],check=True,capture_output=True)
     generated=subprocess.run(['python3',str(project/'scripts/publish-colab-skill.py'),'--version','project-1'],env=env,text=True,capture_output=True,timeout=180)
@@ -139,7 +139,7 @@ try:
     third=cli(*base,'--version','selftest-3','--reference-id',first['referenceId'])['data'];assert third['referenceId']==first['referenceId']
     switch('owner');cli('revoke','--reference-id',first['referenceId'],'--user-id',reporter)
     switch('reporter');denied=cli(*base,'--version','selftest-4','--reference-id',first['referenceId'],ok=False);assert '403' in denied['error']['message']
-    summary={'selfSkillArchivePublished':True,'immutableRetryReused':True,'changedSameVersionRejected':True,'stableChannelReference':True,'twoVersionsRetained':True,'existingPreviewConsumer':True,'noSourceWatcherRegistered':True,'nativeInstallationAndEntrypoint':True,'rollbackAndUpdate':True,'collaboratorPublication':True,'revocationEnforced':True,'scaffoldTarget':True,'directorySyncUnchanged':True}
+    summary={'selfSkillArchivePublished':True,'immutableRetryReused':True,'changedSameVersionRejected':True,'stableChannelReference':True,'twoVersionsRetained':True,'existingPreviewConsumer':True,'noSourceWatcherRegistered':True,'nativeInstallationAndEntrypoint':True,'rollbackAndUpdate':True,'collaboratorPublication':True,'revocationEnforced':True,'scaffoldTarget':True,'genericProjectScaffold':True,'directorySyncUnchanged':True}
     print(json.dumps(summary));(REPO/'.trial/skill-releases/evidence.json').write_text(json.dumps(summary,indent=2))
 except Exception:
     print((root/'server.log').read_text()[-2500:] if (root/'server.log').exists() else '')

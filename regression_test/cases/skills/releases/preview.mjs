@@ -42,5 +42,17 @@ export async function run(ctx) {
   await ctx.page.getByRole('button',{name:'Give to Agent',exact:true}).click();
   const prompt = await ctx.page.getByRole('dialog').locator('pre').innerText();
   ctx.assert('Existing installer remains the consumption path', prompt.includes('colab-skill-tool') && prompt.includes('ensure'), true);
-  await ctx.screenshot('Published Colab Skill version and handoff');
+  await ctx.page.keyboard.press('Escape');
+  await ctx.page.getByRole('button',{name:'Add',exact:true}).click();
+  await ctx.page.getByRole('menuitem',{name:'Skill',exact:true}).click();
+  await ctx.page.getByRole('button',{name:'Publish as Artifact',exact:true}).click();
+  const artifactDialog=ctx.page.getByRole('dialog').filter({has:ctx.page.getByRole('heading',{name:'Publish a Skill Artifact',exact:true})});
+  const publicationPrompt=await artifactDialog.locator('pre').innerText();
+  ctx.assert('Artifact prompt includes exact Channel and real scaffold',publicationPrompt.includes(channel.id)&&publicationPrompt.includes('colab-skill-release init')&&publicationPrompt.includes('scripts/publish-colab-skill.py'),true);
+  ctx.assert('Artifact prompt retains Catalog destination',publicationPrompt.includes('--parent'),true);
+  await ctx.screenshot('Project Skill artifact publication prompt');
+  await ctx.page.keyboard.press('Escape');
+  await ctx.page.getByRole('dialog').filter({has:ctx.page.getByRole('heading',{name:'Share a Skill',exact:true})}).waitFor();
+  ctx.assert('Cancel preserves directory-sharing dialog',await ctx.page.getByRole('button',{name:'Choose Skill folder',exact:true}).count(),1);
+  await ctx.page.keyboard.press('Escape');
 }

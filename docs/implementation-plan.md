@@ -1554,3 +1554,10 @@ Removed the file picker and permanent Add image button; the upload-status contai
 - Added the thin `colab-skill-release` publisher and canonical `packaging/publish-skill-to-colab.py` scaffold target; first publication requires Channel selection.
 - Existing Skill preview, native installation/update and feedback identities are reused; GUI exposes current version and recent release history.
 - Scoped real Core/Server/PostgreSQL regression `20261013T050455Z-450b9297` passed using the canonical Colab Skill ZIP, including distinct collaborator, revocation, native consumption and rollback/update. Public promotion 0.1.247-dev and enterprise promotion 0.1.28-ks.1 are published and installed; real Colab/Kwai Colab artifacts were published and consumed in authorized Channels.
+
+
+### 2026-10-13 — Project Skill publication scaffold and GUI entry
+
+Added project-owned colab-release.json and scripts/publish-colab-skill.py via colab-skill-release init. Tracked Skill files are packaged deterministically, or an existing ZIP is reused; configured argv build/tests run against committed source. Publish-project retains immutable local artifacts and receipts and reuses Core publication/readback. Same-Channel Catalog destinations are validated before publication and moved using the existing Server-owned placement API. Share a Skill now exposes Publish as Artifact with the exact Channel and parent in the Agent handoff. Existing directory sharing remains available.
+
+Verified TypeScript build, isolated real Core/Server/PostgreSQL publication Run 20261013T062250Z-8475e217 (generated project script, archive readback, immutable updates, native consumption, rollback, publisher revocation and directory synchronization), and installed GUI Run 20261013T062620Z-2d661ce3 (exact prompt, Catalog destination, cancellation preserves original sharing dialog). Public promotion 0.1.248-dev: GUI 0.1.184-dev and Skill 0.1.72-dev. Enterprise promotion 0.1.29-ks.1: GUI 0.1.21-ks.1 and Skill 0.1.9-ks.2; candidate installation, client acceptance and stable readback passed. Core, Server and Shell retained.
