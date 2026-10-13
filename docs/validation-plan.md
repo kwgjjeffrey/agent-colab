@@ -1570,3 +1570,8 @@ Seven Catalog component checks passed. Installed GUI end-to-end Run 20261013T081
 ### Portable Skill delivery identity acceptance — 2026-10-13
 
 Real isolated Core/Server regression 20261013T091510Z-e848e675 passed after repairing Channel origin mapping: relocated identity feedback uploaded, project installer verified, modified payload rejected, missing marker rejected; original ZIP and directory synchronization remained valid. Initial authorization failures are retained in test records. Installed public delivery also passed. Enterprise install-candidate and accept-client passed, then stable was promoted to 0.1.31-ks.1 (Core 0.1.18-ks.1, GUI 0.1.23-ks.1, Skill 0.1.9-ks.3). Scope: macOS arm64; company signing/notarization not accepted.
+
+
+### Message unread enterprise rollout — 2026-10-13
+
+Corrected the release omission: commit 25aaad5 had not been included in enterprise 0.1.31-ks.1. Server 0.1.11-ks.1 is deployed with migration 0049; installed authenticated enterprise Core read-state API returns successfully. Promotion 0.1.32-ks.1 includes Core 0.1.19-ks.1, GUI 0.1.24-ks.1 and Shell 0.1.2-ks.1; Skill/workbench retained. Enterprise Shell packaging now includes unread-badge.cjs. Installed-client acceptance passed. Two-account GUI Run 20261013T104510Z-7557c972 passed with the exact installed enterprise Core/GUI and isolated Server: incoming counts, own-message exclusion, Message/Channel badges, focus gating, history/jump and heartbeat convergence. Earlier fixture/auth/browser failures remain recorded; production synthetic fixture was removed. Production SSO two-recipient GUI acceptance is not claimed. Initial migration marks existing history read; recipients must update clients to receive the new UI.

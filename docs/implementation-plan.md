@@ -1579,3 +1579,8 @@ Seven Catalog component checks passed. Installed GUI end-to-end Run 20261013T081
 ### Portable Skill delivery identity — 2026-10-13
 
 Implemented one-command artifact delivery with automatic `.colab/identity.json` seeding, optional project installer and final identity verification. Hook recognition uses the issued identity and payload digest after relocation or symlink resolution. Public promotion 0.1.250-dev and enterprise promotion 0.1.31-ks.1 are published; enterprise installed-client acceptance passed.
+
+
+### Message unread enterprise rollout — 2026-10-13
+
+Corrected the release omission: commit 25aaad5 had not been included in enterprise 0.1.31-ks.1. Server 0.1.11-ks.1 is deployed with migration 0049; installed authenticated enterprise Core read-state API returns successfully. Promotion 0.1.32-ks.1 includes Core 0.1.19-ks.1, GUI 0.1.24-ks.1 and Shell 0.1.2-ks.1; Skill/workbench retained. Enterprise Shell packaging now includes unread-badge.cjs. Installed-client acceptance passed. Two-account GUI Run 20261013T104510Z-7557c972 passed with the exact installed enterprise Core/GUI and isolated Server: incoming counts, own-message exclusion, Message/Channel badges, focus gating, history/jump and heartbeat convergence. Earlier fixture/auth/browser failures remain recorded; production synthetic fixture was removed. Production SSO two-recipient GUI acceptance is not claimed. Initial migration marks existing history read; recipients must update clients to receive the new UI.

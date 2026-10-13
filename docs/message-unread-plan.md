@@ -38,3 +38,5 @@ The additive migration is backward compatible with old clients; rollback can
 retain the reading cursor column and trigger. No production migration or artifact
 promotion has been performed by this change yet. macOS is the native acceptance
 target; Windows overlay icons are not implemented by `app.setBadgeCount`.
+
+Enterprise rollout completed 2026-10-13: promotion 0.1.32-ks.1, Server 0.1.11-ks.1; installed-client two-account GUI Run 20261013T104510Z-7557c972 passed against isolated Server. Production authenticated read-state API checked; production recipient GUI acceptance not claimed.
