@@ -52,6 +52,8 @@ import type { OperationScope } from "@/api/operation-runner";
 import { UserIdentity } from "@/features/context/UserIdentity";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { ItemIcon } from "./ItemIcon";
+import { useUnreadMessages } from "@/features/messages/unread-state";
+import { UnreadBadge } from "@/features/messages/UnreadBadge";
 import { CreationHint } from "./CreationHint";
 import { CatalogDragTarget, type DropPosition } from "./CatalogDragTarget";
 import {
@@ -119,6 +121,7 @@ export function CatalogWorkspace({
   heading,
   activity,
 }: Props) {
+  const unread = useUnreadMessages()[channelId]?.unreadCount ?? 0;
   const [branches, setBranches] = useState<Record<string, CatalogItem[]>>({});
   const loadEpoch = useRef(0);
   const errorScope = useRef(0);
@@ -595,6 +598,7 @@ export function CatalogWorkspace({
             <Button
               variant={view === "messages" ? "secondary" : "ghost"}
               aria-label="Message"
+              aria-description={unread ? `${unread} unread messages` : undefined}
               className="justify-start"
               onClick={() => {
                 setSelectedCatalog(undefined);
@@ -603,6 +607,7 @@ export function CatalogWorkspace({
             >
               <MessageSquareIcon data-icon="inline-start" />
               Message
+              <UnreadBadge count={unread} className="ml-auto" />
             </Button>
             <ScrollArea className="min-h-0 flex-1">
               <CatalogDragTarget

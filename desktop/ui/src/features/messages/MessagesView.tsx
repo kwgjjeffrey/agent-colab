@@ -115,7 +115,8 @@ export function MessagesView({
     },
     [channelId],
   );
-  const cached = messageCache.get(channelId);
+  const cacheKey = `${accountId}:${channelId}`;
+  const cached = messageCache.get(cacheKey);
   const [hasEarlier, setHasEarlier] = useState(true);
   const [loadingEarlier, setLoadingEarlier] = useState(false);
   const [participants, setParticipants] = useState<Participant[]>([]),
@@ -175,7 +176,7 @@ const messageRequest = operation.message;
               ),
             ];
       lastSeqRef.current = next.at(-1)?.seq ?? 0;
-      messageCache.set(channelId, { rows: next, lastSeq: lastSeqRef.current });
+      messageCache.set(cacheKey, { rows: next, lastSeq: lastSeqRef.current });
       return next;
     });
 
@@ -235,7 +236,7 @@ const messageRequest = operation.message;
     return () => onActivityChange(undefined);
   }, [requests, onActivityChange]);
   useEffect(() => {
-    const cached = messageCache.get(channelId);
+    const cached = messageCache.get(cacheKey);
     lastSeqRef.current = cached?.lastSeq ?? 0;
     setMessages(cached?.rows ?? []);
     setReplyingTo(undefined);
@@ -347,7 +348,7 @@ const messageRequest = operation.message;
           ? current
           : [...current, created];
         lastSeqRef.current = next.at(-1)?.seq ?? lastSeqRef.current;
-        messageCache.set(channelId, {
+        messageCache.set(cacheKey, {
           rows: next,
           lastSeq: lastSeqRef.current,
         });

@@ -1,7 +1,9 @@
 import type { ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useLayoutEffect, useRef } from "react";
+import { Fragment, useLayoutEffect, useRef } from "react";
+import { Separator } from "@/components/ui/separator";
+import { useMessageReading } from "./use-message-reading";
 import { useStickToBottom } from "use-stick-to-bottom";
 import { Button } from "@/components/ui/button";
 import { CopyIcon, SparklesIcon, ListIcon, QuoteIcon } from "lucide-react";
@@ -56,10 +58,11 @@ export function MessageTimeline({
   onCopy?: (message: ChannelMessage) => void;
   onStartSelection: (message: ChannelMessage) => void;
 }) {
-  const { scrollRef, contentRef, stopScroll } = useStickToBottom({
+  const { scrollRef, contentRef, stopScroll, isAtBottom, scrollToBottom } = useStickToBottom({
     initial: "instant",
     resize: "instant",
   });
+  const { unreadCount, firstUnreadSeq } = useMessageReading(channelId, messages.at(-1)?.seq ?? 0, isAtBottom, scrollRef);
   const focused = useRef<string | undefined>(undefined);
   useLayoutEffect(() => {
     if (!focusId || focused.current === focusId) return;
@@ -73,6 +76,7 @@ export function MessageTimeline({
   const owners = new Map(agents.map((agent) => [agent.name, agent.ownerName])),
     messageById = new Map(messages.map((message) => [message.id, message]));
   return (
+    <div className="relative flex min-h-0 flex-1 flex-col">
     <div
       ref={scrollRef}
       className="min-h-0 flex-1 overflow-y-auto"
@@ -158,8 +162,11 @@ export function MessageTimeline({
               ? `${message.senderName}${owner ? ` (${owner}'s Agent)` : ""}`
               : message.senderName;
           return (
+            <Fragment key={message.id}>
+            {message.seq === firstUnreadSeq && <div role="separator" aria-label="Unread messages" className="flex items-center gap-3 px-4 py-3">
+              <Separator className="flex-1" /><span className="text-sm text-muted-foreground">Unread messages</span><Separator className="flex-1" />
+            </div>}
             <div
-              key={message.id}
               id={`message-${message.id}`}
               className="group/message flex items-start gap-3 px-4 py-2 hover:bg-muted/40"
             >
@@ -320,9 +327,14 @@ export function MessageTimeline({
                 </div>
               </div>
             </div>
+            </Fragment>
           );
         })}
       </div>
+    </div>
+    {!isAtBottom && unreadCount > 0 && <div className="absolute inset-x-0 bottom-3 flex justify-center pointer-events-none">
+      <Button className="pointer-events-auto" onClick={() => void scrollToBottom()}>{unreadCount} new messages ↓</Button>
+    </div>}
     </div>
   );
 }

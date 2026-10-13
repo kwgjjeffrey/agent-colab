@@ -706,6 +706,8 @@ pub fn router(state: AppState, security: LocalSecurity) -> Router {
             get(messaging::agent_request_events),
         )
         .route("/v1/messages/stream", get(messaging::stream))
+        .route("/v1/messages/read-state", get(messaging::read_states))
+        .route("/v1/channels/{channel_id}/messages/read-state", axum::routing::post(messaging::acknowledge_messages))
         .route("/v1/channels/{channel}/catalog-items", get(catalog::children))
         .route("/v1/channels/{channel}/catalog-items/position", patch(catalog::place))
         .route("/v1/channels/{channel}/catalog-items/{kind}/{item}/trail", get(catalog::trail))

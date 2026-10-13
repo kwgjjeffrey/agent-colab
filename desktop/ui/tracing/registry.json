@@ -3,6 +3,18 @@
   "unit": "desktop-ui",
   "operations": [
     {
+      "id": "messages.unread.refresh", "description": "Reconcile private account unread counts", "owner": "desktop-ui", "status": "candidate",
+      "entry": {"kind": "internal"},
+      "completion": {"success": "result.state_committed", "failure": "result.failed", "cancelled": "result.cancelled"},
+      "source": {"path": "desktop/ui/src/features/messages/unread-state.ts", "function": "refresh", "object": "useMessageUnreadAccount"}
+    },
+    {
+      "id": "messages.unread.acknowledge", "description": "Persist reading progress for the visible latest messages", "owner": "desktop-ui", "status": "candidate",
+      "entry": {"kind": "internal"},
+      "completion": {"success": "result.state_committed", "failure": "result.failed", "cancelled": "result.cancelled"},
+      "source": {"path": "desktop/ui/src/features/messages/unread-state.ts", "function": "acknowledgeMessages"}
+    },
+    {
       "id": "workspace.mutate",
       "description": "Persist native rename, catalog creation/removal and mixed-item placement from the unified workspace",
       "owner": "desktop-ui",

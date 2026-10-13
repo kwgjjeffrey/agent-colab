@@ -66,6 +66,8 @@ import { SessionsView, type SessionShare } from "@/features/sessions/SessionsVie
 import { WorkbenchEntry } from "@/features/workbench/WorkbenchEntry";
 import { SkillsView } from "@/features/skills/SkillsView";
 import { MessagesView } from "@/features/messages/MessagesView";
+import { useMessageUnreadAccount } from "@/features/messages/unread-state";
+import { UnreadBadge } from "@/features/messages/UnreadBadge";
 import { CanvasView } from "@/features/canvas/CanvasView";
 import { ChannelContextProvider } from "@/features/context/ChannelContext";
 import type { ContextResource } from "@/features/context/context-model";
@@ -90,6 +92,7 @@ declare global {
   interface Window {
     colabHost: {
       openWorkbench?: () => Promise<void>;
+      setUnreadCount?: (count: number) => Promise<void>;
       isElectron: boolean;
       openExternal(url: string): Promise<void>;
       choosePath(options: {
@@ -183,6 +186,12 @@ type InstallationMessage = { kind: "success" | "error"; text: string };
 
 function App() {
   const [auth, setAuth] = useState<Auth>({ authenticated: false });
+  const unread = useMessageUnreadAccount(auth.authenticated ? auth.user?.id : undefined);
+  const unreadTotal = Object.values(unread).reduce((sum, row) => sum + row.unreadCount, 0);
+  useEffect(() => {
+    void window.colabHost?.setUnreadCount?.(unreadTotal).catch(() => {});
+    document.title = unreadTotal ? `(${unreadTotal}) Colab` : "Colab";
+  }, [unreadTotal]);
   const [authResolved, setAuthResolved] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [workspaceLoadError, setWorkspaceLoadError] = useState<string>();
@@ -1107,6 +1116,7 @@ const api = operation.response;
                 </TooltipTrigger>
                 <TooltipContent side="right">{channel.name}</TooltipContent>
               </Tooltip>
+              <UnreadBadge count={unread[channel.id]?.unreadCount ?? 0} className="pointer-events-none absolute right-1 -top-1" />
               </div>
             ))}
             {auth.authenticated && (
@@ -1196,7 +1206,7 @@ const api = operation.response;
                 />} channelId={selected.id} channelName={selected.name} view={workspaceTab} focus={workspaceItem ?? contextFocus} onAdd={(kind,parent)=>void addWorkspaceItem(kind,parent)} onSelect={item=>{if(item==="add"||item==="message"){setWorkspaceItem(undefined);setContextFocus(undefined);setWorkspaceTab(item==="add"?"home":"messages");}else{setWorkspaceItem(item);if(item.kind!=="catalog"&&item.kind!=="skill")setContextFocus({kind:item.kind,id:item.id,name:item.name,channelId:selected.id});else setContextFocus(undefined);setWorkspaceTab(item.kind==="catalog"?"catalog":item.kind==="session"?"sessions":item.kind==="skill"?"skills":item.kind);}}}>
               <TabsContent value="home" className="min-h-0 flex-1 overflow-auto"><ChannelHome key={`${selected.id}:${activeHomeTip ?? "idle"}`} accountId={auth.user?.id ?? ""} busyTip={homeTryBusy} defaultAgent={installation?.defaultAgent ?? "codex"} installedAgents={installation?.targets ?? {}} actions={{channel: selected, onAdd: kind => void addWorkspaceItem(kind), onError: setError, quickShare: <QuickShareControl defaultAgent={installation?.defaultAgent ?? "codex"} installedAgents={installation?.targets ?? {}} onChoose={chooseFiles} />}} onTry={id => void tryHomeCase(id)} /></TabsContent>
               <TabsContent data-trace-target={traceTargets("context.people", "context.resources")} data-trace-region={"messages"} value="messages" className="min-h-0 flex-1 overflow-hidden">
-                <MessagesView accountId={auth.user?.id ?? ""} focusId={contextFocus?.kind === "message" ? contextFocus.id : undefined} channelId={selected.id} channelName={selected.name} settingsOpenToken={agentSettingsOpenToken} onSettingsOpenConsumed={()=>setAgentSettingsOpenToken(0)} defaultAgent={installation?.defaultAgent ?? "codex"} installedAgents={installation?.targets ?? {}} onError={setError} onNotice={setNotice} onActivityChange={setAgentActivity}/>
+                <MessagesView key={`${auth.user?.id}:${selected.id}`} accountId={auth.user?.id ?? ""} focusId={contextFocus?.kind === "message" ? contextFocus.id : undefined} channelId={selected.id} channelName={selected.name} settingsOpenToken={agentSettingsOpenToken} onSettingsOpenConsumed={()=>setAgentSettingsOpenToken(0)} defaultAgent={installation?.defaultAgent ?? "codex"} installedAgents={installation?.targets ?? {}} onError={setError} onNotice={setNotice} onActivityChange={setAgentActivity}/>
               </TabsContent>
               <TabsContent data-trace-target={traceTargets("sessions.list")} data-trace-region={"sessions"} value="sessions" className="min-h-0 flex-1 overflow-hidden">
                 <SessionsView

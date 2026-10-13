@@ -1,5 +1,11 @@
 # 技术验证计划
 
+### 2026-10-13 — Message unread reminders
+
+Isolated real Server/PostgreSQL plus two distinct Core accounts: Run `20261013T083354Z-662d3860` passed Message/Channel/native-bridge counts, exclusion of own messages, read-at-latest, stable history scrolling, explicit jump, background focus gating and independent-client acknowledgement reconciliation. Playwright's focus emulation is disabled during actual tab-focus assertions. Earlier fixture/timing failures are retained under parent Run `20261013T081526Z-8b9e6661`.
+
+The persistence contract passed against a disposable database: outsider denial, account isolation, Agent replies, stale/future acknowledgement clamp and leave/rejoin initialization. Four hook/store unit tests and one Shell IPC security test passed; actual Electron 40.8.2 verified production preload/IPC sets the macOS badge to 7 and clears to 0. GUI build/TypeScript, Core/Server checks and operation registry check passed. This does not claim Windows support, production migration, installed release acceptance or remote telemetry delivery.
+
 ### 2026-10-10 — Create context from @
 
 Frontend shared checkout: 54 files / 156 tests passed; clean release checkpoint: 54 files / 155 tests passed (the extra test belongs to unrelated telemetry development). TypeScript and Vite production build passed. New mapped-insertion tests cover saved caret, concurrent edits, cancellation, invalidated text, destroyed editor and failed creation. Menu tests cover hover and all three choices. Rust `skill_reference_has_an_install_consumer` and Python compact-context 3 tests passed. `context.references.add-mention` passed six actual GUI registration paths and cancellation in Run `20261010T081158Z-a1e5052c`, repeated against the packaged clean GUI in `20261010T081850Z-b05cfab9` (44 assertions); only native path picking and Session discovery metadata are fixture boundaries, registration/placement/storage remain real. Initial preflight/helper/adapter fixture errors remain in execution records. Packaged Skill Creator validation passed after normal template substitution.

@@ -121,6 +121,8 @@ pub(super) struct AgentRequestResponse {
 
 pub(super) fn routes() -> Router<AppState> {
     Router::new()
+        .route("/v1/messages/read-state", get(read_states))
+        .route("/v1/channels/{channel_id}/messages/read-state", post(acknowledge_messages))
         .route("/v1/channels/{channel_id}/participants", get(participants))
         .route("/v1/channels/{channel_id}/agent-runtimes", get(runtimes))
         .route(
@@ -173,6 +175,29 @@ pub(super) fn routes() -> Router<AppState> {
             "/v1/agent-runtimes/{runtime_id}/stream",
             get(runtime_stream),
         )
+}
+
+async fn read_states(State(state): State<AppState>, headers: HeaderMap)
+    -> Result<Json<Vec<colab_server_persistence::MessageReadState>>, ApiError> {
+    let user = authenticated_user(&state, &headers).await?;
+    state.database.message_read_states(user).await.map(Json)
+        .map_err(|_| ApiError::internal("message_read_state_failed"))
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct MessageAcknowledgement { last_read_seq: i64 }
+
+async fn acknowledge_messages(State(state): State<AppState>, headers: HeaderMap,
+    Path(channel): Path<uuid::Uuid>, Json(body): Json<MessageAcknowledgement>)
+    -> Result<Json<serde_json::Value>, ApiError> {
+    let user = authenticated_user(&state, &headers).await?;
+    if body.last_read_seq < 0 { return Err(ApiError::bad_request("invalid_read_sequence")); }
+    let seq = state.database.acknowledge_messages(user, channel, body.last_read_seq).await
+        .map_err(|_| ApiError::internal("message_acknowledgement_failed"))?
+        .ok_or_else(|| ApiError::forbidden("channel_access_forbidden"))?;
+    // Account streams reconcile private reading state on their existing heartbeat.
+    Ok(Json(serde_json::json!({"lastReadSeq":seq})))
 }
 
 async fn participants(

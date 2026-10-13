@@ -1,0 +1,40 @@
+// @vitest-environment jsdom
+import { act, cleanup, renderHook } from "@testing-library/react";
+import { afterEach, expect, it, vi } from "vitest";
+const mocks = vi.hoisted(() => ({ ack: vi.fn().mockResolvedValue(undefined), states: {} as Record<string, any> }));
+vi.mock("./unread-state", () => ({ acknowledgeMessages: mocks.ack, useUnreadMessages: () => mocks.states }));
+import { useMessageReading } from "./use-message-reading";
+afterEach(() => { cleanup(); vi.useRealTimers(); vi.restoreAllMocks(); mocks.ack.mockClear(); });
+it("acknowledges only a visible focused latest viewport, and keeps the entry divider", async () => {
+  vi.useFakeTimers();
+  vi.spyOn(document, "hasFocus").mockReturnValue(true);
+  mocks.states = { a: { lastReadSeq: 2, latestSeq: 8, unreadCount: 3, firstUnreadSeq: 4 } };
+  const viewport = { current: { getClientRects: () => [1] } } as any;
+  const hook = renderHook(({ bottom, seq }) => useMessageReading("a", seq, bottom, viewport), { initialProps: { bottom: false, seq: 8 } });
+  await act(() => vi.advanceTimersByTimeAsync(500));
+  expect(mocks.ack).not.toHaveBeenCalled();
+  hook.rerender({ bottom: true, seq: 6 });
+  await act(() => vi.advanceTimersByTimeAsync(500));
+  expect(mocks.ack).not.toHaveBeenCalled();
+  hook.rerender({ bottom: true, seq: 8 });
+  await act(() => vi.advanceTimersByTimeAsync(500));
+  expect(mocks.ack).toHaveBeenCalledWith("a", 8);
+  mocks.states = { a: { lastReadSeq: 8, latestSeq: 8, unreadCount: 0, firstUnreadSeq: null } };
+  hook.rerender({ bottom: true, seq: 8 });
+  expect(hook.result.current.firstUnreadSeq).toBe(4);
+});
+it("does not acknowledge a hidden viewport or a window which loses focus during the delay", async () => {
+  vi.useFakeTimers();
+  const focus = vi.spyOn(document, "hasFocus").mockReturnValue(true);
+  mocks.states = { a: { lastReadSeq: 0, latestSeq: 8, unreadCount: 3, firstUnreadSeq: 4 } };
+  const viewport = { current: { getClientRects: () => [] } } as any;
+  const hook = renderHook(() => useMessageReading("a", 8, true, viewport));
+  await act(() => vi.advanceTimersByTimeAsync(500));
+  expect(mocks.ack).not.toHaveBeenCalled();
+  viewport.current.getClientRects = () => [1];
+  mocks.states = { ...mocks.states, a: { ...mocks.states.a } };
+  hook.rerender();
+  focus.mockReturnValue(false);
+  await act(() => vi.advanceTimersByTimeAsync(500));
+  expect(mocks.ack).not.toHaveBeenCalled();
+});

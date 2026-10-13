@@ -46,6 +46,8 @@ mod invite_links;
 pub use invite_links::{InviteLink, InviteTarget};
 pub use device_auth::{DeviceChallenge, DeviceAccount, LoginDevice};
 mod messaging;
+mod message_read_state;
+pub use message_read_state::MessageReadState;
 mod transfers;
 pub use canvas::{Canvas, CanvasFolder, CanvasUpdate};
 pub use messaging::{

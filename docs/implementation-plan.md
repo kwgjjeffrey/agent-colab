@@ -1,5 +1,11 @@
 # Colab 实现计划
 
+### 2026-10-13 — Message unread reminders
+
+Implemented private membership read cursors and authenticated read/monotonic-ack APIs through Core. One account snapshot drives Message, Channel rail and native Shell badges. Only focused, visible, latest-position timelines acknowledge; own human messages do not count, Agent replies do. Historical membership starts read, rejoining starts at current history. Existing realtime heartbeats reconcile independent-client reads. Account cache keys and stale-response guards isolate account switches. Uses existing stick-to-bottom and shadcn primitives, without introducing a chat framework.
+
+Verified real PostgreSQL permissions/cursor contract, GUI Run `20261013T083354Z-662d3860`, four unread hook/store tests, native IPC restrictions, actual macOS Electron badge set/clear, GUI TypeScript/build and Rust Core/Server checks. See `message-unread-plan.md` for acceptance and rollout boundaries. Production deployment and artifact promotion are not yet performed.
+
 ### 2026-10-10 — Create context from @
 
 Implemented shared shadcn hover menu for Message/Canvas, existing creation-dialog orchestration with cancellation/channel guards, transaction-mapped insertion at the original @ range, and Skill resource lookup/projection/authorized Agent consumption. No source duplication, schema migration or Core change. Python Skill includes Skill context references and metadata inspection commands. GUI six-path acceptance passed in Run `20261010T081158Z-a1e5052c`, with real registration/placement and owned cleanup. Unrelated telemetry development remains excluded from this feature checkpoint.

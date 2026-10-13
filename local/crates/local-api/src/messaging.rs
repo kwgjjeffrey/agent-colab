@@ -203,6 +203,15 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
 
 }).await
 }
+pub(super) async fn read_states(State(state): State<AppState>) -> Result<Json<serde_json::Value>, LocalError> {
+    proxy_get(&state, "/v1/messages/read-state".into()).await
+}
+
+pub(super) async fn acknowledge_messages(State(state): State<AppState>,
+    AxumPath(channel): AxumPath<String>, Json(body): Json<serde_json::Value>)
+    -> Result<(StatusCode, Json<serde_json::Value>), LocalError> {
+    proxy_created(state.inner.http.post(format!("{}/v1/channels/{channel}/messages/read-state", state.inner.server_url)), &state, &body).await
+}
 pub(super) async fn message_by_id(State(state): State<AppState>, AxumPath((channel, id)): AxumPath<(String, String)>) -> Result<Json<ChannelMessage>, LocalError> {
 colab_observability::registered_business(include_str!("../../../tracing/registry.json"), "core.messaging.message-by-id", async {
 
