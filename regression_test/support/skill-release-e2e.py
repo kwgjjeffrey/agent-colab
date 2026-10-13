@@ -11,9 +11,9 @@ PG=f'postgres://{__import__("getpass").getuser()}@127.0.0.1:{pgport}/postgres'
 SERVER=f'http://127.0.0.1:{serverport}'
 def sql(text):
     return subprocess.check_output([PSQL,PG,'-At','-v','ON_ERROR_STOP=1'],input=text,text=True,stderr=None).strip()
-def wait(fn):
+def wait(fn, attempts=100):
     last=None
-    for _ in range(100):
+    for _ in range(attempts):
         try:
             value=fn()
             if value:return value
@@ -83,8 +83,10 @@ try:
     second=cli(*base,'--version','selftest-2')['data'];assert second['referenceId']==first['referenceId']
     history=cli('history','--reference-id',first['referenceId'])['data'];assert len(history['releases'])==2
     info=json.loads(discovery.read_text())
-    def local(path):
-        return json.load(urllib.request.urlopen(urllib.request.Request(info['endpoint']+path,headers={'authorization':'Bearer '+info['bearer']}),timeout=90))
+    def local(path,method='GET',body=None):
+        data=None if body is None else json.dumps(body).encode()
+        with urllib.request.urlopen(urllib.request.Request(info['endpoint']+path,data=data,method=method,headers={'authorization':'Bearer '+info['bearer'],'content-type':'application/json'}),timeout=90) as response:
+            raw=response.read();return json.loads(raw) if raw else None
     preview=local('/v1/skills/'+first['referenceId']+'/preview');assert 'Agent Colab' in preview['content']
     assert db.execute('select count(*) from local_skill_sources').fetchone()[0]==0
     assert sql('select count(*) from skill_releases')=='2'
@@ -104,6 +106,14 @@ try:
         updated=install('ensure');assert (target/'RELEASE-TEST.txt').read_text()=='second version'
     finally:
         if target.exists():install('uninstall')
+    legacy=root/'legacy-skill';legacy.mkdir();entry=legacy/'SKILL.md';entry.write_text('---\nname: legacy-directory-skill\ndescription: Existing source adapter verification\n---\nExisting content')
+    old=local('/v1/channels/'+channel['id']+'/skills/share','POST',{'sourcePath':str(legacy)})
+    old=wait(lambda:next((r for r in local('/v1/channels/'+channel['id']+'/skills') if r['id']==old['id'] and r['currentRootOid']),None))
+    assert old['sourceAdapter']=='shadow-git-v1' and old['currentRootOid']
+    entry.write_text(entry.read_text()+'\nA watched directory update')
+    changed=wait(lambda:next((r for r in local('/v1/channels/'+channel['id']+'/skills') if r['id']==old['id'] and r['currentRootOid']!=old['currentRootOid']),None), attempts=600)
+    assert changed['currentRootOid']
+    local('/v1/skills/'+old['id'],'DELETE');assert entry.exists()
     cli('grant','--reference-id',first['referenceId'],'--user-id',reporter)
     def switch(name):
         global core
@@ -115,7 +125,7 @@ try:
     third=cli(*base,'--version','selftest-3','--reference-id',first['referenceId'])['data'];assert third['referenceId']==first['referenceId']
     switch('owner');cli('revoke','--reference-id',first['referenceId'],'--user-id',reporter)
     switch('reporter');denied=cli(*base,'--version','selftest-4','--reference-id',first['referenceId'],ok=False);assert '403' in denied['error']['message']
-    summary={'selfSkillArchivePublished':True,'immutableRetryReused':True,'changedSameVersionRejected':True,'stableChannelReference':True,'twoVersionsRetained':True,'existingPreviewConsumer':True,'noSourceWatcherRegistered':True,'nativeInstallationAndEntrypoint':True,'rollbackAndUpdate':True,'collaboratorPublication':True,'revocationEnforced':True,'scaffoldTarget':True}
+    summary={'selfSkillArchivePublished':True,'immutableRetryReused':True,'changedSameVersionRejected':True,'stableChannelReference':True,'twoVersionsRetained':True,'existingPreviewConsumer':True,'noSourceWatcherRegistered':True,'nativeInstallationAndEntrypoint':True,'rollbackAndUpdate':True,'collaboratorPublication':True,'revocationEnforced':True,'scaffoldTarget':True,'directorySyncUnchanged':True}
     print(json.dumps(summary));(REPO/'.trial/skill-releases/evidence.json').write_text(json.dumps(summary,indent=2))
 except Exception:
     print((root/'server.log').read_text()[-2500:] if (root/'server.log').exists() else '')
