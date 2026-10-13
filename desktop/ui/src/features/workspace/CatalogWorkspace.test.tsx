@@ -26,10 +26,12 @@ describe("Catalog workspace", () => {
     const list=within(screen.getByLabelText("Catalog contents"));
     fireEvent.click(await list.findByRole("button",{name:"Expand Progress"}));
     expect(onSelect).not.toHaveBeenCalled();
-    fireEvent.click(await list.findByRole("button",{name:"Milestones"}));
-    expect(onSelect).toHaveBeenCalledWith(leaf);
+    await list.findByRole("button",{name:"Milestones"});
     fireEvent.click(list.getByRole("button",{name:"Collapse Progress"}));
     await waitFor(()=>expect(list.queryByRole("button",{name:"Milestones"})).toBeNull());
+    fireEvent.click(list.getByRole("button",{name:"Expand Progress"}));
+    fireEvent.click(await list.findByRole("button",{name:"Milestones"}));
+    expect(onSelect).toHaveBeenCalledWith(leaf);
   });
   it("places primary Add above Home and retains its item menu", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response("[]", {status:200})));
