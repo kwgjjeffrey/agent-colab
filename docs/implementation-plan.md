@@ -2,7 +2,7 @@
 
 ### 2026-10-14 — Default project ignore rules
 
-Files already applies source `.gitignore` on every empty-index publication. Scope inspection now uses the same external empty Git repository semantics for ordinary folders without `.git`, including nested rules and negations; failures surface instead of silently including everything. Colab exclusions remain additive and source rules remain read-only. A targeted real-Git test verifies preview/publication parity and removal after adding rules. Core check/test passed. Release acceptance pending.
+Files already applies source `.gitignore` on every empty-index publication. Scope inspection now uses the same external empty Git repository semantics for ordinary folders without `.git`, including nested rules and negations; failures surface instead of silently including everything. Colab exclusions remain additive and source rules remain read-only. A targeted real-Git test verifies preview/publication parity and removal after adding rules. Core check/test passed. Public promotion 0.1.251-dev (Core 130 / GUI 187) and enterprise promotion 0.1.33-ks.1 (Core 20 / GUI 25) published and normally installed after artifact verification. Installed Core hashes match both built payloads; actual public and enterprise inspection excludes the 150 MiB fixture while including only 38 bytes. Enterprise installed-client/version acceptance passed. Unchanged Shell/Skill/Server retained.
 
 ### 2026-10-13 — Message unread reminders
 

@@ -2,7 +2,7 @@
 
 ### 2026-10-14 — Default project ignore rules
 
-Real-Git regression `gitignore_scope_matches_publication_without_a_source_repository` passed: non-repository directory, root/nested `.gitignore`, negation, additive Colab exclusion, and rebuilding an existing snapshot after new rules removes previously included files. Source `.gitignore` remains byte-identical and no `.git` is created in the source. Core check passed; packaged installation acceptance pending.
+Real-Git regression `gitignore_scope_matches_publication_without_a_source_repository` passed: non-repository directory, root/nested `.gitignore`, negation, additive Colab exclusion, and rebuilding an existing snapshot after new rules removes previously included files. Source `.gitignore` remains byte-identical and no `.git` is created in the source. Core check and clean-source Core/GUI builds passed. Both release providers verified artifact bytes; installed enterprise candidate 0.1.33-ks.1 passed client acceptance before stable promotion. Public 0.1.251-dev installation completed, actual GUI is 187, resident Core runs the activated payload. Installed public and enterprise Core binary hashes equal built payloads. Both actual inspection APIs report 4 included files / 38 bytes, 2 excluded files / 157286408 bytes with `.gitignore` active. No production sharing references were created by these inspection checks.
 
 ### 2026-10-13 — Message unread reminders
 

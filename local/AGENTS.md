@@ -45,6 +45,8 @@ The standalone alpha transports one opaque Git pack per revision. Before `pack-o
 
 Each contributed Files source has exactly one Colab exclusion source of truth: its shadow repository's `$GIT_DIR/info/exclude`. Local API scope reads and writes that file directly. SQLite stores only the source and shadow-repository locators; never mirror exclusion patterns into a column or settings row. The source project's `.gitignore` remains Git-effective and read-only to Colab.
 
+Source `.gitignore` rules apply automatically, including nested rules and negations; Colab exclusions only narrow that scope. Scope inspection must use the same external empty-index Git semantics as publication even when the source has no `.git`. Never silently treat an ignore-evaluation failure as an empty ignore list. Rebuilding publication from an empty index removes files newly ignored since the previous snapshot.
+
 Installation management is an adapter, not a second updater: `system.rs` exposes an allow-listed Local API and invokes the packaged `colab-setup`. GUI code may display receipts and request operations but must never mutate artifact or Agent Skill directories directly.
 
 For managed updates, activate immutable artifacts first, return the HTTP result, then let the resident Core exit after a grace period so the platform supervisor starts `current/core`. macOS uses launchd; Windows uses a per-user Task Scheduler entry and a detached delayed trigger after update. Never restart before the caller has received the result. Non-managed Core processes must report restart-required rather than killing an unknown parent workflow.
