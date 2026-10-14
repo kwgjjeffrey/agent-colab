@@ -1,5 +1,9 @@
 # 技术验证计划
 
+### 2026-10-14 — Default project ignore rules
+
+Real-Git regression `gitignore_scope_matches_publication_without_a_source_repository` passed: non-repository directory, root/nested `.gitignore`, negation, additive Colab exclusion, and rebuilding an existing snapshot after new rules removes previously included files. Source `.gitignore` remains byte-identical and no `.git` is created in the source. Core check passed; packaged installation acceptance pending.
+
 ### 2026-10-13 — Message unread reminders
 
 Isolated real Server/PostgreSQL plus two distinct Core accounts: Run `20261013T083354Z-662d3860` passed Message/Channel/native-bridge counts, exclusion of own messages, read-at-latest, stable history scrolling, explicit jump, background focus gating and independent-client acknowledgement reconciliation. Playwright's focus emulation is disabled during actual tab-focus assertions. Earlier fixture/timing failures are retained under parent Run `20261013T081526Z-8b9e6661`.

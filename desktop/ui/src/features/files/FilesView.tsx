@@ -387,7 +387,7 @@ const trackedFetch = operation.fetch;
           <DialogHeader>
             <DialogTitle>{scopeShareId ? "Edit synchronization scope" : "Review synchronization scope"}</DialogTitle>
             <DialogDescription>
-              Colab stores these exclusions outside the source folder and never changes its Git configuration.
+              Existing .gitignore rules apply automatically. Additional exclusions only narrow what you share.
             </DialogDescription>
           </DialogHeader>
           {inspecting && !inspection ? (

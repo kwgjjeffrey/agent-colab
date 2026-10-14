@@ -1,5 +1,9 @@
 # Colab 实现计划
 
+### 2026-10-14 — Default project ignore rules
+
+Files already applies source `.gitignore` on every empty-index publication. Scope inspection now uses the same external empty Git repository semantics for ordinary folders without `.git`, including nested rules and negations; failures surface instead of silently including everything. Colab exclusions remain additive and source rules remain read-only. A targeted real-Git test verifies preview/publication parity and removal after adding rules. Core check/test passed. Release acceptance pending.
+
 ### 2026-10-13 — Message unread reminders
 
 Implemented private membership read cursors and authenticated read/monotonic-ack APIs through Core. One account snapshot drives Message, Channel rail and native Shell badges. Only focused, visible, latest-position timelines acknowledge; own human messages do not count, Agent replies do. Historical membership starts read, rejoining starts at current history. Existing realtime heartbeats reconcile independent-client reads. Account cache keys and stale-response guards isolate account switches. Uses existing stick-to-bottom and shadcn primitives, without introducing a chat framework.

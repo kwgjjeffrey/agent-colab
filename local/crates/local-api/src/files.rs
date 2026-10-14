@@ -373,7 +373,7 @@ colab_observability::registered_business(include_str!("../../../tracing/registry
 fn inspect_source(source: &Path, sync_excludes: &[String]) -> Result<SourceInspection, LocalError> {
     validate_sync_excludes(sync_excludes)?;
     let files = scan_source_files(&source)?;
-    let project_ignored = project_ignored_paths(&source, &files);
+    let project_ignored = project_ignored_paths(&source)?;
     let selected = sync_excludes.iter().cloned().collect::<HashSet<_>>();
     let mut candidate_totals = std::collections::BTreeMap::<String, (u64, u64)>::new();
     let mut included_files = 0;
@@ -415,7 +415,7 @@ fn inspect_source(source: &Path, sync_excludes: &[String]) -> Result<SourceInspe
         included_bytes,
         excluded_files,
         excluded_bytes,
-        project_ignore_applied: source.is_dir() && source.join(".gitignore").is_file(),
+        project_ignore_applied: source.is_dir() && files.iter().any(|file| file.relative == ".gitignore" || file.relative.ends_with("/.gitignore")),
         exceeds_transport_limit: included_bytes > 200 * 1024 * 1024,
         candidates,
     })
@@ -1472,43 +1472,30 @@ fn scan_directory(
     Ok(())
 }
 
-fn project_ignored_paths(source: &Path, files: &[ScannedFile]) -> HashSet<String> {
+fn project_ignored_paths(source: &Path) -> Result<HashSet<String>, LocalError> {
     let work_tree = if source.is_dir() {
         source
     } else {
         source.parent().unwrap_or_else(|| Path::new("."))
     };
-    let mut command = Command::new("git");
-    command
-        .arg("-C")
-        .arg(work_tree)
-        .args(["check-ignore", "--no-index", "-z", "--stdin"])
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::null());
-    let Ok(mut child) = command.spawn() else {
-        return HashSet::new();
-    };
-    if let Some(stdin) = child.stdin.as_mut() {
-        for file in files {
-            if stdin.write_all(file.relative.as_bytes()).is_err() || stdin.write_all(&[0]).is_err()
-            {
-                return HashSet::new();
-            }
-        }
+    // Match publication's external, empty Git index even for a non-repository
+    // folder. Source Git tracking and parent-repository rules must not alter scope.
+    let temporary = tempfile::tempdir().map_err(LocalError::internal)?;
+    let shadow = temporary.path().join("inspection.git");
+    init_shadow(&shadow, work_tree)?;
+    let output = git_command(&shadow, work_tree)
+        .current_dir(work_tree)
+        .args(["ls-files", "--others", "--ignored", "--exclude-standard", "-z"])
+        .output().map_err(LocalError::internal)?;
+    if !output.status.success() {
+        return Err(LocalError::internal(String::from_utf8_lossy(&output.stderr)));
     }
-    let Ok(output) = child.wait_with_output() else {
-        return HashSet::new();
-    };
-    if !output.status.success() && output.status.code() != Some(1) {
-        return HashSet::new();
-    }
-    output
+    Ok(output
         .stdout
         .split(|byte| *byte == 0)
         .filter(|path| !path.is_empty())
         .filter_map(|path| std::str::from_utf8(path).ok().map(ToOwned::to_owned))
-        .collect()
+        .collect())
 }
 
 fn path_has_component(relative: &str, component: &str) -> bool {
@@ -1635,6 +1622,39 @@ mod job_tests {
         );
         drop(state);
         fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn gitignore_scope_matches_publication_without_a_source_repository() {
+        let root = tempfile::tempdir().unwrap();
+        let source = root.path().join("source");
+        let shadow = root.path().join("shadow.git");
+        fs::create_dir_all(source.join("nested")).unwrap();
+        fs::create_dir_all(source.join("dist")).unwrap();
+        for name in ["keep.txt", "large.bin", "nested/drop.log", "nested/keep.log", "dist/generated.txt"] {
+            fs::write(source.join(name), "fixture bytes").unwrap();
+        }
+        init_shadow(&shadow, &source).unwrap();
+        git(&shadow, &source, &["add", "-A", "--", "."]).unwrap();
+        assert!(git_text(&shadow, &source, &["ls-files"]).unwrap().contains("large.bin"));
+        fs::write(source.join(".gitignore"), "*.bin\n").unwrap();
+        fs::write(source.join("nested/.gitignore"), "*.log\n!keep.log\n").unwrap();
+        let inspection = inspect_source(&source, &["dist".into()]).unwrap();
+        assert!(inspection.project_ignore_applied);
+        assert_eq!(inspection.excluded_files, 3);
+        assert_eq!(inspection.included_files, 4);
+        write_shadow_excludes(&shadow, &["dist".into()]).unwrap();
+        // Previously published files must disappear when the source adds a rule.
+        git(&shadow, &source, &["read-tree", "--empty"]).unwrap();
+        git(&shadow, &source, &["add", "-A", "--", "."]).unwrap();
+        let indexed = git_text(&shadow, &source, &["ls-files"]).unwrap();
+        assert_eq!(indexed.lines().count() as u64, inspection.included_files);
+        assert!(!indexed.contains("large.bin"));
+        assert!(!indexed.contains("drop.log"));
+        assert!(!indexed.contains("generated.txt"));
+        assert!(indexed.contains("nested/keep.log"));
+        assert!(!source.join(".git").exists());
+        assert_eq!(fs::read_to_string(source.join(".gitignore")).unwrap(), "*.bin\n");
     }
 
     #[test]
