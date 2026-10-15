@@ -2,6 +2,8 @@
 
 ### 2026-10-15 — Files centralized editing locks: proposed gates
 
+Additional proposed gates: real CLI/Desktop tool-hook coverage, read-without-lock, denied unmanaged writes, bypass-resistant Server submit, preserved drafts across restart/GC, text three-way recovery and explicit binary/delete/rename resolution. Official Codex hook documentation was checked; these proposed integration paths have not been executed.
+
 Design gates are defined in [Files 中心锁与协作编辑方案](files-central-lock-design.md#10-实施分段与验收): etcd lock/lease/Watch failure handling, path-scoped fencing and final commit ordering, actual changed-path verification, disjoint-file head repair, account/reference authorization, ignore parity, legacy watcher rejection and editor worktree preservation. Existing `.trial/files-vcs` proves Git/SVN storage/lock observations only; it does not validate etcd or the proposed Colab protocol. No implementation tests have run for this proposal.
 
 ### 2026-10-14 — Default project ignore rules

@@ -2,6 +2,8 @@
 
 ### 2026-10-15 — Files centralized editing locks: design only
 
+Design follow-up: specifies read-time lock context, write-time Codex hook checks with explicit tool-coverage limits, and server-authoritative publication. Adds preserved conflict drafts, renewed checkout, text three-way recovery and explicit binary/delete/rename resolution. No hooks installed or runtime implementation claimed.
+
 Reviewable proposal: [Files 中心锁与协作编辑方案](files-central-lock-design.md). Reuses Files selection/inspection/ignore/assets and proposes an opt-in collaboration mode, isolated Agent checkouts, etcd ownership/leases/Watch, path-level fencing, actual Git-pack change validation and existing account realtime. Explicitly addresses the switch from contributor auto-publication to managed multi-writer submission, disjoint-file commits and original-directory imports. No runtime/schema/API change, deployment or capability acceptance is claimed; implementation awaits design review.
 
 ### 2026-10-14 — Default project ignore rules
