@@ -2,7 +2,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   cleanup,
-  fireEvent,
   render,
   screen,
   waitFor,
@@ -16,48 +15,26 @@ vi.mock("@tiptap/react", () => ({
   ),
 }));
 afterEach(cleanup);
-describe("Canvas identity HoverCard", () => {
+describe("Canvas identity click card", () => {
   it("highlights the current member mention like Messages", () => {
     render(<CanvasMentionContext.Provider value={{ canvasId: "doc", agents: [], participants: [{ memberId: "me", displayName: "Alice", email: "", isCurrent: true, agentCount: 0 }], requests: [], prepareSend: vi.fn(), showWork: vi.fn() }}><CanvasMention {...({ node: { attrs: { id: "me", kind: "member", label: "Alice" } }, getPos: () => 1 } as unknown as NodeViewProps)} /></CanvasMentionContext.Provider>);
     expect(screen.getByText("@Alice").className).toContain("member-mention-me");
   });
-  it("stays open from capsule into card and closes after leaving both", async () => {
+  it("ignores hover and opens on click until dismissed", async () => {
     const user = userEvent.setup();
-    const props = {
-      node: { attrs: { id: "person", kind: "member", label: "Alice" } },
-      getPos: () => 12,
-    } as unknown as NodeViewProps;
-    render(
-      <CanvasMentionContext.Provider
-        value={{
-          canvasId: "doc",
-          agents: [],
-          participants: [],
-          requests: [],
-          prepareSend: vi.fn(),
-          showWork: vi.fn(),
-        }}
-      >
-        <CanvasMention {...props} />
-      </CanvasMentionContext.Provider>,
-    );
+    render(<CanvasMention {...({ node: { attrs: { id: "p", kind: "member", label: "Alice" } }, getPos: () => 4 } as unknown as NodeViewProps)} />);
     const trigger = screen.getByText("@Alice");
     await user.hover(trigger);
-    const content = await screen.findByText("Channel member");
-    await user.hover(content);
-    expect(screen.queryByText("Channel member")).not.toBeNull();
-    await user.unhover(content);
-    await waitFor(() =>
-      expect(screen.queryByText("Channel member")).toBeNull(),
-    );
-    await user.hover(trigger);
+    await new Promise(resolve => setTimeout(resolve, 350));
+    expect(screen.queryByText("Channel member")).toBeNull();
+    await user.click(trigger);
     await screen.findByText("Channel member");
     await user.unhover(trigger);
-    await waitFor(() =>
-      expect(screen.queryByText("Channel member")).toBeNull(),
-    );
+    expect(screen.queryByText("Channel member")).not.toBeNull();
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByText("Channel member")).toBeNull());
   });
-  it("opens on focus and closes with Escape", async () => {
+  it("opens with keyboard activation and closes with Escape", async () => {
     const user = userEvent.setup();
     render(
       <CanvasMention
@@ -67,7 +44,9 @@ describe("Canvas identity HoverCard", () => {
         } as unknown as NodeViewProps)}
       />,
     );
-    fireEvent.focus(screen.getByText("@Bob"));
+    screen.getByText("@Bob").focus();
+    expect(screen.queryByText("Channel member")).toBeNull();
+    await user.keyboard("{Enter}");
     await screen.findByText("Channel member");
     await user.keyboard("{Escape}");
     await waitFor(() =>

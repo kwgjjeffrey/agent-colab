@@ -161,9 +161,9 @@ export function UserIdentity({
   const [open, setOpen] = useState(false);
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger data-trace-target={traceTargets("members.identity.requests")}
+      <PopoverTrigger nativeButton={false} data-trace-target={traceTargets("members.identity.requests")}
         render={
-          <span data-trace-target={traceTargets("members.identity.requests")} role="button" tabIndex={0} onMouseEnter={()=>setOpen(true)} onFocus={()=>setOpen(true)} className={className ?? "inline-flex cursor-pointer text-left"} onClick={(event) => event.stopPropagation()} />
+          <span data-trace-target={traceTargets("members.identity.requests")} role="button" tabIndex={0} className={className ?? "inline-flex cursor-pointer text-left"} onClick={(event) => event.stopPropagation()} />
         }
       >
         {children}

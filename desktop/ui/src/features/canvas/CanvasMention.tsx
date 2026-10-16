@@ -3,10 +3,10 @@ import { createContext, useContext, useState } from "react";
 import { NodeViewWrapper, type NodeViewProps } from "@tiptap/react";
 import { SparklesIcon } from "lucide-react";
 import {
-  HoverCard,
-  HoverCardContent,
-  HoverCardTrigger,
-} from "@/components/ui/hover-card";
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { type AgentWorkRequest } from "@/features/agent/AgentWorkDrawer";
 import { AgentIdentityCard } from "@/features/agent/AgentIdentityCard";
@@ -28,7 +28,7 @@ export const CanvasMentionContext = createContext<{
   showWork: (request: Request) => void;
 } | null>(null);
 
-/** The editor atom owns only its trigger. shadcn owns the portal, hover bridge,
+/** The editor atom owns only its trigger. shadcn owns the portal, click activation,
  * positioning and dismissal; execution state belongs to document+Agent. */
 export function CanvasMention({ node, getPos }: NodeViewProps) {
   const context = useContext(CanvasMentionContext);
@@ -48,18 +48,11 @@ export function CanvasMention({ node, getPos }: NodeViewProps) {
         <ContextCapsule kind={kind} id={id} label={label} />
       ) : (
         <>
-          <HoverCard open={open} onOpenChange={setOpen}>
-            <HoverCardTrigger
-              delay={150}
-              closeDelay={150}
+          <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger
               render={
-                <span
-                  tabIndex={0}
-                  role="button"
-                  onClick={() => setOpen((value) => !value)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") setOpen((value) => !value);
-                  }}
+                <button
+                  type="button"
                   data-canvas-mention="true"
                   data-mention-id={id}
                   data-mention-kind={kind}
@@ -70,8 +63,8 @@ export function CanvasMention({ node, getPos }: NodeViewProps) {
               }
             >
               @{label}
-            </HoverCardTrigger>
-            <HoverCardContent align="start" sideOffset={6} className="w-72 p-3">
+            </PopoverTrigger>
+            <PopoverContent align="start" sideOffset={6} className="w-72 p-3">
               {kind !== "agent" ? (
                 <UserIdentityCard id={id} name={label} />
               ) : (
@@ -101,8 +94,8 @@ export function CanvasMention({ node, getPos }: NodeViewProps) {
                   </Button>
                 </AgentIdentityCard>
               )}
-            </HoverCardContent>
-          </HoverCard>
+            </PopoverContent>
+          </Popover>
         </>
       )}
     </NodeViewWrapper>

@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 import {afterEach,it,expect,vi} from "vitest";
 import {render,screen,fireEvent,waitFor,cleanup} from "@testing-library/react";
-import {UserIdentityCard} from "./UserIdentity";
+import userEvent from "@testing-library/user-event";
+import {UserIdentity,UserIdentityCard} from "./UserIdentity";
 const mocks=vi.hoisted(()=>({request:vi.fn(),reload:vi.fn()}));
 vi.mock("./ChannelContext",()=>({useChannelContext:()=>({channelId:"channel",channelName:"Team",people:[],agents:[],resources:[],reloadPeople:mocks.reload})}));
 vi.mock("@/features/messages/api",()=>({messageRequest:mocks.request}));
@@ -30,4 +31,14 @@ it("uses current membership when a previously unknown person has since joined th
  render(<UserIdentityCard id="directory:company:person" name="Person" directoryPerson={person}/>);
  fireEvent.click(screen.getByRole("button",{name:"Invite to this Channel"}));await waitFor(()=>expect(mocks.reload).toHaveBeenCalledOnce());
  expect(mocks.request.mock.calls[1][0]).toBe("/v1/channels/channel/members");
+});
+
+it("opens profiles only on activation, not hover or focus",async()=>{
+ const user=userEvent.setup();render(<UserIdentity name="Person"><span>Profile trigger</span></UserIdentity>);
+ const trigger=screen.getByRole("button",{name:"Profile trigger"});
+ await user.hover(trigger);trigger.focus();await new Promise(resolve=>setTimeout(resolve,350));
+ expect(screen.queryByText("Shared assets")).toBeNull();
+ await user.click(trigger);await screen.findByText("Shared assets");
+ await user.keyboard("{Escape}");await waitFor(()=>expect(screen.queryByText("Shared assets")).toBeNull());
+ trigger.focus();await user.keyboard("{Enter}");await screen.findByText("Shared assets");
 });

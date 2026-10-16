@@ -1590,3 +1590,8 @@ Corrected the release omission: commit 25aaad5 had not been included in enterpri
 ### Feedback critique prompt — 2026-10-13
 
 Consumer analysis now prioritizes evidence-backed, actionable Skill problems; successful task completion does not imply positive rating. Positive tags may be empty and praise is kept brief; fabricated defects remain prohibited. Source prompt and both active local public/enterprise Skill prompts were updated and byte-compared. Applies to subsequent analyses; existing comments are unchanged. Local prompt update is not a new promoted artifact release.
+
+
+### Click-only identity cards and delayed tooltips — 2026-10-16
+
+Removed UserIdentity hover/focus opening, replaced Canvas member/Agent HoverCard with click Popover, and removed AddMentionItem hover activation. Resource capsules retain click Popovers and no native title tooltip. Tooltip provider/explicit trigger delays are clamped to at least 300ms, with shared skip timeout disabled. Four scoped test files / ten checks passed (Canvas hover rejection and keyboard/click dismissal, user identity activation, Add item dispatch, tooltip lower delay bound); TypeScript passed. Source change only; no client artifact promotion or installed GUI acceptance claimed.

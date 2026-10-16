@@ -5,10 +5,10 @@ import { ItemIcon } from "@/features/workspace/ItemIcon";
 
 export type MentionItemKind = "session" | "files" | "skill";
 
-/** The standard menu owns hover bridging and keyboard navigation, not editor focus. */
+/** The standard menu owns click activation and keyboard navigation, not editor focus. */
 export function AddMentionItem({ onChoose }: { onChoose: (kind: MentionItemKind) => void }) {
   return <DropdownMenu modal={false}>
-    <DropdownMenuTrigger openOnHover render={<Button type="button" variant="ghost" className="w-full justify-start" />}>
+    <DropdownMenuTrigger render={<Button type="button" variant="ghost" className="w-full justify-start" />}>
       <PlusIcon data-icon="inline-start" />Add new item
     </DropdownMenuTrigger>
     <DropdownMenuContent side="right" align="start" className="w-44">
