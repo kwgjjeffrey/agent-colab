@@ -1595,3 +1595,8 @@ Consumer analysis now prioritizes evidence-backed, actionable Skill problems; su
 ### Click-only identity cards and delayed tooltips — 2026-10-16
 
 Removed UserIdentity hover/focus opening, replaced Canvas member/Agent HoverCard with click Popover, and removed AddMentionItem hover activation. Resource capsules retain click Popovers and no native title tooltip. Tooltip provider/explicit trigger delays are clamped to at least 300ms, with shared skip timeout disabled. Four scoped test files / ten checks passed (Canvas hover rejection and keyboard/click dismissal, user identity activation, Add item dispatch, tooltip lower delay bound); TypeScript passed. Source change only; no client artifact promotion or installed GUI acceptance claimed.
+
+
+### Click-card GUI release — 2026-10-16
+
+Published source c3d9beb as public promotion 0.1.252-dev / GUI 0.1.188-dev and enterprise promotion 0.1.36-ks.1 / GUI 0.1.27-ks.1. Only GUI changed; other client components retained. Public R2 curl readback verified exact size/SHA-256; enterprise CDN candidate readback, install-candidate and accept-client passed before stable promotion. Both actual local installation receipts and current/ui/ui.json match intended GUI versions. Scoped ten behavior checks and TypeScript passed before packaging; no new installed-GUI browser acceptance claimed.
