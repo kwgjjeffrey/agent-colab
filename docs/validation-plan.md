@@ -1600,3 +1600,8 @@ Removed UserIdentity hover/focus opening, replaced Canvas member/Agent HoverCard
 ### Click-card GUI release — 2026-10-16
 
 Published source c3d9beb as public promotion 0.1.252-dev / GUI 0.1.188-dev and enterprise promotion 0.1.36-ks.1 / GUI 0.1.27-ks.1. Only GUI changed; other client components retained. Public R2 curl readback verified exact size/SHA-256; enterprise CDN candidate readback, install-candidate and accept-client passed before stable promotion. Both actual local installation receipts and current/ui/ui.json match intended GUI versions. Scoped ten behavior checks and TypeScript passed before packaging; no new installed-GUI browser acceptance claimed.
+
+
+### Canvas external hyperlink rendering and activation — 2026-10-20
+
+Read the referenced Onboarding projection and confirmed complete HTTPS destinations. Added persistent blue/underlined Canvas link styling and editor click interception using the existing desktop openExternal bridge; browser fallback opens a separate tab. Disabled Tiptap default link opening to prevent desktop WebView navigation. Unsupported destinations are consumed with an error. Four scoped click/error checks and TypeScript passed. Published public 0.1.253-dev / GUI 0.1.189-dev and enterprise 0.1.37-ks.1 / GUI 0.1.28-ks.1. Enterprise CDN readback, install and accept-client passed; public R2 readback passed using the existing cached publisher runtime after uv dependency download stalled. Other artifacts retained. Document body was not modified; no actual OS browser-launch GUI acceptance claimed.
