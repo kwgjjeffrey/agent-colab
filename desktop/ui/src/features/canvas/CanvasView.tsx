@@ -1,3 +1,4 @@
+import { handleCanvasLinkClick } from "./canvas-links";
 import { CanvasImage, CanvasImageUploads } from "./CanvasImages";
 import { AgentButton } from "@/features/agent/AgentButton";
 import { traceTargets } from "@/api/trace-locators";
@@ -652,12 +653,13 @@ function LoadedCanvasEditor({
   const editor = useEditor(
     {
       extensions: [
-        StarterKit.configure({ undoRedo: false }),
+        StarterKit.configure({ undoRedo: false, link: { openOnClick: false } }),
         mentionExtension,
         CanvasImage,
         Collaboration.configure({ document }),
       ],
       editorProps: {
+        handleClick: (_view, _position, event) => handleCanvasLinkClick(event, setError),
         attributes: {
           class:
             "canvas-editor-content mx-auto min-h-full w-full max-w-4xl px-12 py-3 outline-none",

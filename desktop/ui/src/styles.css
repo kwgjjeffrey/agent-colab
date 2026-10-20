@@ -272,3 +272,8 @@ button:not(:disabled), a[href], [role="button"]:not([aria-disabled="true"]), [ro
 .canvas-image-upload-placeholder .canvas-image-upload-preview { display: block; width: 100%; max-height: 400px; object-fit: contain; margin: 0; }
 .canvas-image-upload-placeholder:has(.canvas-image-upload-preview) .canvas-image-upload-skeleton { position: absolute; inset: 0; opacity: .25; }
 .canvas-image-upload-placeholder:has(.canvas-image-upload-preview) > span { inset: auto 8px 8px; display: block; width: fit-content; padding: 3px 8px; border-radius: 6px; background: var(--background); }
+
+/* Keep document links identifiable without relying on hover or color alone. */
+.canvas-editor-content a[href] { color: #2563eb; text-decoration: underline; text-underline-offset: .18em; text-decoration-thickness: 1px; }
+.dark .canvas-editor-content a[href] { color: #93c5fd; }
+.canvas-editor-content a[href]:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; border-radius: 2px; }
